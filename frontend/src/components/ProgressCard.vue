@@ -121,7 +121,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, h } from 'vue'
 import { mockUserStats } from '../data/mockData'
 
 const stats = mockUserStats
@@ -162,21 +162,62 @@ const areaPath = computed(() => {
   return `${points} L ${width} ${height} L 0 ${height} Z`
 })
 
-const ChartIcon = {
-  template: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg>`
-}
+const ChartIcon = () => h('svg', {
+  width: 18,
+  height: 18,
+  viewBox: '0 0 24 24',
+  fill: 'none',
+  stroke: 'currentColor',
+  'stroke-width': 2,
+  'stroke-linecap': 'round',
+  'stroke-linejoin': 'round'
+}, [
+  h('path', { d: 'M3 3v18h18' }),
+  h('path', { d: 'm19 9-5 5-4-4-3 3' })
+])
 
-const TrendUpIcon = {
-  template: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>`
-}
+const TrendUpIcon = () => h('svg', {
+  width: 16,
+  height: 16,
+  viewBox: '0 0 24 24',
+  fill: 'none',
+  stroke: 'currentColor',
+  'stroke-width': 2,
+  'stroke-linecap': 'round',
+  'stroke-linejoin': 'round'
+}, [
+  h('polyline', { points: '23 6 13.5 15.5 8.5 10.5 1 18' }),
+  h('polyline', { points: '17 6 23 6 23 12' })
+])
 
-const ClockIcon = {
-  template: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>`
-}
+const ClockIcon = () => h('svg', {
+  width: 16,
+  height: 16,
+  viewBox: '0 0 24 24',
+  fill: 'none',
+  stroke: 'currentColor',
+  'stroke-width': 2,
+  'stroke-linecap': 'round',
+  'stroke-linejoin': 'round'
+}, [
+  h('circle', { cx: 12, cy: 12, r: 10 }),
+  h('polyline', { points: '12 6 12 12 16 14' })
+])
 
-const TargetIcon = {
-  template: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>`
-}
+const TargetIcon = () => h('svg', {
+  width: 16,
+  height: 16,
+  viewBox: '0 0 24 24',
+  fill: 'none',
+  stroke: 'currentColor',
+  'stroke-width': 2,
+  'stroke-linecap': 'round',
+  'stroke-linejoin': 'round'
+}, [
+  h('circle', { cx: 12, cy: 12, r: 10 }),
+  h('circle', { cx: 12, cy: 12, r: 6 }),
+  h('circle', { cx: 12, cy: 12, r: 2 })
+])
 </script>
 
 <style scoped>
