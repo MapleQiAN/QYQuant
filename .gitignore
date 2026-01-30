@@ -30,6 +30,8 @@ htmlcov/
 *.cover
 .hypothesis/
 .pytest_cache/
+!frontend/src/lib/
+!frontend/src/lib/**
 
 # Node
 node_modules/
@@ -92,4 +94,8 @@ coverage/
 .pnpm-debug.log*
 
 docs/
+!docs/
+docs/*
+!docs/plans/
+!docs/plans/**
 .worktrees/
