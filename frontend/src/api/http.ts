@@ -18,8 +18,8 @@ export function createHttpClient() {
   return {
     async request<T>(config: AxiosRequestConfig): Promise<T> {
       return retry(async () => {
-        const response = await instance.request<T>(config)
-        return response.data
+        const response = await instance.request<{ code: number; message: string; data: T }>(config)
+        return response.data.data
       }, { retries: 3, delays: [200, 400, 800] })
     }
   }
