@@ -11,11 +11,11 @@
     <!-- Footer -->
     <footer class="app-footer">
       <div class="container footer-content">
-        <span class="copyright">漏 2026 QY Quant. All rights reserved.</span>
+        <span class="copyright">{{ $t('footer.copyright') }}</span>
         <div class="footer-links">
-          <a href="#">甯姪涓績</a>
-          <a href="#">API 鏂囨。</a>
-          <a href="#">闅愮鏀跨瓥</a>
+          <a href="#">{{ $t('footer.help') }}</a>
+          <a href="#">{{ $t('footer.api') }}</a>
+          <a href="#">{{ $t('footer.privacy') }}</a>
         </div>
       </div>
     </footer>

@@ -1,7 +1,6 @@
 <template>
   <nav class="top-nav">
     <div class="nav-content">
-      <!-- Logo -->
       <div class="nav-logo">
         <div class="logo-icon">
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
@@ -12,39 +11,38 @@
         <span class="logo-text">QY Quant</span>
       </div>
 
-      <!-- Navigation Links -->
       <div class="nav-links">
-        <a
+        <RouterLink
           v-for="item in navItems"
           :key="item.id"
-          :class="['nav-link', { active: item.active }]"
-          href="#"
+          :to="item.to"
+          :class="['nav-link', { active: route.path === item.to }]"
         >
           <component :is="getIcon(item.icon)" class="nav-icon" />
-          <span>{{ item.label }}</span>
-        </a>
+          <span>{{ $t(item.label) }}</span>
+        </RouterLink>
       </div>
 
-      <!-- Right Section -->
       <div class="nav-right">
-        <!-- Search -->
         <div class="search-box">
           <SearchIcon class="search-icon" />
-          <input type="text" placeholder="搜索策略、机器人..." class="search-input" />
+          <input type="text" :placeholder="$t('common.searchPlaceholder')" class="search-input" />
         </div>
 
-        <!-- Notifications -->
+        <button class="lang-toggle" type="button" @click="toggleLocale">
+          {{ $t('common.language') }}: {{ localeLabel }}
+        </button>
+
         <button class="nav-btn notification-btn">
           <BellIcon />
-          <span v-if="user.notifications > 0" class="notification-badge">
-            {{ user.notifications }}
+          <span v-if="profile.notifications > 0" class="notification-badge">
+            {{ profile.notifications }}
           </span>
         </button>
 
-        <!-- User Avatar -->
         <div class="user-avatar">
-          <span class="avatar-text">{{ user.avatar }}</span>
-          <span class="user-level">{{ user.level }}</span>
+          <span class="avatar-text">{{ profile.avatar }}</span>
+          <span class="user-level">{{ profile.level }}</span>
         </div>
       </div>
     </div>
@@ -52,12 +50,29 @@
 </template>
 
 <script setup lang="ts">
-import { h } from 'vue'
-import { navItems, mockUser } from '../data/mockData'
+import { computed, h } from 'vue'
+import { storeToRefs } from 'pinia'
+import { RouterLink, useRoute } from 'vue-router'
+import { useUserStore } from '../stores/user'
 
-const user = mockUser
+const route = useRoute()
 
-// Icon components using render functions
+const navItems = [
+  { id: 'dashboard', to: '/', icon: 'chart', label: 'nav.dashboard' },
+  { id: 'backtests', to: '/backtests', icon: 'chart', label: 'nav.backtests' },
+  { id: 'bots', to: '/bots', icon: 'robot', label: 'nav.bots' },
+  { id: 'forum', to: '/forum', icon: 'users', label: 'nav.forum' }
+]
+
+const userStore = useUserStore()
+const { profile, locale } = storeToRefs(userStore)
+
+const localeLabel = computed(() => (locale.value === 'zh' ? '中文' : 'EN'))
+
+function toggleLocale() {
+  userStore.setLocale(locale.value === 'zh' ? 'en' : 'zh')
+}
+
 const ChartIcon = () => h('svg', {
   width: 18,
   height: 18,
@@ -107,21 +122,6 @@ const UsersIcon = () => h('svg', {
   h('path', { d: 'M16 3.13a4 4 0 0 1 0 7.75' })
 ])
 
-const WalletIcon = () => h('svg', {
-  width: 18,
-  height: 18,
-  viewBox: '0 0 24 24',
-  fill: 'none',
-  stroke: 'currentColor',
-  'stroke-width': 2,
-  'stroke-linecap': 'round',
-  'stroke-linejoin': 'round'
-}, [
-  h('path', { d: 'M21 12V7H5a2 2 0 0 1 0-4h14v4' }),
-  h('path', { d: 'M3 5v14a2 2 0 0 0 2 2h16v-5' }),
-  h('path', { d: 'M18 12a2 2 0 0 0 0 4h4v-4Z' })
-])
-
 const SearchIcon = () => h('svg', {
   width: 16,
   height: 16,
@@ -153,8 +153,7 @@ const BellIcon = () => h('svg', {
 const iconMap: Record<string, any> = {
   chart: ChartIcon,
   robot: RobotIcon,
-  users: UsersIcon,
-  wallet: WalletIcon,
+  users: UsersIcon
 }
 
 function getIcon(iconName: string) {
@@ -277,6 +276,22 @@ function getIcon(iconName: string) {
 
 .search-input::placeholder {
   color: var(--color-text-muted);
+}
+
+.lang-toggle {
+  border: 1px solid var(--color-border);
+  background: var(--color-background);
+  color: var(--color-text-secondary);
+  padding: var(--spacing-xs) var(--spacing-sm);
+  border-radius: var(--radius-full);
+  font-size: var(--font-size-xs);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.lang-toggle:hover {
+  color: var(--color-text-primary);
+  border-color: var(--color-primary-light);
 }
 
 .nav-btn {

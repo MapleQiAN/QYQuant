@@ -1,8 +1,8 @@
 <template>
   <section class="view">
     <div class="container">
-      <h1 class="view-title">Bots</h1>
-      <p class="view-subtitle">Manage running bots and recent activity.</p>
+      <h1 class="view-title">{{ $t('pages.botsTitle') }}</h1>
+      <p class="view-subtitle">{{ $t('pages.botsSubtitle') }}</p>
     </div>
   </section>
 </template>

@@ -5,44 +5,43 @@
         <CrownIcon />
       </div>
       <div class="upgrade-text">
-        <h3 class="upgrade-title">升级到 Pro</h3>
-        <p class="upgrade-desc">解锁无限回测、更多机器人槽位和专业数据源</p>
+        <h3 class="upgrade-title">{{ $t('upgrade.title') }}</h3>
+        <p class="upgrade-desc">{{ $t('upgrade.description') }}</p>
       </div>
-      
+
       <div class="features-list">
         <div class="feature-item">
           <CheckIcon class="check-icon" />
-          <span>无限回测次数</span>
+          <span>{{ $t('upgrade.features.unlimitedBacktests') }}</span>
         </div>
         <div class="feature-item">
           <CheckIcon class="check-icon" />
-          <span>10 个机器人槽位</span>
+          <span>{{ $t('upgrade.features.botSlots') }}</span>
         </div>
         <div class="feature-item">
           <CheckIcon class="check-icon" />
-          <span>实时市场数据</span>
+          <span>{{ $t('upgrade.features.realtimeData') }}</span>
         </div>
         <div class="feature-item">
           <CheckIcon class="check-icon" />
-          <span>优先技术支持</span>
+          <span>{{ $t('upgrade.features.prioritySupport') }}</span>
         </div>
       </div>
-      
+
       <div class="pricing">
-        <span class="price">¥99</span>
-        <span class="period">/月</span>
-        <span class="original-price">¥199</span>
+        <span class="price">{{ $t('upgrade.price') }}</span>
+        <span class="period">{{ $t('upgrade.period') }}</span>
+        <span class="original-price">{{ $t('upgrade.originalPrice') }}</span>
       </div>
-      
+
       <button class="upgrade-btn">
         <SparkleIcon />
-        立即升级
+        {{ $t('upgrade.cta') }}
       </button>
-      
-      <p class="trial-text">7 天免费试用，随时取消</p>
+
+      <p class="trial-text">{{ $t('upgrade.trial') }}</p>
     </div>
-    
-    <!-- Decorative Elements -->
+
     <div class="decorative-circle circle-1"></div>
     <div class="decorative-circle circle-2"></div>
   </div>
@@ -218,7 +217,6 @@ const SparkleIcon = () => h('svg', {
   margin-top: var(--spacing-md);
 }
 
-/* Decorative Elements */
 .decorative-circle {
   position: absolute;
   border-radius: 50%;

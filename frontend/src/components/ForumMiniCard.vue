@@ -3,13 +3,22 @@
     <div class="card-header">
       <h3 class="card-title">
         <UsersIcon class="title-icon" />
-        广场动态
+        {{ $t('forum.title') }}
       </h3>
-      <a href="#" class="view-all">查看全部</a>
+      <a href="#" class="view-all">{{ $t('common.viewAll') }}</a>
     </div>
-    
+
     <div class="posts-list">
+      <SkeletonState v-if="loading" :lines="6" />
+      <ErrorState
+        v-else-if="error"
+        :message="error"
+        :action-label="$t('common.retry')"
+        @retry="$emit('retry')"
+      />
+      <EmptyState v-else-if="!posts.length" />
       <div
+        v-else
         v-for="post in posts"
         :key="post.id"
         class="post-item"
@@ -40,25 +49,39 @@
         </div>
       </div>
     </div>
-    
+
     <div class="quick-actions">
       <button class="action-btn">
         <PenIcon />
-        发布帖子
+        {{ $t('forum.publish') }}
       </button>
       <button class="action-btn secondary">
         <BookmarkIcon />
-        我的收藏
+        {{ $t('forum.bookmarks') }}
       </button>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { h } from 'vue'
-import { mockForumPosts } from '../data/mockData'
+import { computed, h } from 'vue'
+import type { Post } from '../types/Post'
+import EmptyState from './EmptyState.vue'
+import ErrorState from './ErrorState.vue'
+import SkeletonState from './SkeletonState.vue'
 
-const posts = mockForumPosts
+defineEmits<{ (event: 'retry'): void }>()
+
+const props = withDefaults(defineProps<{
+  posts?: Post[]
+  loading?: boolean
+  error?: string | null
+}>(), {
+  posts: () => [],
+  loading: false,
+  error: null
+})
+const posts = computed(() => props.posts)
 
 const UsersIcon = () => h('svg', {
   width: 18,

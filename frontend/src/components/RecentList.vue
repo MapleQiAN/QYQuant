@@ -1,7 +1,7 @@
 <template>
   <div class="recent-list card">
     <div class="list-header">
-      <h3 class="list-title">{{ title }}</h3>
+      <h3 class="list-title">{{ resolvedTitle }}</h3>
       <div class="tab-switcher">
         <button
           v-for="tab in tabs"
@@ -13,11 +13,19 @@
         </button>
       </div>
     </div>
-    
+
     <div class="list-content">
-      <!-- Strategies View -->
       <template v-if="activeTab === 'strategies'">
+        <SkeletonState v-if="strategiesLoading" :lines="6" />
+        <ErrorState
+          v-else-if="strategiesError"
+          :message="strategiesError"
+          :action-label="$t('common.retry')"
+          @retry="$emit('retry-strategies')"
+        />
+        <EmptyState v-else-if="!strategies.length" />
         <div
+          v-else
           v-for="strategy in strategies"
           :key="strategy.id"
           :class="['list-item', { expanded: expandedId === strategy.id }]"
@@ -33,7 +41,7 @@
               <div class="item-meta">
                 <span class="symbol">{{ strategy.symbol }}</span>
                 <span class="separator">·</span>
-                <span class="trades">{{ strategy.trades }} 笔交易</span>
+                <span class="trades">{{ strategy.trades }} {{ $t('recent.trades') }}</span>
               </div>
             </div>
             <div class="item-stats">
@@ -43,20 +51,19 @@
               <ExpandIcon :class="['expand-icon', { rotated: expandedId === strategy.id }]" />
             </div>
           </div>
-          
-          <!-- Expanded Details -->
+
           <div v-if="expandedId === strategy.id" class="item-details">
             <div class="details-grid">
               <div class="detail-item">
-                <span class="detail-label">胜率</span>
+                <span class="detail-label">{{ $t('recent.winRate') }}</span>
                 <span class="detail-value">{{ strategy.winRate }}%</span>
               </div>
               <div class="detail-item">
-                <span class="detail-label">最大回撤</span>
+                <span class="detail-label">{{ $t('recent.maxDrawdown') }}</span>
                 <span class="detail-value danger">{{ strategy.maxDrawdown }}%</span>
               </div>
               <div class="detail-item">
-                <span class="detail-label">更新时间</span>
+                <span class="detail-label">{{ $t('recent.updatedAt') }}</span>
                 <span class="detail-value">{{ strategy.lastUpdate }}</span>
               </div>
             </div>
@@ -64,74 +71,85 @@
               <span v-for="tag in strategy.tags" :key="tag" class="chip">{{ tag }}</span>
             </div>
             <div class="action-row">
-              <button class="btn btn-secondary btn-sm">查看详情</button>
-              <button class="btn btn-primary btn-sm">部署机器人</button>
+              <button class="btn btn-secondary btn-sm">{{ $t('recent.viewDetails') }}</button>
+              <button class="btn btn-primary btn-sm">{{ $t('recent.deployBot') }}</button>
             </div>
           </div>
         </div>
       </template>
-      
-      <!-- Robots View -->
+
       <template v-else>
+        <SkeletonState v-if="botsLoading" :lines="6" />
+        <ErrorState
+          v-else-if="botsError"
+          :message="botsError"
+          :action-label="$t('common.retry')"
+          @retry="$emit('retry-bots')"
+        />
+        <EmptyState v-else-if="!bots.length" />
         <div
-          v-for="robot in robots"
-          :key="robot.id"
-          :class="['list-item', { expanded: expandedId === robot.id }]"
+          v-else
+          v-for="bot in bots"
+          :key="bot.id"
+          :class="['list-item', { expanded: expandedId === bot.id }]"
         >
-          <div class="item-main" @click="toggleExpand(robot.id)">
+          <div class="item-main" @click="toggleExpand(bot.id)">
             <div class="item-info">
               <div class="item-header">
-                <span class="item-name">{{ robot.name }}</span>
-                <span :class="['status-badge', robot.status]">
-                  {{ robotStatusLabels[robot.status] }}
+                <span class="item-name">{{ bot.name }}</span>
+                <span :class="['status-badge', bot.status]">
+                  {{ robotStatusLabels[bot.status] }}
                 </span>
               </div>
               <div class="item-meta">
-                <span class="strategy-name">{{ robot.strategy }}</span>
+                <span class="strategy-name">{{ bot.strategy }}</span>
               </div>
             </div>
             <div class="item-stats">
-              <div :class="['returns', { positive: robot.profit >= 0, negative: robot.profit < 0 }]">
-                {{ robot.profit >= 0 ? '+' : '' }}¥{{ robot.profit.toLocaleString() }}
+              <div :class="['returns', { positive: bot.profit >= 0, negative: bot.profit < 0 }]">
+                {{ bot.profit >= 0 ? '+' : '' }}{{ formatCurrency(bot.profit) }}
               </div>
-              <ExpandIcon :class="['expand-icon', { rotated: expandedId === robot.id }]" />
+              <ExpandIcon :class="['expand-icon', { rotated: expandedId === bot.id }]" />
             </div>
           </div>
-          
-          <!-- Expanded Details -->
-          <div v-if="expandedId === robot.id" class="item-details">
+
+          <div v-if="expandedId === bot.id" class="item-details">
             <div class="details-grid">
               <div class="detail-item">
-                <span class="detail-label">运行时间</span>
-                <span class="detail-value">{{ robot.runtime }}</span>
+                <span class="detail-label">{{ $t('recent.runtime') }}</span>
+                <span class="detail-value">{{ bot.runtime }}</span>
               </div>
               <div class="detail-item">
-                <span class="detail-label">投入资金</span>
-                <span class="detail-value">¥{{ robot.capital.toLocaleString() }}</span>
+                <span class="detail-label">{{ $t('recent.capital') }}</span>
+                <span class="detail-value">{{ formatCurrency(bot.capital) }}</span>
               </div>
               <div class="detail-item">
-                <span class="detail-label">收益率</span>
-                <span :class="['detail-value', { success: robot.profit >= 0, danger: robot.profit < 0 }]">
-                  {{ ((robot.profit / robot.capital) * 100).toFixed(2) }}%
+                <span class="detail-label">{{ $t('recent.roi') }}</span>
+                <span :class="['detail-value', { success: bot.profit >= 0, danger: bot.profit < 0 }]">
+                  {{ ((bot.profit / bot.capital) * 100).toFixed(2) }}%
                 </span>
               </div>
             </div>
             <div class="tags-row">
-              <span v-for="tag in robot.tags" :key="tag" class="chip">{{ tag }}</span>
+              <span v-for="tag in bot.tags" :key="tag" class="chip">{{ tag }}</span>
             </div>
             <div class="action-row">
-              <button class="btn btn-secondary btn-sm">查看日志</button>
-              <button v-if="robot.status === 'active'" class="btn btn-warning btn-sm">暂停</button>
-              <button v-else class="btn btn-primary btn-sm">启动</button>
+              <button class="btn btn-secondary btn-sm">{{ $t('recent.viewLogs') }}</button>
+              <button v-if="bot.status === 'active'" class="btn btn-warning btn-sm">
+                {{ $t('recent.pause') }}
+              </button>
+              <button v-else class="btn btn-primary btn-sm">
+                {{ $t('recent.start') }}
+              </button>
             </div>
           </div>
         </div>
       </template>
     </div>
-    
+
     <div class="list-footer">
       <a href="#" class="view-all-link">
-        查看全部
+        {{ $t('common.viewAll') }}
         <ArrowRightIcon />
       </a>
     </div>
@@ -139,44 +157,69 @@
 </template>
 
 <script setup lang="ts">
-import { ref, h } from 'vue'
-import { mockStrategies, mockRobots } from '../data/mockData'
+import { computed, ref, h } from 'vue'
+import { useI18n } from 'vue-i18n'
+import type { Bot } from '../types/Bot'
+import type { Strategy } from '../types/Strategy'
+import EmptyState from './EmptyState.vue'
+import ErrorState from './ErrorState.vue'
+import SkeletonState from './SkeletonState.vue'
 
-interface Props {
+const props = withDefaults(defineProps<{
   title?: string
-}
-
-withDefaults(defineProps<Props>(), {
-  title: '最近记录'
+  strategies?: Strategy[]
+  strategiesLoading?: boolean
+  strategiesError?: string | null
+  bots?: Bot[]
+  botsLoading?: boolean
+  botsError?: string | null
+}>(), {
+  strategies: () => [],
+  strategiesLoading: false,
+  strategiesError: null,
+  bots: () => [],
+  botsLoading: false,
+  botsError: null
 })
 
-const tabs = [
-  { id: 'strategies', label: '策略' },
-  { id: 'robots', label: '机器人' },
-]
+defineEmits<{
+  (event: 'retry-strategies'): void
+  (event: 'retry-bots'): void
+}>()
 
-const activeTab = ref('strategies')
+const { t, locale } = useI18n()
+
+const activeTab = ref<'strategies' | 'bots'>('strategies')
 const expandedId = ref<string | null>(null)
 
-const strategies = mockStrategies
-const robots = mockRobots
+const tabs = computed(() => [
+  { id: 'strategies', label: t('recent.tabs.strategies') },
+  { id: 'bots', label: t('recent.tabs.bots') }
+])
 
-const statusLabels: Record<string, string> = {
-  running: '运行中',
-  paused: '已暂停',
-  stopped: '已停止',
-  completed: '已完成',
-}
+const resolvedTitle = computed(() => props.title || t('dashboard.recentTitle'))
 
-const robotStatusLabels: Record<string, string> = {
-  active: '运行中',
-  paused: '已暂停',
-  error: '异常',
-  offline: '离线',
-}
+const statusLabels = computed<Record<string, string>>(() => ({
+  running: t('status.running'),
+  paused: t('status.paused'),
+  stopped: t('status.stopped'),
+  completed: t('status.completed')
+}))
+
+const robotStatusLabels = computed<Record<string, string>>(() => ({
+  active: t('status.active'),
+  paused: t('status.paused'),
+  error: t('status.error'),
+  offline: t('status.offline')
+}))
 
 function toggleExpand(id: string) {
   expandedId.value = expandedId.value === id ? null : id
+}
+
+function formatCurrency(value: number) {
+  const localeValue = locale.value === 'zh' ? 'zh-CN' : 'en-US'
+  return value.toLocaleString(localeValue, { minimumFractionDigits: 0 })
 }
 
 const ExpandIcon = () => h('svg', {

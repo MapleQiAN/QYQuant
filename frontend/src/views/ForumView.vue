@@ -1,8 +1,8 @@
 <template>
   <section class="view">
     <div class="container">
-      <h1 class="view-title">Forum</h1>
-      <p class="view-subtitle">Explore hot posts and community insights.</p>
+      <h1 class="view-title">{{ $t('pages.forumTitle') }}</h1>
+      <p class="view-subtitle">{{ $t('pages.forumSubtitle') }}</p>
     </div>
   </section>
 </template>

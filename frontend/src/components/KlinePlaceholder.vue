@@ -15,11 +15,9 @@
         </button>
       </div>
     </div>
-    
+
     <div class="chart-container" ref="chartRef">
-      <!-- SVG Placeholder Chart -->
       <svg class="chart-svg" :viewBox="`0 0 ${chartWidth} ${chartHeight}`" preserveAspectRatio="none">
-        <!-- Grid Lines -->
         <g class="grid-lines">
           <line
             v-for="i in 5"
@@ -32,11 +30,9 @@
             stroke-dasharray="4,4"
           />
         </g>
-        
-        <!-- Candles -->
+
         <g class="candles">
           <g v-for="(candle, index) in normalizedData" :key="index">
-            <!-- Wick -->
             <line
               :x1="candle.x + candleWidth / 2"
               :y1="candle.highY"
@@ -45,7 +41,6 @@
               :stroke="candle.color"
               stroke-width="1"
             />
-            <!-- Body -->
             <rect
               :x="candle.x"
               :y="candle.bodyY"
@@ -54,7 +49,6 @@
               :fill="candle.color"
               rx="2"
             />
-            <!-- Signal Marker -->
             <g v-if="candle.signal">
               <circle
                 :cx="candle.x + candleWidth / 2"
@@ -76,8 +70,7 @@
             </g>
           </g>
         </g>
-        
-        <!-- Price Line -->
+
         <line
           :x1="0"
           :y1="currentPriceY"
@@ -89,29 +82,26 @@
           opacity="0.6"
         />
       </svg>
-      
-      <!-- Current Price Tag -->
+
       <div class="price-tag" :style="{ top: currentPriceY + 'px' }">
         {{ currentPrice.toFixed(2) }}
       </div>
-      
-      <!-- Time Axis -->
+
       <div class="time-axis">
         <span v-for="(time, index) in timeLabels" :key="index" class="time-label">
           {{ time }}
         </span>
       </div>
     </div>
-    
-    <!-- Legend -->
+
     <div class="chart-legend">
       <div class="legend-item">
         <span class="legend-dot buy"></span>
-        <span>买入信号</span>
+        <span>{{ $t('kline.buySignal') }}</span>
       </div>
       <div class="legend-item">
         <span class="legend-dot sell"></span>
-        <span>卖出信号</span>
+        <span>{{ $t('kline.sellSignal') }}</span>
       </div>
     </div>
   </div>
@@ -119,10 +109,11 @@
 
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import type { KlineData } from '../data/mockData'
+import { useI18n } from 'vue-i18n'
+import type { KlineBar } from '../types/KlineBar'
 
 interface Props {
-  data: KlineData[]
+  data: KlineBar[]
   symbol?: string
   timeframe?: string
 }
@@ -132,18 +123,16 @@ const props = withDefaults(defineProps<Props>(), {
   timeframe: '15m'
 })
 
-// Expose interface for chart library replacement
 defineExpose({
-  // Method to replace with real chart library (ECharts / Lightweight Charts)
   initChart: (library: 'echarts' | 'lightweight-charts') => {
     console.log(`Ready to initialize ${library} chart`)
-    // Implementation placeholder for chart library integration
   },
-  updateData: (newData: KlineData[]) => {
+  updateData: (newData: KlineBar[]) => {
     console.log('Updating chart data', newData)
-    // Implementation placeholder
   }
 })
+
+const { t } = useI18n()
 
 const chartRef = ref<HTMLElement>()
 const chartWidth = 800
@@ -151,18 +140,18 @@ const chartHeight = 280
 const candleWidth = 12
 const candleGap = 4
 
-const timeframes = [
-  { value: '1m', label: '1分' },
-  { value: '5m', label: '5分' },
-  { value: '15m', label: '15分' },
-  { value: '1h', label: '1时' },
-  { value: '4h', label: '4时' },
-  { value: '1d', label: '日' },
-]
+const timeframes = computed(() => ([
+  { value: '1m', label: t('kline.timeframes.1m') },
+  { value: '5m', label: t('kline.timeframes.5m') },
+  { value: '15m', label: t('kline.timeframes.15m') },
+  { value: '1h', label: t('kline.timeframes.1h') },
+  { value: '4h', label: t('kline.timeframes.4h') },
+  { value: '1d', label: t('kline.timeframes.1d') }
+]))
 
 const priceRange = computed(() => {
   if (!props.data.length) return { min: 0, max: 0 }
-  const prices = props.data.flatMap(d => [d.high, d.low])
+  const prices = props.data.flatMap((d) => [d.high, d.low])
   const min = Math.min(...prices)
   const max = Math.max(...prices)
   const padding = (max - min) * 0.1
@@ -172,7 +161,7 @@ const priceRange = computed(() => {
 const normalizedData = computed(() => {
   const { min, max } = priceRange.value
   const range = max - min
-  
+
   return props.data.map((candle, index) => {
     const x = index * (candleWidth + candleGap) + 40
     const openY = chartHeight - ((candle.open - min) / range) * chartHeight
@@ -180,7 +169,7 @@ const normalizedData = computed(() => {
     const highY = chartHeight - ((candle.high - min) / range) * chartHeight
     const lowY = chartHeight - ((candle.low - min) / range) * chartHeight
     const isUp = candle.close >= candle.open
-    
+
     return {
       x,
       highY,
@@ -209,7 +198,7 @@ const timeLabels = computed(() => {
   const step = Math.ceil(props.data.length / 6)
   return props.data
     .filter((_, index) => index % step === 0)
-    .map(d => d.time)
+    .map((d) => d.time)
 })
 </script>
 

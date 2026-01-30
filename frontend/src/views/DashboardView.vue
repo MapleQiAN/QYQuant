@@ -4,36 +4,53 @@
       <!-- Page Header -->
       <div class="page-header">
         <div class="header-text">
-          <h1 class="page-title">Welcome back, {{ user.name }}</h1>
-          <p class="page-subtitle">Here is your trading dashboard overview.</p>
+          <h1 class="page-title">{{ $t('dashboard.title', { name: user.name }) }}</h1>
+          <p class="page-subtitle">{{ $t('dashboard.subtitle') }}</p>
         </div>
         <div class="header-actions">
           <button class="btn btn-secondary">
             <SettingsIcon />
-            Settings
+            {{ $t('common.settings') }}
           </button>
           <button class="btn btn-primary">
             <PlusIcon />
-            New Strategy
+            {{ $t('common.newStrategy') }}
           </button>
         </div>
       </div>
 
       <!-- Dashboard Grid -->
       <div class="dashboard-grid">
-        <!-- Left: Backtest Overview Card (8 cols) -->
         <div class="grid-area-backtest">
-          <BacktestCard />
+          <BacktestCard
+            :data="backtestsStore.latest"
+            :loading="backtestsStore.loading"
+            :error="backtestsStore.error"
+            @retry="backtestsStore.loadLatest"
+          />
         </div>
 
-        <!-- Right: Recent List (4 cols) -->
         <div class="grid-area-recent">
-          <RecentList title="Recent activity" />
+          <RecentList
+            :title="$t('dashboard.recentTitle')"
+            :strategies="strategiesStore.recent"
+            :strategies-loading="strategiesStore.loading"
+            :strategies-error="strategiesStore.error"
+            :bots="botsStore.recent"
+            :bots-loading="botsStore.loading"
+            :bots-error="botsStore.error"
+            @retry-strategies="strategiesStore.loadRecent"
+            @retry-bots="botsStore.loadRecent"
+          />
         </div>
 
-        <!-- Bottom Row: Three Cards -->
         <div class="grid-area-forum">
-          <ForumMiniCard />
+          <ForumMiniCard
+            :posts="forumStore.posts"
+            :loading="forumStore.loading"
+            :error="forumStore.error"
+            @retry="forumStore.loadHot"
+          />
         </div>
 
         <div class="grid-area-upgrade">
@@ -49,15 +66,28 @@
 </template>
 
 <script setup lang="ts">
-import { h } from 'vue'
+import { computed, h, onMounted } from 'vue'
 import BacktestCard from '../components/BacktestCard.vue'
 import ForumMiniCard from '../components/ForumMiniCard.vue'
 import ProgressCard from '../components/ProgressCard.vue'
 import RecentList from '../components/RecentList.vue'
 import UpgradeCard from '../components/UpgradeCard.vue'
-import { mockUser } from '../data/mockData'
+import { useBacktestsStore, useBotsStore, useForumStore, useStrategiesStore, useUserStore } from '../stores'
 
-const user = mockUser
+const userStore = useUserStore()
+const user = computed(() => userStore.profile)
+
+const backtestsStore = useBacktestsStore()
+const botsStore = useBotsStore()
+const strategiesStore = useStrategiesStore()
+const forumStore = useForumStore()
+
+onMounted(() => {
+  backtestsStore.loadLatest()
+  botsStore.loadRecent()
+  strategiesStore.loadRecent()
+  forumStore.loadHot()
+})
 
 const SettingsIcon = () => h('svg', {
   width: 16,

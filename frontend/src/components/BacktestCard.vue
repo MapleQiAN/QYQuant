@@ -1,112 +1,143 @@
 <template>
   <div class="backtest-card card">
-    <div class="card-header">
-      <div class="header-left">
-        <h3 class="card-title">回测概览</h3>
-        <span class="badge badge-success">已完成</span>
+    <SkeletonState v-if="loading" :lines="8" />
+    <ErrorState
+      v-else-if="error"
+      :message="error"
+      :action-label="$t('common.retry')"
+      @retry="$emit('retry')"
+    />
+    <EmptyState v-else-if="!data" />
+    <template v-else>
+      <div class="card-header">
+        <div class="header-left">
+          <h3 class="card-title">{{ $t('backtest.title') }}</h3>
+          <span class="badge badge-success">{{ $t('backtest.statusCompleted') }}</span>
+        </div>
+        <div class="header-actions">
+          <button class="btn btn-secondary">
+            <RefreshIcon />
+            {{ $t('backtest.refresh') }}
+          </button>
+          <button class="btn btn-primary">
+            <ExportIcon />
+            {{ $t('backtest.export') }}
+          </button>
+        </div>
       </div>
-      <div class="header-actions">
-        <button class="btn btn-secondary">
-          <RefreshIcon />
-          重新运行
-        </button>
-        <button class="btn btn-primary">
-          <ExportIcon />
-          导出报告
-        </button>
+
+      <div class="kpi-grid">
+        <StatCard
+          :label="$t('backtest.kpiTotalReturn')"
+          :value="kpis.totalReturn"
+          suffix="%"
+          :change="kpis.totalReturn"
+          :showSign="true"
+          variant="success"
+        >
+          <template #icon>
+            <TrendUpIcon />
+          </template>
+        </StatCard>
+
+        <StatCard
+          :label="$t('backtest.kpiAnnualizedReturn')"
+          :value="kpis.annualizedReturn"
+          suffix="%"
+          variant="info"
+        >
+          <template #icon>
+            <CalendarIcon />
+          </template>
+        </StatCard>
+
+        <StatCard
+          :label="$t('backtest.kpiSharpe')"
+          :value="kpis.sharpeRatio"
+          variant="default"
+        >
+          <template #icon>
+            <TargetIcon />
+          </template>
+        </StatCard>
+
+        <StatCard
+          :label="$t('backtest.kpiMaxDrawdown')"
+          :value="kpis.maxDrawdown"
+          suffix="%"
+          :showSign="true"
+          variant="danger"
+        >
+          <template #icon>
+            <TrendDownIcon />
+          </template>
+        </StatCard>
       </div>
-    </div>
-    
-    <!-- KPI Grid -->
-    <div class="kpi-grid">
-      <StatCard
-        label="总收益率"
-        :value="kpis.totalReturn"
-        suffix="%"
-        :change="kpis.totalReturn"
-        :showSign="true"
-        variant="success"
-      >
-        <template #icon>
-          <TrendUpIcon />
-        </template>
-      </StatCard>
-      
-      <StatCard
-        label="年化收益"
-        :value="kpis.annualizedReturn"
-        suffix="%"
-        variant="info"
-      >
-        <template #icon>
-          <CalendarIcon />
-        </template>
-      </StatCard>
-      
-      <StatCard
-        label="夏普比率"
-        :value="kpis.sharpeRatio"
-        variant="default"
-      >
-        <template #icon>
-          <TargetIcon />
-        </template>
-      </StatCard>
-      
-      <StatCard
-        label="最大回撤"
-        :value="kpis.maxDrawdown"
-        suffix="%"
-        :showSign="true"
-        variant="danger"
-      >
-        <template #icon>
-          <TrendDownIcon />
-        </template>
-      </StatCard>
-    </div>
-    
-    <!-- Chart Section -->
-    <div class="chart-section">
-      <KlinePlaceholder
-        :data="klineData"
-        symbol="XAUUSD"
-        timeframe="15m"
-      />
-    </div>
-    
-    <!-- Secondary Stats -->
-    <div class="secondary-stats">
-      <div class="stat-item">
-        <span class="stat-label">胜率</span>
-        <span class="stat-value">{{ kpis.winRate }}%</span>
+
+      <div class="chart-section">
+        <KlinePlaceholder
+          :data="klineData"
+          symbol="XAUUSD"
+          timeframe="15m"
+        />
       </div>
-      <div class="stat-item">
-        <span class="stat-label">盈亏比</span>
-        <span class="stat-value">{{ kpis.profitFactor }}</span>
+
+      <div class="secondary-stats">
+        <div class="stat-item">
+          <span class="stat-label">{{ $t('backtest.statWinRate') }}</span>
+          <span class="stat-value">{{ kpis.winRate }}%</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-label">{{ $t('backtest.statProfitFactor') }}</span>
+          <span class="stat-value">{{ kpis.profitFactor }}</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-label">{{ $t('backtest.statTotalTrades') }}</span>
+          <span class="stat-value">{{ kpis.totalTrades }}</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-label">{{ $t('backtest.statAvgHolding') }}</span>
+          <span class="stat-value">{{ kpis.avgHoldingDays }}</span>
+        </div>
       </div>
-      <div class="stat-item">
-        <span class="stat-label">总交易次数</span>
-        <span class="stat-value">{{ kpis.totalTrades }}</span>
-      </div>
-      <div class="stat-item">
-        <span class="stat-label">平均持仓天数</span>
-        <span class="stat-value">{{ kpis.avgHoldingDays }}</span>
-      </div>
-    </div>
+    </template>
   </div>
 </template>
 
 <script setup lang="ts">
-import { h } from 'vue'
+import { computed, h } from 'vue'
+import type { BacktestLatestResponse } from '../types/Backtest'
+import type { KlineBar } from '../types/KlineBar'
+import EmptyState from './EmptyState.vue'
+import ErrorState from './ErrorState.vue'
 import KlinePlaceholder from './KlinePlaceholder.vue'
+import SkeletonState from './SkeletonState.vue'
 import StatCard from './StatCard.vue'
-import { backtestKPIs, mockKlineData } from '../data/mockData'
 
-const kpis = backtestKPIs
-const klineData = mockKlineData
+defineEmits<{ (event: 'retry'): void }>()
 
-// Icon components
+const props = withDefaults(defineProps<{
+  data: BacktestLatestResponse | null
+  loading?: boolean
+  error?: string | null
+}>(), {
+  loading: false,
+  error: null
+})
+
+const kpis = computed(() => ({
+  totalReturn: props.data?.summary.totalReturn ?? 0,
+  annualizedReturn: props.data?.summary.annualizedReturn ?? 0,
+  sharpeRatio: props.data?.summary.sharpeRatio ?? 0,
+  maxDrawdown: props.data?.summary.maxDrawdown ?? 0,
+  winRate: props.data?.summary.winRate ?? 0,
+  profitFactor: props.data?.summary.profitFactor ?? 0,
+  totalTrades: props.data?.summary.totalTrades ?? 0,
+  avgHoldingDays: props.data?.summary.avgHoldingDays ?? 0
+}))
+
+const klineData = computed<KlineBar[]>(() => props.data?.kline ?? [])
+
 const RefreshIcon = () => h('svg', {
   width: 16,
   height: 16,
@@ -271,7 +302,7 @@ const TargetIcon = () => h('svg', {
   .kpi-grid {
     grid-template-columns: repeat(2, 1fr);
   }
-  
+
   .secondary-stats {
     flex-wrap: wrap;
   }

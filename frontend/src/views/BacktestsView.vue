@@ -1,8 +1,8 @@
 <template>
   <section class="view">
     <div class="container">
-      <h1 class="view-title">Backtests</h1>
-      <p class="view-subtitle">Review recent backtest runs and performance.</p>
+      <h1 class="view-title">{{ $t('pages.backtestsTitle') }}</h1>
+      <p class="view-subtitle">{{ $t('pages.backtestsSubtitle') }}</p>
     </div>
   </section>
 </template>

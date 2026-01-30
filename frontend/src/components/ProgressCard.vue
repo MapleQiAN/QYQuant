@@ -3,20 +3,19 @@
     <div class="card-header">
       <h3 class="card-title">
         <ChartIcon class="title-icon" />
-        统计数据
+        {{ $t('progress.title') }}
       </h3>
       <select class="period-select">
-        <option value="7d">近 7 天</option>
-        <option value="30d" selected>近 30 天</option>
-        <option value="90d">近 90 天</option>
+        <option value="7d">{{ $t('progress.period7') }}</option>
+        <option value="30d" selected>{{ $t('progress.period30') }}</option>
+        <option value="90d">{{ $t('progress.period90') }}</option>
       </select>
     </div>
-    
+
     <div class="stats-grid">
-      <!-- Backtest Progress -->
       <div class="stat-block">
         <div class="stat-header">
-          <span class="stat-label">回测次数</span>
+          <span class="stat-label">{{ $t('progress.backtestCount') }}</span>
           <span class="stat-value">{{ stats.backtestCount }}/{{ stats.backtestTarget }}</span>
         </div>
         <div class="progress-bar">
@@ -26,16 +25,15 @@
           ></div>
         </div>
         <div class="stat-footer">
-          <span>本月免费额度</span>
+          <span>{{ $t('progress.monthlyQuota') }}</span>
           <span class="highlight">{{ backtestProgress.toFixed(0) }}%</span>
         </div>
       </div>
-      
-      <!-- Robot Runtime -->
+
       <div class="stat-block">
         <div class="stat-header">
-          <span class="stat-label">机器人运行</span>
-          <span class="stat-value">{{ stats.robotRuntime }} {{ stats.robotRuntimeUnit }}</span>
+          <span class="stat-label">{{ $t('progress.robotRuntime') }}</span>
+          <span class="stat-value">{{ stats.robotRuntime }} {{ $t('progress.runtimeUnit') }}</span>
         </div>
         <div class="runtime-visual">
           <div class="runtime-bar">
@@ -47,21 +45,20 @@
           </div>
         </div>
         <div class="stat-footer">
-          <span>活跃机器人</span>
-          <span class="highlight">4 个</span>
+          <span>{{ $t('progress.activeBots') }}</span>
+          <span class="highlight">{{ stats.activeBots }}</span>
         </div>
       </div>
-      
-      <!-- Total Profit -->
+
       <div class="stat-block profit-block">
         <div class="stat-header">
-          <span class="stat-label">累计收益</span>
+          <span class="stat-label">{{ $t('progress.totalProfit') }}</span>
           <span :class="['profit-change', { positive: stats.profitChange >= 0 }]">
             {{ stats.profitChange >= 0 ? '+' : '' }}{{ stats.profitChange }}%
           </span>
         </div>
         <div class="profit-value">
-          ¥{{ stats.totalProfit.toLocaleString('zh-CN', { minimumFractionDigits: 2 }) }}
+          {{ formatCurrency(stats.totalProfit, true) }}
         </div>
         <div class="profit-chart">
           <svg class="mini-chart" viewBox="0 0 120 40" preserveAspectRatio="none">
@@ -71,10 +68,7 @@
                 <stop offset="100%" stop-color="var(--color-success)" stop-opacity="0"/>
               </linearGradient>
             </defs>
-            <path
-              :d="areaPath"
-              fill="url(#profitGradient)"
-            />
+            <path :d="areaPath" fill="url(#profitGradient)" />
             <path
               :d="linePath"
               fill="none"
@@ -87,7 +81,7 @@
         </div>
       </div>
     </div>
-    
+
     <div class="quick-stats">
       <div class="quick-stat-item">
         <div class="quick-stat-icon success">
@@ -95,7 +89,7 @@
         </div>
         <div class="quick-stat-content">
           <span class="quick-stat-value">68%</span>
-          <span class="quick-stat-label">平均胜率</span>
+          <span class="quick-stat-label">{{ $t('progress.avgWinRate') }}</span>
         </div>
       </div>
       <div class="quick-stat-item">
@@ -103,8 +97,8 @@
           <ClockIcon />
         </div>
         <div class="quick-stat-content">
-          <span class="quick-stat-value">2.3天</span>
-          <span class="quick-stat-label">平均持仓</span>
+          <span class="quick-stat-value">2.3</span>
+          <span class="quick-stat-label">{{ $t('progress.avgHolding') }}</span>
         </div>
       </div>
       <div class="quick-stat-item">
@@ -113,7 +107,7 @@
         </div>
         <div class="quick-stat-content">
           <span class="quick-stat-value">1.85</span>
-          <span class="quick-stat-label">夏普比率</span>
+          <span class="quick-stat-label">{{ $t('progress.sharpeRatio') }}</span>
         </div>
       </div>
     </div>
@@ -122,25 +116,28 @@
 
 <script setup lang="ts">
 import { computed, h } from 'vue'
-import { mockUserStats } from '../data/mockData'
+import { useI18n } from 'vue-i18n'
 
-const stats = mockUserStats
+const { locale } = useI18n()
 
-const backtestProgress = computed(() => {
-  return (stats.backtestCount / stats.backtestTarget) * 100
-})
+const stats = {
+  backtestCount: 45,
+  backtestTarget: 100,
+  robotRuntime: 892,
+  activeBots: 4,
+  totalProfit: 28650.8,
+  profitChange: 12.5
+}
 
-const activeSegments = computed(() => {
-  return Math.ceil((stats.robotRuntime / 1000) * 7)
-})
+const backtestProgress = computed(() => (stats.backtestCount / stats.backtestTarget) * 100)
+const activeSegments = computed(() => Math.ceil((stats.robotRuntime / 1000) * 7))
 
-// Mini chart paths
 const chartData = [20, 25, 22, 30, 28, 35, 32, 38, 36, 40]
 const linePath = computed(() => {
   const width = 120
   const height = 40
   const step = width / (chartData.length - 1)
-  
+
   return chartData.map((value, index) => {
     const x = index * step
     const y = height - (value / 50) * height
@@ -152,15 +149,21 @@ const areaPath = computed(() => {
   const width = 120
   const height = 40
   const step = width / (chartData.length - 1)
-  
+
   const points = chartData.map((value, index) => {
     const x = index * step
     const y = height - (value / 50) * height
     return index === 0 ? `M ${x} ${y}` : `L ${x} ${y}`
   }).join(' ')
-  
+
   return `${points} L ${width} ${height} L 0 ${height} Z`
 })
+
+function formatCurrency(value: number, withDecimals = false) {
+  const localeValue = locale.value === 'zh' ? 'zh-CN' : 'en-US'
+  const options = withDecimals ? { minimumFractionDigits: 2 } : {}
+  return value.toLocaleString(localeValue, options)
+}
 
 const ChartIcon = () => h('svg', {
   width: 18,
