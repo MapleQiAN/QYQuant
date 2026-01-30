@@ -24,3 +24,5 @@ export function createHttpClient() {
     }
   }
 }
+
+export type HttpClient = ReturnType<typeof createHttpClient>
