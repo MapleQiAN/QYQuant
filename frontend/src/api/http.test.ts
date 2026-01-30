@@ -5,7 +5,9 @@ vi.mock('axios', () => {
   return {
     default: {
       create: () => ({
-        request: vi.fn().mockResolvedValue({ data: { ok: true } }),
+        request: vi.fn().mockResolvedValue({
+          data: { code: 0, message: 'ok', data: { ok: true } }
+        }),
         interceptors: { request: { use: vi.fn() }, response: { use: vi.fn() } }
       })
     }
@@ -13,7 +15,7 @@ vi.mock('axios', () => {
 })
 
 describe('http client', () => {
-  it('returns data from request', async () => {
+  it('unwraps api envelope', async () => {
     const client = createHttpClient()
     const data = await client.request({ method: 'get', url: '/ping' })
     expect(data).toEqual({ ok: true })
