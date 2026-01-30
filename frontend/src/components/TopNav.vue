@@ -3,10 +3,7 @@
     <div class="nav-content">
       <div class="nav-logo">
         <div class="logo-icon">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-            <path d="M3 17L9 11L13 15L21 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-            <path d="M17 7H21V11" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-          </svg>
+          <img :src="logoUrl" alt="QY Quant Logo" class="logo-image" />
         </div>
         <span class="logo-text">QY Quant</span>
       </div>
@@ -54,6 +51,7 @@ import { computed, h } from 'vue'
 import { storeToRefs } from 'pinia'
 import { RouterLink, useRoute } from 'vue-router'
 import { useUserStore } from '../stores/user'
+import logoUrl from '../logo.png'
 
 const route = useRoute()
 
@@ -190,12 +188,15 @@ function getIcon(iconName: string) {
 .logo-icon {
   width: 40px;
   height: 40px;
-  background: var(--color-primary);
-  border-radius: var(--radius-md);
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--color-text-inverse);
+}
+
+.logo-image {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
 }
 
 .logo-text {
