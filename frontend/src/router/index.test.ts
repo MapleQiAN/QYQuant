@@ -7,4 +7,9 @@ describe('router', () => {
     const hasDashboard = router.getRoutes().some((route) => route.path === '/')
     expect(hasDashboard).toBe(true)
   })
+
+  it('contains settings route', () => {
+    const hasSettings = router.getRoutes().some((route) => route.path === '/settings')
+    expect(hasSettings).toBe(true)
+  })
 })

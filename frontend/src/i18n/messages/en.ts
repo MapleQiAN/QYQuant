@@ -7,6 +7,13 @@ const en = {
     language: 'Language',
     retry: 'Retry'
   },
+  settings: {
+    title: 'Settings',
+    language: 'Language',
+    languageHint: 'Choose your interface language.',
+    zh: '中文',
+    en: 'EN'
+  },
   nav: {
     dashboard: 'Dashboard',
     backtests: 'Backtests',
@@ -130,3 +137,4 @@ const en = {
 }
 
 export default en
+

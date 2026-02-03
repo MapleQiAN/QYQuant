@@ -26,10 +26,6 @@
           <input type="text" :placeholder="$t('common.searchPlaceholder')" class="search-input" />
         </div>
 
-        <button class="lang-toggle" type="button" @click="toggleLocale">
-          {{ $t('common.language') }}: {{ localeLabel }}
-        </button>
-
         <button class="nav-btn notification-btn">
           <BellIcon />
           <span v-if="profile.notifications > 0" class="notification-badge">
@@ -47,7 +43,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, h } from 'vue'
+import { h } from 'vue'
 import { storeToRefs } from 'pinia'
 import { RouterLink, useRoute } from 'vue-router'
 import { useUserStore } from '../stores/user'
@@ -63,13 +59,7 @@ const navItems = [
 ]
 
 const userStore = useUserStore()
-const { profile, locale } = storeToRefs(userStore)
-
-const localeLabel = computed(() => (locale.value === 'zh' ? '中文' : 'EN'))
-
-function toggleLocale() {
-  userStore.setLocale(locale.value === 'zh' ? 'en' : 'zh')
-}
+const { profile } = storeToRefs(userStore)
 
 const ChartIcon = () => h('svg', {
   width: 18,
@@ -277,22 +267,6 @@ function getIcon(iconName: string) {
 
 .search-input::placeholder {
   color: var(--color-text-muted);
-}
-
-.lang-toggle {
-  border: 1px solid var(--color-border);
-  background: var(--color-background);
-  color: var(--color-text-secondary);
-  padding: var(--spacing-xs) var(--spacing-sm);
-  border-radius: var(--radius-full);
-  font-size: var(--font-size-xs);
-  cursor: pointer;
-  transition: all var(--transition-fast);
-}
-
-.lang-toggle:hover {
-  color: var(--color-text-primary);
-  border-color: var(--color-primary-light);
 }
 
 .nav-btn {

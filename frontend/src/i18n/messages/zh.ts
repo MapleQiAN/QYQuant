@@ -7,6 +7,13 @@ const zh = {
     language: '语言',
     retry: '重试'
   },
+  settings: {
+    title: '设置',
+    language: '语言',
+    languageHint: '选择界面语言。',
+    zh: '中文',
+    en: 'EN'
+  },
   nav: {
     dashboard: '概览',
     backtests: '回测',
@@ -130,3 +137,4 @@ const zh = {
 }
 
 export default zh
+
