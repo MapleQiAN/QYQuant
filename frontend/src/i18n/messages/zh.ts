@@ -1,4 +1,4 @@
-﻿const zh = {
+const zh = {
   common: {
     settings: '设置',
     newStrategy: '新建策略',

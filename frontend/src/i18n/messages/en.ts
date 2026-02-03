@@ -1,4 +1,4 @@
-﻿const en = {
+const en = {
   common: {
     settings: 'Settings',
     newStrategy: 'New Strategy',
