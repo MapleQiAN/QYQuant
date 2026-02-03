@@ -8,10 +8,10 @@
           <p class="page-subtitle">{{ $t('dashboard.subtitle') }}</p>
         </div>
         <div class="header-actions">
-          <button class="btn btn-secondary">
+          <RouterLink class="btn btn-secondary" to="/settings">
             <SettingsIcon />
             {{ $t('common.settings') }}
-          </button>
+          </RouterLink>
           <button class="btn btn-primary">
             <PlusIcon />
             {{ $t('common.newStrategy') }}
@@ -67,6 +67,7 @@
 
 <script setup lang="ts">
 import { computed, h, onMounted } from 'vue'
+import { RouterLink } from 'vue-router'
 import BacktestCard from '../components/BacktestCard.vue'
 import ForumMiniCard from '../components/ForumMiniCard.vue'
 import ProgressCard from '../components/ProgressCard.vue'
