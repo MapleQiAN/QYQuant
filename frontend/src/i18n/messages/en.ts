@@ -1,4 +1,4 @@
-const en = {
+﻿const en = {
   common: {
     settings: 'Settings',
     newStrategy: 'New Strategy',
@@ -6,6 +6,13 @@ const en = {
     searchPlaceholder: 'Search strategies, bots...',
     language: 'Language',
     retry: 'Retry'
+  },
+  settings: {
+    title: 'Settings',
+    language: 'Language',
+    languageHint: 'Choose your interface language.',
+    zh: '中文',
+    en: 'EN'
   },
   nav: {
     dashboard: 'Dashboard',
@@ -130,3 +137,4 @@ const en = {
 }
 
 export default en
+
