@@ -88,6 +88,8 @@ cd QYQuant
 ![Docker](https://img.shields.io/badge/Docker-支持-2496ED?style=for-the-badge&logo=docker&logoColor=white)
 ![Docker Compose](https://img.shields.io/badge/Docker%20Compose-支持-2496ED?style=for-the-badge&logo=docker&logoColor=white)
 
+一键部署全部服务：前端 + 后端 + 数据库 + Redis + Celery
+
 </div>
 
 #### 🎯 快速启动
@@ -112,17 +114,17 @@ chmod +x deploy.sh
 cp .env.example .env
 # 编辑 .env 文件，修改密码和密钥配置
 
-# 2. 启动所有服务
-docker-compose up -d
+# 2. 启动所有服务（前端、后端、数据库、Redis、Celery）
+docker compose up -d
 
 # 3. 初始化数据库（可选）
-docker-compose exec backend flask db upgrade
+docker compose exec backend flask db upgrade
 
 # 4. 查看服务状态
-docker-compose ps
+docker compose ps
 
 # 5. 查看日志
-docker-compose logs -f
+docker compose logs -f
 ```
 
 #### 📊 服务说明
@@ -150,23 +152,23 @@ Docker 部署包含以下服务：
 
 ```bash
 # 停止所有服务
-docker-compose down
+docker compose down
 
 # 重启服务
-docker-compose restart
+docker compose restart
 
 # 重新构建镜像
-docker-compose build --no-cache
+docker compose build --no-cache
 
 # 查看服务日志
-docker-compose logs -f [服务名]
+docker compose logs -f [服务名]
 
 # 进入容器
-docker-compose exec backend bash
-docker-compose exec postgres psql -U qyquant -d qyquant
+docker compose exec backend bash
+docker compose exec postgres psql -U qyquant -d qyquant
 
 # 清理数据（谨慎操作）
-docker-compose down -v  # 删除所有数据卷
+docker compose down -v  # 删除所有数据卷
 ```
 
 #### 🔧 生产环境部署建议
@@ -185,7 +187,7 @@ docker-compose down -v  # 删除所有数据卷
 
 ```bash
 cd backend
-docker-compose up -d  # 启动 PostgreSQL + Redis
+docker compose up -d  # 启动 PostgreSQL + Redis
 python -m venv .venv
 
 # Windows

@@ -61,15 +61,15 @@ check_env_file() {
 
 # 构建镜像
 build_images() {
-    print_info "开始构建 Docker 镜像..."
-    docker-compose build --no-cache
+    print_info "开始构建 Docker 镜像（包含前端、后端、Celery 等全部服务）..."
+    docker compose build --no-cache
     print_info "镜像构建完成"
 }
 
 # 启动服务
 start_services() {
-    print_info "启动所有服务..."
-    docker-compose up -d
+    print_info "启动所有服务（前端、后端、数据库、Redis、Celery）..."
+    docker compose up -d
 
     # 等待服务启动
     print_info "等待服务启动..."
@@ -77,7 +77,7 @@ start_services() {
 
     # 检查服务状态
     print_info "服务状态："
-    docker-compose ps
+    docker compose ps
 }
 
 # 初始化数据库
@@ -85,10 +85,10 @@ init_database() {
     print_info "初始化数据库..."
 
     # 运行数据库迁移
-    docker-compose exec -T backend flask db upgrade || print_warn "数据库迁移失败（可能已经执行过）"
+    docker compose exec -T backend flask db upgrade || print_warn "数据库迁移失败（可能已经执行过）"
 
     # 创建默认管理员账号
-    docker-compose exec -T backend python -c "
+    docker compose exec -T backend python -c "
 from app import create_app
 from app.extensions import db
 from app.models.user import User
@@ -126,10 +126,10 @@ show_access_info() {
     print_warn "生产环境请立即修改默认密码！"
     echo ""
     echo "常用命令："
-    echo -e "  查看日志: ${GREEN}docker-compose logs -f${NC}"
-    echo -e "  停止服务: ${GREEN}docker-compose down${NC}"
-    echo -e "  重启服务: ${GREEN}docker-compose restart${NC}"
-    echo -e "  查看状态: ${GREEN}docker-compose ps${NC}"
+    echo -e "  查看日志: ${GREEN}docker compose logs -f${NC}"
+    echo -e "  停止服务: ${GREEN}docker compose down${NC}"
+    echo -e "  重启服务: ${GREEN}docker compose restart${NC}"
+    echo -e "  查看状态: ${GREEN}docker compose ps${NC}"
     echo "============================================"
 }
 

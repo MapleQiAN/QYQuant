@@ -59,15 +59,24 @@ function Test-EnvFile {
 
 # 构建镜像
 function Build-Images {
-    Write-Info "开始构建 Docker 镜像..."
-    docker-compose build --no-cache
+    Write-Info "开始构建 Docker 镜像（包含前端、后端、Celery 等全部服务）..."
+    docker compose build --no-cache
+    if ($LASTEXITCODE -ne 0) {
+        Write-Error "镜像构建失败"
+        exit 1
+    }
     Write-Info "镜像构建完成"
 }
 
 # 启动服务
 function Start-Services {
-    Write-Info "启动所有服务..."
-    docker-compose up -d
+    Write-Info "启动所有服务（前端、后端、数据库、Redis、Celery）..."
+    docker compose up -d
+
+    if ($LASTEXITCODE -ne 0) {
+        Write-Error "服务启动失败"
+        exit 1
+    }
 
     # 等待服务启动
     Write-Info "等待服务启动..."
@@ -75,7 +84,7 @@ function Start-Services {
 
     # 检查服务状态
     Write-Info "服务状态："
-    docker-compose ps
+    docker compose ps
 }
 
 # 初始化数据库
@@ -84,7 +93,7 @@ function Initialize-Database {
 
     # 运行数据库迁移
     try {
-        docker-compose exec -T backend flask db upgrade
+        docker compose exec -T backend flask db upgrade
     }
     catch {
         Write-Warn "数据库迁移失败（可能已经执行过）"
@@ -92,7 +101,7 @@ function Initialize-Database {
 
     # 创建默认管理员账号
     try {
-        docker-compose exec -T backend python -c @"
+        docker compose exec -T backend python -c @"
 from app import create_app
 from app.extensions import db
 from app.models.user import User
@@ -142,13 +151,13 @@ function Show-AccessInfo {
     Write-Host ""
     Write-Host "常用命令："
     Write-Host "  查看日志: " -NoNewline
-    Write-Host "docker-compose logs -f" -ForegroundColor Green
+    Write-Host "docker compose logs -f" -ForegroundColor Green
     Write-Host "  停止服务: " -NoNewline
-    Write-Host "docker-compose down" -ForegroundColor Green
+    Write-Host "docker compose down" -ForegroundColor Green
     Write-Host "  重启服务: " -NoNewline
-    Write-Host "docker-compose restart" -ForegroundColor Green
+    Write-Host "docker compose restart" -ForegroundColor Green
     Write-Host "  查看状态: " -NoNewline
-    Write-Host "docker-compose ps" -ForegroundColor Green
+    Write-Host "docker compose ps" -ForegroundColor Green
     Write-Host "============================================" -ForegroundColor Cyan
 }
 
