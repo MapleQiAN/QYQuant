@@ -77,7 +77,7 @@ QYQuant 是一个全栈量化交易平台，提供策略回测、模拟交易、
 ### 📥 1. 克隆项目
 
 ```bash
-git clone https://github.com/yourusername/QYQuant.git
+git clone https://github.com/MapleQiAN/QYQuant.git
 cd QYQuant
 ```
 
@@ -525,8 +525,8 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 <div align="center">
 
-- 🐛 **报告问题**: [GitHub Issues](https://github.com/yourusername/QYQuant/issues)
-- 💬 **讨论交流**: [GitHub Discussions](https://github.com/yourusername/QYQuant/discussions)
+- 🐛 **报告问题**: [GitHub Issues](https://github.com/MapleQiAN/QYQuant/issues)
+- 💬 **讨论交流**: [GitHub Discussions](https://github.com/MapleQiAN/QYQuant/discussions)
 - 📧 **邮件联系**: support@qyquant.com
 
 </div>
@@ -634,7 +634,7 @@ npm run dev
 
 Made with ❤️ by QYQuant Team
 
-![GitHub stars](https://img.shields.io/github/stars/yourusername/QYQuant?style=social)
-![GitHub forks](https://img.shields.io/github/forks/yourusername/QYQuant?style=social)
+![GitHub stars](https://img.shields.io/github/stars/MapleQiAN/QYQuant?style=social)
+![GitHub forks](https://img.shields.io/github/forks/MapleQiAN/QYQuant?style=social)
 
 </div>
