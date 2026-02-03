@@ -1,56 +1,640 @@
-﻿# QY_Quant
+<div align="center">
 
-Vue 3 + Vite 前端，Flask 后端 API。  
-Vue 3 + Vite frontend with a Flask backend API.
+<img src="frontend/src/logo.png" alt="QYQuant Logo" width="120" height="120"/>
 
-## 目录 | Table of Contents
-- 项目结构 | Project Structure
-- 环境要求 | Requirements
-- 快速开始 | Quick Start
-- 开发说明 | Development Notes
-- 接口 | API
-- 常见问题 | Troubleshooting
+# QYQuant 量化交易平台
 
-## 项目结构 | Project Structure
-- `frontend/` — Vue 3 + Vite 前端应用 | Vue 3 + Vite app
-- `backend/` — Flask 后端 API | Flask API
+**专业的数字货币量化交易回测与模拟交易平台**
 
-## 环境要求 | Requirements
-- Node.js 18+（建议 18/20）| Node.js 18+ (recommended 18/20)
-- Python 3.10+
-- npm
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Vue 3](https://img.shields.io/badge/Vue-3.4-42b883?logo=vue.js&logoColor=white)](https://vuejs.org/)
+[![Flask](https://img.shields.io/badge/Flask-3.0-000000?logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
+[![Python](https://img.shields.io/badge/Python-3.10+-blue?logo=python&logoColor=white)](https://www.python.org/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.3-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 
-## 快速开始 | Quick Start
+[功能特性](#-功能特性) • [快速开始](#-快速开始) • [技术架构](#-技术架构) • [API 文档](#-api-文档) • [开发指南](#-开发指南)
 
-### 后端 | Backend (Flask)
-```powershell
-cd backend
-python -m venv .venv
-.\.venv\Scripts\Activate.ps1
-pip install -r requirements.txt
-python app.py
+[English](#english) | [中文](#中文)
+
+</div>
+
+---
+
+## 中文
+
+### 📖 项目简介
+
+QYQuant 是一个全栈量化交易平台，提供策略回测、模拟交易、社区交流等核心功能。采用前后端分离架构，支持中英文双语界面。
+
+### ✨ 功能特性
+
+#### 核心功能
+
+| 功能 | 描述 |
+|:---:|:---|
+| 🎯 **策略管理** | 创建、编辑、版本控制交易策略 |
+| 📈 **历史回测** | 基于 Celery 异步任务的高性能回测引擎 |
+| 🤖 **模拟交易** | 纸面交易机器人，实时监控策略表现 |
+| 💬 **社区论坛** | 策略分享、评论、点赞、打赏功能 |
+| 📁 **文件管理** | 策略文件上传下载，支持版本管理 |
+| 🔐 **用户系统** | JWT 认证、用户资料、关注功能 |
+
+#### 技术亮点
+
+<div align="center">
+
+![Vue](https://img.shields.io/badge/Vue-3-42b883?style=for-the-badge&logo=vue.js&logoColor=white)
+![TypeScript](https://img.shields.io/badge/TypeScript-5.3-3178C6?style=for-the-badge&logo=typescript&logoColor=white)
+![Pinia](https://img.shields.io/badge/Pinia-Store-ffcd69?style=for-the-badge&logo=pinia&logoColor=white)
+![Flask](https://img.shields.io/badge/Flask-API-000000?style=for-the-badge&logo=flask&logoColor=white)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-15-336791?style=for-the-badge&logo=postgresql&logoColor=white)
+![Redis](https://img.shields.io/badge/Redis-7-DC382D?style=for-the-badge&logo=redis&logoColor=white)
+![Celery](https://img.shields.io/badge/Celery-5.3-37814A?style=for-the-badge&logo=celery&logoColor=white)
+
+</div>
+
+- 🎨 **现代化 UI** - Vue 3 组合式 API + TypeScript
+- 🌍 **国际化** - 内置中英文双语支持
+- 📊 **响应式设计** - 完美适配桌面端和移动端
+- 🔐 **安全认证** - JWT Token + 加密存储
+- ⚡ **异步任务** - Celery + Redis 任务队列
+- 🗄️ **数据持久化** - PostgreSQL + SQLAlchemy ORM
+- 🧪 **完善测试** - Vitest (前端) + Pytest (后端)
+
+---
+
+## 🚀 快速开始
+
+### 📋 环境要求
+
+| 依赖 | 版本要求 | 图标 |
+|------|---------|------|
+| Node.js | 18+ (推荐 18/20) | ![Node.js](https://img.shields.io/badge/Node.js-18+-339933?logo=node.js&logoColor=white) |
+| Python | 3.10+ | ![Python](https://img.shields.io/badge/Python-3.10+-blue?logo=python&logoColor=white) |
+| npm | 最新版 | ![npm](https://img.shields.io/badge/npm-latest-CB3837?logo=npm&logoColor=white) |
+| Docker | (可选，用于数据库服务) | ![Docker](https://img.shields.io/badge/Docker-Optional-2496ED?logo=docker&logoColor=white) |
+
+### 📥 1. 克隆项目
+
+```bash
+git clone https://github.com/yourusername/QYQuant.git
+cd QYQuant
 ```
 
-默认地址 | Default URL: `http://127.0.0.1:5000`
+### 🔧 2. 启动后端服务
 
-### 前端 | Frontend (Vue + Vite)
-```powershell
+#### 方式一：使用 Docker (推荐)
+
+```bash
+cd backend
+docker-compose up -d  # 启动 PostgreSQL + Redis
+python -m venv .venv
+
+# Windows
+.\.venv\Scripts\Activate.ps1
+
+# Linux/Mac
+source .venv/bin/activate
+
+pip install -r requirements.txt
+flask --app app run
+```
+
+#### 方式二：本地数据库
+
+修改 `backend/.env.development` 中的数据库配置，然后运行：
+
+```bash
+cd backend
+pip install -r requirements.txt
+flask --app app run
+```
+
+<div align="center">
+
+**🌐 后端地址**: `http://127.0.0.1:5000`
+
+**🔑 默认账号**: `admin / admin123` (运行 `python scripts/seed.py` 创建)
+
+</div>
+
+### 🎨 3. 启动前端服务
+
+```bash
 cd frontend
 npm install
 npm run dev
 ```
 
-默认地址 | Default URL: `http://127.0.0.1:5173`
+<div align="center">
 
-## 开发说明 | Development Notes
-- Vite 已配置代理 | Proxy configured: `/api` → `http://127.0.0.1:5000`
+**🌐 前端地址**: `http://127.0.0.1:5173`
 
-## 接口 | API
-- `GET /api/health`
-- `GET /api/hello`
+</div>
 
-## 常见问题 | Troubleshooting
-- **PowerShell 无法激活虚拟环境 | Cannot activate venv**
-  - 运行 `Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass` 后再执行 `Activate.ps1`
-- **端口被占用 | Port already in use**
-  - 修改后端监听端口或 Vite 配置中的代理目标
+### 🎉 4. 访问应用
+
+打开浏览器访问 `http://127.0.0.1:5173`，开始使用 QYQuant！
+
+---
+
+## 🏗️ 技术架构
+
+### 📱 前端技术栈
+
+```text
+Vue 3 + Vite
+├── 🎨 UI 框架: Vue 3 Composition API
+├── 🔷 类型系统: TypeScript 5.3
+├── 📦 状态管理: Pinia
+├── 🛣️ 路由管理: Vue Router 4
+├── 🌐 HTTP 客户端: Axios
+├── 🌍 国际化: Vue I18n
+├── 🔔 通知提示: Vue Toastification
+├── ⚡ 构建工具: Vite 5
+├── 🧪 测试框架: Vitest + Vue Test Utils
+└── 🎭 Mock 服务: MSW (开发中)
+```
+
+### 🔧 后端技术栈
+
+```text
+Flask + Python 3.10+
+├── 🌐 Web 框架: Flask 3.0
+├── 🗄️ ORM: SQLAlchemy
+├── 🔄 数据库迁移: Alembic (Flask-Migrate)
+├── 📚 API 文档: Flask-Smorest (OpenAPI 3.0)
+├── 🔐 认证授权: Flask-JWT-Extended
+├── ⚙️ 异步任务: Celery 5.3
+├── 🔴 缓存队列: Redis 7
+├── 🐘 数据库: PostgreSQL 15
+├── 🔒 加密库: Cryptography (Fernet)
+└── 🧪 测试框架: Pytest + Pytest-Flask
+```
+
+### 📂 项目结构
+
+```text
+QYQuant/
+├── 📁 frontend/                 # Vue 3 前端应用
+│   ├── src/
+│   │   ├── 📡 api/             # API 客户端
+│   │   ├── 🎨 components/      # Vue 组件
+│   │   ├── 📦 stores/          # Pinia 状态管理
+│   │   ├── 👁️ views/           # 页面视图
+│   │   ├── 🔷 types/           # TypeScript 类型
+│   │   ├── 🌍 i18n/            # 国际化配置
+│   │   └── 🛣️ router/          # 路由配置
+│   ├── 📦 package.json
+│   └── ⚙️ vite.config.ts
+│
+├── 📁 backend/                 # Flask 后端 API
+│   ├── app/
+│   │   ├── 📋 blueprints/      # API 蓝图模块
+│   │   ├── 🗃️ models/          # 数据模型
+│   │   ├── 📄 schemas/         # Marshmallow 序列化
+│   │   ├── 📊 backtest/        # 回测引擎
+│   │   ├── ⚙️ tasks/           # Celery 任务
+│   │   ├── 🛠️ utils/           # 工具函数
+│   │   ├── ⚙️ config.py        # 配置管理
+│   │   └── 🔌 extensions.py    # Flask 扩展
+│   ├── 🔄 migrations/          # 数据库迁移
+│   ├── 🧪 tests/               # 后端测试
+│   ├── 📜 scripts/             # 脚本工具
+│   ├── 📦 requirements.txt
+│   └── 🐳 docker-compose.yml
+│
+└── 📁 docs/                    # 项目文档
+    ├── 📄 api-contract.md
+    └── 📋 plans/               # 设计文档
+```
+
+---
+
+## 📡 API 文档
+
+### 🌐 基础信息
+
+<div align="center">
+
+**Base URL**: `/api`
+
+**认证方式**: 🔑 JWT Bearer Token
+
+**响应格式**: 📦 统一信封格式
+
+</div>
+
+### ✅ 成功响应
+
+```json
+{
+  "code": 0,
+  "message": "ok",
+  "data": { /* 业务数据 */ },
+  "request_id": "uuid"
+}
+```
+
+### ❌ 错误响应
+
+```json
+{
+  "code": "40001",
+  "message": "参数验证失败",
+  "details": { /* 详细信息 */ }
+}
+```
+
+### 🔌 核心接口
+
+#### 🔐 认证模块 `/api/auth`
+
+| 方法 | 路径 | 描述 |
+|:---:|:-----|:-----|
+| POST | `/login` | 用户登录，返回 access_token |
+
+#### 👤 用户模块 `/api/users`
+
+| 方法 | 路径 | 描述 |
+|:---:|:-----|:-----|
+| GET | `/me` | 获取当前用户信息 |
+
+#### 📊 策略模块 `/api/strategies`
+
+| 方法 | 路径 | 描述 |
+|:---:|:-----|:-----|
+| GET | `/recent` | 获取最近策略列表 |
+
+#### 📈 回测模块 `/api/backtests`
+
+| 方法 | 路径 | 描述 |
+|:---:|:-----|:-----|
+| POST | `/run` | 创建回测任务，返回 job_id |
+| GET | `/job/<job_id>` | 查询任务状态和结果 |
+| GET | `/latest` | 获取最新回测概览 |
+
+#### 🤖 机器人模块 `/api/bots`
+
+| 方法 | 路径 | 描述 |
+|:---:|:-----|:-----|
+| GET | `/recent` | 获取最近运行的机器人 |
+| POST | `/` | 创建新的机器人实例 |
+| PATCH | `/<id>/status` | 更新机器人运行状态 |
+| GET | `/<id>/performance` | 获取机器人绩效数据 |
+
+#### 💬 论坛模块 `/api/forum`
+
+| 方法 | 路径 | 描述 |
+|:---:|:-----|:-----|
+| GET | `/hot` | 获取热门帖子 |
+| POST | `/posts` | 创建新帖子 |
+| POST | `/posts/<id>/comments` | 发表评论 |
+| POST | `/posts/<id>/like` | 点赞/取消点赞 |
+
+#### 📁 文件模块 `/api/files`
+
+| 方法 | 路径 | 描述 |
+|:---:|:-----|:-----|
+| POST | `/` | 上传文件 |
+| GET | `/<id>` | 下载文件 |
+
+<div align="center">
+
+📖 **详细 API 文档请访问**: [`/api/docs`](http://localhost:5000/api/docs) (Swagger UI)
+
+</div>
+
+---
+
+## 🛠️ 开发指南
+
+### ⚙️ 环境变量配置
+
+#### 🔧 后端 `backend/.env.development`
+
+```env
+FLASK_ENV=development
+FLASK_DEBUG=1
+DATABASE_URL=postgresql://postgres:postgres@localhost:5432/qyquant
+SECRET_KEY=your-secret-key-here
+JWT_SECRET_KEY=your-jwt-secret-key
+CORS_ORIGINS=http://localhost:5173
+REDIS_URL=redis://localhost:6379/0
+```
+
+#### 🎨 前端 `frontend/.env.development`
+
+```env
+VITE_API_BASE_URL=http://localhost:5000/api
+```
+
+### 🗄️ 数据库迁移
+
+```bash
+cd backend
+
+# 创建迁移
+flask db migrate -m "描述信息"
+
+# 执行迁移
+flask db upgrade
+
+# 回滚迁移
+flask db downgrade
+```
+
+### 🧪 运行测试
+
+#### 🔧 后端测试
+
+```bash
+cd backend
+pytest                          # 运行所有测试
+pytest tests/test_backtests.py  # 运行特定测试
+pytest -v                       # 详细输出
+pytest --cov=app                # 生成覆盖率报告
+```
+
+#### 🎨 前端测试
+
+```bash
+cd frontend
+npm test               # 运行所有测试
+npm run test:ui        # Vitest UI 模式
+```
+
+### ⚙️ Celery 任务队列
+
+```bash
+cd backend
+
+# 启动 Celery Worker
+celery -A app.celery_app worker --loglevel=info
+
+# 启动 Celery Beat (定时任务)
+celery -A app.celery_app beat --loglevel=info
+```
+
+### 💻 可用命令
+
+#### 🔧 后端 Make 命令
+
+```bash
+cd backend
+make dev    # 启动开发服务器
+```
+
+#### 🎨 前端 npm 脚本
+
+```bash
+cd frontend
+npm run dev       # 开发服务器
+npm run build     # 生产构建
+npm run preview   # 预览构建结果
+npm run test      # 运行测试
+```
+
+---
+
+## 🐛 故障排除
+
+### ❓ PowerShell 无法激活虚拟环境
+
+```powershell
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
+.\.venv\Scripts\Activate.ps1
+```
+
+### 🔌 端口被占用
+
+**修改后端端口**:
+
+```python
+# backend/app/config.py
+DEBUG = True
+PORT = 5001  # 修改端口
+```
+
+**修改前端代理**:
+
+```typescript
+// frontend/vite.config.ts
+server: {
+  proxy: {
+    '/api': {
+      target: 'http://127.0.0.1:5001', // 修改目标端口
+    }
+  }
+}
+```
+
+### 🗄️ 数据库连接失败
+
+<div align="center">
+
+1️⃣ 检查 Docker 容器状态: `docker ps`
+
+2️⃣ 检查数据库配置: `backend/.env.development`
+
+3️⃣ 确认 PostgreSQL 服务运行正常
+
+</div>
+
+### 🌐 CORS 错误
+
+检查 `backend/app/config.py` 中的 `CORS_ORIGINS` 配置是否包含前端地址。
+
+---
+
+## 🗺️ 开发路线图
+
+### ✅ MVP 阶段
+
+<div align="center">
+
+- [x] 🔨 前后端基础架构
+- [x] 🔐 用户认证系统
+- [x] 📊 策略管理模块
+- [x] 📈 回测引擎框架
+- [x] 🤖 机器人模拟交易
+- [x] 💬 社区论坛功能
+- [x] 📁 文件上传下载
+
+</div>
+
+### 🚧 下一阶段
+
+<div align="center">
+
+- [ ] 📊 实时数据源接入 (Binance/OKX)
+- [ ] 🛡️ 策略沙箱执行环境
+- [ ] 🔌 WebSocket 实时推送
+- [ ] 📈 高级图表组件
+- [ ] 🏪 策略市场功能
+- [ ] 💰 实盘交易对接
+
+</div>
+
+### 🔮 长期规划
+
+<div align="center">
+
+- [ ] 📱 移动端 App (React Native)
+- [ ] 🤖 策略 AI 辅助生成
+- [ ] 🏦 多交易所支持
+- [ ] ☁️ 云端部署方案
+
+</div>
+
+---
+
+## 📄 许可证
+
+<div align="center">
+
+![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge)
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+</div>
+
+---
+
+## 🤝 贡献指南
+
+欢迎提交 Issue 和 Pull Request！
+
+<div align="center">
+
+1️⃣ Fork 本仓库
+
+2️⃣ 创建特性分支 (`git checkout -b feature/AmazingFeature`)
+
+3️⃣ 提交更改 (`git commit -m 'Add some AmazingFeature'`)
+
+4️⃣ 推送到分支 (`git push origin feature/AmazingFeature`)
+
+5️⃣ 开启 Pull Request
+
+</div>
+
+---
+
+## 📞 联系方式
+
+<div align="center">
+
+- 🐛 **报告问题**: [GitHub Issues](https://github.com/yourusername/QYQuant/issues)
+- 💬 **讨论交流**: [GitHub Discussions](https://github.com/yourusername/QYQuant/discussions)
+- 📧 **邮件联系**: support@qyquant.com
+
+</div>
+
+---
+
+## English
+
+### 📖 Overview
+
+QYQuant is a full-stack quantitative trading platform providing strategy backtesting, paper trading, and community features. Built with a modern frontend-backend architecture supporting both Chinese and English.
+
+### ✨ Features
+
+| Feature | Description |
+|:---:|:---|
+| 🎯 **Strategy Management** | Create, edit, and version control trading strategies |
+| 📈 **Historical Backtesting** | High-performance backtesting engine powered by Celery |
+| 🤖 **Paper Trading** | Simulated trading bots with real-time monitoring |
+| 💬 **Community Forum** | Share strategies, comments, likes, and tipping |
+| 📁 **File Management** | Upload/download strategy files with version control |
+| 🔐 **User System** | JWT authentication, profiles, and social features |
+
+### 🚀 Quick Start
+
+#### 📋 Prerequisites
+
+<div align="center">
+
+![Node.js](https://img.shields.io/badge/Node.js-18+-339933?logo=node.js&logoColor=white)
+![Python](https://img.shields.io/badge/Python-3.10+-blue?logo=python&logoColor=white)
+![Docker](https://img.shields.io/badge/Docker-Optional-2496ED?logo=docker&logoColor=white)
+
+</div>
+
+#### 🔧 Backend Setup
+
+```bash
+cd backend
+docker-compose up -d
+python -m venv .venv
+source .venv/bin/activate  # Linux/Mac
+.\.venv\Scripts\Activate.ps1  # Windows
+pip install -r requirements.txt
+flask --app app run
+```
+
+<div align="center">
+
+**🌐 Backend URL**: `http://127.0.0.1:5000`
+
+**🔑 Default Account**: `admin / admin123`
+
+</div>
+
+#### 🎨 Frontend Setup
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+<div align="center">
+
+**🌐 Frontend URL**: `http://127.0.0.1:5173`
+
+</div>
+
+### 📡 API Documentation
+
+**Base URL**: `/api`
+
+#### ✅ Success Response
+
+```json
+{ "code": 0, "message": "ok", "data": {...}, "request_id": "..." }
+```
+
+#### 🔌 Main Endpoints
+
+<div align="center">
+
+| Method | Endpoint | Description |
+|:---:|:-----|:-----|
+| POST | `/api/auth/login` | User login |
+| GET | `/api/users/me` | Current user info |
+| GET | `/api/strategies/recent` | Recent strategies |
+| POST | `/api/backtests/run` | Create backtest job |
+| GET | `/api/backtests/job/<id>` | Job status and result |
+| GET | `/api/bots/recent` | Recent bots |
+| GET | `/api/forum/hot` | Hot forum posts |
+
+</div>
+
+<div align="center">
+
+📖 **Visit** [`/api/docs`](http://localhost:5000/api/docs) **for full Swagger documentation**
+
+</div>
+
+---
+
+<div align="center">
+
+Made with ❤️ by QYQuant Team
+
+![GitHub stars](https://img.shields.io/github/stars/yourusername/QYQuant?style=social)
+![GitHub forks](https://img.shields.io/github/forks/yourusername/QYQuant?style=social)
+
+</div>
