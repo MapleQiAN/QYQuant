@@ -81,6 +81,104 @@ git clone https://github.com/MapleQiAN/QYQuant.git
 cd QYQuant
 ```
 
+### 🐳 方式一：Docker 一键部署（推荐）
+
+<div align="center">
+
+![Docker](https://img.shields.io/badge/Docker-支持-2496ED?style=for-the-badge&logo=docker&logoColor=white)
+![Docker Compose](https://img.shields.io/badge/Docker%20Compose-支持-2496ED?style=for-the-badge&logo=docker&logoColor=white)
+
+</div>
+
+#### 🎯 快速启动
+
+**Linux / macOS:**
+
+```bash
+chmod +x deploy.sh
+./deploy.sh
+```
+
+**Windows (PowerShell):**
+
+```powershell
+.\deploy.ps1
+```
+
+#### 🛠️ 手动部署
+
+```bash
+# 1. 配置环境变量
+cp .env.example .env
+# 编辑 .env 文件，修改密码和密钥配置
+
+# 2. 启动所有服务
+docker-compose up -d
+
+# 3. 初始化数据库（可选）
+docker-compose exec backend flask db upgrade
+
+# 4. 查看服务状态
+docker-compose ps
+
+# 5. 查看日志
+docker-compose logs -f
+```
+
+#### 📊 服务说明
+
+Docker 部署包含以下服务：
+
+| 服务 | 描述 | 端口 |
+|:---:|:-----|:-----|
+| **frontend** | Vue 3 前端应用 (Nginx) | 80 |
+| **backend** | Flask API 服务 (Gunicorn) | 5000 |
+| **celery-worker** | Celery 异步任务处理 | - |
+| **celery-beat** | Celery 定时任务调度 | - |
+| **postgres** | PostgreSQL 数据库 | 5432 |
+| **redis** | Redis 缓存和消息队列 | 6379 |
+
+<div align="center">
+
+**🌐 访问地址**: `http://localhost`
+
+**🔑 默认账号**: `admin / admin123`
+
+</div>
+
+#### 📝 常用命令
+
+```bash
+# 停止所有服务
+docker-compose down
+
+# 重启服务
+docker-compose restart
+
+# 重新构建镜像
+docker-compose build --no-cache
+
+# 查看服务日志
+docker-compose logs -f [服务名]
+
+# 进入容器
+docker-compose exec backend bash
+docker-compose exec postgres psql -U qyquant -d qyquant
+
+# 清理数据（谨慎操作）
+docker-compose down -v  # 删除所有数据卷
+```
+
+#### 🔧 生产环境部署建议
+
+1. **修改默认密码**：编辑 `.env` 文件，修改所有密码和密钥
+2. **配置 HTTPS**：使用 Nginx 反向代理 + Let's Encrypt 证书
+3. **数据备份**：定期备份 PostgreSQL 数据卷
+4. **资源限制**：根据服务器配置调整 `docker-compose.yml` 中的资源限制
+5. **日志管理**：配置日志轮转，避免磁盘占满
+
+---
+
 ### 🔧 2. 启动后端服务
 
 #### 方式一：使用 Docker (推荐)
