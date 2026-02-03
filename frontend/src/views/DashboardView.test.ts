@@ -45,7 +45,12 @@ describe('DashboardView', () => {
 
     const wrapper = mount(DashboardView, {
       global: {
-        plugins: [i18n]
+        plugins: [i18n],
+        stubs: {
+          RouterLink: {
+            template: '<a><slot /></a>'
+          }
+        }
       }
     })
 
