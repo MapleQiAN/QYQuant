@@ -105,3 +105,6 @@ docker-compose.override.yml
 .env.local
 .env.*.local
 .worktrees/
+.claude/
+_bmad/
+_bmad-output/
