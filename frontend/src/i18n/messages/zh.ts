@@ -12,7 +12,11 @@ const zh = {
     language: '语言',
     languageHint: '选择界面语言。',
     zh: '中文',
-    en: 'EN'
+    en: 'EN',
+    marketStyle: '行情颜色风格',
+    marketStyleHint: '选择涨跌颜色显示方式。',
+    marketStyleCn: 'A股风格（红涨绿跌）',
+    marketStyleUs: '美股风格（绿涨红跌）'
   },
   nav: {
     dashboard: '概览',

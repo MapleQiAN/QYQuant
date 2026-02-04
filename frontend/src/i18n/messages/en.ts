@@ -12,7 +12,11 @@ const en = {
     language: 'Language',
     languageHint: 'Choose your interface language.',
     zh: '中文',
-    en: 'EN'
+    en: 'EN',
+    marketStyle: 'Market Color Style',
+    marketStyleHint: 'Choose how price moves are colored.',
+    marketStyleCn: 'A-share style (red up, green down)',
+    marketStyleUs: 'US style (green up, red down)'
   },
   nav: {
     dashboard: 'Dashboard',

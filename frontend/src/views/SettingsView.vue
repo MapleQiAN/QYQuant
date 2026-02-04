@@ -30,6 +30,34 @@
           </div>
         </div>
       </div>
+      <div class="card setting-card">
+        <div class="setting-header">
+          <div>
+            <h3>{{ $t('settings.marketStyle') }}</h3>
+            <p class="hint">{{ $t('settings.marketStyleHint') }}</p>
+          </div>
+          <div class="toggle">
+            <button
+              class="toggle-btn"
+              :class="{ active: marketStyle === 'cn' }"
+              data-market-style="cn"
+              type="button"
+              @click="setMarketStyle('cn')"
+            >
+              {{ $t('settings.marketStyleCn') }}
+            </button>
+            <button
+              class="toggle-btn"
+              :class="{ active: marketStyle === 'us' }"
+              data-market-style="us"
+              type="button"
+              @click="setMarketStyle('us')"
+            >
+              {{ $t('settings.marketStyleUs') }}
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
   </section>
 </template>
@@ -39,10 +67,14 @@ import { storeToRefs } from 'pinia'
 import { useUserStore } from '../stores/user'
 
 const userStore = useUserStore()
-const { locale } = storeToRefs(userStore)
+const { locale, marketStyle } = storeToRefs(userStore)
 
 function setLocale(next: 'en' | 'zh') {
   userStore.setLocale(next)
+}
+
+function setMarketStyle(next: 'cn' | 'us') {
+  userStore.setMarketStyle(next)
 }
 </script>
 
@@ -59,6 +91,10 @@ function setLocale(next: 'en' | 'zh') {
 
 .setting-card {
   padding: var(--spacing-lg);
+}
+
+.setting-card + .setting-card {
+  margin-top: var(--spacing-md);
 }
 
 .setting-header {

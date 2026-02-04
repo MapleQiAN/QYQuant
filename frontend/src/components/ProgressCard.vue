@@ -64,15 +64,15 @@
           <svg class="mini-chart" viewBox="0 0 120 40" preserveAspectRatio="none">
             <defs>
               <linearGradient id="profitGradient" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stop-color="var(--color-success)" stop-opacity="0.3"/>
-                <stop offset="100%" stop-color="var(--color-success)" stop-opacity="0"/>
+                <stop offset="0%" stop-color="var(--color-up)" stop-opacity="0.3"/>
+                <stop offset="100%" stop-color="var(--color-up)" stop-opacity="0"/>
               </linearGradient>
             </defs>
             <path :d="areaPath" fill="url(#profitGradient)" />
             <path
               :d="linePath"
               fill="none"
-              stroke="var(--color-success)"
+              stroke="var(--color-up)"
               stroke-width="2"
               stroke-linecap="round"
               stroke-linejoin="round"
@@ -347,22 +347,22 @@ const TargetIcon = () => h('svg', {
 }
 
 .profit-block {
-  background: linear-gradient(135deg, var(--color-success-bg), var(--color-surface));
+  background: linear-gradient(135deg, var(--color-up-bg), var(--color-surface));
 }
 
 .profit-change {
   font-size: var(--font-size-sm);
   font-weight: var(--font-weight-medium);
   padding: 2px 8px;
-  background: var(--color-success-bg);
-  color: var(--color-success);
+  background: var(--color-up-bg);
+  color: var(--color-up);
   border-radius: var(--radius-full);
 }
 
 .profit-value {
   font-size: var(--font-size-xxl);
   font-weight: var(--font-weight-bold);
-  color: var(--color-success);
+  color: var(--color-up);
   margin-bottom: var(--spacing-sm);
 }
 
