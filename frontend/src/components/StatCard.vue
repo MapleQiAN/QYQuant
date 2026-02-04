@@ -30,7 +30,7 @@ interface Props {
   suffix?: string
   change?: number
   subtitle?: string
-  variant?: 'default' | 'success' | 'warning' | 'danger' | 'info'
+  variant?: 'default' | 'success' | 'warning' | 'danger' | 'info' | 'up' | 'down'
   iconBg?: string
   showSign?: boolean
 }
@@ -123,6 +123,16 @@ const isNegative = computed(() => {
 .stat-card.info .stat-icon {
   background: var(--color-info-bg);
   color: var(--color-info);
+}
+
+.stat-card.up .stat-icon {
+  background: var(--color-up-bg);
+  color: var(--color-up);
+}
+
+.stat-card.down .stat-icon {
+  background: var(--color-down-bg);
+  color: var(--color-down);
 }
 
 .stat-content {

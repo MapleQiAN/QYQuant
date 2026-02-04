@@ -33,7 +33,7 @@
           suffix="%"
           :change="kpis.totalReturn"
           :showSign="true"
-          variant="success"
+          variant="up"
         >
           <template #icon>
             <TrendUpIcon />
@@ -66,7 +66,7 @@
           :value="kpis.maxDrawdown"
           suffix="%"
           :showSign="true"
-          variant="danger"
+          variant="down"
         >
           <template #icon>
             <TrendDownIcon />
