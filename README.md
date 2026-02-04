@@ -181,6 +181,260 @@ docker compose down -v  # 删除所有数据卷
 
 ---
 
+### 💻 方式二：本地部署（不使用 Docker）
+
+<div align="center">
+
+![Node.js](https://img.shields.io/badge/本地部署-完整指南-339933?style=for-the-badge&logo=none)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-手动安装-336791?style=for-the-badge&logo=postgresql&logoColor=white)
+![Redis](https://img.shields.io/badge/Redis-手动安装-DC382D?style=for-the-badge&logo=redis&logoColor=white)
+
+适用于需要完全控制本地开发环境的开发者
+
+</div>
+
+#### 📦 第一步：安装系统依赖
+
+**1. 安装 PostgreSQL 15+**
+
+- **Windows**：从 [PostgreSQL 官网](https://www.postgresql.org/download/windows/) 下载安装
+- **macOS**：`brew install postgresql@15`
+- **Linux (Ubuntu/Debian)**：
+  ```bash
+  sudo apt update
+  sudo apt install postgresql postgresql-contrib
+  sudo systemctl start postgresql
+  ```
+
+**2. 安装 Redis 7+**
+
+- **Windows**：
+  - 推荐：使用 WSL2 安装 Linux 版 Redis
+  - 或下载 [Redis for Windows](https://github.com/microsoftarchive/redis/releases)
+- **macOS**：`brew install redis`
+- **Linux (Ubuntu/Debian)**：
+  ```bash
+  sudo apt install redis-server
+  sudo systemctl start redis
+  ```
+
+**3. 验证安装**
+
+```bash
+# 检查 PostgreSQL
+psql --version
+
+# 检查 Redis
+redis-cli ping  # 应返回 PONG
+```
+
+#### 🗄️ 第二步：配置数据库
+
+**1. 创建数据库和用户**
+
+```bash
+# 连接到 PostgreSQL
+psql -U postgres
+
+# 在 PostgreSQL 命令行中执行：
+CREATE DATABASE qyquant;
+CREATE USER postgres WITH PASSWORD 'postgres';
+GRANT ALL PRIVILEGES ON DATABASE qyquant TO postgres;
+\q
+```
+
+**2. 验证连接**
+
+```bash
+psql -U postgres -d qyquant -c "SELECT version();"
+```
+
+#### 🔧 第三步：配置后端环境
+
+**1. 进入后端目录**
+
+```bash
+cd backend
+```
+
+**2. 配置环境变量**
+
+编辑 `.env.development` 文件（或从 `.env.example` 复制）：
+
+```env
+FLASK_ENV=development
+DATABASE_URL=postgresql://postgres:postgres@localhost:5432/qyquant
+REDIS_URL=redis://localhost:6379/0
+SECRET_KEY=your-secret-key-here
+JWT_SECRET=your-jwt-secret-key
+FERNET_KEY=your-fernet-key
+CORS_ORIGINS=http://localhost:5173,http://localhost:5174
+BACKTEST_DATA_PROVIDER=binance
+BINANCE_BASE_URL=https://api.binance.com
+```
+
+**3. 创建 Python 虚拟环境**
+
+```bash
+# Windows
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+
+# Linux/macOS
+python3 -m venv .venv
+source .venv/bin/activate
+```
+
+**4. 安装 Python 依赖**
+
+```bash
+pip install --upgrade pip
+pip install -r requirements.txt
+```
+
+**5. 初始化数据库**
+
+```bash
+# 运行数据库迁移
+flask db upgrade
+
+# 创建默认管理员账号（可选）
+python scripts/seed.py
+```
+
+<div align="center">
+
+**🔑 默认账号**: `admin / admin123`
+
+</div>
+
+**6. 启动后端服务**
+
+```bash
+# 启动 Flask 开发服务器
+flask --app app run
+```
+
+后端将在 `http://127.0.0.1:5000` 启动。
+
+**7. 启动 Celery Worker（可选，用于异步任务）**
+
+```bash
+# 终端 1：启动 Celery Worker
+celery -A app.celery_app worker --loglevel=info
+
+# 终端 2（可选）：启动 Celery Beat 定时任务
+celery -A app.celery_app beat --loglevel=info
+```
+
+#### 🎨 第四步：启动前端服务
+
+**1. 进入前端目录**
+
+```bash
+cd frontend
+```
+
+**2. 安装 Node.js 依赖**
+
+```bash
+npm install
+```
+
+**3. 配置环境变量**
+
+创建 `.env.development` 文件：
+
+```env
+VITE_API_BASE_URL=http://localhost:5000/api
+```
+
+**4. 启动前端开发服务器**
+
+```bash
+npm run dev
+```
+
+前端将在 `http://127.0.0.1:5173` 启动。
+
+#### 🎉 第五步：访问应用
+
+打开浏览器访问 [http://127.0.0.1:5173](http://127.0.0.1:5173)
+
+<div align="center">
+
+| 服务 | 地址 | 说明 |
+|:---:|:-----|:-----|
+| **前端应用** | http://127.0.0.1:5173 | Vue 3 开发服务器 |
+| **后端 API** | http://127.0.0.1:5000 | Flask 开发服务器 |
+| **API 文档** | http://127.0.0.1:5000/api/docs | Swagger UI |
+
+</div>
+
+#### 🔍 故障排除
+
+**PostgreSQL 连接失败**
+
+```bash
+# 检查 PostgreSQL 服务状态
+# Linux
+sudo systemctl status postgresql
+
+# macOS
+brew services list
+
+# Windows
+# 检查服务中的 PostgreSQL 服务
+```
+
+**Redis 连接失败**
+
+```bash
+# 检查 Redis 服务状态
+# Linux
+sudo systemctl status redis
+
+# macOS
+brew services list
+
+# 启动 Redis
+redis-server
+```
+
+**端口被占用**
+
+```bash
+# 查看端口占用情况
+# Windows
+netstat -ano | findstr :5000
+netstat -ano | findstr :5432
+netstat -ano | findstr :6379
+
+# Linux/macOS
+lsof -i :5000
+lsof -i :5432
+lsof -i :6379
+```
+
+**Python 依赖安装失败**
+
+```bash
+# 升级 pip
+pip install --upgrade pip
+
+# 使用国内镜像源（可选）
+pip install -r requirements.txt -i https://pypi.tuna.tsinghua.edu.cn/simple
+```
+
+#### 📝 开发提示
+
+- **热重载**：Flask 和 Vite 都支持热重载，修改代码后会自动重启
+- **调试模式**：开发模式下 Flask 会显示详细错误信息
+- **日志查看**：后端日志会在终端直接输出
+- **数据库管理**：可使用 pgAdmin、DBeaver 等 GUI 工具管理 PostgreSQL
+
+---
+
 ### 🔧 2. 启动后端服务
 
 #### 方式一：使用 Docker (推荐)
