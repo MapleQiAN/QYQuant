@@ -149,11 +149,11 @@ const isNegative = computed(() => {
 }
 
 .value.positive {
-  color: var(--color-success);
+  color: var(--color-up);
 }
 
 .value.negative {
-  color: var(--color-danger);
+  color: var(--color-down);
 }
 
 .change {
@@ -164,13 +164,13 @@ const isNegative = computed(() => {
 }
 
 .change.positive {
-  background: var(--color-success-bg);
-  color: var(--color-success);
+  background: var(--color-up-bg);
+  color: var(--color-up);
 }
 
 .change.negative {
-  background: var(--color-danger-bg);
-  color: var(--color-danger);
+  background: var(--color-down-bg);
+  color: var(--color-down);
 }
 
 .stat-subtitle {

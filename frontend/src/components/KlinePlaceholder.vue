@@ -54,14 +54,14 @@
                 :cx="candle.x + candleWidth / 2"
                 :cy="candle.signal === 'buy' ? candle.lowY + 20 : candle.highY - 20"
                 r="8"
-                :fill="candle.signal === 'buy' ? 'var(--color-success)' : 'var(--color-danger)'"
+                :fill="candle.signal === 'buy' ? 'var(--color-up)' : 'var(--color-down)'"
                 opacity="0.2"
               />
               <text
                 :x="candle.x + candleWidth / 2"
                 :y="candle.signal === 'buy' ? candle.lowY + 24 : candle.highY - 16"
                 text-anchor="middle"
-                :fill="candle.signal === 'buy' ? 'var(--color-success)' : 'var(--color-danger)'"
+                :fill="candle.signal === 'buy' ? 'var(--color-up)' : 'var(--color-down)'"
                 font-size="10"
                 font-weight="600"
               >
@@ -176,7 +176,7 @@ const normalizedData = computed(() => {
       lowY,
       bodyY: Math.min(openY, closeY),
       bodyHeight: Math.abs(closeY - openY),
-      color: isUp ? 'var(--color-success)' : 'var(--color-danger)',
+      color: isUp ? 'var(--color-up)' : 'var(--color-down)',
       signal: candle.signal
     }
   })
@@ -326,10 +326,10 @@ const timeLabels = computed(() => {
 }
 
 .legend-dot.buy {
-  background: var(--color-success);
+  background: var(--color-up);
 }
 
 .legend-dot.sell {
-  background: var(--color-danger);
+  background: var(--color-down);
 }
 </style>
