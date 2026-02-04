@@ -102,6 +102,8 @@ docs/
 docs/*
 !docs/plans/
 !docs/plans/**
+!docs/strategy-format/
+!docs/strategy-format/**
 
 # Docker
 docker-compose.override.yml

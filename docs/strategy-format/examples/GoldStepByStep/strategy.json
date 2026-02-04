@@ -1,0 +1,37 @@
+{
+  "schemaVersion": "1.0",
+  "kind": "QYStrategy",
+  "id": "ee1adc2c-2b67-4c9d-9c9f-b7c3a7d4ed85",
+  "name": "黄金策略 Step-By-Step",
+  "version": "0.1.0",
+  "language": "python",
+  "runtime": {
+    "name": "python",
+    "version": "3.11"
+  },
+  "entrypoint": {
+    "path": "src/strategy.py",
+    "callable": "main"
+  },
+  "tags": [
+    "gold",
+    "breakout",
+    "step-by-step"
+  ],
+  "createdAt": "2026-02-04T16:26:09Z",
+  "updatedAt": "2026-02-04T16:51:01Z",
+  "integrity": {
+    "files": [
+      {
+        "path": "strategy.json",
+        "sha256": "729e61dbd19120058f1bc1bcb398f838eb2d61b8df37c3eef519db7670d1283e",
+        "size": 507
+      },
+      {
+        "path": "src/strategy.py",
+        "sha256": "ff597c3e5b6ce9063628d0e736555880df2c3be4eee4174c09f89d50643f5e22",
+        "size": 10878
+      }
+    ]
+  }
+}
