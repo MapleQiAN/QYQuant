@@ -1,5 +1,5 @@
 export interface KlineBar {
-  time: string
+  time: string | number
   open: number
   high: number
   low: number

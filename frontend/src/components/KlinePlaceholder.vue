@@ -193,12 +193,50 @@ const currentPriceY = computed(() => {
   return chartHeight - ((currentPrice.value - min) / range) * chartHeight
 })
 
+const parseEpoch = (value: string | number): number | null => {
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    if (value > 1e12) return value
+    if (value > 1e9) return value * 1000
+    return null
+  }
+
+  if (typeof value === 'string') {
+    const trimmed = value.trim()
+    if (!trimmed) return null
+    if (/^\d+$/.test(trimmed)) {
+      const numeric = Number(trimmed)
+      if (numeric > 1e12) return numeric
+      if (numeric > 1e9) return numeric * 1000
+      return null
+    }
+    if (/^\d{4}-\d{2}-\d{2}/.test(trimmed)) {
+      const parsed = Date.parse(trimmed)
+      return Number.isNaN(parsed) ? null : parsed
+    }
+  }
+
+  return null
+}
+
+const formatTimeLabel = (value: string | number) => {
+  const epoch = parseEpoch(value)
+  if (epoch === null) return String(value)
+  const date = new Date(epoch)
+  if (Number.isNaN(date.getTime())) return String(value)
+  const tf = (props.timeframe ?? '15m').toLowerCase()
+  const showDate = tf.endsWith('d')
+  if (showDate) {
+    return date.toLocaleDateString(undefined, { month: '2-digit', day: '2-digit' })
+  }
+  return date.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })
+}
+
 const timeLabels = computed(() => {
   if (!props.data.length) return []
   const step = Math.ceil(props.data.length / 6)
   return props.data
     .filter((_, index) => index % step === 0)
-    .map((d) => d.time)
+    .map((d) => formatTimeLabel(d.time))
 })
 </script>
 

@@ -24,8 +24,6 @@ class BinanceProvider:
         self.default_interval = default_interval or os.getenv('BACKTEST_INTERVAL', '1m')
 
     def get_bars(self, symbol, limit=200, interval=None, start_time=None, end_time=None):
-        if symbol and not _is_gold_symbol(symbol):
-            raise ValueError(f"FreeGold provider only supports XAUUSD (got {symbol})")
         interval = interval or self.default_interval
         return self.client.get_klines(
             symbol,
