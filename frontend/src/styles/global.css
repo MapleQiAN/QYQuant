@@ -22,6 +22,11 @@
   --color-danger-bg: rgba(239, 68, 68, 0.1);
   --color-info: #3b82f6;
   --color-info-bg: rgba(59, 130, 246, 0.1);
+
+  --color-up: #ef4444;
+  --color-up-bg: rgba(239, 68, 68, 0.1);
+  --color-down: #10b981;
+  --color-down-bg: rgba(16, 185, 129, 0.1);
   
   --color-white: #ffffff;
   --color-background: #f8fafc;
@@ -90,6 +95,13 @@
   --grid-columns: 12;
   --grid-gap: 24px;
   --container-max-width: 1440px;
+}
+
+:root[data-market-style="us"] {
+  --color-up: #10b981;
+  --color-up-bg: rgba(16, 185, 129, 0.1);
+  --color-down: #ef4444;
+  --color-down-bg: rgba(239, 68, 68, 0.1);
 }
 
 /* Reset */

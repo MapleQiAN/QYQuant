@@ -409,11 +409,11 @@ const ArrowRightIcon = () => h('svg', {
 }
 
 .returns.positive {
-  color: var(--color-success);
+  color: var(--color-up);
 }
 
 .returns.negative {
-  color: var(--color-danger);
+  color: var(--color-down);
 }
 
 .expand-icon {
@@ -470,11 +470,11 @@ const ArrowRightIcon = () => h('svg', {
 }
 
 .detail-value.success {
-  color: var(--color-success);
+  color: var(--color-up);
 }
 
 .detail-value.danger {
-  color: var(--color-danger);
+  color: var(--color-down);
 }
 
 .tags-row {
