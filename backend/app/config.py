@@ -3,14 +3,14 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 
-# 从 backend 目录加载 .env 文件
-backend_dir = Path(__file__).parent.parent
+# 从项目根目录加载 .env 文件
+root_dir = Path(__file__).parent.parent.parent
 env = os.getenv('FLASK_ENV', 'development')
-env_file = backend_dir / f'.env.{env}'
+env_file = root_dir / f'.env.{env}'
 
 # 如果特定环境的文件不存在，尝试加载默认的 .env
 if not env_file.exists():
-    env_file = backend_dir / '.env'
+    env_file = root_dir / '.env'
 
 load_dotenv(env_file, override=True)
 

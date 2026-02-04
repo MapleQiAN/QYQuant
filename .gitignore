@@ -92,6 +92,7 @@ coverage/
 *.pid.lock
 .pnpm-debug.log*
 
+# Documentation
 docs/
 !docs/
 docs/*
