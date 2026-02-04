@@ -1,8 +1,18 @@
 import os
+from pathlib import Path
 
 from dotenv import load_dotenv
 
-load_dotenv()
+# 从 backend 目录加载 .env 文件
+backend_dir = Path(__file__).parent.parent
+env = os.getenv('FLASK_ENV', 'development')
+env_file = backend_dir / f'.env.{env}'
+
+# 如果特定环境的文件不存在，尝试加载默认的 .env
+if not env_file.exists():
+    env_file = backend_dir / '.env'
+
+load_dotenv(env_file, override=True)
 
 
 class BaseConfig:
@@ -10,6 +20,14 @@ class BaseConfig:
         self.SECRET_KEY = os.getenv('SECRET_KEY', 'dev-secret')
         self.JWT_SECRET_KEY = os.getenv('JWT_SECRET', 'dev-jwt-secret')
         self.SQLALCHEMY_DATABASE_URI = os.getenv('DATABASE_URL')
+
+        # 验证数据库配置
+        if not self.SQLALCHEMY_DATABASE_URI:
+            raise RuntimeError(
+                "DATABASE_URL not found in environment. "
+                f"Ensure {env_file} exists and contains DATABASE_URL."
+            )
+
         self.SQLALCHEMY_TRACK_MODIFICATIONS = False
         self.CORS_ORIGINS = os.getenv('CORS_ORIGINS', 'http://localhost:5173,http://localhost:5174').split(',')
         self.JSON_SORT_KEYS = False
