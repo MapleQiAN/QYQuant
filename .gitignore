@@ -47,6 +47,9 @@ dist-ssr/
 .env
 .env.*
 !.env.example
+!backend/.env.development
+!backend/.env.test
+!backend/.env.production
 
 # IDE
 .vscode/*
