@@ -21,7 +21,7 @@ def _calculate_summary(bars):
 
     start_ms = bars[0]["time"]
     end_ms = bars[-1]["time"]
-    duration_days = max((end_ms - start_ms) / 86_400_000, 1e-9)
+    duration_days = max((end_ms - start_ms) / 86_400_000, 1)
     annualized_return = (pow(1 + total_return / 100, 365 / duration_days) - 1) * 100
 
     returns = [(closes[i] / closes[i - 1] - 1) for i in range(1, len(closes))]

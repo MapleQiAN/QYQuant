@@ -77,7 +77,7 @@
       <div class="chart-section">
         <KlinePlaceholder
           :data="klineData"
-          symbol="XAUUSD"
+          :symbol="symbol"
           timeframe="15m"
         />
       </div>

@@ -47,6 +47,9 @@ dist-ssr/
 .env
 .env.*
 !.env.example
+!backend/.env.development
+!backend/.env.test
+!backend/.env.production
 
 # IDE
 .vscode/*
@@ -99,6 +102,8 @@ docs/
 docs/*
 !docs/plans/
 !docs/plans/**
+!docs/strategy-format/
+!docs/strategy-format/**
 
 # Docker
 docker-compose.override.yml

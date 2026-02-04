@@ -9,11 +9,11 @@ export const useBacktestsStore = defineStore('backtests', {
     error: null as string | null
   }),
   actions: {
-    async loadLatest() {
+    async loadLatest(symbol?: string) {
       this.loading = true
       this.error = null
       try {
-        this.latest = await fetchLatest()
+        this.latest = await fetchLatest(symbol)
       } catch (error: any) {
         this.error = error?.message || 'Failed to load backtest'
       } finally {
