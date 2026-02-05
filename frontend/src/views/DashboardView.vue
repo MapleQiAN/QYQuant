@@ -26,7 +26,8 @@
             :data="backtestsStore.latest"
             :loading="backtestsStore.loading"
             :error="backtestsStore.error"
-            @retry="backtestsStore.loadLatest"
+            symbol="XAUUSD"
+            @retry="backtestsStore.loadLatest('XAUUSD')"
           />
         </div>
 
@@ -84,7 +85,7 @@ const strategiesStore = useStrategiesStore()
 const forumStore = useForumStore()
 
 onMounted(() => {
-  backtestsStore.loadLatest()
+  backtestsStore.loadLatest('XAUUSD')
   botsStore.loadRecent()
   strategiesStore.loadRecent()
   forumStore.loadHot()

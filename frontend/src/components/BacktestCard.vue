@@ -120,9 +120,11 @@ const props = withDefaults(defineProps<{
   data: BacktestLatestResponse | null
   loading?: boolean
   error?: string | null
+  symbol?: string
 }>(), {
   loading: false,
-  error: null
+  error: null,
+  symbol: 'XAUUSD'
 })
 
 const kpis = computed(() => ({
