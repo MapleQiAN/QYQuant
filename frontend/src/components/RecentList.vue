@@ -200,6 +200,7 @@ const tabs = computed(() => [
 const resolvedTitle = computed(() => props.title || t('dashboard.recentTitle'))
 
 const statusLabels = computed<Record<string, string>>(() => ({
+  draft: t('status.draft'),
   running: t('status.running'),
   paused: t('status.paused'),
   stopped: t('status.stopped'),
@@ -370,6 +371,7 @@ const ArrowRightIcon = () => h('svg', {
 }
 
 .status-badge.stopped,
+.status-badge.draft,
 .status-badge.offline {
   background: var(--color-border-light);
   color: var(--color-text-muted);

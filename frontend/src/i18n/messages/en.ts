@@ -74,6 +74,7 @@ const en = {
     start: 'Start'
   },
   status: {
+    draft: 'Draft',
     running: 'Running',
     paused: 'Paused',
     stopped: 'Stopped',
@@ -81,6 +82,35 @@ const en = {
     active: 'Active',
     error: 'Error',
     offline: 'Offline'
+  },
+  strategyNew: {
+    title: 'Create Strategy',
+    subtitle: 'Start from scratch or import a QYSP package.',
+    back: 'Back to dashboard',
+    createTitle: 'Create from scratch',
+    createHint: 'Define basic info now. You can import a package later.',
+    nameLabel: 'Strategy name',
+    namePlaceholder: 'e.g. Gold Breakout',
+    symbolLabel: 'Primary symbol',
+    symbolPlaceholder: 'e.g. XAUUSD',
+    tagsLabel: 'Tags',
+    tagsPlaceholder: 'e.g. gold, breakout, trend',
+    createAction: 'Create strategy',
+    resetAction: 'Reset',
+    importTitle: 'Import from file',
+    importHint: 'Upload a .qys package that includes strategy.json.',
+    fileLabel: 'Strategy package',
+    filePlaceholder: 'Choose a .qys file',
+    fileHelp: 'Supported: .qys (ZIP), max 20 MB.',
+    importAction: 'Import strategy',
+    createSuccess: 'Strategy created',
+    importSuccess: 'Strategy imported',
+    nameRequired: 'Strategy name is required',
+    symbolRequired: 'Primary symbol is required',
+    fileRequired: 'Please choose a strategy file',
+    fileSelected: 'Selected file',
+    versionLabel: 'Version',
+    sizeLabel: 'Size'
   },
   forum: {
     title: 'Forum Pulse',

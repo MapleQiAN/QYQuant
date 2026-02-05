@@ -74,6 +74,7 @@ const zh = {
     start: '启动'
   },
   status: {
+    draft: 'Draft',
     running: '运行中',
     paused: '已暂停',
     stopped: '已停止',
@@ -81,6 +82,35 @@ const zh = {
     active: '运行中',
     error: '异常',
     offline: '离线'
+  },
+  strategyNew: {
+    title: 'Create Strategy',
+    subtitle: 'Start from scratch or import a QYSP package.',
+    back: 'Back to dashboard',
+    createTitle: 'Create from scratch',
+    createHint: 'Define basic info now. You can import a package later.',
+    nameLabel: 'Strategy name',
+    namePlaceholder: 'e.g. Gold Breakout',
+    symbolLabel: 'Primary symbol',
+    symbolPlaceholder: 'e.g. XAUUSD',
+    tagsLabel: 'Tags',
+    tagsPlaceholder: 'e.g. gold, breakout, trend',
+    createAction: 'Create strategy',
+    resetAction: 'Reset',
+    importTitle: 'Import from file',
+    importHint: 'Upload a .qys package that includes strategy.json.',
+    fileLabel: 'Strategy package',
+    filePlaceholder: 'Choose a .qys file',
+    fileHelp: 'Supported: .qys (ZIP), max 20 MB.',
+    importAction: 'Import strategy',
+    createSuccess: 'Strategy created',
+    importSuccess: 'Strategy imported',
+    nameRequired: 'Strategy name is required',
+    symbolRequired: 'Primary symbol is required',
+    fileRequired: 'Please choose a strategy file',
+    fileSelected: 'Selected file',
+    versionLabel: 'Version',
+    sizeLabel: 'Size'
   },
   forum: {
     title: '广场动态',
