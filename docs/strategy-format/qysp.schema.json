@@ -1,0 +1,166 @@
+﻿{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "QY Strategy Package Manifest",
+  "type": "object",
+  "required": [
+    "schemaVersion",
+    "kind",
+    "id",
+    "name",
+    "version",
+    "language",
+    "runtime",
+    "entrypoint"
+  ],
+  "properties": {
+    "schemaVersion": { "type": "string", "const": "1.0" },
+    "kind": { "type": "string", "const": "QYStrategy" },
+    "id": { "type": "string", "format": "uuid" },
+    "name": { "type": "string", "minLength": 1 },
+    "version": { "type": "string", "minLength": 1 },
+    "description": { "type": "string" },
+    "language": { "type": "string", "minLength": 1 },
+    "runtime": {
+      "type": "object",
+      "required": ["name", "version"],
+      "properties": {
+        "name": { "type": "string", "minLength": 1 },
+        "version": { "type": "string", "minLength": 1 }
+      }
+    },
+    "entrypoint": {
+      "type": "object",
+      "required": ["path", "callable"],
+      "properties": {
+        "path": { "type": "string", "minLength": 1 },
+        "callable": { "type": "string", "minLength": 1 },
+        "interface": { "type": "string" }
+      }
+    },
+    "parameters": {
+      "type": "array",
+      "items": { "$ref": "#/definitions/parameter" }
+    },
+    "universe": {
+      "type": "object",
+      "properties": {
+        "symbols": { "type": "array", "items": { "type": "string" } },
+        "assetClass": { "type": "string" },
+        "market": { "type": "string" },
+        "currency": { "type": "string" },
+        "timezone": { "type": "string" }
+      }
+    },
+    "data": {
+      "type": "object",
+      "properties": {
+        "resolution": { "type": "string" },
+        "fields": { "type": "array", "items": { "type": "string" } },
+        "lookback": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "execution": {
+      "type": "object",
+      "properties": {
+        "orderTypes": { "type": "array", "items": { "type": "string" } },
+        "slippageBps": { "type": "number", "minimum": 0 },
+        "commissionBps": { "type": "number", "minimum": 0 },
+        "priceType": { "type": "string" },
+        "maxOrdersPerDay": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "risk": {
+      "type": "object",
+      "properties": {
+        "maxPositionPct": { "type": "number", "minimum": 0, "maximum": 100 },
+        "maxDrawdownPct": { "type": "number", "minimum": 0, "maximum": 100 },
+        "stopLossPct": { "type": "number", "minimum": 0, "maximum": 100 },
+        "takeProfitPct": { "type": "number", "minimum": 0, "maximum": 100 },
+        "cooldownDays": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "tags": { "type": "array", "items": { "type": "string" } },
+    "author": {
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "email": { "type": "string" },
+        "org": { "type": "string" }
+      }
+    },
+    "license": { "type": "string" },
+    "createdAt": { "type": "string" },
+    "updatedAt": { "type": "string" },
+    "performance": {
+      "type": "object",
+      "properties": {
+        "backtest": {
+          "type": "object",
+          "properties": {
+            "period": {
+              "type": "object",
+              "properties": {
+                "start": { "type": "string" },
+                "end": { "type": "string" }
+              }
+            },
+            "dataset": {
+              "type": "object",
+              "properties": {
+                "vendor": { "type": "string" },
+                "symbol": { "type": "string" },
+                "resolution": { "type": "string" }
+              }
+            },
+            "summary": { "type": "object" }
+          }
+        }
+      }
+    },
+    "dependencies": {
+      "type": "object",
+      "properties": {
+        "pip": { "type": "array", "items": { "type": "string" } },
+        "conda": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "integrity": {
+      "type": "object",
+      "properties": {
+        "files": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["path", "sha256", "size"],
+            "properties": {
+              "path": { "type": "string" },
+              "sha256": { "type": "string" },
+              "size": { "type": "integer", "minimum": 0 }
+            }
+          }
+        }
+      }
+    }
+  },
+  "definitions": {
+    "parameter": {
+      "type": "object",
+      "required": ["key", "type"],
+      "properties": {
+        "key": { "type": "string", "minLength": 1 },
+        "type": {
+          "type": "string",
+          "enum": ["integer", "number", "string", "boolean", "enum", "array", "object"]
+        },
+        "default": {},
+        "required": { "type": "boolean" },
+        "min": { "type": "number" },
+        "max": { "type": "number" },
+        "step": { "type": "number" },
+        "enum": { "type": "array" },
+        "description": { "type": "string" },
+        "ui": { "type": "object" }
+      }
+    }
+  }
+}
