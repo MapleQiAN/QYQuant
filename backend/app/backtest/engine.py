@@ -1,6 +1,7 @@
 import math
 
 from .providers import get_backtest_provider
+from ..strategy_runtime import execute_backtest_strategy, preflight_strategy
 
 
 def _calculate_summary(bars):
@@ -64,7 +65,17 @@ def _calculate_summary(bars):
     }
 
 
-def run_backtest(symbol, strategy='sma', interval=None, limit=120, start_time=None, end_time=None):
+def run_backtest(
+    symbol,
+    strategy='sma',
+    interval=None,
+    limit=120,
+    start_time=None,
+    end_time=None,
+    strategy_id=None,
+    strategy_version=None,
+    strategy_params=None,
+):
     provider = get_backtest_provider()
     kline = provider.get_bars(
         symbol,
@@ -73,6 +84,17 @@ def run_backtest(symbol, strategy='sma', interval=None, limit=120, start_time=No
         start_time=start_time,
         end_time=end_time,
     )
-    trades = []
+
+    runtime = None
+    if strategy_id:
+        loaded_strategy, validated_params = preflight_strategy(strategy_id, strategy_version, strategy_params)
+        strategy_result = execute_backtest_strategy(symbol, kline, loaded_strategy, validated_params)
+        trades = strategy_result.get('trades') or []
+        runtime = strategy_result.get('runtime')
+    else:
+        trades = []
+
     summary = _calculate_summary(kline)
+    if runtime:
+        return {"kline": kline, "trades": trades, "summary": summary, "runtime": runtime}
     return {"kline": kline, "trades": trades, "summary": summary}
