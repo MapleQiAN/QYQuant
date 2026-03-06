@@ -113,3 +113,4 @@ docker-compose.override.yml
 .claude/
 _bmad/
 _bmad-output/
+.gitnexus
