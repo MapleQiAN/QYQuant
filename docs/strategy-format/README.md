@@ -66,6 +66,24 @@ my-strategy.qys
 | callable | string | 是 | 入口对象名称，例如 `Strategy` 或 `main` |
 | interface | string | 否 | 约定接口名，例如 `event_v1` |
 
+**event_v1 回测接口约定（首版）**
+- 宿主按事件驱动调用策略对象，支持回调：
+  - `on_init(ctx)`
+  - `on_bar(ctx, bar)`
+  - `on_order(ctx, order)`
+  - `on_trade(ctx, trade)`
+  - `on_risk(ctx, snapshot)`
+  - `on_timer(ctx, tick)`
+  - `on_error(ctx, err)`
+  - `on_finish(ctx, result)`
+- 其中仅 `on_bar` 在策略执行中最关键，其余为可选回调。
+- 策略通过 `ctx.emit_order({...})` 发出下单意图，宿主在回测中完成撮合并触发后续事件。
+
+**自定义参数覆盖规则**
+- 请求侧可传入 `strategyParams` 覆盖 `parameters[*].default`。
+- 覆盖值必须满足 `type`、`required`、`min/max`、`enum` 约束。
+- 不允许传入未在 `parameters` 声明的键。
+
 **parameters**
 每个参数对象支持以下字段：
 
@@ -112,6 +130,22 @@ my-strategy.qys
 `version` <- `version`
 `file_id` <- 上传后的文件 ID
 `checksum` <- `integrity.files[*].sha256` 合并或整体包哈希
+
+**回测执行 API（策略运行）**
+
+```json
+POST /api/backtests/run
+{
+  "symbol": "BTCUSDT",
+  "interval": "1m",
+  "limit": 120,
+  "strategyId": "ee1adc2c-2b67-4c9d-9c9f-b7c3a7d4ed85",
+  "strategyVersion": "0.1.0",
+  "strategyParams": {
+    "threshold": 0.2
+  }
+}
+```
 
 **向后兼容约定**
 - 仅允许新增可选字段

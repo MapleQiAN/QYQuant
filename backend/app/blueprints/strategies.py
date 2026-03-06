@@ -11,6 +11,8 @@ from werkzeug.utils import secure_filename
 from ..extensions import db
 from ..models import File, Strategy, StrategyVersion
 from ..schemas import StrategySchema
+from ..strategy_runtime import StrategyRuntimeError
+from ..strategy_runtime.loader import load_strategy_package
 from ..utils.response import ok
 from ..utils.time import now_ms
 
@@ -230,3 +232,30 @@ def import_strategy():
 def recent():
     items = Strategy.query.order_by(Strategy.last_update.desc()).limit(10).all()
     return ok(StrategySchema(many=True).dump(items))
+
+
+@bp.get('/<strategy_id>/runtime')
+def runtime_descriptor(strategy_id):
+    requested_version = request.args.get('version')
+
+    query = StrategyVersion.query.filter_by(strategy_id=strategy_id)
+    if requested_version:
+        query = query.filter_by(version=requested_version)
+    strategy_version = query.order_by(StrategyVersion.created_at.desc()).first()
+    if not strategy_version:
+        return {"code": 40000, "message": "strategy_version_not_found", "details": None}, 400
+
+    try:
+        loaded = load_strategy_package(strategy_id, strategy_version.version)
+    except StrategyRuntimeError as exc:
+        return {"code": 40000, "message": exc.message, "details": exc.details}, 400
+
+    manifest = loaded.get('manifest') or {}
+    entrypoint = manifest.get('entrypoint') or {}
+    return ok({
+        "strategyId": strategy_id,
+        "strategyVersion": strategy_version.version,
+        "name": manifest.get('name'),
+        "interface": entrypoint.get('interface') or 'event_v1',
+        "parameters": manifest.get('parameters') or [],
+    })

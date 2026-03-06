@@ -28,3 +28,25 @@ export interface StrategyImportResult {
     path: string
   }
 }
+
+export type StrategyParamType = 'integer' | 'number' | 'string' | 'boolean' | 'enum' | 'array' | 'object'
+
+export interface StrategyParameter {
+  key: string
+  type: StrategyParamType
+  default?: unknown
+  required?: boolean
+  min?: number
+  max?: number
+  step?: number
+  enum?: Array<string | number | boolean>
+  description?: string
+}
+
+export interface StrategyRuntimeDescriptor {
+  strategyId: string
+  strategyVersion: string
+  name?: string
+  interface: string
+  parameters: StrategyParameter[]
+}

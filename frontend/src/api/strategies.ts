@@ -1,5 +1,5 @@
 import { createHttpClient } from './http'
-import type { Strategy, StrategyImportResult } from '../types/Strategy'
+import type { Strategy, StrategyImportResult, StrategyRuntimeDescriptor } from '../types/Strategy'
 
 const client = createHttpClient()
 
@@ -25,4 +25,9 @@ export function importStrategy(file: File): Promise<StrategyImportResult> {
     data: form,
     headers: { 'Content-Type': 'multipart/form-data' }
   })
+}
+
+export function fetchRuntimeDescriptor(strategyId: string, version?: string): Promise<StrategyRuntimeDescriptor> {
+  const params = version ? { version } : undefined
+  return client.request({ method: 'get', url: `/strategies/${strategyId}/runtime`, params })
 }

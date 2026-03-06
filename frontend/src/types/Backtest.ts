@@ -16,6 +16,30 @@ export interface BacktestLatestResponse {
   summary: BacktestSummary
   kline: KlineBar[]
   trades: Trade[]
+  runtime?: {
+    strategyId: string
+    strategyVersion: string
+    params?: Record<string, unknown>
+    logs?: string[]
+  }
+}
+
+export interface RunBacktestPayload {
+  symbol: string
+  interval?: string
+  limit?: number
+  strategyId?: string
+  strategyVersion?: string
+  strategyParams?: Record<string, unknown>
+}
+
+export interface RunBacktestResponse {
+  job_id: string
+}
+
+export interface BacktestJobResponse {
+  status: string
+  result?: BacktestLatestResponse
 }
 
 export interface Backtest {
