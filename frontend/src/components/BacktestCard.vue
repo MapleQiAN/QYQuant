@@ -77,8 +77,10 @@
       <div class="chart-section">
         <KlinePlaceholder
           :data="klineData"
+          :trades="tradeData"
           :symbol="symbol"
-          timeframe="15m"
+          :timeframe="timeframe"
+          @change-timeframe="$emit('change-timeframe', $event)"
         />
       </div>
 
@@ -114,17 +116,22 @@ import KlinePlaceholder from './KlinePlaceholder.vue'
 import SkeletonState from './SkeletonState.vue'
 import StatCard from './StatCard.vue'
 
-defineEmits<{ (event: 'retry'): void }>()
+defineEmits<{
+  (event: 'retry'): void
+  (event: 'change-timeframe', value: string): void
+}>()
 
 const props = withDefaults(defineProps<{
   data: BacktestLatestResponse | null
   loading?: boolean
   error?: string | null
   symbol?: string
+  timeframe?: string
 }>(), {
   loading: false,
   error: null,
-  symbol: 'XAUUSD'
+  symbol: 'XAUUSD',
+  timeframe: '15m'
 })
 
 const kpis = computed(() => ({
@@ -139,6 +146,7 @@ const kpis = computed(() => ({
 }))
 
 const klineData = computed<KlineBar[]>(() => props.data?.kline ?? [])
+const tradeData = computed(() => props.data?.trades ?? [])
 
 const RefreshIcon = () => h('svg', {
   width: 16,

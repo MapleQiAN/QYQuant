@@ -27,7 +27,9 @@
             :loading="backtestsStore.loading"
             :error="backtestsStore.error"
             symbol="XAUUSD"
-            @retry="backtestsStore.loadLatest('XAUUSD')"
+            :timeframe="selectedTimeframe"
+            @retry="loadLatestBacktest"
+            @change-timeframe="handleTimeframeChange"
           />
         </div>
 
@@ -67,7 +69,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, h, onMounted } from 'vue'
+import { computed, h, onMounted, ref } from 'vue'
 import { RouterLink } from 'vue-router'
 import BacktestCard from '../components/BacktestCard.vue'
 import ForumMiniCard from '../components/ForumMiniCard.vue'
@@ -83,9 +85,19 @@ const backtestsStore = useBacktestsStore()
 const botsStore = useBotsStore()
 const strategiesStore = useStrategiesStore()
 const forumStore = useForumStore()
+const selectedTimeframe = ref('15m')
+
+const loadLatestBacktest = () => {
+  backtestsStore.loadLatest('XAUUSD', { interval: selectedTimeframe.value })
+}
+
+const handleTimeframeChange = (timeframe: string) => {
+  selectedTimeframe.value = timeframe
+  loadLatestBacktest()
+}
 
 onMounted(() => {
-  backtestsStore.loadLatest('XAUUSD')
+  loadLatestBacktest()
   botsStore.loadRecent()
   strategiesStore.loadRecent()
   forumStore.loadHot()

@@ -8,8 +8,19 @@ import type {
 
 const client = createHttpClient()
 
-export function fetchLatest(symbol?: string): Promise<BacktestLatestResponse> {
-  const params = symbol ? { symbol } : undefined
+export interface FetchLatestParams {
+  interval?: string
+  limit?: number
+}
+
+export function fetchLatest(symbol?: string, query?: FetchLatestParams): Promise<BacktestLatestResponse> {
+  const composed = {
+    ...(symbol ? { symbol } : {}),
+    ...(query?.interval ? { interval: query.interval } : {}),
+    ...(query?.limit ? { limit: query.limit } : {})
+  }
+  const params = Object.keys(composed).length ? composed : undefined
+
   return client.request({ method: 'get', url: '/backtests/latest', params })
 }
 

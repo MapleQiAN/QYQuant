@@ -47,6 +47,9 @@ describe('DashboardView', () => {
       global: {
         plugins: [i18n],
         stubs: {
+          BacktestCard: {
+            template: '<div data-test="backtest-card" />'
+          },
           RouterLink: {
             template: '<a><slot /></a>'
           }

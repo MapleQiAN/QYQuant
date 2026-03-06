@@ -44,6 +44,9 @@ const zh = {
     statAvgHolding: '平均持仓天数'
   },
   kline: {
+    candles: 'K线',
+    volume: '成交量',
+    noData: '暂无图表数据',
     buySignal: '买入信号',
     sellSignal: '卖出信号',
     timeframes: {

@@ -44,6 +44,9 @@ const en = {
     statAvgHolding: 'Avg holding days'
   },
   kline: {
+    candles: 'Candles',
+    volume: 'Volume',
+    noData: 'No chart data yet',
     buySignal: 'Buy signal',
     sellSignal: 'Sell signal',
     timeframes: {
