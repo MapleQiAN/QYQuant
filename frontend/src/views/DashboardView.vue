@@ -26,10 +26,13 @@
             :data="backtestsStore.latest"
             :loading="backtestsStore.loading"
             :error="backtestsStore.error"
-            symbol="XAUUSD"
-            :timeframe="selectedTimeframe"
-            @retry="loadLatestBacktest"
-            @change-timeframe="handleTimeframeChange"
+            :symbol="backtestQuery.symbol"
+            :timeframe="backtestQuery.interval"
+            :data-source="backtestQuery.dataSource"
+            @retry="loadBacktest"
+            @refresh="loadBacktest"
+            @timeframe-change="handleTimeframeChange"
+            @data-source-change="handleDataSourceChange"
           />
         </div>
 
@@ -69,7 +72,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, h, onMounted, ref } from 'vue'
+import { computed, h, onMounted, reactive } from 'vue'
 import { RouterLink } from 'vue-router'
 import BacktestCard from '../components/BacktestCard.vue'
 import ForumMiniCard from '../components/ForumMiniCard.vue'
@@ -85,19 +88,31 @@ const backtestsStore = useBacktestsStore()
 const botsStore = useBotsStore()
 const strategiesStore = useStrategiesStore()
 const forumStore = useForumStore()
-const selectedTimeframe = ref('15m')
+const backtestQuery = reactive({
+  symbol: 'XAUUSD',
+  interval: '1d',
+  dataSource: 'auto'
+})
 
-const loadLatestBacktest = () => {
-  backtestsStore.loadLatest('XAUUSD', { interval: selectedTimeframe.value })
+const loadBacktest = () => {
+  backtestsStore.loadLatest({ ...backtestQuery })
 }
 
-const handleTimeframeChange = (timeframe: string) => {
-  selectedTimeframe.value = timeframe
-  loadLatestBacktest()
+const handleTimeframeChange = (interval: string) => {
+  backtestQuery.interval = interval
+  loadBacktest()
+}
+
+const handleDataSourceChange = (dataSource: string) => {
+  backtestQuery.dataSource = dataSource
+  if (dataSource === 'freegold') {
+    backtestQuery.interval = '1d'
+  }
+  loadBacktest()
 }
 
 onMounted(() => {
-  loadLatestBacktest()
+  loadBacktest()
   botsStore.loadRecent()
   strategiesStore.loadRecent()
   forumStore.loadHot()

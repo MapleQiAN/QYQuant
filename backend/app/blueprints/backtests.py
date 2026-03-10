@@ -16,6 +16,7 @@ def run():
     payload = request.get_json() or {}
     symbol = payload.get('symbol', 'BTCUSDT')
     interval = payload.get('interval')
+    data_source = payload.get('dataSource', payload.get('data_source', payload.get('provider')))
     limit = payload.get('limit', 120)
     start_time = payload.get('startTime', payload.get('start_time'))
     end_time = payload.get('endTime', payload.get('end_time'))
@@ -43,6 +44,7 @@ def run():
         strategy_id,
         strategy_version,
         strategy_params,
+        data_source,
     )
     return ok({"job_id": job.id})
 
@@ -63,6 +65,7 @@ def latest():
 
     symbol = request.args.get('symbol', 'BTCUSDT')
     interval = request.args.get('interval')
+    data_source = request.args.get('dataSource', request.args.get('data_source', request.args.get('provider')))
     limit = request.args.get('limit', 120)
     start_time = request.args.get('startTime', request.args.get('start_time'))
     end_time = request.args.get('endTime', request.args.get('end_time'))
@@ -91,6 +94,7 @@ def latest():
             strategy_id=strategy_id,
             strategy_version=strategy_version,
             strategy_params=strategy_params,
+            data_source=data_source,
         )
     except StrategyRuntimeError as exc:
         return as_response(exc), 400

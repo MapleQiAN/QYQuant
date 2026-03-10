@@ -90,20 +90,63 @@ class AutoProvider:
         return self._select(symbol).get_latest_price(symbol)
 
 
-def get_backtest_provider():
+_CANONICAL_PROVIDERS = {'mock', 'auto', 'freegold', 'binance'}
+_PROVIDER_ALIASES = {
+    'mock': 'mock',
+    'demo': 'mock',
+    'auto': 'auto',
+    'hybrid': 'auto',
+    'mixed': 'auto',
+    'gold': 'freegold',
+    'xau': 'freegold',
+    'freegold': 'freegold',
+    'binance': 'binance',
+    'live': 'binance',
+    'real': 'binance',
+}
+
+
+def _normalize_provider_name(value):
+    if value is None:
+        return None
+    normalized = str(value).strip().lower()
+    if not normalized:
+        return None
+    return _PROVIDER_ALIASES.get(normalized, normalized)
+
+
+def _default_provider_name():
     provider = os.getenv('BACKTEST_DATA_PROVIDER')
     if not provider:
         env = os.getenv('FLASK_ENV', 'development').lower()
         provider = 'mock' if env in {'test', 'testing'} else 'auto'
+    provider = _normalize_provider_name(provider)
+    if provider not in _CANONICAL_PROVIDERS:
+        return 'auto'
+    return provider
 
-    provider = provider.lower()
-    if provider in {'mock', 'demo'}:
+
+def resolve_data_source(provider_override=None, symbol=None):
+    provider = _normalize_provider_name(provider_override)
+    if provider not in _CANONICAL_PROVIDERS:
+        provider = _default_provider_name()
+    if provider == 'auto':
+        return 'freegold' if _is_gold_symbol(symbol) else 'binance'
+    return provider
+
+
+def get_backtest_provider(provider_override=None):
+    provider = _normalize_provider_name(provider_override)
+    if provider not in _CANONICAL_PROVIDERS:
+        provider = _default_provider_name()
+
+    if provider == 'mock':
         return MockProvider()
-    if provider in {'auto', 'hybrid', 'mixed'}:
+    if provider == 'auto':
         return AutoProvider()
-    if provider in {'gold', 'xau', 'freegold'}:
+    if provider == 'freegold':
         return FreeGoldProvider()
-    if provider in {'binance', 'live', 'real'}:
+    if provider == 'binance':
         return BinanceProvider()
 
-    raise ValueError(f"Unknown BACKTEST_DATA_PROVIDER: {provider}")
+    return AutoProvider()

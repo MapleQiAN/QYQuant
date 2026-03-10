@@ -55,7 +55,7 @@ const props = withDefaults(defineProps<Props>(), {
 })
 
 const emit = defineEmits<{
-  (event: 'change-timeframe', value: string): void
+  (event: 'timeframe-change', value: string): void
 }>()
 
 const { t, locale } = useI18n()
@@ -300,7 +300,7 @@ const renderChart = () => {
 
 const handleTimeframeChange = (next: string) => {
   if (next === props.timeframe) return
-  emit('change-timeframe', next)
+  emit('timeframe-change', next)
 }
 
 onMounted(() => {

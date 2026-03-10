@@ -9,18 +9,15 @@ import type {
 const client = createHttpClient()
 
 export interface FetchLatestParams {
+  symbol?: string
   interval?: string
   limit?: number
+  startTime?: string | number
+  endTime?: string | number
+  dataSource?: string
 }
 
-export function fetchLatest(symbol?: string, query?: FetchLatestParams): Promise<BacktestLatestResponse> {
-  const composed = {
-    ...(symbol ? { symbol } : {}),
-    ...(query?.interval ? { interval: query.interval } : {}),
-    ...(query?.limit ? { limit: query.limit } : {})
-  }
-  const params = Object.keys(composed).length ? composed : undefined
-
+export function fetchLatest(params?: FetchLatestParams): Promise<BacktestLatestResponse> {
   return client.request({ method: 'get', url: '/backtests/latest', params })
 }
 

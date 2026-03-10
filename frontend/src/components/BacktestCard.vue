@@ -13,9 +13,22 @@
         <div class="header-left">
           <h3 class="card-title">{{ $t('backtest.title') }}</h3>
           <span class="badge badge-success">{{ $t('backtest.statusCompleted') }}</span>
+          <span class="badge badge-info">{{ dataSourceBadge }}</span>
         </div>
         <div class="header-actions">
-          <button class="btn btn-secondary">
+          <div class="data-source-control">
+            <span class="data-source-label">{{ $t('backtest.dataSource') }}</span>
+            <select
+              class="data-source-select"
+              :value="selectedDataSource"
+              @change="handleDataSourceChange"
+            >
+              <option v-for="option in dataSourceOptions" :key="option.value" :value="option.value">
+                {{ option.label }}
+              </option>
+            </select>
+          </div>
+          <button class="btn btn-secondary" @click="emit('refresh')">
             <RefreshIcon />
             {{ $t('backtest.refresh') }}
           </button>
@@ -80,7 +93,7 @@
           :trades="tradeData"
           :symbol="symbol"
           :timeframe="timeframe"
-          @change-timeframe="$emit('change-timeframe', $event)"
+          @timeframe-change="handleTimeframeChange"
         />
       </div>
 
@@ -108,6 +121,7 @@
 
 <script setup lang="ts">
 import { computed, h } from 'vue'
+import { useI18n } from 'vue-i18n'
 import type { BacktestLatestResponse } from '../types/Backtest'
 import type { KlineBar } from '../types/KlineBar'
 import EmptyState from './EmptyState.vue'
@@ -116,9 +130,11 @@ import KlinePlaceholder from './KlinePlaceholder.vue'
 import SkeletonState from './SkeletonState.vue'
 import StatCard from './StatCard.vue'
 
-defineEmits<{
+const emit = defineEmits<{
   (event: 'retry'): void
-  (event: 'change-timeframe', value: string): void
+  (event: 'refresh'): void
+  (event: 'data-source-change', value: string): void
+  (event: 'timeframe-change', value: string): void
 }>()
 
 const props = withDefaults(defineProps<{
@@ -127,12 +143,16 @@ const props = withDefaults(defineProps<{
   error?: string | null
   symbol?: string
   timeframe?: string
+  dataSource?: string
 }>(), {
   loading: false,
   error: null,
   symbol: 'XAUUSD',
-  timeframe: '15m'
+  timeframe: '15m',
+  dataSource: 'auto'
 })
+
+const { t } = useI18n()
 
 const kpis = computed(() => ({
   totalReturn: props.data?.summary.totalReturn ?? 0,
@@ -147,6 +167,39 @@ const kpis = computed(() => ({
 
 const klineData = computed<KlineBar[]>(() => props.data?.kline ?? [])
 const tradeData = computed(() => props.data?.trades ?? [])
+const selectedDataSource = computed(() => normalizeDataSource(props.dataSource) ?? 'auto')
+const resolvedDataSource = computed(() => normalizeDataSource(props.data?.dataSource) ?? selectedDataSource.value)
+
+const dataSourceOptions = computed(() => ([
+  { value: 'auto', label: t('backtest.dataSourceAuto') },
+  { value: 'binance', label: t('backtest.dataSourceBinance') },
+  { value: 'freegold', label: t('backtest.dataSourceFreegold') },
+  { value: 'mock', label: t('backtest.dataSourceMock') }
+]))
+
+const dataSourceBadge = computed(() => {
+  const resolved = resolvedDataSource.value
+  const resolvedLabel = dataSourceOptions.value.find((option) => option.value === resolved)?.label ?? resolved
+  if (selectedDataSource.value === 'auto' && resolved !== 'auto') {
+    return t('backtest.dataSourceAutoWith', { source: resolvedLabel })
+  }
+  return resolvedLabel
+})
+
+const handleDataSourceChange = (event: Event) => {
+  const target = event.target as HTMLSelectElement
+  emit('data-source-change', target.value)
+}
+
+const handleTimeframeChange = (value: string) => {
+  emit('timeframe-change', value)
+}
+
+function normalizeDataSource(value?: string | null) {
+  if (!value) return null
+  const normalized = String(value).trim().toLowerCase()
+  return normalized || null
+}
 
 const RefreshIcon = () => h('svg', {
   width: 16,
@@ -266,7 +319,30 @@ const TargetIcon = () => h('svg', {
 
 .header-actions {
   display: flex;
+  align-items: center;
   gap: var(--spacing-sm);
+  flex-wrap: wrap;
+}
+
+.data-source-control {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+}
+
+.data-source-label {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+}
+
+.data-source-select {
+  padding: var(--spacing-xs) var(--spacing-sm);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-secondary);
+  background: var(--color-background);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
 }
 
 .kpi-grid {

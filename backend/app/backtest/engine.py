@@ -1,6 +1,6 @@
 import math
 
-from .providers import get_backtest_provider
+from .providers import get_backtest_provider, resolve_data_source
 from ..strategy_runtime import execute_backtest_strategy, preflight_strategy
 
 
@@ -75,8 +75,9 @@ def run_backtest(
     strategy_id=None,
     strategy_version=None,
     strategy_params=None,
+    data_source=None,
 ):
-    provider = get_backtest_provider()
+    provider = get_backtest_provider(data_source)
     kline = provider.get_bars(
         symbol,
         limit=limit,
@@ -95,6 +96,12 @@ def run_backtest(
         trades = []
 
     summary = _calculate_summary(kline)
+    result = {
+        "kline": kline,
+        "trades": trades,
+        "summary": summary,
+        "dataSource": resolve_data_source(data_source, symbol),
+    }
     if runtime:
-        return {"kline": kline, "trades": trades, "summary": summary, "runtime": runtime}
-    return {"kline": kline, "trades": trades, "summary": summary}
+        result["runtime"] = runtime
+    return result

@@ -14,6 +14,7 @@ export const latestBacktest: BacktestLatestResponse = {
     totalTrades: 128,
     avgHoldingDays: 2.8
   },
+  dataSource: 'mock',
   kline: [
     { time: '09:30', open: 2850, high: 2865, low: 2845, close: 2860, volume: 12500 },
     { time: '09:45', open: 2860, high: 2875, low: 2855, close: 2870, volume: 15000, signal: 'buy' },
