@@ -118,7 +118,7 @@ class StrategyContext:
     def __init__(
         self,
         account: Account,
-        parameters: ParameterAccessor | None = None,
+        parameters: ParameterAccessor | None = None,  # 也接受 ParameterProvider（子类）
         current_dt: datetime | None = None,
     ) -> None:
         self.account: Account = account
