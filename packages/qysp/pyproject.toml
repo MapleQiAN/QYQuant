@@ -9,6 +9,9 @@ dependencies = [
 [project.scripts]
 qys = "qysp.cli.main:cli"
 
+[project.optional-dependencies]
+indicators = ["pandas>=2.0"]
+
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
