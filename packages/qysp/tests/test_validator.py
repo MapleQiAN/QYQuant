@@ -151,6 +151,16 @@ class TestValidateSchema:
         errors = validate_schema(data)
         assert errors == []
 
+    def test_backtest_date_format_invalid(self):
+        """backtest.defaultPeriod 日期格式无效时报错。"""
+        data = _minimal_strategy()
+        data["backtest"] = {
+            "defaultPeriod": {"start": "not-a-date", "end": "2024-12-31"},
+        }
+        errors = validate_schema(data)
+        assert len(errors) > 0
+        assert any("start" in e for e in errors)
+
     def test_non_dict_input(self):
         """非 dict 输入抛出 ValidationError。"""
         with pytest.raises(ValidationError, match="must be a dict"):
@@ -221,6 +231,39 @@ class TestValidateIntegrity:
         with pytest.raises(FileNotFoundError):
             validate_integrity(tmp_path / "nonexistent.qys")
 
+    def test_bad_zip_file(self, tmp_path: Path):
+        """非法 ZIP 文件抛出 ValidationError。"""
+        bad_qys = tmp_path / "bad.qys"
+        bad_qys.write_bytes(b"this is not a zip file")
+        with pytest.raises(ValidationError, match="not a valid ZIP"):
+            validate_integrity(bad_qys)
+
+    def test_malformed_strategy_json(self, tmp_path: Path):
+        """损坏的 strategy.json 抛出 ValidationError。"""
+        qys_path = tmp_path / "bad_json.qys"
+        buf = io.BytesIO()
+        with zipfile.ZipFile(buf, "w") as zf:
+            zf.writestr("strategy.json", "{invalid json")
+        qys_path.write_bytes(buf.getvalue())
+        with pytest.raises(ValidationError, match="Malformed strategy.json"):
+            validate_integrity(qys_path)
+
+    def test_integrity_files_not_list(self, tmp_path: Path):
+        """integrity.files 非数组时抛出 ValidationError。"""
+        strategy = _minimal_strategy()
+        strategy["integrity"] = {"files": "not-a-list"}
+        qys = _make_qys(tmp_path, strategy)
+        with pytest.raises(ValidationError, match="must be an array"):
+            validate_integrity(qys)
+
+    def test_integrity_entry_missing_keys(self, tmp_path: Path):
+        """integrity.files 条目缺少 path/sha256 时抛出 ValidationError。"""
+        strategy = _minimal_strategy()
+        strategy["integrity"] = {"files": [{"path": "only-path"}]}
+        qys = _make_qys(tmp_path, strategy)
+        with pytest.raises(ValidationError, match="missing required keys"):
+            validate_integrity(qys)
+
 
 # ---------------------------------------------------------------------------
 # 统一入口测试
@@ -283,6 +326,21 @@ class TestValidate:
         result = validate(qys)
         assert result["valid"] is False
         assert any("checksum mismatch" in e for e in result["errors"])
+
+    def test_qys_bad_zip(self, tmp_path: Path):
+        """非法 ZIP .qys 文件返回错误而非崩溃。"""
+        bad_qys = tmp_path / "bad.qys"
+        bad_qys.write_bytes(b"not a zip")
+        result = validate(bad_qys)
+        assert result["valid"] is False
+        assert any("Invalid .qys package" in e for e in result["errors"])
+
+    def test_directory_malformed_json(self, tmp_path: Path):
+        """目录中 strategy.json 损坏时返回错误。"""
+        (tmp_path / "strategy.json").write_text("{bad json", encoding="utf-8")
+        result = validate(tmp_path)
+        assert result["valid"] is False
+        assert any("Malformed" in e for e in result["errors"])
 
 
 # ---------------------------------------------------------------------------
