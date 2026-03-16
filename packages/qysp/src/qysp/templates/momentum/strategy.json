@@ -1,0 +1,40 @@
+{
+  "schemaVersion": "1.0",
+  "kind": "QYStrategy",
+  "id": "00000000-0000-0000-0000-000000000000",
+  "name": "template-strategy",
+  "version": "0.1.0",
+  "description": "EMA 动量确认模板",
+  "language": "python",
+  "runtime": {
+    "name": "python",
+    "version": "3.11"
+  },
+  "entrypoint": {
+    "path": "src/strategy.py",
+    "callable": "on_bar",
+    "interface": "event_v1"
+  },
+  "parameters": [
+    {
+      "key": "ema_period",
+      "type": "integer",
+      "default": 12,
+      "min": 2,
+      "max": 200,
+      "description": "快 EMA 周期"
+    },
+    {
+      "key": "signal_period",
+      "type": "integer",
+      "default": 26,
+      "min": 5,
+      "max": 300,
+      "description": "慢 EMA 周期"
+    }
+  ],
+  "ui": {
+    "category": "momentum",
+    "difficulty": "beginner"
+  }
+}

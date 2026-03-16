@@ -1,0 +1,40 @@
+{
+  "schemaVersion": "1.0",
+  "kind": "QYStrategy",
+  "id": "00000000-0000-0000-0000-000000000000",
+  "name": "template-strategy",
+  "version": "0.1.0",
+  "description": "双均线趋势跟踪模板",
+  "language": "python",
+  "runtime": {
+    "name": "python",
+    "version": "3.11"
+  },
+  "entrypoint": {
+    "path": "src/strategy.py",
+    "callable": "on_bar",
+    "interface": "event_v1"
+  },
+  "parameters": [
+    {
+      "key": "fast_period",
+      "type": "integer",
+      "default": 5,
+      "min": 2,
+      "max": 200,
+      "description": "短周期均线窗口"
+    },
+    {
+      "key": "slow_period",
+      "type": "integer",
+      "default": 20,
+      "min": 5,
+      "max": 500,
+      "description": "长周期均线窗口"
+    }
+  ],
+  "ui": {
+    "category": "trend-following",
+    "difficulty": "beginner"
+  }
+}

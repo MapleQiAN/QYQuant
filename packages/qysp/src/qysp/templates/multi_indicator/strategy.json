@@ -1,0 +1,56 @@
+{
+  "schemaVersion": "1.0",
+  "kind": "QYStrategy",
+  "id": "00000000-0000-0000-0000-000000000000",
+  "name": "template-strategy",
+  "version": "0.1.0",
+  "description": "多指标确认模板（SMA + ATR + Bollinger）",
+  "language": "python",
+  "runtime": {
+    "name": "python",
+    "version": "3.11"
+  },
+  "entrypoint": {
+    "path": "src/strategy.py",
+    "callable": "on_bar",
+    "interface": "event_v1"
+  },
+  "parameters": [
+    {
+      "key": "sma_period",
+      "type": "integer",
+      "default": 20,
+      "min": 5,
+      "max": 200,
+      "description": "趋势均线窗口"
+    },
+    {
+      "key": "atr_period",
+      "type": "integer",
+      "default": 14,
+      "min": 5,
+      "max": 200,
+      "description": "ATR 波动率窗口"
+    },
+    {
+      "key": "bb_period",
+      "type": "integer",
+      "default": 20,
+      "min": 5,
+      "max": 200,
+      "description": "布林带窗口"
+    },
+    {
+      "key": "bb_std",
+      "type": "number",
+      "default": 2.0,
+      "min": 0.5,
+      "max": 4.0,
+      "description": "布林带标准差倍数"
+    }
+  ],
+  "ui": {
+    "category": "multi-indicator",
+    "difficulty": "advanced"
+  }
+}

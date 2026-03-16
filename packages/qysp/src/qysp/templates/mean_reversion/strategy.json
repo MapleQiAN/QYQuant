@@ -1,0 +1,40 @@
+{
+  "schemaVersion": "1.0",
+  "kind": "QYStrategy",
+  "id": "00000000-0000-0000-0000-000000000000",
+  "name": "template-strategy",
+  "version": "0.1.0",
+  "description": "布林带均值回归模板",
+  "language": "python",
+  "runtime": {
+    "name": "python",
+    "version": "3.11"
+  },
+  "entrypoint": {
+    "path": "src/strategy.py",
+    "callable": "on_bar",
+    "interface": "event_v1"
+  },
+  "parameters": [
+    {
+      "key": "bb_period",
+      "type": "integer",
+      "default": 20,
+      "min": 5,
+      "max": 200,
+      "description": "布林带均线周期"
+    },
+    {
+      "key": "bb_std",
+      "type": "number",
+      "default": 2.0,
+      "min": 0.5,
+      "max": 4.0,
+      "description": "布林带标准差倍数"
+    }
+  ],
+  "ui": {
+    "category": "mean-reversion",
+    "difficulty": "intermediate"
+  }
+}
