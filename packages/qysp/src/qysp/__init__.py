@@ -19,6 +19,7 @@ from qysp.indicators import (
     sma,
 )
 from qysp.parameters import ParameterProvider, ValidationError
+from qysp.validator import validate, validate_integrity, validate_schema
 
 __version__ = "0.1.0"
 
@@ -39,4 +40,7 @@ __all__ = [
     "cross_under",
     "ema",
     "sma",
+    "validate",
+    "validate_integrity",
+    "validate_schema",
 ]
