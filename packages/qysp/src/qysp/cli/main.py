@@ -4,11 +4,13 @@ from __future__ import annotations
 
 import hashlib
 import json
+import re
 import sys
 import textwrap
 import uuid
 import zipfile
 from pathlib import Path, PurePosixPath
+from typing import Callable
 
 import click
 
@@ -72,6 +74,9 @@ def _make_strategy_json(name: str, template: str) -> dict:
     }
 
 
+_VALID_NAME_RE = re.compile(r"^[a-zA-Z0-9][a-zA-Z0-9._-]*$")
+
+
 @cli.command()
 @click.argument("name")
 @click.option(
@@ -84,6 +89,14 @@ def _make_strategy_json(name: str, template: str) -> dict:
 )
 def init(name: str, template: str) -> None:
     """从模板创建新策略项目"""
+    if not _VALID_NAME_RE.match(name):
+        click.echo(
+            f"无效的策略名称 '{name}'：只允许字母、数字、连字符、下划线和点号，"
+            "且必须以字母或数字开头",
+            err=True,
+        )
+        sys.exit(1)
+
     target = Path(name)
     if target.exists():
         click.echo(f"Directory '{name}' already exists")
@@ -163,11 +176,23 @@ def build(source_dir: str, output: str | None) -> None:
     strategy_data = json.loads(strategy_json_path.read_text(encoding="utf-8"))
     strategy_name = strategy_data.get("name", src.name)
 
-    # Collect all files (relative to source_dir)
+    # Collect all files (relative to source_dir), filtering out junk
+    _EXCLUDE_DIRS = {"__pycache__", ".git", ".svn", ".hg", ".venv", "node_modules"}
+    _EXCLUDE_SUFFIXES = {".pyc", ".pyo"}
+    _EXCLUDE_NAMES = {".DS_Store", "Thumbs.db", ".gitignore"}
+
     all_files: list[Path] = []
     for f in sorted(src.rglob("*")):
-        if f.is_file():
-            all_files.append(f)
+        if not f.is_file():
+            continue
+        parts = set(f.relative_to(src).parts)
+        if parts & _EXCLUDE_DIRS:
+            continue
+        if f.suffix in _EXCLUDE_SUFFIXES:
+            continue
+        if f.name in _EXCLUDE_NAMES:
+            continue
+        all_files.append(f)
 
     # Compute SHA256 for all files except strategy.json itself
     integrity_files: list[dict] = []
@@ -218,7 +243,7 @@ def build(source_dir: str, output: str | None) -> None:
 
 CURRENT_SCHEMA_VERSION = "1.0"
 
-MIGRATIONS: dict[str, object] = {
+MIGRATIONS: dict[str, Callable] = {
     # "0.9->1.0": migrate_0_9_to_1_0,  # placeholder
 }
 
@@ -232,12 +257,15 @@ def migrate(path: str) -> None:
         click.echo(f"路径不存在: {path}", err=True)
         sys.exit(2)
 
-    # Locate strategy.json
+    # Locate strategy.json — handle directory, .qys file, or bare json
+    is_qys = p.is_file() and p.suffix == ".qys"
+
+    if is_qys:
+        _migrate_qys(p)
+        return
+
     if p.is_dir():
         strategy_json_path = p / "strategy.json"
-    elif p.suffix == ".qys":
-        click.echo("❌ .qys 文件迁移暂不支持，请先解压后对目录执行迁移", err=True)
-        sys.exit(1)
     else:
         strategy_json_path = p
 
@@ -251,7 +279,6 @@ def migrate(path: str) -> None:
     if current_version == CURRENT_SCHEMA_VERSION:
         click.echo(f"已是最新版本（{CURRENT_SCHEMA_VERSION}）")
     else:
-        # Future: apply migrations in order
         click.echo(
             f"当前版本 {current_version} → 最新版本 {CURRENT_SCHEMA_VERSION}"
         )
@@ -261,6 +288,49 @@ def migrate(path: str) -> None:
             encoding="utf-8",
         )
         click.echo("✅ 迁移完成")
+
+
+def _migrate_qys(qys_path: Path) -> None:
+    """对 .qys 包执行就地 schema 版本迁移。"""
+    try:
+        zf_in = zipfile.ZipFile(qys_path, "r")
+    except zipfile.BadZipFile:
+        click.echo("❌ 无效的 .qys 文件（非 ZIP 格式）", err=True)
+        sys.exit(1)
+
+    with zf_in:
+        if "strategy.json" not in zf_in.namelist():
+            click.echo("❌ .qys 包中缺少 strategy.json", err=True)
+            sys.exit(1)
+
+        strategy_data = json.loads(zf_in.read("strategy.json"))
+        current_version = strategy_data.get("schemaVersion", "")
+
+        if current_version == CURRENT_SCHEMA_VERSION:
+            click.echo(f"已是最新版本（{CURRENT_SCHEMA_VERSION}）")
+            return
+
+        click.echo(
+            f"当前版本 {current_version} → 最新版本 {CURRENT_SCHEMA_VERSION}"
+        )
+        strategy_data["schemaVersion"] = CURRENT_SCHEMA_VERSION
+        updated_json = json.dumps(strategy_data, indent=2, ensure_ascii=False) + "\n"
+
+        # Rewrite the .qys with updated strategy.json
+        all_entries = zf_in.namelist()
+
+    # Re-open for reading (context manager closed above), write to temp then replace
+    tmp_path = qys_path.with_suffix(".qys.tmp")
+    with zipfile.ZipFile(qys_path, "r") as zf_in, \
+         zipfile.ZipFile(tmp_path, "w", zipfile.ZIP_DEFLATED) as zf_out:
+        for entry in zf_in.namelist():
+            if entry == "strategy.json":
+                zf_out.writestr("strategy.json", updated_json)
+            else:
+                zf_out.writestr(entry, zf_in.read(entry))
+
+    tmp_path.replace(qys_path)
+    click.echo("✅ 迁移完成")
 
 
 # ---------------------------------------------------------------------------

@@ -85,6 +85,18 @@ class TestInit:
                 data = json.load(f)
             assert data["ui"]["category"] == "trend-following"
 
+    def test_init_invalid_name_rejected(self, tmp_path: object) -> None:
+        runner = CliRunner()
+        with runner.isolated_filesystem(temp_dir=tmp_path):
+            result = runner.invoke(cli, ["init", "../hack"])
+            assert result.exit_code != 0
+
+    def test_init_invalid_name_with_spaces(self, tmp_path: object) -> None:
+        runner = CliRunner()
+        with runner.isolated_filesystem(temp_dir=tmp_path):
+            result = runner.invoke(cli, ["init", "bad name"])
+            assert result.exit_code != 0
+
 
 class TestValidate:
     """qys validate 子命令测试。"""
@@ -178,7 +190,7 @@ class TestBuild:
             os.makedirs("empty-dir")
             result = runner.invoke(cli, ["build", "empty-dir"])
             assert result.exit_code != 0
-            assert "strategy.json" in result.output or "strategy.json" in (result.output + str(result.exception or ""))
+            assert "strategy.json" in result.output
 
     def test_build_missing_strategy_py(self, tmp_path: object) -> None:
         runner = CliRunner()
@@ -200,6 +212,56 @@ class TestMigrate:
             result = runner.invoke(cli, ["migrate", "my-strat"])
             assert result.exit_code == 0
             assert "已是最新版本" in result.output
+
+    def test_migrate_older_version_dir(self, tmp_path: object) -> None:
+        runner = CliRunner()
+        with runner.isolated_filesystem(temp_dir=tmp_path):
+            runner.invoke(cli, ["init", "my-strat"])
+            # Downgrade schemaVersion to trigger migration
+            sj = os.path.join("my-strat", "strategy.json")
+            with open(sj, encoding="utf-8") as f:
+                data = json.load(f)
+            data["schemaVersion"] = "0.9"
+            with open(sj, "w", encoding="utf-8") as f:
+                json.dump(data, f)
+            result = runner.invoke(cli, ["migrate", "my-strat"])
+            assert result.exit_code == 0
+            assert "迁移完成" in result.output
+            # Verify version updated on disk
+            with open(sj, encoding="utf-8") as f:
+                updated = json.load(f)
+            assert updated["schemaVersion"] == "1.0"
+
+    def test_migrate_qys_already_latest(self, tmp_path: object) -> None:
+        runner = CliRunner()
+        with runner.isolated_filesystem(temp_dir=tmp_path):
+            runner.invoke(cli, ["init", "my-strat"])
+            runner.invoke(cli, ["build", "my-strat"])
+            result = runner.invoke(cli, ["migrate", "my-strat.qys"])
+            assert result.exit_code == 0
+            assert "已是最新版本" in result.output
+
+    def test_migrate_qys_older_version(self, tmp_path: object) -> None:
+        runner = CliRunner()
+        with runner.isolated_filesystem(temp_dir=tmp_path):
+            runner.invoke(cli, ["init", "my-strat"])
+            runner.invoke(cli, ["build", "my-strat"])
+            # Tamper the .qys: downgrade schemaVersion
+            with zipfile.ZipFile("my-strat.qys", "r") as zf_in:
+                entries = {n: zf_in.read(n) for n in zf_in.namelist()}
+            sj = json.loads(entries["strategy.json"])
+            sj["schemaVersion"] = "0.9"
+            entries["strategy.json"] = json.dumps(sj).encode()
+            with zipfile.ZipFile("my-strat.qys", "w") as zf_out:
+                for name, content in entries.items():
+                    zf_out.writestr(name, content)
+            result = runner.invoke(cli, ["migrate", "my-strat.qys"])
+            assert result.exit_code == 0
+            assert "迁移完成" in result.output
+            # Verify version updated inside .qys
+            with zipfile.ZipFile("my-strat.qys", "r") as zf:
+                updated = json.loads(zf.read("strategy.json"))
+            assert updated["schemaVersion"] == "1.0"
 
     def test_migrate_nonexistent_path(self, tmp_path: object) -> None:
         runner = CliRunner()
