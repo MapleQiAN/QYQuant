@@ -5,12 +5,23 @@ export interface Strategy {
   name: string
   symbol: string
   status: StrategyStatus
+  description?: string | null
+  category?: string | null
+  source?: string | null
   returns: number
   winRate: number
   maxDrawdown: number
   tags: string[]
   lastUpdate: string | number
   trades: number
+  createdAt?: string | number
+}
+
+export interface StrategyListResult {
+  items: Strategy[]
+  page: number
+  perPage: number
+  total: number
 }
 
 export interface StrategyImportResult {
@@ -27,6 +38,7 @@ export interface StrategyImportResult {
     size: number
     path: string
   }
+  next?: string
 }
 
 export type StrategyParamType = 'integer' | 'number' | 'string' | 'boolean' | 'enum' | 'array' | 'object'

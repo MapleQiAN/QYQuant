@@ -1,10 +1,35 @@
 import { createHttpClient } from './http'
-import type { Strategy, StrategyImportResult, StrategyRuntimeDescriptor } from '../types/Strategy'
+import type {
+  Strategy,
+  StrategyImportResult,
+  StrategyListResult,
+  StrategyRuntimeDescriptor
+} from '../types/Strategy'
 
 const client = createHttpClient()
 
 export function fetchRecent(): Promise<Strategy[]> {
   return client.request({ method: 'get', url: '/strategies/recent' })
+}
+
+export function fetchStrategies(params?: {
+  page?: number
+  perPage?: number
+  sort?: string
+  order?: 'asc' | 'desc'
+}): Promise<StrategyListResult> {
+  return client.request({
+    method: 'get',
+    url: '/v1/strategies/',
+    params: params
+      ? {
+          page: params.page,
+          per_page: params.perPage,
+          sort: params.sort,
+          order: params.order
+        }
+      : undefined
+  })
 }
 
 export function createStrategy(payload: {
@@ -21,9 +46,16 @@ export function importStrategy(file: File): Promise<StrategyImportResult> {
   form.append('file', file)
   return client.request({
     method: 'post',
-    url: '/strategies/import',
+    url: '/v1/strategies/import',
     data: form,
     headers: { 'Content-Type': 'multipart/form-data' }
+  })
+}
+
+export function deleteStrategy(strategyId: string): Promise<{ deletedId: string }> {
+  return client.request({
+    method: 'delete',
+    url: `/v1/strategies/${strategyId}`
   })
 }
 

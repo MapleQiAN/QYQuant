@@ -12,7 +12,7 @@
             <SettingsIcon />
             {{ $t('common.settings') }}
           </RouterLink>
-          <RouterLink class="btn btn-primary" to="/strategies/new">
+        <RouterLink class="btn btn-primary" to="/strategies">
             <PlusIcon />
             {{ $t('common.newStrategy') }}
           </RouterLink>

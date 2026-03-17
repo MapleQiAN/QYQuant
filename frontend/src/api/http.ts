@@ -8,6 +8,17 @@ export function createHttpClient() {
     timeout: 8000
   })
 
+  instance.interceptors.request.use((config) => {
+    if (typeof window !== 'undefined') {
+      const token = localStorage.getItem('qyquant-token')
+      if (token) {
+        config.headers = config.headers || {}
+        config.headers.Authorization = `Bearer ${token}`
+      }
+    }
+    return config
+  })
+
   instance.interceptors.response.use(
     (response) => response,
     async (error) => {
