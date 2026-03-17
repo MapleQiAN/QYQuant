@@ -48,12 +48,16 @@ class StrategySchema(Schema):
     name = fields.Str(required=True)
     symbol = fields.Str(required=True)
     status = fields.Str(required=True)
+    description = fields.Str(allow_none=True)
+    category = fields.Str(allow_none=True)
+    source = fields.Function(lambda obj: _value(obj, "source") or "upload")
     returns = fields.Float()
     winRate = fields.Float(attribute='win_rate')
     maxDrawdown = fields.Float(attribute='max_drawdown')
     tags = fields.List(fields.Str())
     lastUpdate = fields.Int(attribute='last_update')
     trades = fields.Int()
+    createdAt = fields.Int(attribute='created_at')
 
 
 class BacktestSummarySchema(Schema):

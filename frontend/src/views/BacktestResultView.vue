@@ -12,29 +12,38 @@
       <div v-if="store.reportLoading" class="card state-card">Loading report...</div>
       <div v-else-if="store.reportError" class="card state-card error">{{ store.reportError }}</div>
       <template v-else-if="report">
-        <div class="metrics-grid">
+        <ErrorDisplay
+          v-if="report.status === 'failed' && report.error"
+          :error="report.error"
+          :supported-packages="store.supportedPackages"
+          :loading="store.supportedPackagesLoading"
+        />
+
+        <template v-else>
+          <div class="metrics-grid">
           <article v-for="metric in coreMetrics" :key="metric.label" class="metric-card">
             <span class="metric-label">{{ metric.label }}</span>
             <strong class="metric-value" :class="metric.tone">{{ metric.value }}</strong>
           </article>
-        </div>
-
-        <EquityCurveChart class="chart-block" :points="report.equity_curve" :trades="report.trades" />
-
-        <details class="card details-card">
-          <summary>View all 11 metrics</summary>
-          <div class="details-grid">
-            <div v-for="metric in detailedMetrics" :key="metric.label" class="detail-item">
-              <span class="detail-label">{{ metric.label }}</span>
-              <span class="detail-value">{{ metric.value }}</span>
-            </div>
           </div>
-        </details>
 
-        <div class="card disclaimer-card">
-          <p class="disclaimer-title">Disclaimer</p>
-          <p class="disclaimer-text">{{ report.disclaimer }}</p>
-        </div>
+          <EquityCurveChart class="chart-block" :points="report.equity_curve || []" :trades="report.trades || []" />
+
+          <details class="card details-card">
+            <summary>View all 11 metrics</summary>
+            <div class="details-grid">
+              <div v-for="metric in detailedMetrics" :key="metric.label" class="detail-item">
+                <span class="detail-label">{{ metric.label }}</span>
+                <span class="detail-value">{{ metric.value }}</span>
+              </div>
+            </div>
+          </details>
+
+          <div class="card disclaimer-card">
+            <p class="disclaimer-title">Disclaimer</p>
+            <p class="disclaimer-text">{{ report.disclaimer }}</p>
+          </div>
+        </template>
       </template>
     </div>
   </section>
@@ -44,6 +53,7 @@
 import { computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import EquityCurveChart from '../components/backtest/EquityCurveChart.vue'
+import ErrorDisplay from '../components/backtest/ErrorDisplay.vue'
 import { useBacktestsStore } from '../stores/backtests'
 
 const route = useRoute()
@@ -98,6 +108,7 @@ onMounted(() => {
   if (jobId) {
     void store.loadReport(jobId)
   }
+  void store.loadSupportedPackages()
 })
 </script>
 

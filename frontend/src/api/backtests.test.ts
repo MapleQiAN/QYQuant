@@ -79,4 +79,11 @@ describe('backtests api', () => {
     expect(data).toEqual({ ok: true })
     expect(requestMock).toHaveBeenCalledWith({ method: 'get', url: '/v1/backtest/job-id/report' })
   })
+
+  it('fetches supported package whitelist', async () => {
+    const data = await backtests.fetchSupportedPackages()
+
+    expect(data).toEqual({ ok: true })
+    expect(requestMock).toHaveBeenCalledWith({ method: 'get', url: '/v1/backtest/supported-packages' })
+  })
 })

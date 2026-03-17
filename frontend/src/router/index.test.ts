@@ -8,6 +8,7 @@ vi.mock('../views/BotsView.vue', () => ({ default: { template: '<div />' } }))
 vi.mock('../views/ForumView.vue', () => ({ default: { template: '<div />' } }))
 vi.mock('../views/SettingsView.vue', () => ({ default: { template: '<div />' } }))
 vi.mock('../views/NewStrategyView.vue', () => ({ default: { template: '<div />' } }))
+vi.mock('../views/StrategyLibraryView.vue', () => ({ default: { template: '<div />' } }))
 
 import router from './index'
 
@@ -25,5 +26,10 @@ describe('router', () => {
   it('contains backtest report route', () => {
     const hasReport = router.getRoutes().some((route) => route.path === '/backtests/:jobId/report')
     expect(hasReport).toBe(true)
+  })
+
+  it('contains strategy library route', () => {
+    const hasStrategyLibrary = router.getRoutes().some((route) => route.path === '/strategies')
+    expect(hasStrategyLibrary).toBe(true)
   })
 })

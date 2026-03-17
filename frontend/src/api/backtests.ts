@@ -7,6 +7,7 @@ import type {
   RunBacktestPayload,
   RunBacktestResponse,
   SubmitBacktestPayload,
+  SupportedPackagesResponse,
 } from '../types/Backtest'
 
 const client = createHttpClient()
@@ -42,4 +43,8 @@ export function fetchBacktestStatus(jobId: string): Promise<BacktestStatusRespon
 
 export function fetchBacktestReport(jobId: string): Promise<BacktestReportResponse> {
   return client.request({ method: 'get', url: `/v1/backtest/${jobId}/report` })
+}
+
+export function fetchSupportedPackages(): Promise<SupportedPackagesResponse> {
+  return client.request({ method: 'get', url: '/v1/backtest/supported-packages' })
 }

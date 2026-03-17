@@ -1,3 +1,5 @@
+import json
+
 from celery.exceptions import SoftTimeLimitExceeded
 from flask import has_app_context
 
@@ -6,10 +8,17 @@ from ..celery_app import celery_app
 from ..extensions import db
 from ..models import BacktestJob, BacktestJobStatus
 from ..quota import consume_quota
+from ..services.error_parser import dump_execution_error
 from ..services.metrics import build_backtest_report
 from ..strategy_runtime import StrategyRuntimeError
 from ..utils.storage import build_backtest_storage_key, write_json
 from ..utils.time import now_utc
+
+
+def _store_structured_error(job, raw_error):
+    payload = dump_execution_error(raw_error)
+    job.error_message = payload
+    return json.loads(payload)
 
 
 def _run_job(job_id):
@@ -55,13 +64,14 @@ def _run_job(job_id):
             job.error_message = exc.message
         else:
             job.status = BacktestJobStatus.FAILED.value
-            job.error_message = exc.message
+            raw_error = (exc.details or {}).get("reason") or exc.message
+            _store_structured_error(job, raw_error)
         job.completed_at = now_utc()
         db.session.commit()
         return {"status": job.status}
     except Exception as exc:
         job.status = BacktestJobStatus.FAILED.value
-        job.error_message = str(exc)
+        _store_structured_error(job, str(exc))
         job.completed_at = now_utc()
         db.session.commit()
         return {"status": job.status}
@@ -80,7 +90,7 @@ def _run_job(job_id):
         write_json(f"{storage_key}/trades.json", report["trades"])
     except Exception as exc:
         job.status = BacktestJobStatus.FAILED.value
-        job.error_message = str(exc)
+        _store_structured_error(job, str(exc))
         job.completed_at = now_utc()
         db.session.commit()
         return {"status": job.status}

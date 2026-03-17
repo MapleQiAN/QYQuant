@@ -8,6 +8,8 @@ from ..celery_app import celery_app
 from ..extensions import db
 from ..models import BacktestJob, BacktestJobStatus, Strategy
 from ..quota import ensure_user_quota, has_remaining_quota, serialize_plan_limit
+from ..services.error_parser import load_execution_error
+from ..services.supported_packages import get_supported_packages
 from ..strategy_runtime import StrategyRuntimeError, as_response, preflight_strategy
 from ..tasks.backtests import run_backtest_task
 from ..utils.response import error_response, ok
@@ -213,6 +215,16 @@ def get_backtest_report(job_id):
     job_record = db.session.get(BacktestJob, job_id)
     if job_record is None or job_record.user_id != user_id:
         return error_response("JOB_NOT_FOUND", "回测任务不存在", 404)
+    if job_record.status == BacktestJobStatus.FAILED.value:
+        return ok(
+            {
+                "job_id": job_record.id,
+                "status": job_record.status,
+                "params": job_record.params,
+                "error": load_execution_error(job_record.error_message),
+                "completed_at": format_beijing_iso(job_record.completed_at),
+            }
+        )
     if job_record.status != BacktestJobStatus.COMPLETED.value:
         return error_response("REPORT_NOT_READY", "回测报告尚未生成", 409)
 
@@ -235,6 +247,12 @@ def get_backtest_report(job_id):
             "disclaimer": REPORT_DISCLAIMER,
         }
     )
+
+
+@bp.get("/v1/backtest/supported-packages")
+@jwt_required()
+def get_backtest_supported_packages():
+    return ok({"packages": get_supported_packages()})
 
 
 @bp.post("/v1/backtest/")

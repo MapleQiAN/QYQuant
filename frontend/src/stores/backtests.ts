@@ -1,14 +1,16 @@
 import { defineStore } from 'pinia'
-import { fetchBacktestReport, fetchLatest } from '../api/backtests'
+import { fetchBacktestReport, fetchLatest, fetchSupportedPackages } from '../api/backtests'
 import type { FetchLatestParams } from '../api/backtests'
-import type { BacktestLatestResponse, BacktestReportResponse } from '../types/Backtest'
+import type { BacktestLatestResponse, BacktestReportResponse, SupportedPackage } from '../types/Backtest'
 
 export const useBacktestsStore = defineStore('backtests', {
   state: () => ({
     latest: null as BacktestLatestResponse | null,
     report: null as BacktestReportResponse | null,
+    supportedPackages: [] as SupportedPackage[],
     loading: false,
     reportLoading: false,
+    supportedPackagesLoading: false,
     error: null as string | null,
     reportError: null as string | null
   }),
@@ -33,6 +35,15 @@ export const useBacktestsStore = defineStore('backtests', {
         this.reportError = error?.message || 'Failed to load backtest report'
       } finally {
         this.reportLoading = false
+      }
+    },
+    async loadSupportedPackages() {
+      this.supportedPackagesLoading = true
+      try {
+        const response = await fetchSupportedPackages()
+        this.supportedPackages = response.packages ?? []
+      } finally {
+        this.supportedPackagesLoading = false
       }
     }
   }

@@ -19,6 +19,21 @@ export interface BacktestSummary {
   beta?: number
 }
 
+export interface StructuredBacktestError {
+  type: string
+  line?: number | null
+  message: string
+  suggestion?: string
+  example_code?: string
+  raw_error?: string
+}
+
+export interface SupportedPackage {
+  name: string
+  version: string
+  description: string
+}
+
 export interface BacktestLatestResponse {
   summary: BacktestSummary
   kline: KlineBar[]
@@ -79,11 +94,16 @@ export interface BacktestReportResponse {
   job_id: string
   status: string
   params?: Record<string, unknown>
-  result_summary: BacktestSummary
-  equity_curve: BacktestReportPoint[]
-  trades: Trade[]
+  result_summary?: BacktestSummary
+  equity_curve?: BacktestReportPoint[]
+  trades?: Trade[]
+  error?: StructuredBacktestError
   completed_at?: string | null
-  disclaimer: string
+  disclaimer?: string
+}
+
+export interface SupportedPackagesResponse {
+  packages: SupportedPackage[]
 }
 
 export interface Backtest {

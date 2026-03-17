@@ -771,3 +771,103 @@ def test_get_backtest_report_hides_non_owner_jobs(client, app, tmp_path, monkeyp
 
     assert response.status_code == 404
     assert response.json["error"]["code"] == "JOB_NOT_FOUND"
+
+
+def test_get_backtest_report_returns_structured_error_for_failed_job(client, app):
+    import json
+
+    from app.extensions import db
+    from app.models import BacktestJob, BacktestJobStatus, Strategy
+
+    token, user_id = _login_user(client, phone="13800138011", nickname="FailedReader")
+
+    structured_error = {
+        "type": "NameError",
+        "line": 15,
+        "message": "未定义的变量 'sma_period'",
+        "suggestion": "请检查变量名是否正确，或确认是否已在策略参数中定义该参数",
+        "example_code": "sma_period = ctx.params.get('sma_period', 20)",
+        "raw_error": "NameError: name 'sma_period' is not defined",
+    }
+
+    with app.app_context():
+        db.session.add(
+            Strategy(
+                id="failed-report-strategy",
+                name="Failed Report Strategy",
+                symbol="BTCUSDT",
+                status="draft",
+                owner_id=user_id,
+            )
+        )
+        job = BacktestJob(
+            user_id=user_id,
+            strategy_id="failed-report-strategy",
+            status=BacktestJobStatus.FAILED.value,
+            params={"symbol": "BTCUSDT"},
+            error_message=json.dumps(structured_error, ensure_ascii=False),
+        )
+        db.session.add(job)
+        db.session.commit()
+        job_id = job.id
+
+    response = client.get(f"/api/v1/backtest/{job_id}/report", headers=_auth_headers(token))
+
+    assert response.status_code == 200
+    data = response.json["data"]
+    assert data["job_id"] == job_id
+    assert data["status"] == "failed"
+    assert data["error"]["type"] == "NameError"
+    assert data["error"]["line"] == 15
+    assert "sma_period" in data["error"]["message"]
+    assert "ctx.params" in data["error"]["example_code"]
+
+
+def test_get_supported_packages_returns_whitelist(client):
+    token, _ = _login_user(client, phone="13800138012", nickname="PackageReader")
+
+    response = client.get("/api/v1/backtest/supported-packages", headers=_auth_headers(token))
+
+    assert response.status_code == 200
+    packages = response.json["data"]["packages"]
+    assert any(item["name"] == "pandas" for item in packages)
+    assert any(item["name"] == "numpy" for item in packages)
+    assert any(item["name"] == "ta-lib" for item in packages)
+    pandas = next(item for item in packages if item["name"] == "pandas")
+    assert pandas["version"]
+    assert pandas["description"]
+
+
+def test_worker_persists_structured_error_payload(monkeypatch, client, app):
+    import json
+
+    from app.extensions import db
+    from app.models import BacktestJob
+    from app.strategy_runtime.errors import StrategyRuntimeError
+
+    def _raise_runtime_error(*args, **kwargs):
+        raise StrategyRuntimeError(
+            "strategy_runtime_error",
+            {
+                "reason": """
+Traceback (most recent call last):
+  File "/sandbox/workdir/strategy.py", line 21, in <module>
+    result = missing_factor * close
+NameError: name 'missing_factor' is not defined
+""".strip()
+            },
+        )
+
+    monkeypatch.setattr("app.tasks.backtests.run_backtest", _raise_runtime_error)
+
+    response = client.post("/api/backtests/run", json={"symbol": "BTCUSDT"})
+    assert response.status_code == 200
+    job_id = response.json["data"]["job_id"]
+
+    with app.app_context():
+        job = db.session.get(BacktestJob, job_id)
+        payload = json.loads(job.error_message)
+        assert job.status == "failed"
+        assert payload["type"] == "NameError"
+        assert payload["line"] == 21
+        assert "missing_factor" in payload["message"]

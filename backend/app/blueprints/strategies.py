@@ -1,107 +1,45 @@
-import hashlib
-import json
 import os
-import uuid
-import zipfile
+from pathlib import Path
 
 from flask import request
+from flask_jwt_extended import get_jwt_identity, jwt_required
 from flask_smorest import Blueprint
-from werkzeug.utils import secure_filename
 
 from ..extensions import db
-from ..models import File, Strategy, StrategyVersion
+from ..models import BacktestJob, File, Strategy, StrategyVersion
 from ..schemas import StrategySchema
+from ..services.strategy_import import StrategyImportError, import_strategy_package
 from ..strategy_runtime import StrategyRuntimeError
 from ..strategy_runtime.loader import load_strategy_package
-from ..utils.crypto import encrypt_strategy, hash_strategy_source
-from ..utils.response import ok
+from ..utils.response import error_response, ok
 from ..utils.time import now_ms
 
-bp = Blueprint('strategies', __name__, url_prefix='/api/strategies')
-
-ALLOWED_IMPORT_EXT = {'.qys', '.zip'}
-MAX_IMPORT_SIZE = 20 * 1024 * 1024
-STRATEGY_STORE_DIR = 'backend/strategy_store'
+bp = Blueprint("strategies", __name__, url_prefix="/api")
 
 
-def _sha256_file(path):
-    digest = hashlib.sha256()
-    with open(path, 'rb') as handle:
-        for chunk in iter(lambda: handle.read(8192), b''):
-            digest.update(chunk)
-    return digest.hexdigest()
-
-
-def _validate_manifest(manifest):
-    if not isinstance(manifest, dict):
-        return 'manifest_invalid'
-    required = ['schemaVersion', 'kind', 'id', 'name', 'version', 'language', 'runtime', 'entrypoint']
-    for key in required:
-        if not manifest.get(key):
-            return f'missing_{key}'
-    if manifest.get('schemaVersion') != '1.0':
-        return 'unsupported_schema'
-    if manifest.get('kind') != 'QYStrategy':
-        return 'invalid_kind'
-    runtime = manifest.get('runtime') or {}
-    if not runtime.get('name') or not runtime.get('version'):
-        return 'invalid_runtime'
-    entrypoint = manifest.get('entrypoint') or {}
-    if not entrypoint.get('path') or not entrypoint.get('callable'):
-        return 'invalid_entrypoint'
-    return None
-
-
-def _validate_integrity(zf, manifest):
-    files = (manifest.get('integrity') or {}).get('files')
-    if not files:
-        return None
-    for item in files:
-        path = item.get('path')
-        sha256 = item.get('sha256')
-        size = item.get('size')
-        if not path or not sha256:
-            return 'integrity_missing'
-        try:
-            data = zf.read(path)
-        except KeyError:
-            return f'integrity_missing_{path}'
-        if size is not None and size != len(data):
-            return f'integrity_size_{path}'
-        if hashlib.sha256(data).hexdigest() != sha256:
-            return f'integrity_hash_{path}'
-    return None
-
-
-def _safe_symbol(manifest):
-    universe = manifest.get('universe') or {}
-    symbols = universe.get('symbols') or []
-    if symbols:
-        return symbols[0]
-    dataset = (manifest.get('performance') or {}).get('backtest') or {}
-    symbol = (dataset.get('dataset') or {}).get('symbol')
-    return symbol or 'N/A'
-
-
-@bp.post('')
+@bp.post("/strategies")
 def create_strategy():
     payload = request.get_json() or {}
-    name = (payload.get('name') or '').strip()
-    symbol = (payload.get('symbol') or '').strip()
+    name = (payload.get("name") or "").strip()
+    symbol = (payload.get("symbol") or "").strip()
     if not name:
         return {"code": 40000, "message": "name_required", "details": None}, 400
     if not symbol:
         return {"code": 40000, "message": "symbol_required", "details": None}, 400
-    tags = payload.get('tags', [])
+
+    tags = payload.get("tags", [])
     if not isinstance(tags, list):
         tags = []
-    status = payload.get('status') or 'draft'
-    if status not in {'draft', 'running', 'paused', 'stopped', 'completed'}:
-        status = 'draft'
+
+    status = payload.get("status") or "draft"
+    if status not in {"draft", "running", "paused", "stopped", "completed"}:
+        status = "draft"
+
     strategy = Strategy(
         name=name,
         symbol=symbol,
         status=status,
+        source="manual",
         returns=0,
         win_rate=0,
         max_drawdown=0,
@@ -114,138 +52,29 @@ def create_strategy():
     return ok(StrategySchema().dump(strategy))
 
 
-@bp.post('/import')
-def import_strategy():
-    if request.content_length and request.content_length > MAX_IMPORT_SIZE:
-        return {"code": 40000, "message": "file_too_large", "details": None}, 400
-    incoming = request.files.get('file')
+@bp.post("/strategies/import")
+def import_strategy_legacy():
+    incoming = request.files.get("file")
     if not incoming:
         return {"code": 40000, "message": "file_required", "details": None}, 400
-    original_name = incoming.filename or ''
-    safe_name = secure_filename(original_name)
-    original_ext = os.path.splitext(original_name)[1].lower()
-    ext = original_ext or os.path.splitext(safe_name)[1].lower()
-    if ext not in ALLOWED_IMPORT_EXT:
-        return {"code": 40000, "message": "invalid_file_type", "details": None}, 400
-
-    os.makedirs(STRATEGY_STORE_DIR, exist_ok=True)
-    stored_name = f"{uuid.uuid4().hex}{ext}"
-    stored_path = os.path.join(STRATEGY_STORE_DIR, stored_name)
-    incoming.save(stored_path)
 
     try:
-        with zipfile.ZipFile(stored_path) as zf:
-            try:
-                manifest_raw = zf.read('strategy.json')
-            except KeyError:
-                raise ValueError('missing_manifest')
-            try:
-                manifest = json.loads(manifest_raw.decode('utf-8'))
-            except (UnicodeDecodeError, json.JSONDecodeError):
-                raise ValueError('invalid_manifest')
-            error = _validate_manifest(manifest)
-            if error:
-                raise ValueError(error)
-            entrypoint_path = (manifest.get('entrypoint') or {}).get('path')
-            if entrypoint_path:
-                entrypoint_path = entrypoint_path.replace('\\', '/').lstrip('./')
-            if entrypoint_path and entrypoint_path not in zf.namelist():
-                raise ValueError('entrypoint_missing')
-            try:
-                entrypoint_source = zf.read(entrypoint_path).decode('utf-8')
-            except UnicodeDecodeError:
-                raise ValueError('entrypoint_not_utf8')
-            integrity_error = _validate_integrity(zf, manifest)
-            if integrity_error:
-                raise ValueError(integrity_error)
-    except (zipfile.BadZipFile, ValueError) as exc:
-        os.remove(stored_path)
-        message = str(exc) if isinstance(exc, ValueError) else 'invalid_archive'
-        return {"code": 40000, "message": message, "details": None}, 400
+        strategy, version, file_record = import_strategy_package(incoming, owner_id=None)
+    except StrategyImportError as exc:
+        return error_response(exc.code, exc.message, exc.status, details=exc.details)
 
-    checksum = _sha256_file(stored_path)
-    file_size = os.path.getsize(stored_path)
-    stored_path_db = stored_path.replace('\\', '/')
-
-    strategy = None
-    manifest_id = manifest.get('id')
-    if manifest_id:
-        strategy = db.session.get(Strategy, manifest_id)
-
-    tags = manifest.get('tags')
-    if not isinstance(tags, list):
-        tags = []
-    if strategy:
-        strategy.name = manifest.get('name', strategy.name)
-        strategy.symbol = _safe_symbol(manifest)
-        strategy.tags = tags or strategy.tags
-        strategy.last_update = now_ms()
-        strategy.code_encrypted = encrypt_strategy(entrypoint_source.encode('utf-8'))
-        strategy.code_hash = hash_strategy_source(entrypoint_source)
-    else:
-        strategy = Strategy(
-            id=manifest_id or None,
-            name=manifest.get('name'),
-            symbol=_safe_symbol(manifest),
-            status='draft',
-            returns=0,
-            win_rate=0,
-            max_drawdown=0,
-            tags=tags,
-            last_update=now_ms(),
-            trades=0,
-            code_encrypted=encrypt_strategy(entrypoint_source.encode('utf-8')),
-            code_hash=hash_strategy_source(entrypoint_source),
-        )
-        db.session.add(strategy)
-        db.session.flush()
-
-    display_name = safe_name or original_name or stored_name
-    file_record = File(
-        owner_id=None,
-        filename=display_name,
-        content_type=incoming.mimetype or 'application/zip',
-        size=file_size,
-        path=stored_path_db,
-    )
-    db.session.add(file_record)
-    db.session.flush()
-
-    version = StrategyVersion(
-        strategy_id=strategy.id,
-        version=manifest.get('version'),
-        file_id=file_record.id,
-        checksum=checksum,
-    )
-    db.session.add(version)
-    db.session.commit()
-
-    return ok({
-        "strategy": StrategySchema().dump(strategy),
-        "version": {
-            "id": version.id,
-            "version": version.version,
-            "checksum": version.checksum,
-            "fileId": file_record.id,
-        },
-        "file": {
-            "id": file_record.id,
-            "filename": file_record.filename,
-            "size": file_record.size,
-            "path": file_record.path,
-        }
-    })
+    return ok(_build_import_payload(strategy, version, file_record))
 
 
-@bp.get('/recent')
+@bp.get("/strategies/recent")
 def recent():
     items = Strategy.query.order_by(Strategy.last_update.desc()).limit(10).all()
     return ok(StrategySchema(many=True).dump(items))
 
 
-@bp.get('/<strategy_id>/runtime')
+@bp.get("/strategies/<strategy_id>/runtime")
 def runtime_descriptor(strategy_id):
-    requested_version = request.args.get('version')
+    requested_version = request.args.get("version")
 
     query = StrategyVersion.query.filter_by(strategy_id=strategy_id)
     if requested_version:
@@ -259,12 +88,137 @@ def runtime_descriptor(strategy_id):
     except StrategyRuntimeError as exc:
         return {"code": 40000, "message": exc.message, "details": exc.details}, 400
 
-    manifest = loaded.get('manifest') or {}
-    entrypoint = manifest.get('entrypoint') or {}
-    return ok({
-        "strategyId": strategy_id,
-        "strategyVersion": strategy_version.version,
-        "name": manifest.get('name'),
-        "interface": entrypoint.get('interface') or 'event_v1',
-        "parameters": manifest.get('parameters') or [],
-    })
+    manifest = loaded.get("manifest") or {}
+    entrypoint = manifest.get("entrypoint") or {}
+    return ok(
+        {
+            "strategyId": strategy_id,
+            "strategyVersion": strategy_version.version,
+            "name": manifest.get("name"),
+            "interface": entrypoint.get("interface") or "event_v1",
+            "parameters": manifest.get("parameters") or [],
+        }
+    )
+
+
+@bp.get("/v1/strategies/")
+@jwt_required()
+def list_strategies():
+    user_id = get_jwt_identity()
+    page = _int_arg("page", 1, minimum=1)
+    per_page = _int_arg("per_page", 20, minimum=1, maximum=100)
+    sort = request.args.get("sort", "created_at")
+    order = request.args.get("order", "desc").lower()
+
+    query = Strategy.query.filter_by(owner_id=user_id)
+    sort_column = _sort_column(sort)
+    query = query.order_by(sort_column.desc() if order != "asc" else sort_column.asc())
+
+    total = query.count()
+    items = query.offset((page - 1) * per_page).limit(per_page).all()
+    return ok(
+        {
+            "items": StrategySchema(many=True).dump(items),
+            "page": page,
+            "perPage": per_page,
+            "total": total,
+        }
+    )
+
+
+@bp.delete("/v1/strategies/<strategy_id>")
+@jwt_required()
+def delete_strategy(strategy_id):
+    user_id = get_jwt_identity()
+    strategy = Strategy.query.filter_by(id=strategy_id, owner_id=user_id).first()
+    if strategy is None:
+        return error_response("STRATEGY_NOT_FOUND", "Strategy not found", 404)
+
+    _delete_strategy_assets(strategy)
+    db.session.delete(strategy)
+    db.session.commit()
+    return ok({"deletedId": strategy_id})
+
+
+@bp.post("/v1/strategies/import")
+@jwt_required()
+def import_strategy_v1():
+    incoming = request.files.get("file")
+    if not incoming:
+        return error_response("FILE_REQUIRED", "Strategy package is required", 400)
+
+    try:
+        strategy, version, file_record = import_strategy_package(incoming, owner_id=get_jwt_identity())
+    except StrategyImportError as exc:
+        return error_response(exc.code, exc.message, exc.status, details=exc.details)
+
+    payload = _build_import_payload(strategy, version, file_record)
+    payload["next"] = f"/strategies/{strategy.id}/parameters"
+    return ok(payload)
+
+
+def _build_import_payload(strategy, version, file_record):
+    return {
+        "strategy": StrategySchema().dump(strategy),
+        "version": {
+            "id": version.id,
+            "version": version.version,
+            "checksum": version.checksum,
+            "fileId": file_record.id,
+        },
+        "file": {
+            "id": file_record.id,
+            "filename": file_record.filename,
+            "size": file_record.size,
+            "path": file_record.path,
+        },
+    }
+
+
+def _int_arg(name, default, *, minimum=None, maximum=None):
+    raw = request.args.get(name, default)
+    try:
+        value = int(raw)
+    except (TypeError, ValueError):
+        value = default
+    if minimum is not None:
+        value = max(minimum, value)
+    if maximum is not None:
+        value = min(maximum, value)
+    return value
+
+
+def _sort_column(name):
+    mapping = {
+        "created_at": Strategy.created_at,
+        "updated_at": Strategy.updated_at,
+        "name": Strategy.name,
+    }
+    return mapping.get(name, Strategy.created_at)
+
+
+def _delete_strategy_assets(strategy):
+    versions = StrategyVersion.query.filter_by(strategy_id=strategy.id).all()
+    file_ids = [version.file_id for version in versions if version.file_id]
+
+    for version in versions:
+        db.session.delete(version)
+
+    if file_ids:
+        for file_record in File.query.filter(File.id.in_(file_ids)).all():
+            _remove_path(file_record.path)
+            db.session.delete(file_record)
+
+    if strategy.storage_key:
+        storage_root = Path(os.getenv("STRATEGY_STORAGE_DIR") or Path(__file__).resolve().parents[2] / "storage")
+        _remove_path((storage_root / strategy.storage_key).as_posix())
+
+    BacktestJob.query.filter_by(strategy_id=strategy.id).update({"strategy_id": None})
+
+
+def _remove_path(path):
+    if not path:
+        return
+    candidate = Path(path)
+    if candidate.exists() and candidate.is_file():
+        candidate.unlink()

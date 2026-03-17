@@ -1,0 +1,185 @@
+import hashlib
+import json
+import os
+import uuid
+import zipfile
+from pathlib import Path
+
+from qysp.parameters import ValidationError as QYSPValidationError
+from qysp.validator import validate_integrity, validate_schema
+
+from ..extensions import db
+from ..models import File, Strategy, StrategyVersion
+from ..utils.crypto import encrypt_strategy, hash_strategy_source
+from ..utils.time import now_ms
+
+
+MAX_IMPORT_SIZE = 10 * 1024 * 1024
+ALLOWED_IMPORT_EXT = {".qys", ".zip"}
+
+
+class StrategyImportError(Exception):
+    def __init__(self, code, message, status, details=None):
+        super().__init__(message)
+        self.code = code
+        self.message = message
+        self.status = status
+        self.details = details
+
+
+def import_strategy_package(file_storage, owner_id):
+    original_name = file_storage.filename or "strategy.qys"
+    ext = os.path.splitext(original_name)[1].lower()
+    if ext not in ALLOWED_IMPORT_EXT:
+        raise StrategyImportError("INVALID_FILE_TYPE", "Only .qys packages are supported", 400)
+
+    payload = file_storage.read()
+    if not payload:
+        raise StrategyImportError("FILE_REQUIRED", "Strategy package is required", 400)
+    if len(payload) > MAX_IMPORT_SIZE:
+        raise StrategyImportError("FILE_TOO_LARGE", "Strategy package exceeds 10 MB", 400)
+
+    temp_path = _strategy_storage_root() / "_tmp" / f"{uuid.uuid4().hex}{ext}"
+    temp_path.parent.mkdir(parents=True, exist_ok=True)
+    temp_path.write_bytes(payload)
+
+    try:
+        manifest, entrypoint_source = _parse_package(temp_path)
+        _validate_manifest(manifest)
+        _validate_package_integrity(temp_path)
+
+        storage_key = f"strategies/{uuid.uuid4().hex}{ext}"
+        stored_path = _strategy_storage_root() / storage_key
+        stored_path.parent.mkdir(parents=True, exist_ok=True)
+        stored_path.write_bytes(payload)
+
+        strategy = _upsert_strategy(
+            manifest=manifest,
+            entrypoint_source=entrypoint_source,
+            owner_id=owner_id,
+            storage_key=storage_key,
+        )
+
+        file_record = File(
+            owner_id=owner_id,
+            filename=original_name,
+            content_type=file_storage.mimetype or "application/octet-stream",
+            size=len(payload),
+            path=stored_path.as_posix(),
+        )
+        db.session.add(file_record)
+        db.session.flush()
+
+        version = StrategyVersion(
+            strategy_id=strategy.id,
+            version=manifest.get("version") or "1.0.0",
+            file_id=file_record.id,
+            checksum=hashlib.sha256(payload).hexdigest(),
+        )
+        db.session.add(version)
+        db.session.commit()
+        return strategy, version, file_record
+    finally:
+        if temp_path.exists():
+            temp_path.unlink()
+
+
+def _parse_package(package_path):
+    try:
+        with zipfile.ZipFile(package_path, "r") as archive:
+            try:
+                manifest = json.loads(archive.read("strategy.json").decode("utf-8"))
+            except KeyError as exc:
+                raise StrategyImportError("INVALID_STRATEGY_PACKAGE", "strategy.json is required", 422) from exc
+            except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+                raise StrategyImportError("INVALID_STRATEGY_PACKAGE", "strategy.json is invalid", 422) from exc
+
+            entrypoint = ((manifest.get("entrypoint") or {}).get("path") or "src/strategy.py").replace("\\", "/")
+            try:
+                entrypoint_source = archive.read(entrypoint).decode("utf-8")
+            except KeyError as exc:
+                raise StrategyImportError("INVALID_STRATEGY_PACKAGE", "Strategy entrypoint is missing", 422) from exc
+            except UnicodeDecodeError as exc:
+                raise StrategyImportError("INVALID_STRATEGY_PACKAGE", "Strategy entrypoint must be UTF-8", 422) from exc
+            return manifest, entrypoint_source
+    except zipfile.BadZipFile as exc:
+        raise StrategyImportError("INVALID_STRATEGY_PACKAGE", "Invalid .qys archive", 422) from exc
+
+
+def _validate_manifest(manifest):
+    errors = validate_schema(manifest)
+    if errors:
+        raise StrategyImportError("INVALID_STRATEGY_PACKAGE", "strategy.json schema validation failed", 422, details=errors)
+
+
+def _validate_package_integrity(package_path):
+    try:
+        validate_integrity(package_path)
+    except QYSPValidationError as exc:
+        raise StrategyImportError("INTEGRITY_CHECK_FAILED", "File integrity check failed", 422) from exc
+
+
+def _upsert_strategy(*, manifest, entrypoint_source, owner_id, storage_key):
+    strategy_id = manifest.get("id") or str(uuid.uuid4())
+    strategy = db.session.get(Strategy, strategy_id)
+    if strategy is not None and strategy.owner_id not in {None, owner_id}:
+        raise StrategyImportError("STRATEGY_NOT_FOUND", "Strategy not found", 404)
+
+    tags = manifest.get("tags")
+    if not isinstance(tags, list):
+        tags = []
+
+    category = ((manifest.get("ui") or {}).get("category") or "other").strip() or "other"
+    payload = entrypoint_source.encode("utf-8")
+    fields = {
+        "name": manifest.get("name") or "Imported Strategy",
+        "symbol": _safe_symbol(manifest),
+        "status": "draft",
+        "description": manifest.get("description"),
+        "category": category,
+        "source": "upload",
+        "tags": tags,
+        "owner_id": owner_id,
+        "storage_key": storage_key,
+        "code_encrypted": encrypt_strategy(payload),
+        "code_hash": hash_strategy_source(payload),
+        "last_update": now_ms(),
+        "updated_at": now_ms(),
+    }
+
+    if strategy is None:
+        strategy = Strategy(
+            id=strategy_id,
+            returns=0,
+            win_rate=0,
+            max_drawdown=0,
+            trades=0,
+            created_at=now_ms(),
+            **fields,
+        )
+        db.session.add(strategy)
+        db.session.flush()
+        return strategy
+
+    for key, value in fields.items():
+        setattr(strategy, key, value)
+    db.session.flush()
+    return strategy
+
+
+def _safe_symbol(manifest):
+    universe = manifest.get("universe") or {}
+    symbols = universe.get("symbols") or []
+    if symbols:
+        return symbols[0]
+
+    dataset = (manifest.get("performance") or {}).get("backtest") or {}
+    symbol = (dataset.get("dataset") or {}).get("symbol")
+    return symbol or "N/A"
+
+
+def _strategy_storage_root():
+    configured = os.getenv("STRATEGY_STORAGE_DIR")
+    if configured:
+        return Path(configured)
+    return Path(__file__).resolve().parents[2] / "storage"

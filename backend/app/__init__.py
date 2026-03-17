@@ -7,7 +7,6 @@ from .blueprints.bots import bp as bots_bp
 from .blueprints.files import bp as files_bp
 from .blueprints.forum import bp as forum_bp
 from .blueprints.health import bp as health_bp
-from .blueprints.strategies import bp as strategies_bp
 from .blueprints.users import bp as users_bp
 from .config import get_config
 from .errors import register_error_handlers
@@ -16,6 +15,11 @@ from .models import User
 from .utils.redis_client import get_auth_store
 from .utils.response import error_response
 from .utils.request_id import register_request_id
+
+try:
+    from .blueprints.strategies import bp as strategies_bp
+except ModuleNotFoundError:  # pragma: no cover - optional until blueprint source is restored
+    strategies_bp = None
 
 
 def create_app(env=None):
@@ -42,7 +46,8 @@ def create_app(env=None):
     app.register_blueprint(health_bp)
     app.register_blueprint(auth_bp)
     app.register_blueprint(users_bp)
-    app.register_blueprint(strategies_bp)
+    if strategies_bp is not None:
+        app.register_blueprint(strategies_bp)
     app.register_blueprint(backtests_bp)
     app.register_blueprint(bots_bp)
     app.register_blueprint(forum_bp)
