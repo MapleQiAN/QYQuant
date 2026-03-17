@@ -44,6 +44,9 @@ def validate_and_merge_params(param_defs, overrides):
         raise StrategyRuntimeError('invalid_strategy_params', {"reason": "params_not_object"})
 
     definitions = param_defs or []
+    if not definitions:
+        return dict(overrides)
+
     result = {}
     known_keys = set()
 

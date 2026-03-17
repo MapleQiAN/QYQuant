@@ -17,6 +17,7 @@ export interface BacktestLatestResponse {
   kline: KlineBar[]
   trades: Trade[]
   dataSource?: string
+  data_range_notice?: string
   runtime?: {
     strategyId: string
     strategyVersion: string

@@ -74,6 +74,8 @@ class Strategy(db.Model):
     last_update = db.Column(db.BigInteger, default=now_ms)
     trades = db.Column(db.Integer, default=0)
     owner_id = db.Column(db.String, db.ForeignKey('users.id'))
+    code_encrypted = db.Column(db.LargeBinary, nullable=True)
+    code_hash = db.Column(db.String(64), nullable=True)
     created_at = db.Column(db.BigInteger, default=now_ms)
     updated_at = db.Column(db.BigInteger, default=now_ms)
 
@@ -138,6 +140,23 @@ class UserQuota(db.Model):
     plan_level = db.Column(db.String(32), nullable=False, default='free')
     used_count = db.Column(db.Integer, nullable=False, default=0)
     reset_at = db.Column(db.DateTime(timezone=True), nullable=True)
+
+
+class MarketDataCache(db.Model):
+    __tablename__ = 'market_data_cache'
+    __table_args__ = (
+        db.Index('ix_market_data_cache_symbol_trade_date_desc', 'symbol', db.text('trade_date DESC')),
+    )
+
+    symbol = db.Column(db.String(20), primary_key=True)
+    trade_date = db.Column(db.Date, primary_key=True)
+    open = db.Column(db.Numeric(18, 6), nullable=False)
+    high = db.Column(db.Numeric(18, 6), nullable=False)
+    low = db.Column(db.Numeric(18, 6), nullable=False)
+    close = db.Column(db.Numeric(18, 6), nullable=False)
+    volume = db.Column(db.BigInteger, nullable=False)
+    source = db.Column(db.String(20), nullable=False, default='joinquant', server_default='joinquant')
+    cached_at = db.Column(db.DateTime(timezone=True), nullable=False, default=now_utc, server_default=db.func.now())
 
 
 class BotInstance(db.Model):

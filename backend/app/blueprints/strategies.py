@@ -13,6 +13,7 @@ from ..models import File, Strategy, StrategyVersion
 from ..schemas import StrategySchema
 from ..strategy_runtime import StrategyRuntimeError
 from ..strategy_runtime.loader import load_strategy_package
+from ..utils.crypto import encrypt_strategy, hash_strategy_source
 from ..utils.response import ok
 from ..utils.time import now_ms
 
@@ -150,6 +151,10 @@ def import_strategy():
                 entrypoint_path = entrypoint_path.replace('\\', '/').lstrip('./')
             if entrypoint_path and entrypoint_path not in zf.namelist():
                 raise ValueError('entrypoint_missing')
+            try:
+                entrypoint_source = zf.read(entrypoint_path).decode('utf-8')
+            except UnicodeDecodeError:
+                raise ValueError('entrypoint_not_utf8')
             integrity_error = _validate_integrity(zf, manifest)
             if integrity_error:
                 raise ValueError(integrity_error)
@@ -165,7 +170,7 @@ def import_strategy():
     strategy = None
     manifest_id = manifest.get('id')
     if manifest_id:
-        strategy = Strategy.query.get(manifest_id)
+        strategy = db.session.get(Strategy, manifest_id)
 
     tags = manifest.get('tags')
     if not isinstance(tags, list):
@@ -175,6 +180,8 @@ def import_strategy():
         strategy.symbol = _safe_symbol(manifest)
         strategy.tags = tags or strategy.tags
         strategy.last_update = now_ms()
+        strategy.code_encrypted = encrypt_strategy(entrypoint_source.encode('utf-8'))
+        strategy.code_hash = hash_strategy_source(entrypoint_source)
     else:
         strategy = Strategy(
             id=manifest_id or None,
@@ -187,6 +194,8 @@ def import_strategy():
             tags=tags,
             last_update=now_ms(),
             trades=0,
+            code_encrypted=encrypt_strategy(entrypoint_source.encode('utf-8')),
+            code_hash=hash_strategy_source(entrypoint_source),
         )
         db.session.add(strategy)
         db.session.flush()

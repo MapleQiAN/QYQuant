@@ -9,6 +9,8 @@ os.environ.setdefault('CELERY_TASK_ALWAYS_EAGER', '1')
 os.environ.setdefault('REDIS_URL', 'redis://localhost:6379/0')
 os.environ.setdefault('CELERY_BROKER_URL', 'redis://localhost:6379/1')
 os.environ.setdefault('CELERY_RESULT_BACKEND', 'redis://localhost:6379/1')
+os.environ.setdefault('STRATEGY_ENCRYPT_KEY', 'MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=')
+os.environ.setdefault('E2B_API_KEY', 'test-e2b-api-key')
 
 BACKEND_DIR = Path(__file__).resolve().parents[1]
 if str(BACKEND_DIR) not in sys.path:
@@ -28,6 +30,8 @@ def app(tmp_path, monkeypatch):
     monkeypatch.setenv('JWT_SECRET', 'test-jwt-secret-key-with-sufficient-length-123456')
     monkeypatch.setenv('AUTH_FIXED_SMS_CODE', '123456')
     monkeypatch.setenv('BACKTEST_DATA_PROVIDER', 'mock')
+    monkeypatch.setenv('STRATEGY_ENCRYPT_KEY', 'MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=')
+    monkeypatch.setenv('E2B_API_KEY', 'test-e2b-api-key')
 
     from app import create_app
     from app.extensions import db

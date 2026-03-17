@@ -1,6 +1,7 @@
+from ..services import sandbox as sandbox_service
 from .loader import load_strategy_package
 from .params import validate_and_merge_params
-from .sandbox import guard_strategy_source, run_strategy_in_subprocess
+from .sandbox import guard_strategy_source
 
 
 def preflight_strategy(strategy_id, strategy_version, strategy_params):
@@ -10,14 +11,18 @@ def preflight_strategy(strategy_id, strategy_version, strategy_params):
     return loaded, params
 
 
-def execute_backtest_strategy(symbol, bars, loaded_strategy, params, timeout_seconds=10):
-    outcome = run_strategy_in_subprocess(
-        symbol=symbol,
-        source=loaded_strategy['source'],
-        callable_name=loaded_strategy['entrypoint_callable'],
-        bars=bars,
+def execute_backtest_strategy(symbol, bars, loaded_strategy, params, timeout_seconds=300):
+    outcome = sandbox_service.execute_strategy(
+        code=loaded_strategy['source'],
+        market_data={"symbol": symbol, "bars": bars},
         params=params,
-        timeout_seconds=timeout_seconds,
+        metadata={
+            "callable_name": loaded_strategy['entrypoint_callable'],
+            "strategy_id": loaded_strategy['strategy_id'],
+            "strategy_version": loaded_strategy['version'],
+            "symbol": symbol,
+            "timeout_seconds": timeout_seconds,
+        },
     )
     return {
         "trades": outcome.get('trades') or [],
@@ -28,4 +33,3 @@ def execute_backtest_strategy(symbol, bars, loaded_strategy, params, timeout_sec
             "logs": outcome.get('logs') or [],
         },
     }
-

@@ -5,6 +5,7 @@ from ..backtest.engine import run_backtest
 from ..celery_app import celery_app
 from ..extensions import db
 from ..models import BacktestJob, BacktestJobStatus
+from ..strategy_runtime import StrategyRuntimeError
 from ..utils.time import now_utc
 
 
@@ -35,6 +36,16 @@ def _run_job(job_id):
     except SoftTimeLimitExceeded:
         job.status = BacktestJobStatus.TIMEOUT.value
         job.error_message = 'soft_time_limit_exceeded'
+        job.completed_at = now_utc()
+        db.session.commit()
+        return {"status": job.status}
+    except StrategyRuntimeError as exc:
+        if exc.message == 'strategy_timeout':
+            job.status = BacktestJobStatus.TIMEOUT.value
+            job.error_message = exc.message
+        else:
+            job.status = BacktestJobStatus.FAILED.value
+            job.error_message = exc.message
         job.completed_at = now_utc()
         db.session.commit()
         return {"status": job.status}

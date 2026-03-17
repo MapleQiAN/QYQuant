@@ -1,6 +1,8 @@
 import os
+from datetime import date, datetime, time, timedelta, timezone
 
 from ..marketdata import BinanceClient, FreeGoldClient
+from ..services import MarketDataService
 
 
 class MockProvider:
@@ -67,6 +69,75 @@ class FreeGoldProvider:
         return self.client.get_latest_price(symbol, use_cache=True)
 
 
+def _coerce_date(value):
+    if value is None:
+        return None
+    if isinstance(value, date) and not isinstance(value, datetime):
+        return value
+    if isinstance(value, datetime):
+        return value.date()
+    if isinstance(value, (int, float)):
+        return datetime.fromtimestamp(value / 1000 if value > 1_000_000_000_000 else value, tz=timezone.utc).date()
+    if isinstance(value, str):
+        normalized = value.strip()
+        if not normalized:
+            return None
+        return date.fromisoformat(normalized[:10])
+    raise TypeError(f"Unsupported date type: {type(value)}")
+
+
+def _to_bar(row):
+    ts = datetime.combine(row["trade_date"], time.min, tzinfo=timezone.utc)
+    return {
+        "time": int(ts.timestamp() * 1000),
+        "open": row["open"],
+        "high": row["high"],
+        "low": row["low"],
+        "close": row["close"],
+        "volume": row["volume"],
+    }
+
+
+def _daily_range(limit, start_time, end_time):
+    end_date = _coerce_date(end_time) or datetime.now(timezone.utc).date()
+    start_date = _coerce_date(start_time)
+    if start_date is None:
+        lookback = max(int(limit or 200), 1)
+        start_date = end_date - timedelta(days=lookback * 2)
+    return start_date, end_date
+
+
+class JoinQuantBacktestProvider:
+    def __init__(self, market_data_service=None, default_interval=None):
+        self.market_data_service = market_data_service or MarketDataService()
+        self.default_interval = default_interval or os.getenv('JOINQUANT_INTERVAL', '1d')
+        self.last_data_range_notice = None
+
+    def get_bars(self, symbol, limit=200, interval=None, start_time=None, end_time=None):
+        interval = (interval or self.default_interval).strip().lower()
+        if interval not in {'1d', '1day', 'day', 'daily'}:
+            raise ValueError(f"JoinQuant provider only supports daily interval (got {interval})")
+
+        start_date, end_date = _daily_range(limit=limit, start_time=start_time, end_time=end_time)
+        result = self.market_data_service.get_market_data(symbol, start_date, end_date)
+        self.last_data_range_notice = result.get("data_range_notice")
+
+        bars = [_to_bar(row) for row in result["bars"]]
+        try:
+            limit = int(limit) if limit is not None else None
+        except (TypeError, ValueError):
+            limit = None
+        if limit and len(bars) > limit:
+            bars = bars[-limit:]
+        return bars
+
+    def get_latest_price(self, symbol):
+        bars = self.get_bars(symbol, limit=1)
+        if not bars:
+            raise ValueError(f"No market data available for {symbol}")
+        return bars[-1]["close"]
+
+
 class AutoProvider:
     def __init__(self, gold_provider=None, binance_provider=None):
         self.gold_provider = gold_provider or FreeGoldProvider()
@@ -90,7 +161,7 @@ class AutoProvider:
         return self._select(symbol).get_latest_price(symbol)
 
 
-_CANONICAL_PROVIDERS = {'mock', 'auto', 'freegold', 'binance'}
+_CANONICAL_PROVIDERS = {'mock', 'auto', 'freegold', 'binance', 'joinquant'}
 _PROVIDER_ALIASES = {
     'mock': 'mock',
     'demo': 'mock',
@@ -103,6 +174,10 @@ _PROVIDER_ALIASES = {
     'binance': 'binance',
     'live': 'binance',
     'real': 'binance',
+    'joinquant': 'joinquant',
+    'jq': 'joinquant',
+    'jqdata': 'joinquant',
+    'cached': 'joinquant',
 }
 
 
@@ -148,5 +223,7 @@ def get_backtest_provider(provider_override=None):
         return FreeGoldProvider()
     if provider == 'binance':
         return BinanceProvider()
+    if provider == 'joinquant':
+        return JoinQuantBacktestProvider()
 
     return AutoProvider()

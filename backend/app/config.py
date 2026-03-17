@@ -13,7 +13,7 @@ env_file = root_dir / f'.env.{env}'
 if not env_file.exists():
     env_file = root_dir / '.env'
 
-load_dotenv(env_file, override=True)
+load_dotenv(env_file, override=False)
 
 
 class BaseConfig:

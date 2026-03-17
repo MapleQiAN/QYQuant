@@ -102,6 +102,9 @@ def run_backtest(
         "summary": summary,
         "dataSource": resolve_data_source(data_source, symbol),
     }
+    data_range_notice = getattr(provider, 'last_data_range_notice', None)
+    if data_range_notice:
+        result["data_range_notice"] = data_range_notice
     if runtime:
         result["runtime"] = runtime
     return result
