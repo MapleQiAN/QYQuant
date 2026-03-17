@@ -256,10 +256,24 @@ JQDATA_USERNAME=your-account
 JQDATA_PASSWORD=your-password
 ```
 
-3. Start PostgreSQL and Redis.
+3. Prepare PostgreSQL and Redis.
+
+Choose either approach:
+
+- Native local services: run PostgreSQL 15+ and Redis 7+ directly on your machine and make sure they match the connection strings in `.env.development`.
+- Docker dependencies only: if you do not want to install them locally, start just the database and cache services:
 
 ```bash
 docker compose up -d postgres redis
+```
+
+If you use native local services, at minimum these connections must work:
+
+```env
+DATABASE_URL=postgresql://qyquant:qyquant_password@localhost:5432/qyquant
+REDIS_URL=redis://:redis_password@localhost:6379/0
+CELERY_BROKER_URL=redis://:redis_password@localhost:6379/1
+CELERY_RESULT_BACKEND=redis://:redis_password@localhost:6379/1
 ```
 
 4. Install Python dependencies.

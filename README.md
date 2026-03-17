@@ -258,10 +258,24 @@ JQDATA_USERNAME=your-account
 JQDATA_PASSWORD=your-password
 ```
 
-3. 启动 PostgreSQL 与 Redis。
+3. 准备 PostgreSQL 与 Redis。
+
+你可以任选一种方式：
+
+- 本地原生安装：直接在本机启动 PostgreSQL 15+ 和 Redis 7+，并确保它们和 `.env.development` 里的连接串一致。
+- Docker 依赖方式：如果你不想本地安装依赖，可以只拉起数据库和缓存：
 
 ```bash
 docker compose up -d postgres redis
+```
+
+如果你使用本地原生安装，至少要保证这些连接可用：
+
+```env
+DATABASE_URL=postgresql://qyquant:qyquant_password@localhost:5432/qyquant
+REDIS_URL=redis://:redis_password@localhost:6379/0
+CELERY_BROKER_URL=redis://:redis_password@localhost:6379/1
+CELERY_RESULT_BACKEND=redis://:redis_password@localhost:6379/1
 ```
 
 4. 安装 Python 依赖。
