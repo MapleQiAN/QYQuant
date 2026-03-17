@@ -57,6 +57,31 @@ def test_first_login_registers_user_and_returns_tokens(client):
     assert "HttpOnly" in _extract_refresh_cookie(resp)
 
 
+def test_first_login_creates_default_user_quota(client, app):
+    from app.extensions import db
+    from app.models import UserQuota
+
+    _seed_code(client.application, "13800138111")
+
+    resp = client.post(
+        "/api/v1/auth/login",
+        json={
+            "phone": "13800138111",
+            "code": "123456",
+            "nickname": "QuotaInit",
+        },
+    )
+
+    assert resp.status_code == 200
+    user_id = resp.json["data"]["user_id"]
+
+    with app.app_context():
+        quota = db.session.get(UserQuota, user_id)
+        assert quota is not None
+        assert quota.plan_level == "free"
+        assert quota.used_count == 0
+
+
 def test_registered_user_login_reuses_same_user(client):
     _seed_code(client.application, "13800138000")
     first_login = client.post(

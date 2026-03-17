@@ -9,6 +9,7 @@ from flask_smorest import Blueprint
 
 from ..extensions import db
 from ..models import AuditLog, RefreshToken, User
+from ..quota import ensure_user_quota
 from ..utils.auth import (
     REFRESH_COOKIE_NAME,
     as_utc,
@@ -179,6 +180,8 @@ def login():
                 details={"phone": _mask_phone(phone)},
             )
         )
+
+    ensure_user_quota(user.id, plan_level=user.plan_level)
 
     store.delete_verification_code(phone)
     store.reset_failed_attempts(phone)

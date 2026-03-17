@@ -5,6 +5,7 @@ from ..backtest.engine import run_backtest
 from ..celery_app import celery_app
 from ..extensions import db
 from ..models import BacktestJob, BacktestJobStatus
+from ..quota import consume_quota
 from ..strategy_runtime import StrategyRuntimeError
 from ..utils.time import now_utc
 
@@ -15,6 +16,13 @@ def _run_job(job_id):
         return {"status": "missing"}
 
     params = dict(job.params or {})
+    if job.user_id and not consume_quota(job.user_id):
+        job.status = BacktestJobStatus.FAILED.value
+        job.completed_at = now_utc()
+        job.error_message = "quota_exceeded"
+        db.session.commit()
+        return {"status": job.status}
+
     job.status = BacktestJobStatus.RUNNING.value
     job.started_at = now_utc()
     job.completed_at = None
