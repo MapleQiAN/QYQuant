@@ -12,7 +12,7 @@
     ·
     <a href="#core-capabilities">Highlights</a>
     ·
-    <a href="#project-structure">Architecture</a>
+    <a href="#system-architecture">Architecture</a>
   </p>
 
   <p>
@@ -62,9 +62,157 @@ QYQuant is not intended to stay a single-purpose tool. The broader direction is 
 
 That is why this README separates what is already implemented from what the product is clearly aiming toward.
 
+## System Architecture
+
+The diagram below reflects the flows that already exist in this repository today: a Vue 3 workspace talks to the Flask API for auth, strategy library, backtests, bots, and forum features; strategy packages are validated by `qysp` before entering storage; and backtests can run either synchronously for fast debugging or asynchronously through Celery + Redis, with market data routed to Binance, FreeGold, or the JoinQuant-backed cache path.
+
+```mermaid
+flowchart LR
+    user["User / Browser"]
+    cli["qys CLI / .qys Package"]
+
+    subgraph frontend["Frontend · Vue 3"]
+        web["Dashboard / Strategies / Backtests / Bots / Forum / Settings"]
+        client["Router + Stores + API Client"]
+    end
+
+    subgraph backend["Backend · Flask API"]
+        auth["Auth / Users"]
+        strategies["Strategies Import / Runtime Metadata"]
+        backtests["Backtests API"]
+        community["Bots / Forum / Files"]
+    end
+
+    subgraph runtime["Execution Layer"]
+        validator["qysp Validator<br/>schema + integrity"]
+        engine["Backtest Engine"]
+        strategyRuntime["Strategy Runtime<br/>preflight + execute"]
+        worker["Celery Worker<br/>backtest queue"]
+        market["Provider Router / MarketDataService"]
+        report["Metrics / Report Builder"]
+    end
+
+    subgraph infra["Data & Infrastructure"]
+        pg[("PostgreSQL")]
+        redis[("Redis")]
+        storage[("Local Storage<br/>strategies / backtest artifacts")]
+        binance["Binance API"]
+        freegold["FreeGold API"]
+        joinquant["JoinQuant API"]
+    end
+
+    user --> web --> client
+    client --> auth
+    client --> strategies
+    client --> backtests
+    client --> community
+
+    cli --> validator
+    strategies --> validator
+    strategies --> storage
+    strategies --> pg
+
+    auth --> pg
+    auth --> redis
+    community --> pg
+
+    backtests -->|"GET /api/backtests/latest"| engine
+    backtests -->|"POST /api/v1/backtest"| worker
+    backtests --> pg
+
+    worker <--> redis
+    worker --> engine
+    worker --> report
+    worker --> storage
+    worker --> pg
+
+    engine --> strategyRuntime
+    engine --> market
+    strategyRuntime <--> storage
+    strategyRuntime <--> pg
+
+    market --> binance
+    market --> freegold
+    market --> joinquant
+    market <--> pg
+```
+
 ## Quick Start
 
-### Requirements
+You can run QYQuant in two ways:
+
+- Docker one-click deployment: build the full stack with frontend, backend, PostgreSQL, Redis, and Celery.
+- Developer deployment: run PostgreSQL and Redis locally, then start backend, worker, and frontend separately for iterative development.
+
+### Option A: Docker one-click deployment
+
+Requirements:
+
+- Docker Engine / Docker Desktop
+- Docker Compose v2
+
+1. Clone the repository.
+
+```bash
+git clone https://github.com/MapleQiAN/QYQuant.git
+cd QYQuant
+```
+
+2. Create a deployment env file.
+
+```bash
+cp .env.example .env
+```
+
+Review these values before exposing the stack outside your machine:
+
+```env
+POSTGRES_PASSWORD=qyquant_password
+REDIS_PASSWORD=redis_password
+SECRET_KEY=change-this-secret-key-in-production
+JWT_SECRET=change-this-jwt-secret-in-production
+FERNET_KEY=change-this-fernet-key-in-production
+FRONTEND_PORT=58888
+BACKEND_PORT=59999
+CORS_ORIGINS=http://localhost:58888
+AUTH_FIXED_SMS_CODE=123456
+```
+
+3. Build and start the full stack.
+
+```bash
+docker compose up -d --build
+```
+
+Optional helper scripts:
+
+```bash
+./deploy.sh
+```
+
+```powershell
+.\deploy.ps1
+```
+
+Default endpoints:
+
+- Web: [http://127.0.0.1:58888](http://127.0.0.1:58888)
+- API: [http://127.0.0.1:59999](http://127.0.0.1:59999)
+- Swagger UI: [http://127.0.0.1:59999/api/docs](http://127.0.0.1:59999/api/docs)
+
+Useful operations:
+
+```bash
+docker compose ps
+docker compose logs -f backend
+docker compose logs -f frontend
+docker compose logs -f celery-worker
+docker compose down
+```
+
+### Option B: Developer deployment
+
+Requirements:
 
 | Dependency | Version |
 | --- | --- |
@@ -74,68 +222,59 @@ That is why this README separates what is already implemented from what the prod
 | Redis | 7+ |
 | uv | 0.4+ |
 
-### 1. Clone the repository
+1. Clone the repository.
 
 ```bash
 git clone https://github.com/MapleQiAN/QYQuant.git
 cd QYQuant
 ```
 
-### 2. Configure environment variables
-
-Copy the root template:
+2. Create a development env file.
 
 ```bash
 cp .env.example .env.development
 ```
 
-At minimum, verify these values:
+The defaults in `.env.example` already match the root Compose dependency stack:
 
 ```env
-DATABASE_URL=postgresql://postgres:your_password@localhost:5432/qyquant
-REDIS_URL=redis://localhost:6379/0
-JWT_SECRET=change-this-jwt-secret-in-production
+DATABASE_URL=postgresql://qyquant:qyquant_password@localhost:5432/qyquant
+REDIS_URL=redis://:redis_password@localhost:6379/0
+CELERY_BROKER_URL=redis://:redis_password@localhost:6379/1
+CELERY_RESULT_BACKEND=redis://:redis_password@localhost:6379/1
 SECRET_KEY=change-this-secret-key-in-production
+JWT_SECRET=change-this-jwt-secret-in-production
 FERNET_KEY=change-this-fernet-key-in-production
 CORS_ORIGINS=http://localhost:58888
-```
-
-If you do not want to use a real SMS provider in development:
-
-```env
 AUTH_FIXED_SMS_CODE=123456
 ```
 
-If you want JoinQuant-backed data:
+If you want JoinQuant-backed data, also set:
 
 ```env
 JQDATA_USERNAME=your-account
 JQDATA_PASSWORD=your-password
 ```
 
-### 3. Start PostgreSQL and Redis
-
-If you do not already have local services, you can use the root Compose file:
+3. Start PostgreSQL and Redis.
 
 ```bash
 docker compose up -d postgres redis
 ```
 
-### 4. Install Python dependencies
-
-Use `uv` at the repository root so both `backend` and the local `packages/qysp` package are installed:
+4. Install Python dependencies.
 
 ```bash
 uv sync --dev
 ```
 
-### 5. Initialize the database
+5. Initialize the database.
 
 ```bash
 uv run --package qyquant-backend flask --app app db upgrade
 ```
 
-### 6. Start the backend
+6. Start the backend.
 
 ```bash
 uv run --package qyquant-backend flask --app app run --debug --port 59999
@@ -146,9 +285,7 @@ After that:
 - API: [http://127.0.0.1:59999](http://127.0.0.1:59999)
 - Swagger UI: [http://127.0.0.1:59999/api/docs](http://127.0.0.1:59999/api/docs)
 
-### 7. Start the Celery worker
-
-Async backtests require Redis and a Celery worker:
+7. Start the Celery worker.
 
 ```bash
 uv run --package qyquant-backend celery -A app.celery_app worker --loglevel=info
@@ -160,7 +297,7 @@ If you also need scheduled jobs:
 uv run --package qyquant-backend celery -A app.celery_app beat --loglevel=info
 ```
 
-### 8. Start the frontend
+8. Start the frontend.
 
 ```bash
 cd frontend
@@ -172,7 +309,7 @@ Default address:
 
 - Web: [http://127.0.0.1:58888](http://127.0.0.1:58888)
 
-> The Vite dev server currently proxies `/api` to `http://127.0.0.1:59999`.
+> The Vite dev server proxies `/api` to `http://127.0.0.1:59999`.
 
 ## Developer Notes
 

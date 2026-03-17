@@ -139,7 +139,82 @@ flowchart LR
 
 ## 快速开始
 
-### 环境要求
+你可以用两种方式启动 QYQuant：
+
+- Docker 一键部署：直接拉起前端、后端、PostgreSQL、Redis 与 Celery 的完整栈。
+- 开发者部署：只启动 PostgreSQL / Redis 依赖，再分别运行后端、Worker 和前端，适合日常迭代。
+
+### 方案 A：Docker 一键部署
+
+环境要求：
+
+- Docker Engine / Docker Desktop
+- Docker Compose v2
+
+1. 克隆仓库。
+
+```bash
+git clone https://github.com/MapleQiAN/QYQuant.git
+cd QYQuant
+```
+
+2. 创建部署环境文件。
+
+```bash
+cp .env.example .env
+```
+
+上线前至少检查这些配置：
+
+```env
+POSTGRES_PASSWORD=qyquant_password
+REDIS_PASSWORD=redis_password
+SECRET_KEY=change-this-secret-key-in-production
+JWT_SECRET=change-this-jwt-secret-in-production
+FERNET_KEY=change-this-fernet-key-in-production
+FRONTEND_PORT=58888
+BACKEND_PORT=59999
+CORS_ORIGINS=http://localhost:58888
+AUTH_FIXED_SMS_CODE=123456
+```
+
+3. 构建并启动完整栈。
+
+```bash
+docker compose up -d --build
+```
+
+如果你更习惯用脚本：
+
+```bash
+./deploy.sh
+```
+
+Windows PowerShell：
+
+```powershell
+.\deploy.ps1
+```
+
+默认访问地址：
+
+- Web: [http://127.0.0.1:58888](http://127.0.0.1:58888)
+- API: [http://127.0.0.1:59999](http://127.0.0.1:59999)
+- Swagger UI: [http://127.0.0.1:59999/api/docs](http://127.0.0.1:59999/api/docs)
+
+常用运维命令：
+
+```bash
+docker compose ps
+docker compose logs -f backend
+docker compose logs -f frontend
+docker compose logs -f celery-worker
+docker compose down
+```
+
+### 方案 B：开发者部署
+
+环境要求：
 
 | 依赖 | 版本 |
 | --- | --- |
@@ -149,35 +224,30 @@ flowchart LR
 | Redis | 7+ |
 | uv | 0.4+ |
 
-### 1. 克隆仓库
+1. 克隆仓库。
 
 ```bash
 git clone https://github.com/MapleQiAN/QYQuant.git
 cd QYQuant
 ```
 
-### 2. 配置环境变量
-
-复制根目录模板：
+2. 创建开发环境文件。
 
 ```bash
 cp .env.example .env.development
 ```
 
-至少确认以下配置存在且可用：
+`.env.example` 里的默认值已经和根目录 Compose 的依赖服务对齐：
 
 ```env
-DATABASE_URL=postgresql://postgres:your_password@localhost:5432/qyquant
-REDIS_URL=redis://localhost:6379/0
-JWT_SECRET=change-this-jwt-secret-in-production
+DATABASE_URL=postgresql://qyquant:qyquant_password@localhost:5432/qyquant
+REDIS_URL=redis://:redis_password@localhost:6379/0
+CELERY_BROKER_URL=redis://:redis_password@localhost:6379/1
+CELERY_RESULT_BACKEND=redis://:redis_password@localhost:6379/1
 SECRET_KEY=change-this-secret-key-in-production
+JWT_SECRET=change-this-jwt-secret-in-production
 FERNET_KEY=change-this-fernet-key-in-production
 CORS_ORIGINS=http://localhost:58888
-```
-
-开发环境如果不想接真实短信，可以加上：
-
-```env
 AUTH_FIXED_SMS_CODE=123456
 ```
 
@@ -188,15 +258,13 @@ JQDATA_USERNAME=your-account
 JQDATA_PASSWORD=your-password
 ```
 
-### 3. 启动 PostgreSQL 与 Redis
-
-如果本机没有现成服务，可以直接用根目录 Compose 启动依赖：
+3. 启动 PostgreSQL 与 Redis。
 
 ```bash
 docker compose up -d postgres redis
 ```
 
-### 4. 安装 Python 依赖
+4. 安装 Python 依赖。
 
 推荐在仓库根目录使用 `uv`，这样会同时安装 `backend` 和本地包 `packages/qysp`：
 
@@ -204,13 +272,13 @@ docker compose up -d postgres redis
 uv sync --dev
 ```
 
-### 5. 初始化数据库
+5. 初始化数据库。
 
 ```bash
 uv run --package qyquant-backend flask --app app db upgrade
 ```
 
-### 6. 启动后端
+6. 启动后端。
 
 ```bash
 uv run --package qyquant-backend flask --app app run --debug --port 59999
@@ -221,9 +289,7 @@ uv run --package qyquant-backend flask --app app run --debug --port 59999
 - API: [http://127.0.0.1:59999](http://127.0.0.1:59999)
 - Swagger UI: [http://127.0.0.1:59999/api/docs](http://127.0.0.1:59999/api/docs)
 
-### 7. 启动 Celery Worker
-
-异步回测依赖 Redis 与 Celery Worker：
+7. 启动 Celery Worker。
 
 ```bash
 uv run --package qyquant-backend celery -A app.celery_app worker --loglevel=info
@@ -235,7 +301,7 @@ uv run --package qyquant-backend celery -A app.celery_app worker --loglevel=info
 uv run --package qyquant-backend celery -A app.celery_app beat --loglevel=info
 ```
 
-### 8. 启动前端
+8. 启动前端。
 
 ```bash
 cd frontend

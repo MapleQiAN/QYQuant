@@ -1,28 +1,24 @@
-# Celery Worker Dockerfile
 FROM python:3.11-slim
 
-# 设置工作目录
 WORKDIR /app
 
-# 安装系统依赖
 RUN apt-get update && apt-get install -y \
     gcc \
     g++ \
     postgresql-client \
     && rm -rf /var/lib/apt/lists/*
 
-# 复制依赖文件
-COPY requirements.txt .
+COPY backend/requirements.txt ./backend/requirements.txt
+COPY packages/qysp ./packages/qysp
 
-# 安装 Python 依赖
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir -r backend/requirements.txt \
+    && pip install --no-cache-dir ./packages/qysp
 
-# 复制应用代码
-COPY . .
+COPY backend ./backend
 
-# 创建非 root 用户
+WORKDIR /app/backend
+
 RUN useradd -m -u 1000 appuser && chown -R appuser:appuser /app
 USER appuser
 
-# 启动 Celery Worker
 CMD ["sh", "-lc", "celery -A app.celery_app worker --loglevel=info --concurrency=${CELERYD_CONCURRENCY:-10} -Q backtest"]
