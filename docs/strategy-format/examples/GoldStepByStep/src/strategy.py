@@ -1,249 +1,92 @@
-from dataclasses import dataclass
-from typing import Optional
+"""黄金阶梯突破策略示例。"""
+
+from __future__ import annotations
+
+from qysp import BarData, Order, StrategyContext
 
 
-@dataclass
-class Date:
-    year: int
-    month: int
-    day: int
+def _append_history(ctx: StrategyContext, data: BarData, lookback: int) -> list[BarData]:
+    """在上下文中保留有限长度的 K 线历史。"""
+    history = list(getattr(ctx, "_gold_step_history", []))
+    history.append(data)
+    trimmed = history[-max(lookback + 2, 2) :]
+    setattr(ctx, "_gold_step_history", trimmed)
+    return trimmed
 
 
-@dataclass
-class Record_Price:
-    price: float
-    time: Date
+def _get_previous_high(history: list[BarData], lookback: int) -> float | None:
+    """返回不含当前 K 线的最近 lookback 根最高价。"""
+    if len(history) <= 1:
+        return None
+    window = history[:-1][-lookback:]
+    if not window:
+        return None
+    return max(bar.high for bar in window)
 
 
-@dataclass
-class Holding:
-    name: str #当前持仓标的名称
-    amount: int #当前持仓股数
-    cost: float #当前持仓单股成本价
-    current_price: float #当前持仓单股价格。
-    current_value: float #当前持仓总价值。current_value=current_price*amount
-    current_profit: float #当前持仓总收益。current_profit=(current_price-cost_price)*amount
-    current_yield: float #当前持仓收益率。current_yield=100*(current_price/cost_price-1)。例如持仓成本价格为100美元，当前价格为120美元，则该持仓current_yield值为20.00
-    percentage: float #该持仓占总投资资金量的比例。例如持仓价值5000美元，账户总资产价值10000美元，则该持仓percentage值为50.00
+def on_bar(ctx: StrategyContext, data: BarData) -> list[Order]:
+    """event_v1 入口：突破前高买入，跌破风控阈值卖出。"""
+    # 从 strategy.json 读取全部策略参数。
+    breakout_lookback = int(ctx.parameters.get("breakout_lookback", 20))
+    drop_one_day_pct = float(ctx.parameters.get("drop_one_day_pct", 3.0))
+    drop_from_peak_pct = float(ctx.parameters.get("drop_from_peak_pct", 6.0))
 
+    # 缓存最近的 K 线，供突破判断和单日跌幅判断使用。
+    history = _append_history(ctx, data, breakout_lookback)
+    previous_high = _get_previous_high(history, breakout_lookback)
+    previous_close = history[-2].close if len(history) >= 2 else None
 
-@dataclass
-class Account:
-    total_capital: float
-    available_capital: float
-    holding: Holding
-    have_holding: bool
+    # 读取当前标的与持仓状态。
+    symbol = data.symbol
+    price = float(data.close)
+    position = ctx.account.positions.get(symbol)
+    has_position = position is not None and position.quantity > 0
 
-
-def break_previous_cycle_peak(previous_cycle_peak, current_price):
-    if current_price > previous_cycle_peak.price:
-        return True
-    else:
-        return False
-
-
-def drop_3_percent_in_one_day(yesterday_close, current_price):
-    if current_price < 0.97 * yesterday_close:
-        return True
-    else:
-        return False
-
-
-def drop_6_percent_in_total(all_time_high, current_price):
-    if current_price < 0.94 * all_time_high.price:
-        return True
-    else:
-        return False
-
-
-def get_current_price():
-    # 后续需要接入券商API实时返回当前价格
-    # 需要加入获取失败的容错机制
-    current_price = float(input("请输入当前价格"))
-    return current_price
-
-
-def market_open():
-    # 后续要接入券商API获取开盘信号
-    open_signal = int(input("是否开盘？（1：开盘，0：未开盘）"))
-    while open_signal not in (0, 1):
-        open_signal = int(input("输入无效！\n" + "是否开盘？（1：开盘，0：未开盘）"))
-    if open_signal == 0:
-        print("未开盘")
-        return False
-    elif open_signal == 1:
-        print("已开盘")
-        return True
-
-
-def market_opening(signal_price):
-    # 目前以获取到signal_price为-1为收盘信号
-    if signal_price != -1:
-        return True
-    else:
-        return False
-
-
-def market_closing(open_signal):
-    if open_signal == False:
-        return True
-    else:
-        return False
-
-
-def market_close(today, current_price, open_signal, yesterday_close):
-    today = date_pass(today)
-    open_signal = False
-    yesterday_close = current_price
-    return today, current_price, open_signal, yesterday_close
-
-
-def open_position(account, current_price):
-    account.holding = Holding(
-        "黄金ETF（IAU）",
-        int(account.available_capital / current_price),
-        current_price,
-        current_price,
-        current_price * int(account.available_capital / current_price),
-        0.00,
-        0.00,
-        100 * current_price * int(account.available_capital / current_price) / account.total_capital
-    )
-    account.have_holding = True
-    account.available_capital -= account.holding.current_value
-    print(
-        "开始做多。" +
-        "\n标的名称：" + str(account.holding.name) +
-        "\n当前成本：" + str(account.holding.cost) +
-        "\n当前股数：" + str(account.holding.amount) +
-        "\n当前价格：" + str(account.holding.current_price) +
-        "\n持仓价值：" + str("{:.2f}".format(account.holding.current_value)) +
-        "\n当前利润：" + str("{:.2f}".format(account.holding.current_profit)) +
-        "\n当前收益率：" + str(account.holding.current_yield)[:5] + "%" +
-        "\n持仓占比：" + str(account.holding.percentage)[:5] + "%"
-    )
-    return account
-
-
-def sell(account, previous_cycle_peak, cycle_peak):
-    account.available_capital = account.available_capital + float(account.holding.current_value)    # 释放可用资金
-    account.holding = reset_position()                                                                             # 清空仓位
-    account.have_holding = False
-    previous_cycle_peak.price = cycle_peak.price                                                            # 周期新高变周期前高
-    previous_cycle_peak.time = cycle_peak.time
-    return account, previous_cycle_peak, cycle_peak
-
-
-def reset_position():
-    holding = Holding("", 0, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00)
-    return holding
-
-
-def update_holding(account, current_price):                                                                 # 按最新价格更新持仓信息
-    account.holding.current_price = current_price
-    account.holding.current_value = account.holding.amount * account.holding.current_price
-    account.holding.current_profit = (account.holding.current_price - account.holding.cost) * account.holding.amount
-    account.holding.current_yield = 100 * (account.holding.current_price / account.holding.cost - 1)
-    account.total_capital = account.available_capital + account.holding.current_value
-    account.holding.percentage = 100 * account.holding.current_value / account.total_capital
-    return account, current_price
-
-
-def print_account_info(account):
-    if account.have_holding:
-        print(
-            "账户资产：" + str("{:.2f}".format(account.total_capital)) +
-            "\n可用资金：" + str("{:.2f}".format(account.available_capital)) +
-            "\n-------------【持仓信息】--------------" +
-            "\n标的名称：" + str(account.holding.name) +
-            "\n当前成本：" + str(account.holding.cost) +
-            "\n当前股数：" + str(account.holding.amount) +
-            "\n当前价格：" + str(account.holding.current_price) +
-            "\n持仓价值：" + str("{:.2f}".format(account.holding.current_value)) +
-            "\n当前利润：" + str("{:.2f}".format(account.holding.current_profit)) +
-            "\n当前收益率：" + str(account.holding.current_yield)[:5] + "%" +
-            "\n持仓占比：" + str(account.holding.percentage)[:5] + "%"
+    if has_position:
+        # 持仓期间持续更新峰值，用于累计回撤止损。
+        peak_price = float(
+            getattr(
+                ctx,
+                "_gold_step_peak_price",
+                max(position.current_price, position.avg_cost, price),
+            )
         )
-    else:
-        print(
-            "账户资产：" + str("{:.2f}".format(account.total_capital)) +
-            "\n可用资金：" + str("{:.2f}".format(account.available_capital)) +
-            "\n-------------【持仓信息】--------------" +
-            "\n暂无持仓"
-        )
+        peak_price = max(peak_price, float(data.high))
+        setattr(ctx, "_gold_step_peak_price", peak_price)
 
+        # 单日跌幅超过阈值时立即清仓。
+        if previous_close and previous_close > 0:
+            one_day_drop_pct = (previous_close - price) / previous_close * 100
+            if one_day_drop_pct >= drop_one_day_pct:
+                setattr(ctx, "_gold_step_peak_price", 0.0)
+                return [ctx.sell(symbol, position.quantity)]
 
-def date_pass(today):
-    if today.day == 28 and today.month == 2:
-        today.month += 1
-        today.day = 1
-    elif today.day == 30 and today.month in (4, 6, 9, 11):
-        today.month += 1
-        today.day = 1
-    elif today.day == 31 and today.month in (1, 3, 5, 7, 8, 10, 12):
-        today.month += 1
-        today.day = 1
-        if today.month == 13:
-            today.month = 1
-            today.year += 1
-    else:
-        today.day += 1
-    return today
+        # 从持仓期最高点回撤超过阈值时清仓。
+        if peak_price > 0:
+            drawdown_pct = (peak_price - price) / peak_price * 100
+            if drawdown_pct >= drop_from_peak_pct:
+                setattr(ctx, "_gold_step_peak_price", 0.0)
+                return [ctx.sell(symbol, position.quantity)]
 
+        # 风控条件都未触发时继续持有。
+        return []
 
+    # 空仓时重置峰值缓存，避免上一笔交易污染下一次判断。
+    setattr(ctx, "_gold_step_peak_price", 0.0)
 
-def main():
-    account = Account(                                                                                                   # 初始化账户
-        total_capital=1_000_000,
-        available_capital=1_000_000,
-        holding=reset_position(),
-        have_holding=False
-    )
-                                                                                                                                  # 初始化策略配置参数
-    previous_cycle_peak = Record_Price(39.36, Date(2022, 3, 8))                                 # 策略启动时，人为设定的周期前高和新高
-    cycle_peak = Record_Price(39.36, Date(2022, 3, 8))
-                                                                                                                                  # 初始化股市信息
-    yesterday_close = previous_cycle_peak.price
-    current_price = previous_cycle_peak.price
-    signal_price = previous_cycle_peak.price
-    today = Date(2022, 3, 8)
-    open_signal = False
+    # 历史不足时不做突破判断。
+    if previous_high is None:
+        return []
 
-    while True:                                                                                                           # 每日重复
-        while market_closing(open_signal):                                                                    # 未开盘则持续获取开盘信号。
-            open_signal = market_open()
-        while market_opening(signal_price):                                                                  # 获取到开盘信号进入循环：获取价格-判断价格是否触发建仓/清仓-观望/执行操作
-            signal_price = get_current_price()
+    # 只有收盘价突破前高时才发出买单。
+    if price <= previous_high:
+        return []
 
-            if signal_price != -1:                                                                                      # 获取到信号价格为-1表示收盘，否则是实时价格
-                current_price = signal_price
-                if current_price > cycle_peak.price:                                                          # 价格破新高先记录，用于判断清仓条件
-                    cycle_peak.price = current_price
-                    cycle_peak.time = today
-            else:
-                signal_price = yesterday_close
-                break
+    # 示例使用全仓买入，便于展示 ctx.buy 的基本用法。
+    quantity = ctx.account.cash / price if price > 0 else 0.0
+    if quantity <= 0:
+        return []
 
-            if not account.have_holding:
-                if break_previous_cycle_peak(previous_cycle_peak, current_price):         # 突破周期前高则买入
-                    account = open_position(account, current_price)
-                else:
-                    print_account_info(account)                                                                # 否则观望
-                    print("观望中......")
-            else:
-                account, current_price = update_holding(account, current_price)
-                if drop_3_percent_in_one_day(yesterday_close, current_price):            # 单日跌幅超3%则清仓
-                    account, previous_cycle_peak, cycle_peak = sell(account, previous_cycle_peak, cycle_peak)
-                    print("由于单日跌幅超过3%，已清仓")
-                elif drop_6_percent_in_total(cycle_peak, current_price):                       # 相较周期新高累计跌幅超过6%则清仓
-                    account, previous_cycle_peak, cycle_peak = sell(account, previous_cycle_peak, cycle_peak)
-                    print("由于相较新高累计跌幅超过6%，已清仓")
-                else:
-                    print_account_info(account)
-                    print("持仓中......")
-
-        today, current_price, open_signal, yesterday_close = market_close(today, current_price, open_signal, yesterday_close)
-        print("已收盘，今日收盘价为" + str(current_price))
-
-if __name__ == "__main__":
-    main()
+    # 记录当前峰值，供后续的累计回撤止损使用。
+    setattr(ctx, "_gold_step_peak_price", float(data.high))
+    return [ctx.buy(symbol, quantity)]

@@ -1,10 +1,10 @@
-﻿{
+{
   "schemaVersion": "1.0",
   "kind": "QYStrategy",
   "id": "a2e4a6cf-3f2f-4c5d-8a4a-1f5f9b2b2e10",
-  "name": "Gold Trend Follow",
+  "name": "黄金均线趋势策略",
   "version": "1.0.0",
-  "description": "Breakout-based gold trend strategy with drawdown exits.",
+  "description": "使用 SMA 过滤趋势并在突破近期高点后入场的黄金示例策略。",
   "language": "python",
   "runtime": {
     "name": "python",
@@ -12,36 +12,36 @@
   },
   "entrypoint": {
     "path": "src/strategy.py",
-    "callable": "Strategy",
+    "callable": "on_bar",
     "interface": "event_v1"
   },
   "parameters": [
     {
-      "key": "breakoutLookback",
+      "key": "trend_sma_period",
       "type": "integer",
-      "default": 252,
-      "min": 20,
-      "max": 2000,
+      "default": 30,
+      "min": 5,
+      "max": 250,
       "step": 1,
-      "description": "Lookback window for previous cycle peak."
+      "description": "趋势过滤使用的简单移动平均窗口。"
     },
     {
-      "key": "dropOneDayPct",
-      "type": "number",
-      "default": 3.0,
-      "min": 0.5,
-      "max": 20,
-      "step": 0.1,
-      "description": "Exit if price drops this percent in one day."
+      "key": "breakout_lookback",
+      "type": "integer",
+      "default": 20,
+      "min": 5,
+      "max": 250,
+      "step": 1,
+      "description": "突破判断使用的历史窗口长度。"
     },
     {
-      "key": "dropFromPeakPct",
+      "key": "max_drawdown_pct",
       "type": "number",
       "default": 6.0,
       "min": 1,
-      "max": 50,
+      "max": 30,
       "step": 0.1,
-      "description": "Exit if price drops this percent from cycle peak."
+      "description": "从持仓高点回撤到该比例时执行卖出。"
     }
   ],
   "universe": {
@@ -54,30 +54,18 @@
   "data": {
     "resolution": "1d",
     "fields": ["open", "high", "low", "close", "volume"],
-    "lookback": 300
+    "lookback": 120
   },
-  "execution": {
-    "orderTypes": ["market"],
-    "slippageBps": 2,
-    "commissionBps": 1,
-    "priceType": "close",
-    "maxOrdersPerDay": 2
+  "ui": {
+    "category": "trend-following",
+    "difficulty": "beginner"
   },
-  "risk": {
-    "maxPositionPct": 100,
-    "maxDrawdownPct": 25,
-    "stopLossPct": 6,
-    "cooldownDays": 1
+  "backtest": {
+    "defaultPeriod": {
+      "start": "2022-01-01",
+      "end": "2025-12-31"
+    },
+    "initialCapital": 1000000
   },
-  "tags": ["gold", "trend", "breakout"],
-  "author": {
-    "name": "QYQuant Team",
-    "email": "team@qyquant.local"
-  },
-  "license": "Apache-2.0",
-  "createdAt": "2026-02-04T08:00:00Z",
-  "updatedAt": "2026-02-04T08:00:00Z",
-  "dependencies": {
-    "pip": ["pandas==2.2.2"]
-  }
+  "tags": ["gold", "trend", "sma", "breakout"]
 }

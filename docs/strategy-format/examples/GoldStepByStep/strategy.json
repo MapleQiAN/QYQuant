@@ -2,8 +2,9 @@
   "schemaVersion": "1.0",
   "kind": "QYStrategy",
   "id": "ee1adc2c-2b67-4c9d-9c9f-b7c3a7d4ed85",
-  "name": "黄金策略 Step-By-Step",
-  "version": "0.1.0",
+  "name": "黄金阶梯突破策略",
+  "version": "1.0.0",
+  "description": "基于前高突破和双重止损规则的黄金趋势跟踪示例。",
   "language": "python",
   "runtime": {
     "name": "python",
@@ -11,27 +12,60 @@
   },
   "entrypoint": {
     "path": "src/strategy.py",
-    "callable": "main"
+    "callable": "on_bar",
+    "interface": "event_v1"
   },
-  "tags": [
-    "gold",
-    "breakout",
-    "step-by-step"
+  "parameters": [
+    {
+      "key": "breakout_lookback",
+      "type": "integer",
+      "default": 20,
+      "min": 5,
+      "max": 300,
+      "step": 1,
+      "description": "突破判断使用的历史 K 线窗口长度。"
+    },
+    {
+      "key": "drop_one_day_pct",
+      "type": "number",
+      "default": 3.0,
+      "min": 0.5,
+      "max": 20,
+      "step": 0.1,
+      "description": "单日跌幅止损阈值，单位为百分比。"
+    },
+    {
+      "key": "drop_from_peak_pct",
+      "type": "number",
+      "default": 6.0,
+      "min": 1,
+      "max": 50,
+      "step": 0.1,
+      "description": "从持仓期最高点回撤的止损阈值，单位为百分比。"
+    }
   ],
-  "createdAt": "2026-02-04T16:26:09Z",
-  "updatedAt": "2026-02-04T16:51:01Z",
-  "integrity": {
-    "files": [
-      {
-        "path": "strategy.json",
-        "sha256": "729e61dbd19120058f1bc1bcb398f838eb2d61b8df37c3eef519db7670d1283e",
-        "size": 507
-      },
-      {
-        "path": "src/strategy.py",
-        "sha256": "ff597c3e5b6ce9063628d0e736555880df2c3be4eee4174c09f89d50643f5e22",
-        "size": 10878
-      }
-    ]
-  }
+  "universe": {
+    "symbols": ["XAUUSD"],
+    "assetClass": "commodity",
+    "market": "spot",
+    "currency": "USD",
+    "timezone": "UTC"
+  },
+  "data": {
+    "resolution": "1d",
+    "fields": ["open", "high", "low", "close", "volume"],
+    "lookback": 60
+  },
+  "ui": {
+    "category": "trend-following",
+    "difficulty": "beginner"
+  },
+  "backtest": {
+    "defaultPeriod": {
+      "start": "2022-01-01",
+      "end": "2025-12-31"
+    },
+    "initialCapital": 1000000
+  },
+  "tags": ["gold", "trend", "breakout", "beginner"]
 }

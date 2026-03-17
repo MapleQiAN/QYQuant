@@ -102,6 +102,9 @@ docs/
 docs/*
 !docs/plans/
 !docs/plans/**
+!docs/quickstart.md
+!docs/api-reference.md
+!docs/cli-reference.md
 !docs/strategy-format/
 !docs/strategy-format/**
 
