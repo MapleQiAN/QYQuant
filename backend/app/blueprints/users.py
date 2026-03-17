@@ -64,6 +64,23 @@ def update_me():
     return ok(_private_schema.dump(user))
 
 
+@bp.put('/<user_id>/onboarding-completed')
+@jwt_required()
+def update_onboarding_completed(user_id):
+    user, error = _get_user_or_404(get_jwt_identity())
+    if error:
+        return error
+
+    payload = request.get_json() or {}
+    completed = payload.get("completed")
+    if not isinstance(completed, bool):
+        return error_response("VALIDATION_ERROR", "completed must be a boolean", 422)
+
+    user.onboarding_completed = completed
+    db.session.commit()
+    return ok(_private_schema.dump(user))
+
+
 @bp.delete('/me')
 @jwt_required()
 def delete_me():

@@ -228,6 +228,46 @@ def test_get_strategy_parameters_returns_normalized_manifest_parameters(client, 
     ]
 
 
+def test_marketplace_strategies_can_filter_onboarding_tag(client, app):
+    with app.app_context():
+        db.session.add_all(
+            [
+                Strategy(
+                    id="guided-strategy",
+                    name="Guided Gold Strategy",
+                    symbol="XAUUSD",
+                    status="running",
+                    owner_id=None,
+                    returns=12.5,
+                    win_rate=68,
+                    max_drawdown=9.8,
+                    tags=["onboarding", "gold"],
+                    trades=18,
+                ),
+                Strategy(
+                    id="non-guided-strategy",
+                    name="Other Strategy",
+                    symbol="BTCUSDT",
+                    status="running",
+                    owner_id=None,
+                    returns=4.2,
+                    win_rate=55,
+                    max_drawdown=11.3,
+                    tags=["swing"],
+                    trades=6,
+                ),
+            ]
+        )
+        db.session.commit()
+
+    response = client.get("/api/v1/marketplace/strategies?tag=onboarding")
+
+    assert response.status_code == 200
+    items = response.json["data"]
+    assert [item["id"] for item in items] == ["guided-strategy"]
+    assert items[0]["tags"] == ["onboarding", "gold"]
+
+
 def test_import_strategy_encrypts_entrypoint_source(client, app, tmp_path):
     strategy_id = str(uuid.uuid4())
     version = '2.0.0'

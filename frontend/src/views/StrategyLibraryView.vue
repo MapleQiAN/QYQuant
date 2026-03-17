@@ -11,6 +11,32 @@
         </RouterLink>
       </div>
 
+      <section v-if="isGuidedMode" :class="['card guided-card', { 'onboarding-highlight': userStore.onboardingHighlightTarget === 'guided-strategy-card' }]" data-onboarding-target="guided-strategy-card">
+        <div class="section-header">
+          <h2>Guided Strategy</h2>
+          <p>Pick the recommended onboarding strategy to complete your first backtest with fewer decisions.</p>
+        </div>
+        <div v-if="guidedLoading" class="empty-state">Loading guided strategies...</div>
+        <p v-else-if="guidedError" class="message error">{{ guidedError }}</p>
+        <div v-else-if="guidedStrategies.length" class="strategy-list">
+          <article v-for="strategy in guidedStrategies" :key="strategy.id" class="strategy-row guided-row">
+            <div class="row-main">
+              <div class="row-title">{{ strategy.name }}</div>
+              <div class="row-meta">
+                <span>{{ strategy.symbol }}</span>
+                <span>{{ strategy.category || 'beginner' }}</span>
+              </div>
+              <div class="tag-row">
+                <span v-for="tag in strategy.tags" :key="tag" class="pill">{{ tag }}</span>
+              </div>
+            </div>
+            <button class="btn btn-primary" type="button" @click="handleGuidedSelect(strategy.id)">
+              Use this strategy
+            </button>
+          </article>
+        </div>
+      </section>
+
       <div class="layout-grid">
         <div class="card import-card">
           <div class="section-header">
@@ -112,15 +138,21 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
-import { RouterLink, useRouter } from 'vue-router'
-import { deleteStrategy, fetchStrategies, importStrategy } from '../api/strategies'
+import { RouterLink, useRoute, useRouter } from 'vue-router'
+import { deleteStrategy, fetchMarketplaceStrategies, fetchStrategies, importStrategy } from '../api/strategies'
 import type { Strategy } from '../types/Strategy'
+import { useUserStore } from '../stores'
 
 const router = useRouter()
+const route = useRoute()
+const userStore = useUserStore()
 
 const items = ref<Strategy[]>([])
+const guidedStrategies = ref<Strategy[]>([])
 const loading = ref(false)
 const loadError = ref('')
+const guidedLoading = ref(false)
+const guidedError = ref('')
 const importError = ref('')
 const importing = ref(false)
 const dragActive = ref(false)
@@ -131,9 +163,13 @@ const perPage = ref(10)
 const total = ref(0)
 
 const totalPages = computed(() => Math.max(1, Math.ceil(total.value / perPage.value)))
+const isGuidedMode = computed(() => route.query.guided === 'true')
 
 onMounted(() => {
   void loadPage(1)
+  if (isGuidedMode.value) {
+    void loadGuidedStrategies()
+  }
 })
 
 async function loadPage(nextPage: number) {
@@ -154,6 +190,18 @@ async function loadPage(nextPage: number) {
 
 function changePage(nextPage: number) {
   void loadPage(nextPage)
+}
+
+async function loadGuidedStrategies() {
+  guidedLoading.value = true
+  guidedError.value = ''
+  try {
+    guidedStrategies.value = await fetchMarketplaceStrategies({ tag: 'onboarding' })
+  } catch (error: any) {
+    guidedError.value = error?.message || 'Failed to load guided strategies'
+  } finally {
+    guidedLoading.value = false
+  }
 }
 
 function handleFileChange(event: Event) {
@@ -203,6 +251,17 @@ async function handleDelete(strategyId: string) {
   await loadPage(fallbackPage)
 }
 
+async function handleGuidedSelect(strategyId: string) {
+  userStore.setGuidedBacktestStrategy(strategyId)
+  userStore.setGuidedBacktestStep(2)
+  userStore.setOnboardingHighlightTarget('guided-run-button')
+  await router.push({
+    name: 'strategy-detail',
+    params: { strategyId },
+    query: { guided: 'true' },
+  })
+}
+
 function formatBytes(bytes: number) {
   if (bytes <= 0) return '0 B'
   const units = ['B', 'KB', 'MB', 'GB']
@@ -245,6 +304,15 @@ function formatCreatedAt(value?: string | number) {
   display: grid;
   grid-template-columns: minmax(320px, 0.9fr) minmax(0, 1.1fr);
   gap: var(--spacing-lg);
+}
+
+.guided-card {
+  margin-bottom: var(--spacing-lg);
+  padding: var(--spacing-lg);
+}
+
+.guided-row {
+  align-items: center;
 }
 
 .import-card,

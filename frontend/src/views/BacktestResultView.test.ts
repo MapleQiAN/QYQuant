@@ -36,11 +36,42 @@ const storeState = {
 }
 
 vi.mock('vue-router', () => ({
+  useRouter: () => ({
+    push: vi.fn(),
+  }),
   useRoute: () => ({
     params: {
       jobId: 'job-1'
-    }
+    },
+    query: {},
   })
+}))
+
+vi.mock('../stores', () => ({
+  useUserStore: () => ({
+    onboardingHighlightTarget: null,
+    markOnboardingCompleted: vi.fn(),
+    finishGuidedBacktest: vi.fn(),
+  }),
+}))
+
+vi.mock('../components/help/MetricTooltip.vue', () => ({
+  default: {
+    template: '<span data-test="metric-tooltip" />',
+  },
+}))
+
+vi.mock('../components/backtest/ErrorDisplay.vue', () => ({
+  default: {
+    props: ['error', 'supportedPackages'],
+    template: '<div>{{ error?.type }} {{ error?.line }} {{ error?.message }} {{ error?.example_code }} {{ supportedPackages?.[0]?.name }}</div>',
+  },
+}))
+
+vi.mock('../components/backtest/EquityCurveChart.vue', () => ({
+  default: {
+    template: '<div data-test="equity-chart" />',
+  },
 }))
 
 vi.mock('../stores/backtests', () => ({
@@ -86,15 +117,7 @@ describe('BacktestResultView', () => {
   })
 
   it('renders core metrics and disclaimer', async () => {
-    const wrapper = mount(BacktestResultView, {
-      global: {
-        stubs: {
-          EquityCurveChart: {
-            template: '<div data-test="equity-chart" />'
-          }
-        }
-      }
-    })
+    const wrapper = mount(BacktestResultView)
 
     expect(loadReportMock).toHaveBeenCalledWith('job-1')
     expect(wrapper.text()).toContain('12.50%')
@@ -119,15 +142,7 @@ describe('BacktestResultView', () => {
       { name: 'pandas', version: '2.x', description: 'Data analysis' }
     ]
 
-    const wrapper = mount(BacktestResultView, {
-      global: {
-        stubs: {
-          EquityCurveChart: {
-            template: '<div data-test="equity-chart" />'
-          }
-        }
-      }
-    })
+    const wrapper = mount(BacktestResultView)
 
     expect(wrapper.text()).toContain("未定义的变量 'sma_period'")
     expect(wrapper.text()).toContain('NameError')

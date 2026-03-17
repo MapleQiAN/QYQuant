@@ -13,7 +13,8 @@
           v-for="item in navItems"
           :key="item.id"
           :to="item.to"
-          :class="['nav-link', { active: route.path === item.to }]"
+          :class="['nav-link', { active: route.path === item.to, 'onboarding-highlight': onboardingHighlightTarget === item.target }]"
+          :data-onboarding-target="item.target"
         >
           <component :is="getIcon(item.icon)" class="nav-icon" />
           <span>{{ $t(item.label) }}</span>
@@ -25,6 +26,9 @@
           <SearchIcon class="search-icon" />
           <input type="text" :placeholder="$t('common.searchPlaceholder')" class="search-input" />
         </div>
+        <button class="nav-btn" type="button" aria-label="打开帮助中心" @click="userStore.setHelpPanelOpen(true)">
+          <HelpIcon />
+        </button>
 
         <button class="nav-btn notification-btn">
           <BellIcon />
@@ -52,14 +56,15 @@ import logoUrl from '../logo.png'
 const route = useRoute()
 
 const navItems = [
-  { id: 'dashboard', to: '/', icon: 'chart', label: 'nav.dashboard' },
-  { id: 'backtests', to: '/backtests', icon: 'chart', label: 'nav.backtests' },
-  { id: 'bots', to: '/bots', icon: 'robot', label: 'nav.bots' },
-  { id: 'forum', to: '/forum', icon: 'users', label: 'nav.forum' }
+  { id: 'dashboard', to: '/', icon: 'chart', label: 'nav.dashboard', target: null },
+  { id: 'strategies', to: '/strategies', icon: 'target', label: 'common.newStrategy', target: 'strategy-library-entry' },
+  { id: 'backtests', to: '/backtests', icon: 'chart', label: 'nav.backtests', target: null },
+  { id: 'bots', to: '/bots', icon: 'robot', label: 'nav.bots', target: null },
+  { id: 'forum', to: '/forum', icon: 'users', label: 'nav.forum', target: null },
 ]
 
 const userStore = useUserStore()
-const { profile } = storeToRefs(userStore)
+const { profile, onboardingHighlightTarget } = storeToRefs(userStore)
 
 const ChartIcon = () => h('svg', {
   width: 18,
@@ -110,6 +115,21 @@ const UsersIcon = () => h('svg', {
   h('path', { d: 'M16 3.13a4 4 0 0 1 0 7.75' })
 ])
 
+const HelpIcon = () => h('svg', {
+  width: 18,
+  height: 18,
+  viewBox: '0 0 24 24',
+  fill: 'none',
+  stroke: 'currentColor',
+  'stroke-width': 2,
+  'stroke-linecap': 'round',
+  'stroke-linejoin': 'round'
+}, [
+  h('circle', { cx: 12, cy: 12, r: 10 }),
+  h('path', { d: 'M9.09 9a3 3 0 1 1 5.82 1c0 2-3 2-3 4' }),
+  h('line', { x1: 12, y1: 17, x2: 12.01, y2: 17 }),
+])
+
 const SearchIcon = () => h('svg', {
   width: 16,
   height: 16,
@@ -138,8 +158,24 @@ const BellIcon = () => h('svg', {
   h('path', { d: 'M10.3 21a1.94 1.94 0 0 0 3.4 0' })
 ])
 
+const TargetIcon = () => h('svg', {
+  width: 18,
+  height: 18,
+  viewBox: '0 0 24 24',
+  fill: 'none',
+  stroke: 'currentColor',
+  'stroke-width': 2,
+  'stroke-linecap': 'round',
+  'stroke-linejoin': 'round'
+}, [
+  h('circle', { cx: 12, cy: 12, r: 10 }),
+  h('circle', { cx: 12, cy: 12, r: 6 }),
+  h('circle', { cx: 12, cy: 12, r: 2 }),
+])
+
 const iconMap: Record<string, any> = {
   chart: ChartIcon,
+  target: TargetIcon,
   robot: RobotIcon,
   users: UsersIcon
 }

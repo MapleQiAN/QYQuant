@@ -5,12 +5,14 @@ import StrategyDetailView from './StrategyDetailView.vue'
 
 const {
   fetchStrategyParametersMock,
+  fetchBacktestStatusMock,
   submitBacktestMock,
   loadPresetsMock,
   savePresetMock,
   removePresetMock,
 } = vi.hoisted(() => ({
   fetchStrategyParametersMock: vi.fn(),
+  fetchBacktestStatusMock: vi.fn(),
   submitBacktestMock: vi.fn(),
   loadPresetsMock: vi.fn(),
   savePresetMock: vi.fn(),
@@ -25,10 +27,14 @@ const presetsStoreState = {
 
 vi.mock('vue-router', () => ({
   RouterLink: { template: '<a><slot /></a>' },
+  useRouter: () => ({
+    push: vi.fn(),
+  }),
   useRoute: () => ({
     params: {
       strategyId: 'strategy-1',
     },
+    query: {},
   }),
 }))
 
@@ -37,7 +43,17 @@ vi.mock('../api/strategies', () => ({
 }))
 
 vi.mock('../api/backtests', () => ({
+  fetchBacktestStatus: fetchBacktestStatusMock,
   submitBacktest: submitBacktestMock,
+}))
+
+vi.mock('../stores', () => ({
+  useUserStore: () => ({
+    onboardingHighlightTarget: null,
+    setGuidedBacktestJob: vi.fn(),
+    setGuidedBacktestStep: vi.fn(),
+    setOnboardingHighlightTarget: vi.fn(),
+  }),
 }))
 
 vi.mock('../stores/usePresetsStore', () => ({
@@ -52,6 +68,7 @@ vi.mock('../stores/usePresetsStore', () => ({
 describe('StrategyDetailView', () => {
   beforeEach(() => {
     fetchStrategyParametersMock.mockReset()
+    fetchBacktestStatusMock.mockReset()
     submitBacktestMock.mockReset()
     loadPresetsMock.mockReset()
     savePresetMock.mockReset()

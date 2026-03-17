@@ -3,18 +3,22 @@
     <div class="container">
       <div class="page-header">
         <div>
-          <h1 class="page-title">策略参数配置</h1>
-          <p class="page-subtitle">配置策略参数、管理个人预设，并直接发起回测任务。</p>
+          <h1 class="page-title">Strategy Parameters</h1>
+          <p class="page-subtitle">Configure strategy inputs, save presets, and launch a backtest task.</p>
         </div>
-        <RouterLink class="btn btn-secondary" to="/strategies">返回策略库</RouterLink>
+        <RouterLink class="btn btn-secondary" to="/strategies">Back to strategy library</RouterLink>
+      </div>
+
+      <div v-if="isGuidedMode" class="card guided-banner">
+        Guided backtest is enabled. The default symbols, date range, and parameters are already prepared for your first run.
       </div>
 
       <div class="layout-grid">
         <div class="card control-card">
-          <div class="section-title">回测设置</div>
+          <div class="section-title">Backtest Setup</div>
           <div class="field-grid">
             <label class="field">
-              <span class="field-label">交易标的</span>
+              <span class="field-label">Symbols</span>
               <input
                 data-test="symbol-input"
                 v-model.trim="runForm.symbols"
@@ -24,7 +28,7 @@
               />
             </label>
             <label class="field">
-              <span class="field-label">开始日期</span>
+              <span class="field-label">Start Date</span>
               <input
                 data-test="start-date-input"
                 v-model="runForm.startDate"
@@ -33,7 +37,7 @@
               />
             </label>
             <label class="field">
-              <span class="field-label">结束日期</span>
+              <span class="field-label">End Date</span>
               <input
                 data-test="end-date-input"
                 v-model="runForm.endDate"
@@ -55,8 +59,8 @@
         </div>
 
         <div class="card form-card">
-          <div class="section-title">参数表单</div>
-          <p v-if="loading" class="message">正在加载参数定义...</p>
+          <div class="section-title">Parameter Form</div>
+          <p v-if="loading" class="message">Loading strategy parameters...</p>
           <p v-else-if="loadError" class="message error">{{ loadError }}</p>
           <ParameterForm
             v-else
@@ -72,12 +76,13 @@
         <p v-else-if="submitSuccess" class="message success">{{ submitSuccess }}</p>
         <button
           data-test="start-backtest"
-          class="btn btn-primary"
+          :class="['btn btn-primary', { 'onboarding-highlight': userStore.onboardingHighlightTarget === 'guided-run-button' }]"
+          data-onboarding-target="guided-run-button"
           type="button"
           :disabled="submitting || loading"
           @click="handleSubmit"
         >
-          {{ submitting ? '提交中...' : '开始回测' }}
+          {{ submitting ? 'Submitting...' : 'Start Backtest' }}
         </button>
       </div>
     </div>
@@ -86,16 +91,20 @@
 
 <script setup lang="ts">
 import { onMounted, reactive, ref } from 'vue'
-import { RouterLink, useRoute } from 'vue-router'
-import { submitBacktest } from '../api/backtests'
+import { RouterLink, useRoute, useRouter } from 'vue-router'
+import { fetchBacktestStatus, submitBacktest } from '../api/backtests'
 import { fetchStrategyParameters } from '../api/strategies'
 import ParameterForm from '../components/strategy/ParameterForm.vue'
 import PresetManager from '../components/strategy/PresetManager.vue'
+import { useUserStore } from '../stores'
 import { usePresetsStore } from '../stores/usePresetsStore'
 import type { StrategyParameterDefinition } from '../types/Strategy'
 
 const route = useRoute()
+const router = useRouter()
+const userStore = useUserStore()
 const strategyId = String(route.params.strategyId || '')
+const isGuidedMode = route.query.guided === 'true'
 const presetsStore = usePresetsStore()
 
 const definitions = ref<StrategyParameterDefinition[]>([])
@@ -168,15 +177,15 @@ async function handleSubmit() {
     .filter(Boolean)
 
   if (!symbols.length) {
-    submitError.value = '请至少输入一个交易标的'
+    submitError.value = 'Please enter at least one symbol'
     return
   }
   if (!runForm.startDate || !runForm.endDate) {
-    submitError.value = '请选择完整的回测时间区间'
+    submitError.value = 'Please choose a complete date range'
     return
   }
   if (!formValid.value) {
-    submitError.value = '请先修正参数表单中的错误'
+    submitError.value = 'Please fix the parameter form errors first'
     return
   }
 
@@ -189,7 +198,22 @@ async function handleSubmit() {
       end_date: runForm.endDate,
       parameters: sanitizeParameters(definitions.value, parameterValues.value),
     })
-    submitSuccess.value = `回测任务已提交：${result.job_id}`
+
+    if (isGuidedMode) {
+      userStore.setGuidedBacktestJob(result.job_id)
+      userStore.setGuidedBacktestStep(3)
+      userStore.setOnboardingHighlightTarget(null)
+      await waitForGuidedReport(result.job_id)
+      userStore.setGuidedBacktestStep(4)
+      userStore.setOnboardingHighlightTarget('backtest-results-section')
+      await router.push({
+        name: 'backtest-report',
+        params: { jobId: result.job_id },
+        query: { guided: 'true' },
+      })
+    } else {
+      submitSuccess.value = `Backtest submitted: ${result.job_id}`
+    }
   } catch (error: any) {
     submitError.value = error?.message || 'Failed to submit backtest'
   } finally {
@@ -231,6 +255,24 @@ function defaultStartDate() {
   date.setMonth(date.getMonth() - 1)
   return date.toISOString().slice(0, 10)
 }
+
+function sleep(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms))
+}
+
+async function waitForGuidedReport(jobId: string) {
+  for (let attempt = 0; attempt < 30; attempt += 1) {
+    const status = await fetchBacktestStatus(jobId)
+    if (status.status === 'completed') {
+      return
+    }
+    if (status.status === 'failed' || status.status === 'timeout') {
+      throw new Error(`Backtest job failed: ${status.status}`)
+    }
+    await sleep(1000)
+  }
+  throw new Error('Backtest job timeout')
+}
 </script>
 
 <style scoped>
@@ -255,6 +297,12 @@ function defaultStartDate() {
 .page-subtitle {
   margin: var(--spacing-xs) 0 0;
   color: var(--color-text-muted);
+}
+
+.guided-banner {
+  margin-bottom: var(--spacing-lg);
+  padding: var(--spacing-md);
+  border-left: 4px solid #f5e642;
 }
 
 .layout-grid {

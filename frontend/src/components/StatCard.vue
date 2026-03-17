@@ -6,7 +6,10 @@
       </slot>
     </div>
     <div class="stat-content">
-      <div class="stat-label">{{ label }}</div>
+      <div class="stat-label">
+        <span>{{ label }}</span>
+        <slot name="label-extra" />
+      </div>
       <div class="stat-value">
         <span :class="['value', { positive: isPositive, negative: isNegative }]">
           {{ prefix }}{{ formattedValue }}{{ suffix }}
@@ -141,6 +144,9 @@ const isNegative = computed(() => {
 }
 
 .stat-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
   font-size: var(--font-size-sm);
   color: var(--color-text-muted);
   margin-bottom: var(--spacing-xs);

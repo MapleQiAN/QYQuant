@@ -1,15 +1,16 @@
-import hashlib
+﻿import hashlib
 import re
 import secrets
 from datetime import datetime, timezone
 
 from flask import current_app, request
-from flask_jwt_extended import create_access_token, create_refresh_token, decode_token
+from flask_jwt_extended import create_access_token, create_refresh_token, decode_token, get_jwt_identity, jwt_required
 from flask_smorest import Blueprint
 
 from ..extensions import db
 from ..models import AuditLog, RefreshToken, User
 from ..quota import ensure_user_quota
+from ..schemas import UserPrivateSchema
 from ..utils.auth import (
     REFRESH_COOKIE_NAME,
     as_utc,
@@ -29,6 +30,7 @@ from ..utils.time import now_utc
 bp = Blueprint('auth', __name__, url_prefix='/api/v1/auth')
 
 PHONE_RE = re.compile(r'^1[3-9]\d{9}$')
+_private_schema = UserPrivateSchema()
 
 
 def _hash_token(token):
@@ -81,20 +83,20 @@ def _create_refresh_token_record(user):
 def _decode_refresh_cookie():
     token = request.cookies.get(REFRESH_COOKIE_NAME)
     if not token:
-        return None, None, error_response("UNAUTHORIZED", "未登录", 401)
+        return None, None, error_response("UNAUTHORIZED", "Unauthorized", 401)
 
     try:
         decoded = decode_token(token)
         if decoded.get("type") != "refresh":
-            return None, None, error_response("INVALID_TOKEN", "无效的登录状态", 401)
+            return None, None, error_response("INVALID_TOKEN", "Invalid login state", 401)
     except Exception:
-        return None, None, error_response("TOKEN_EXPIRED", "登录已过期，请重新登录", 401)
+        return None, None, error_response("TOKEN_EXPIRED", "Login expired", 401)
     return token, decoded, None
 
 
 def _validate_phone(phone):
     if not PHONE_RE.match(phone or ""):
-        return error_response("INVALID_PHONE", "手机号格式不正确", 422)
+        return error_response("INVALID_PHONE", "鎵嬫満鍙锋牸寮忎笉姝ｇ‘", 422)
     return None
 
 
@@ -108,6 +110,13 @@ def _issue_code():
 def _find_refresh_record(token):
     token_hash = _hash_token(token)
     return RefreshToken.query.filter_by(token_hash=token_hash).one_or_none()
+
+
+def _get_current_user():
+    user = db.session.get(User, get_jwt_identity())
+    if user is None or user.deleted_at is not None:
+        return None
+    return user
 
 
 @bp.post('/send-code')
@@ -124,7 +133,7 @@ def send_code():
     if retry_after > 0:
         return error_response(
             "RATE_LIMITED",
-            f"请 {retry_after} 秒后重试",
+            f"Retry after {retry_after} seconds",
             429,
             details={"retry_after": retry_after},
         )
@@ -153,21 +162,21 @@ def login():
 
     store = get_auth_store()
     if store.get_failed_attempts(phone) >= current_app.config["AUTH_SMS_MAX_FAILURES"]:
-        return error_response("TOO_MANY_ATTEMPTS", "验证码尝试次数过多，请稍后重试", 429)
+        return error_response("TOO_MANY_ATTEMPTS", "Too many verification attempts, please retry later", 429)
 
     saved_code = store.get_verification_code(phone)
     if saved_code != code:
         attempts = store.increment_failed_attempts(phone, ttl=current_app.config["AUTH_SMS_LOCK_SECONDS"])
         if attempts >= current_app.config["AUTH_SMS_MAX_FAILURES"]:
-            return error_response("TOO_MANY_ATTEMPTS", "验证码尝试次数过多，请稍后重试", 429)
-        return error_response("INVALID_CODE", "验证码错误或已过期", 422)
+            return error_response("TOO_MANY_ATTEMPTS", "Too many verification attempts, please retry later", 429)
+        return error_response("INVALID_CODE", "Invalid or expired verification code", 422)
 
     user = User.query.filter_by(phone=phone).one_or_none()
     if user is not None and user.deleted_at is not None:
         user = None
     if user is None:
         if not nickname:
-            return error_response("NICKNAME_REQUIRED", "首次登录需要填写昵称", 422)
+            return error_response("NICKNAME_REQUIRED", "Nickname is required for first login", 422)
         user = User(phone=phone, nickname=nickname)
         db.session.add(user)
         db.session.flush()
@@ -207,17 +216,17 @@ def refresh():
 
     store = get_auth_store()
     if store.is_token_blacklisted(decoded["jti"]):
-        return error_response("TOKEN_REVOKED", "登录已失效，请重新登录", 401)
+        return error_response("TOKEN_REVOKED", "Login has been revoked", 401)
 
     record = _find_refresh_record(token)
     if record is None or as_utc(record.expires_at) <= datetime.now(timezone.utc):
-        return error_response("TOKEN_EXPIRED", "登录已过期，请重新登录", 401)
+        return error_response("TOKEN_EXPIRED", "Login expired", 401)
 
     if record.revoked_at is not None:
         revoked_tokens = revoke_all_user_tokens(record.user_id)
         db.session.commit()
         blacklist_refresh_tokens(revoked_tokens)
-        return error_response("TOKEN_REVOKED", "登录已失效，请重新登录", 401)
+        return error_response("TOKEN_REVOKED", "Login has been revoked", 401)
 
     revoke_token_record(record)
     store.blacklist_token(record.jti, seconds_until(record.expires_at))
@@ -237,6 +246,15 @@ def refresh():
     return response
 
 
+@bp.get('/profile')
+@jwt_required()
+def profile():
+    user = _get_current_user()
+    if user is None:
+        return error_response("UNAUTHORIZED", "Unauthorized", 401)
+    return ok(_private_schema.dump(user))
+
+
 @bp.post('/logout')
 def logout():
     token, decoded, error = _decode_refresh_cookie()
@@ -249,7 +267,7 @@ def logout():
         get_auth_store().blacklist_token(decoded["jti"], seconds_until(record.expires_at))
         db.session.commit()
 
-    payload = ok({"message": "已成功登出"})
+    payload = ok({"message": "Logged out"})
     response = current_app.response_class(
         response=current_app.json.dumps(payload),
         status=200,

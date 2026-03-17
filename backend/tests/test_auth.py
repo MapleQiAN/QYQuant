@@ -129,6 +129,42 @@ def test_refresh_rotates_refresh_token_and_returns_new_access_token(client):
     assert second_cookie != first_cookie
 
 
+def test_profile_returns_private_user_payload_with_onboarding_state(client, app):
+    from app.extensions import db
+    from app.models import User
+
+    _seed_code(client.application, "13800138999")
+    login = client.post(
+        "/api/v1/auth/login",
+        json={
+            "phone": "13800138999",
+            "code": "123456",
+            "nickname": "OnboardingUser",
+        },
+    )
+    access_token = login.json["access_token"]
+    user_id = login.json["data"]["user_id"]
+
+    with app.app_context():
+        user = db.session.get(User, user_id)
+        user.avatar_url = "https://example.com/onboarding.png"
+        user.bio = "First-time quant user"
+        user.onboarding_completed = False
+        db.session.commit()
+
+    response = client.get(
+        "/api/v1/auth/profile",
+        headers={"Authorization": f"Bearer {access_token}"},
+    )
+
+    assert response.status_code == 200
+    data = response.json["data"]
+    assert data["id"] == user_id
+    assert data["nickname"] == "OnboardingUser"
+    assert data["onboarding_completed"] is False
+    assert data["avatar_url"] == "https://example.com/onboarding.png"
+
+
 def test_logout_revokes_current_device_refresh_token_only(client):
     phone = "13800138000"
 

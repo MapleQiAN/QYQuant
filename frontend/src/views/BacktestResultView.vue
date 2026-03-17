@@ -12,6 +12,14 @@
       <div v-if="store.reportLoading" class="card state-card">Loading report...</div>
       <div v-else-if="store.reportError" class="card state-card error">{{ store.reportError }}</div>
       <template v-else-if="report">
+        <div v-if="isGuidedMode" class="card guided-success">
+          <strong>你完成了第一次量化回测。</strong>
+          <p>重点先看累计收益率、最大回撤和夏普比率，理解“收益”和“波动”之间的关系。</p>
+          <button class="btn btn-primary" type="button" @click="finishGuidedOnboarding">
+            完成新手引导
+          </button>
+        </div>
+
         <ErrorDisplay
           v-if="report.status === 'failed' && report.error"
           :error="report.error"
@@ -20,9 +28,12 @@
         />
 
         <template v-else>
-          <div class="metrics-grid">
+          <div :class="['metrics-grid', { 'onboarding-highlight': userStore.onboardingHighlightTarget === 'backtest-results-section' }]" data-onboarding-target="backtest-results-section">
           <article v-for="metric in coreMetrics" :key="metric.label" class="metric-card">
-            <span class="metric-label">{{ metric.label }}</span>
+            <span class="metric-label">
+              {{ metric.label }}
+              <MetricTooltip :metric-key="metric.metricKey" />
+            </span>
             <strong class="metric-value" :class="metric.tone">{{ metric.value }}</strong>
           </article>
           </div>
@@ -33,7 +44,10 @@
             <summary>View all 11 metrics</summary>
             <div class="details-grid">
               <div v-for="metric in detailedMetrics" :key="metric.label" class="detail-item">
-                <span class="detail-label">{{ metric.label }}</span>
+                <span class="detail-label">
+                  {{ metric.label }}
+                  <MetricTooltip :metric-key="metric.metricKey" />
+                </span>
                 <span class="detail-value">{{ metric.value }}</span>
               </div>
             </div>
@@ -51,14 +65,19 @@
 
 <script setup lang="ts">
 import { computed, onMounted } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import EquityCurveChart from '../components/backtest/EquityCurveChart.vue'
 import ErrorDisplay from '../components/backtest/ErrorDisplay.vue'
+import MetricTooltip from '../components/help/MetricTooltip.vue'
+import { useUserStore } from '../stores'
 import { useBacktestsStore } from '../stores/backtests'
 
 const route = useRoute()
+const router = useRouter()
 const store = useBacktestsStore()
+const userStore = useUserStore()
 const jobId = String(route.params.jobId || '')
+const isGuidedMode = route.query.guided === 'true'
 
 const report = computed(() => store.report)
 const summary = computed(() => report.value?.result_summary ?? {})
@@ -73,16 +92,19 @@ function formatMetric(value: number | undefined, digits = 2, suffix = '') {
 const coreMetrics = computed(() => ([
   {
     label: 'Total Return',
+    metricKey: 'total_return',
     value: formatMetric(summary.value.totalReturn, 2, '%'),
     tone: (summary.value.totalReturn ?? 0) >= 0 ? 'positive' : 'negative'
   },
   {
     label: 'Max Drawdown',
+    metricKey: 'max_drawdown',
     value: formatMetric(summary.value.maxDrawdown, 2, '%'),
     tone: 'negative'
   },
   {
     label: 'Sharpe Ratio',
+    metricKey: 'sharpe_ratio',
     value: formatMetric(summary.value.sharpeRatio, 2),
     tone: 'neutral'
   }
@@ -90,19 +112,25 @@ const coreMetrics = computed(() => ([
 
 const detailedMetrics = computed(() =>
   [
-    ['Total Return', formatMetric(summary.value.totalReturn, 2, '%')],
-    ['Annualized Return', formatMetric(summary.value.annualizedReturn, 2, '%')],
-    ['Max Drawdown', formatMetric(summary.value.maxDrawdown, 2, '%')],
-    ['Sharpe Ratio', formatMetric(summary.value.sharpeRatio, 2)],
-    ['Volatility', formatMetric(summary.value.volatility, 2, '%')],
-    ['Sortino Ratio', formatMetric(summary.value.sortinoRatio, 2)],
-    ['Calmar Ratio', formatMetric(summary.value.calmarRatio, 2)],
-    ['Win Rate', formatMetric(summary.value.winRate, 2, '%')],
-    ['Profit/Loss Ratio', formatMetric(summary.value.profitLossRatio, 2)],
-    ['Max Consecutive Losses', formatMetric(summary.value.maxConsecutiveLosses, 0)],
-    ['Total Trades', formatMetric(summary.value.totalTrades, 0)]
-  ].map(([label, value]) => ({ label, value }))
+    ['Total Return', 'total_return', formatMetric(summary.value.totalReturn, 2, '%')],
+    ['Annualized Return', 'annualized_return', formatMetric(summary.value.annualizedReturn, 2, '%')],
+    ['Max Drawdown', 'max_drawdown', formatMetric(summary.value.maxDrawdown, 2, '%')],
+    ['Sharpe Ratio', 'sharpe_ratio', formatMetric(summary.value.sharpeRatio, 2)],
+    ['Volatility', 'volatility', formatMetric(summary.value.volatility, 2, '%')],
+    ['Sortino Ratio', 'sortino_ratio', formatMetric(summary.value.sortinoRatio, 2)],
+    ['Calmar Ratio', 'calmar_ratio', formatMetric(summary.value.calmarRatio, 2)],
+    ['Win Rate', 'win_rate', formatMetric(summary.value.winRate, 2, '%')],
+    ['Profit/Loss Ratio', 'profit_loss_ratio', formatMetric(summary.value.profitLossRatio, 2)],
+    ['Max Consecutive Losses', 'max_consecutive_losses', formatMetric(summary.value.maxConsecutiveLosses, 0)],
+    ['Total Trades', 'total_trades', formatMetric(summary.value.totalTrades, 0)]
+  ].map(([label, metricKey, value]) => ({ label, metricKey, value }))
 )
+
+async function finishGuidedOnboarding() {
+  await userStore.markOnboardingCompleted(true)
+  userStore.finishGuidedBacktest()
+  await router.push({ name: 'dashboard' })
+}
 
 onMounted(() => {
   if (jobId) {
@@ -148,6 +176,20 @@ onMounted(() => {
   color: var(--color-danger);
 }
 
+.guided-success {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-md);
+  padding: var(--spacing-md);
+  margin-bottom: var(--spacing-lg);
+}
+
+.guided-success p {
+  margin: 6px 0 0;
+  color: var(--color-text-secondary);
+}
+
 .metrics-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -166,6 +208,9 @@ onMounted(() => {
 }
 
 .metric-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
   font-size: var(--font-size-sm);
   color: var(--color-text-muted);
 }
@@ -219,6 +264,9 @@ onMounted(() => {
 }
 
 .detail-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
   color: var(--color-text-muted);
 }
 

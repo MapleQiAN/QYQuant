@@ -1,5 +1,6 @@
 import os
 from pathlib import Path
+import uuid
 
 from flask import request
 from flask_jwt_extended import get_jwt_identity, jwt_required
@@ -151,6 +152,24 @@ def list_strategies():
     )
 
 
+@bp.get("/v1/marketplace/strategies")
+def list_marketplace_strategies():
+    tag = (request.args.get("tag") or "").strip().lower()
+    if tag == "onboarding":
+        _ensure_onboarding_strategy()
+    items = (
+        Strategy.query.filter_by(owner_id=None)
+        .order_by(Strategy.last_update.desc(), Strategy.created_at.desc())
+        .all()
+    )
+    if tag:
+        items = [
+            item for item in items
+            if any(str(entry).strip().lower() == tag for entry in (item.tags or []))
+        ]
+    return ok(StrategySchema(many=True).dump(items))
+
+
 @bp.delete("/v1/strategies/<strategy_id>")
 @jwt_required()
 def delete_strategy(strategy_id):
@@ -287,3 +306,71 @@ def _remove_path(path):
     candidate = Path(path)
     if candidate.exists() and candidate.is_file():
         candidate.unlink()
+
+
+def _ensure_onboarding_strategy():
+    existing = Strategy.query.filter_by(owner_id=None).all()
+    if any(any(str(tag).strip().lower() == "onboarding" for tag in (item.tags or [])) for item in existing):
+        return
+
+    package_path = Path(__file__).resolve().parents[2] / "strategy_store" / "GoldStepByStep.qys"
+    if not package_path.exists():
+        return
+
+    strategy_id = "onboarding-gold-step"
+    file_id = "onboarding-gold-step-file"
+    version = "0.1.0"
+
+    strategy = db.session.get(Strategy, strategy_id)
+    if strategy is None:
+        strategy = Strategy(
+            id=strategy_id,
+            name="Gold Step-By-Step",
+            symbol="XAUUSD",
+            status="running",
+            description="Default onboarding strategy for the guided first backtest.",
+            category="beginner",
+            source="seed",
+            returns=0,
+            win_rate=0,
+            max_drawdown=0,
+            tags=["onboarding", "gold", "guided"],
+            trades=0,
+            owner_id=None,
+            storage_key=f"strategy_store/{package_path.name}",
+            last_update=now_ms(),
+            updated_at=now_ms(),
+        )
+        db.session.add(strategy)
+    else:
+        strategy.tags = list({*(strategy.tags or []), "onboarding", "gold", "guided"})
+        strategy.owner_id = None
+
+    file_record = db.session.get(File, file_id)
+    if file_record is None:
+        file_record = File(
+            id=file_id,
+            owner_id=None,
+            filename=package_path.name,
+            content_type="application/zip",
+            size=package_path.stat().st_size,
+            path=package_path.as_posix(),
+        )
+        db.session.add(file_record)
+    else:
+        file_record.path = package_path.as_posix()
+        file_record.size = package_path.stat().st_size
+
+    existing_version = StrategyVersion.query.filter_by(strategy_id=strategy_id, version=version).first()
+    if existing_version is None:
+        db.session.add(
+            StrategyVersion(
+                id=f"onboarding-version-{uuid.uuid4().hex[:8]}",
+                strategy_id=strategy_id,
+                version=version,
+                file_id=file_record.id,
+                checksum="onboarding-gold-step",
+            )
+        )
+
+    db.session.commit()

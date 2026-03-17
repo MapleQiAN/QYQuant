@@ -3,9 +3,10 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { flushPromises, mount } from '@vue/test-utils'
 import StrategyLibraryView from './StrategyLibraryView.vue'
 
-const { pushMock, fetchStrategiesMock, deleteStrategyMock, importStrategyMock } = vi.hoisted(() => ({
+const { pushMock, fetchStrategiesMock, fetchMarketplaceStrategiesMock, deleteStrategyMock, importStrategyMock } = vi.hoisted(() => ({
   pushMock: vi.fn(),
   fetchStrategiesMock: vi.fn(),
+  fetchMarketplaceStrategiesMock: vi.fn(),
   deleteStrategyMock: vi.fn(),
   importStrategyMock: vi.fn()
 }))
@@ -14,6 +15,9 @@ vi.mock('vue-router', () => ({
   RouterLink: {
     template: '<a><slot /></a>'
   },
+  useRoute: () => ({
+    query: {},
+  }),
   useRouter: () => ({
     push: pushMock
   })
@@ -21,14 +25,25 @@ vi.mock('vue-router', () => ({
 
 vi.mock('../api/strategies', () => ({
   fetchStrategies: fetchStrategiesMock,
+  fetchMarketplaceStrategies: fetchMarketplaceStrategiesMock,
   deleteStrategy: deleteStrategyMock,
   importStrategy: importStrategyMock
+}))
+
+vi.mock('../stores', () => ({
+  useUserStore: () => ({
+    onboardingHighlightTarget: null,
+    setGuidedBacktestStrategy: vi.fn(),
+    setGuidedBacktestStep: vi.fn(),
+    setOnboardingHighlightTarget: vi.fn(),
+  }),
 }))
 
 describe('StrategyLibraryView', () => {
   beforeEach(() => {
     pushMock.mockClear()
     fetchStrategiesMock.mockReset()
+    fetchMarketplaceStrategiesMock.mockReset()
     deleteStrategyMock.mockReset()
     importStrategyMock.mockReset()
     vi.stubGlobal('confirm', vi.fn(() => true))

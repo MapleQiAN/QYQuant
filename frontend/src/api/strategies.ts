@@ -34,6 +34,14 @@ export function fetchStrategies(params?: {
   })
 }
 
+export function fetchMarketplaceStrategies(params?: { tag?: string }): Promise<Strategy[]> {
+  return client.request({
+    method: 'get',
+    url: '/v1/marketplace/strategies',
+    params,
+  })
+}
+
 export function createStrategy(payload: {
   name: string
   symbol: string

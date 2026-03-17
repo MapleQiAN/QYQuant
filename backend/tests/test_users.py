@@ -141,6 +141,26 @@ def test_patch_me_rejects_bio_longer_than_200_characters(client):
     assert response.json["error"]["code"] == "VALIDATION_ERROR"
 
 
+def test_put_onboarding_completed_updates_only_current_user(client, app):
+    token, user_id = _login_user(client, phone="13800138123", nickname="GuideOwner")
+    _, other_user_id = _login_user(client, phone="13800138124", nickname="OtherUser")
+
+    response = client.put(
+        f"/api/v1/users/{other_user_id}/onboarding-completed",
+        headers=_auth_headers(token),
+        json={"completed": True},
+    )
+
+    assert response.status_code == 200
+    assert response.json["data"]["onboarding_completed"] is True
+
+    with app.app_context():
+        owner = db.session.get(User, user_id)
+        other = db.session.get(User, other_user_id)
+        assert owner.onboarding_completed is True
+        assert other.onboarding_completed is False
+
+
 def test_get_public_profile_hides_phone_and_returns_banned_flag(client, app):
     _, user_id = _login_user(client, phone="13900139000", nickname="PublicUser")
 

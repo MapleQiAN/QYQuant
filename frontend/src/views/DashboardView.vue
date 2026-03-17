@@ -18,8 +18,14 @@
           </RouterLink>
         </div>
       </div>
+      <OnboardingGuide
+        :visible="showOnboardingGuide"
+        @skip="handleSkipOnboarding"
+        @focus-target="userStore.setOnboardingHighlightTarget"
+        @launch-guided-backtest="userStore.startGuidedBacktest()"
+        @complete="handleSkipOnboarding"
+      />
 
-      <!-- Dashboard Grid -->
       <div class="dashboard-grid">
         <div class="grid-area-backtest">
           <BacktestCard
@@ -76,6 +82,7 @@ import { computed, h, onMounted, reactive } from 'vue'
 import { RouterLink } from 'vue-router'
 import BacktestCard from '../components/BacktestCard.vue'
 import ForumMiniCard from '../components/ForumMiniCard.vue'
+import OnboardingGuide from '../components/onboarding/OnboardingGuide.vue'
 import ProgressCard from '../components/ProgressCard.vue'
 import RecentList from '../components/RecentList.vue'
 import UpgradeCard from '../components/UpgradeCard.vue'
@@ -83,6 +90,9 @@ import { useBacktestsStore, useBotsStore, useForumStore, useStrategiesStore, use
 
 const userStore = useUserStore()
 const user = computed(() => userStore.profile)
+const showOnboardingGuide = computed(() =>
+  Boolean(user.value.id) && !user.value.onboarding_completed && !userStore.guidedBacktestActive
+)
 
 const backtestsStore = useBacktestsStore()
 const botsStore = useBotsStore()
@@ -112,11 +122,17 @@ const handleDataSourceChange = (dataSource: string) => {
 }
 
 onMounted(() => {
+  void userStore.loadProfile?.()
   loadBacktest()
   botsStore.loadRecent()
   strategiesStore.loadRecent()
   forumStore.loadHot()
 })
+
+async function handleSkipOnboarding() {
+  await userStore.markOnboardingCompleted(true)
+  userStore.setOnboardingHighlightTarget(null)
+}
 
 const SettingsIcon = () => h('svg', {
   width: 16,

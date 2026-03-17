@@ -1,14 +1,20 @@
 <template>
   <div class="app">
-    <!-- Top Navigation -->
     <TopNav />
-
-    <!-- Main Content -->
     <main class="main-content">
       <RouterView />
     </main>
-
-    <!-- Footer -->
+    <HelpPanel :open="userStore.helpPanelOpen" @close="userStore.setHelpPanelOpen(false)" />
+    <GuidedBacktestFlow
+      v-if="userStore.guidedBacktestActive"
+      :step="userStore.guidedBacktestStep || 1"
+      :job-id="userStore.guidedBacktestJobId || ''"
+      @exit="handleGuidedExit"
+      @open-marketplace="handleOpenMarketplace"
+      @open-parameters="handleOpenParameters"
+      @open-report="handleOpenReport"
+      @complete="handleGuidedComplete"
+    />
     <footer class="app-footer">
       <div class="container footer-content">
         <span class="copyright">{{ $t('footer.copyright') }}</span>
@@ -23,8 +29,69 @@
 </template>
 
 <script setup lang="ts">
-import { RouterView } from 'vue-router'
+import { onBeforeUnmount, onMounted } from 'vue'
+import { RouterView, useRouter } from 'vue-router'
+import HelpPanel from './components/help/HelpPanel.vue'
+import GuidedBacktestFlow from './components/onboarding/GuidedBacktestFlow.vue'
 import TopNav from './components/TopNav.vue'
+import { useUserStore } from './stores'
+
+const router = useRouter()
+const userStore = useUserStore()
+
+function handleShortcut(event: KeyboardEvent) {
+  const target = event.target as HTMLElement | null
+  const tagName = target?.tagName?.toLowerCase()
+  const typing = tagName === 'input' || tagName === 'textarea' || target?.isContentEditable
+
+  if (!typing && (event.key === '?' || event.key === 'F1')) {
+    event.preventDefault()
+    userStore.setHelpPanelOpen(true)
+  }
+
+  if (event.key === 'Escape' && userStore.helpPanelOpen) {
+    userStore.setHelpPanelOpen(false)
+  }
+}
+
+function handleGuidedExit() {
+  userStore.cancelGuidedBacktest()
+}
+
+function handleOpenMarketplace(strategyId: string) {
+  userStore.setGuidedBacktestStrategy(strategyId)
+  userStore.setGuidedBacktestStep(1)
+  userStore.setOnboardingHighlightTarget('guided-strategy-card')
+  void router.push({ name: 'strategy-library', query: { guided: 'true', onboardingStrategyId: strategyId } })
+}
+
+function handleOpenParameters(strategyId: string) {
+  userStore.setGuidedBacktestStrategy(strategyId)
+  userStore.setGuidedBacktestStep(2)
+  userStore.setOnboardingHighlightTarget('guided-run-button')
+  void router.push({ name: 'strategy-detail', params: { strategyId }, query: { guided: 'true' } })
+}
+
+function handleOpenReport(jobId: string) {
+  userStore.setGuidedBacktestJob(jobId)
+  userStore.setGuidedBacktestStep(4)
+  userStore.setOnboardingHighlightTarget('backtest-results-section')
+  void router.push({ name: 'backtest-report', params: { jobId }, query: { guided: 'true' } })
+}
+
+async function handleGuidedComplete() {
+  await userStore.markOnboardingCompleted(true)
+  userStore.finishGuidedBacktest()
+}
+
+onMounted(() => {
+  void userStore.loadProfile()
+  window.addEventListener('keydown', handleShortcut)
+})
+
+onBeforeUnmount(() => {
+  window.removeEventListener('keydown', handleShortcut)
+})
 </script>
 
 <style scoped>
@@ -38,6 +105,13 @@ import TopNav from './components/TopNav.vue'
 .main-content {
   flex: 1;
   padding: var(--spacing-lg) 0;
+}
+
+:deep(.onboarding-highlight) {
+  position: relative;
+  box-shadow: 0 0 0 3px rgba(245, 230, 66, 0.95), 0 20px 40px rgba(15, 23, 42, 0.18);
+  border-radius: 16px;
+  z-index: 2;
 }
 
 /* Footer */
