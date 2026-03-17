@@ -1,15 +1,46 @@
-from marshmallow import Schema, fields
+from marshmallow import Schema, fields, validate
+
+from .utils.phone import mask_phone
+from .utils.time import format_beijing_iso
 
 
-class UserSchema(Schema):
+def _value(obj, name):
+    if isinstance(obj, dict):
+        return obj.get(name)
+    return getattr(obj, name, None)
+
+
+class UserPrivateSchema(Schema):
     id = fields.Str()
-    phone = fields.Str(allow_none=True)
+    phone = fields.Function(lambda obj: mask_phone(_value(obj, "phone")))
     nickname = fields.Str(required=True)
     avatar_url = fields.Str(required=True)
     bio = fields.Str(required=True)
     role = fields.Str(required=True)
     plan_level = fields.Str(required=True)
     is_banned = fields.Bool(required=True)
+    onboarding_completed = fields.Bool(required=True)
+    created_at = fields.Function(lambda obj: format_beijing_iso(_value(obj, "created_at")))
+    updated_at = fields.Function(lambda obj: format_beijing_iso(_value(obj, "updated_at")))
+
+
+class UserPublicSchema(Schema):
+    id = fields.Str()
+    nickname = fields.Str(required=True)
+    avatar_url = fields.Str(required=True)
+    bio = fields.Str(required=True)
+    is_banned = fields.Bool(required=True)
+    created_at = fields.Function(lambda obj: format_beijing_iso(_value(obj, "created_at")))
+
+
+class UserUpdateSchema(Schema):
+    nickname = fields.Str(validate=validate.Length(min=2, max=30))
+    bio = fields.Str(validate=validate.Length(max=200))
+    avatar_url = fields.Str()
+
+
+class UserSchema(UserPrivateSchema):
+    pass
 
 
 class StrategySchema(Schema):

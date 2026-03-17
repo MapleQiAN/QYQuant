@@ -113,3 +113,4 @@ docker-compose.override.yml
 .env.local
 .env.*.local
 .worktrees/
+.gitnexus
