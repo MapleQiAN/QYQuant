@@ -70,7 +70,7 @@ development_status:
   epic-3: in-progress
   3-1-celery-redis任务队列基础设施: ready-for-dev
   3-2-历史行情数据缓存层: done
-  3-3-e2b沙箱集成与策略安全执行: ready-for-dev
+  3-3-e2b沙箱集成与策略安全执行: review
   3-4-回测任务提交与额度管理: ready-for-dev
   3-5-回测报告展示-equity-curve-11项指标: ready-for-dev
   3-6-智能错误提示与依赖库清单: ready-for-dev

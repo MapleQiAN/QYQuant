@@ -15,11 +15,12 @@ except ImportError:  # pragma: no cover
 
 DEFAULT_TIMEOUT_SECONDS = 300
 DEFAULT_POOL_SIZE = 1
+_DEFAULT_SANDBOX_CLS = object()
 
 
 class SandboxService:
-    def __init__(self, sandbox_cls=None):
-        self.sandbox_cls = sandbox_cls or E2BSandbox
+    def __init__(self, sandbox_cls=_DEFAULT_SANDBOX_CLS):
+        self.sandbox_cls = E2BSandbox if sandbox_cls is _DEFAULT_SANDBOX_CLS else sandbox_cls
         self.api_key = os.getenv('E2B_API_KEY')
         self.pool_size = max(int(os.getenv('E2B_WARM_POOL_SIZE', DEFAULT_POOL_SIZE)), 0)
         self._pool = []
@@ -29,11 +30,12 @@ class SandboxService:
         execution_metadata = dict(metadata or {})
         timeout_seconds = int(execution_metadata.get('timeout_seconds') or DEFAULT_TIMEOUT_SECONDS)
 
-        if not self._should_use_remote():
+        if self._is_test_env():
             outcome = self._execute_locally(code, market_data, params, execution_metadata, timeout_seconds)
-            self._warm_pool_if_needed(timeout_seconds)
             return outcome
 
+        self._ensure_remote_available()
+        self._warm_pool_if_needed(timeout_seconds)
         sandbox = self._acquire(timeout_seconds)
         keep_warm = self.pool_size > 0
         try:
@@ -75,14 +77,23 @@ class SandboxService:
             "logs": outcome.get('logs') or [],
         }
 
+    @staticmethod
+    def _is_test_env():
+        return os.getenv('FLASK_ENV', '').lower() in {'test', 'testing'}
+
+    def _ensure_remote_available(self):
+        if self.sandbox_cls is None:
+            raise StrategyRuntimeError('sandbox_unavailable', {"reason": "e2b_code_interpreter_not_installed"})
+        if not self.api_key:
+            raise StrategyRuntimeError('sandbox_unavailable', {"reason": "missing_e2b_api_key"})
+
     def _should_use_remote(self):
-        if os.getenv('FLASK_ENV', '').lower() in {'test', 'testing'}:
-            return False
-        return bool(self.sandbox_cls and self.api_key)
+        return not self._is_test_env()
 
     def _warm_pool_if_needed(self, timeout_seconds):
         if not self._should_use_remote():
             return
+        self._ensure_remote_available()
         with self._lock:
             while len(self._pool) < self.pool_size:
                 self._pool.append(self._create_remote_sandbox(timeout_seconds))
