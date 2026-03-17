@@ -12,7 +12,7 @@
     ·
     <a href="#核心能力">Highlights</a>
     ·
-    <a href="#项目结构">Architecture</a>
+    <a href="#系统架构图">Architecture</a>
   </p>
 
   <p>
@@ -61,6 +61,81 @@ QYQuant 的长期方向不是单点工具，而是一个由 3 个层次构成的
 | Community | 策略分享、论坛互动、内容与策略分发 | 论坛骨架已在仓库中，市场化能力待推进 |
 
 这也是 README 的组织方式：既展示现在能跑起来的部分，也保留项目为何值得继续投入的方向感。
+
+## 系统架构图
+
+下图对应当前仓库里已经落地的主链路：前端工作台通过 Flask API 访问认证、策略库、回测、机器人与论坛能力；策略包经过 `qysp` 校验后进入策略存储；回测既支持同步调试，也支持通过 Celery + Redis 异步排队执行，并按数据源路由到 Binance、FreeGold 或 JoinQuant 缓存链路。
+
+```mermaid
+flowchart LR
+    user["User / Browser"]
+    cli["qys CLI / .qys Package"]
+
+    subgraph frontend["Frontend · Vue 3"]
+        web["Dashboard / Strategies / Backtests / Bots / Forum / Settings"]
+        client["Router + Stores + API Client"]
+    end
+
+    subgraph backend["Backend · Flask API"]
+        auth["Auth / Users"]
+        strategies["Strategies Import / Runtime Metadata"]
+        backtests["Backtests API"]
+        community["Bots / Forum / Files"]
+    end
+
+    subgraph runtime["Execution Layer"]
+        validator["qysp Validator<br/>schema + integrity"]
+        engine["Backtest Engine"]
+        strategyRuntime["Strategy Runtime<br/>preflight + execute"]
+        worker["Celery Worker<br/>backtest queue"]
+        market["Provider Router / MarketDataService"]
+        report["Metrics / Report Builder"]
+    end
+
+    subgraph infra["Data & Infrastructure"]
+        pg[("PostgreSQL")]
+        redis[("Redis")]
+        storage[("Local Storage<br/>strategies / backtest artifacts")]
+        binance["Binance API"]
+        freegold["FreeGold API"]
+        joinquant["JoinQuant API"]
+    end
+
+    user --> web --> client
+    client --> auth
+    client --> strategies
+    client --> backtests
+    client --> community
+
+    cli --> validator
+    strategies --> validator
+    strategies --> storage
+    strategies --> pg
+
+    auth --> pg
+    auth --> redis
+    community --> pg
+
+    backtests -->|"GET /api/backtests/latest"| engine
+    backtests -->|"POST /api/v1/backtest"| worker
+    backtests --> pg
+
+    worker <--> redis
+    worker --> engine
+    worker --> report
+    worker --> storage
+    worker --> pg
+
+    engine --> strategyRuntime
+    engine --> market
+    strategyRuntime <--> storage
+    strategyRuntime <--> pg
+
+    market --> binance
+    market --> freegold
+    market --> joinquant
+    market <--> pg
+```
 
 ## 快速开始
 
