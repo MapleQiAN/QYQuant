@@ -1,7 +1,7 @@
 import uuid
 
 from .extensions import db
-from .utils.time import now_ms
+from .utils.time import now_ms, now_utc
 
 
 def gen_id():
@@ -11,16 +11,39 @@ def gen_id():
 class User(db.Model):
     __tablename__ = 'users'
     id = db.Column(db.String, primary_key=True, default=gen_id)
-    email = db.Column(db.String, unique=True, nullable=False)
-    name = db.Column(db.String, nullable=False)
-    avatar = db.Column(db.String, nullable=False, default='')
-    level = db.Column(db.String, nullable=True)
-    notifications = db.Column(db.Integer, default=0)
-    password_hash = db.Column(db.String, nullable=False)
-    api_key_encrypted = db.Column(db.String, nullable=True)
-    broker_key_encrypted = db.Column(db.String, nullable=True)
-    created_at = db.Column(db.BigInteger, default=now_ms)
-    updated_at = db.Column(db.BigInteger, default=now_ms)
+    phone = db.Column(db.String(20), unique=True, nullable=True)
+    nickname = db.Column(db.String(200), nullable=False)
+    avatar_url = db.Column(db.String, nullable=False, default='')
+    bio = db.Column(db.String(200), nullable=False, default='')
+    role = db.Column(db.String(32), nullable=False, default='user')
+    plan_level = db.Column(db.String(32), nullable=False, default='free')
+    is_banned = db.Column(db.Boolean, nullable=False, default=False)
+    onboarding_completed = db.Column(db.Boolean, nullable=False, default=False)
+    deleted_at = db.Column(db.DateTime(timezone=True), nullable=True)
+    created_at = db.Column(db.DateTime(timezone=True), nullable=False, default=now_utc)
+    updated_at = db.Column(db.DateTime(timezone=True), nullable=False, default=now_utc, onupdate=now_utc)
+
+
+class RefreshToken(db.Model):
+    __tablename__ = 'refresh_tokens'
+    id = db.Column(db.String, primary_key=True, default=gen_id)
+    user_id = db.Column(db.String, db.ForeignKey('users.id'), nullable=False)
+    token_hash = db.Column(db.String(64), nullable=False, unique=True)
+    jti = db.Column(db.String(64), nullable=False, unique=True)
+    expires_at = db.Column(db.DateTime(timezone=True), nullable=False)
+    revoked_at = db.Column(db.DateTime(timezone=True), nullable=True)
+    created_at = db.Column(db.DateTime(timezone=True), nullable=False, default=now_utc)
+
+
+class AuditLog(db.Model):
+    __tablename__ = 'audit_logs'
+    id = db.Column(db.String, primary_key=True, default=gen_id)
+    operator_id = db.Column(db.String, db.ForeignKey('users.id'), nullable=True)
+    action = db.Column(db.String(100), nullable=False)
+    target_type = db.Column(db.String(50), nullable=False)
+    target_id = db.Column(db.String, nullable=False)
+    details = db.Column(db.JSON, nullable=True, default=dict)
+    created_at = db.Column(db.DateTime(timezone=True), nullable=False, default=now_utc)
 
 
 class Strategy(db.Model):

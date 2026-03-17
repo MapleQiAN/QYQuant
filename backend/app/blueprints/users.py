@@ -11,5 +11,7 @@ bp = Blueprint('users', __name__, url_prefix='/api/users')
 @bp.get('/me')
 @jwt_required()
 def me():
-    user = User.query.get(get_jwt_identity())
+    user = db.session.get(User, get_jwt_identity())
+    if user is None:
+        return {"error": {"code": "USER_NOT_FOUND", "message": "用户不存在"}}, 404
     return ok(UserSchema().dump(user))

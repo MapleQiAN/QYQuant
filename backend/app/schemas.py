@@ -3,11 +3,13 @@ from marshmallow import Schema, fields
 
 class UserSchema(Schema):
     id = fields.Str()
-    email = fields.Str()
-    name = fields.Str(required=True)
-    avatar = fields.Str(required=True)
-    level = fields.Str(allow_none=True)
-    notifications = fields.Int(allow_none=True)
+    phone = fields.Str(allow_none=True)
+    nickname = fields.Str(required=True)
+    avatar_url = fields.Str(required=True)
+    bio = fields.Str(required=True)
+    role = fields.Str(required=True)
+    plan_level = fields.Str(required=True)
+    is_banned = fields.Bool(required=True)
 
 
 class StrategySchema(Schema):

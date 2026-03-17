@@ -1,5 +1,10 @@
+import logging
+
 from flask import jsonify
 from werkzeug.exceptions import HTTPException
+
+
+logger = logging.getLogger(__name__)
 
 
 def register_error_handlers(app):
@@ -15,5 +20,6 @@ def register_error_handlers(app):
 
     @app.errorhandler(Exception)
     def handle_error(err):
+        logger.exception("Unhandled application error", exc_info=err)
         payload = {"code": 50000, "message": "internal_error", "details": None}
         return jsonify(payload), 500

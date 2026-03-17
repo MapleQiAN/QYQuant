@@ -1,6 +1,6 @@
 # Story 2.2: 登录与 Token 刷新
 
-Status: ready-for-dev
+Status: done
 
 ## Story
 
@@ -128,4 +128,18 @@ backend/app/
 
 ### Completion Notes List
 
+- Added refresh-token cookie handling, refresh rotation, logout revocation, and blacklist checks.
+- Registered JWT callbacks for expired, unauthorized, invalid, and revoked token responses.
+- Added multi-device coverage so logout only revokes the current device refresh token.
+- Verified the backend regression suite after auth changes.
+
 ### File List
+
+- backend/app/blueprints/auth.py
+- backend/app/models.py
+- backend/app/config.py
+- backend/app/__init__.py
+- backend/app/utils/redis_client.py
+- backend/tests/test_auth.py
+- backend/tests/conftest.py
+- backend/migrations/versions/3b1d8f6c2a4e_phone_auth.py

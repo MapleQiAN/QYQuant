@@ -12,6 +12,8 @@ from .blueprints.users import bp as users_bp
 from .config import get_config
 from .errors import register_error_handlers
 from .extensions import api, cors, db, jwt, migrate
+from .utils.redis_client import get_auth_store
+from .utils.response import error_response
 from .utils.request_id import register_request_id
 
 
@@ -33,6 +35,7 @@ def create_app(env=None):
     app.config.setdefault('OPENAPI_SWAGGER_UI_URL', 'https://cdn.jsdelivr.net/npm/swagger-ui-dist/')
 
     api.init_app(app)
+    _register_jwt_callbacks()
 
     register_error_handlers(app)
     app.register_blueprint(health_bp)
@@ -45,3 +48,25 @@ def create_app(env=None):
     app.register_blueprint(files_bp)
 
     return app
+
+
+def _register_jwt_callbacks():
+    @jwt.token_in_blocklist_loader
+    def token_in_blocklist(jwt_header, jwt_payload):
+        return get_auth_store().is_token_blacklisted(jwt_payload["jti"])
+
+    @jwt.expired_token_loader
+    def expired_token(jwt_header, jwt_payload):
+        return error_response("TOKEN_EXPIRED", "登录已过期，请重新登录", 401)
+
+    @jwt.unauthorized_loader
+    def unauthorized(message):
+        return error_response("UNAUTHORIZED", "未登录", 401)
+
+    @jwt.invalid_token_loader
+    def invalid_token(message):
+        return error_response("INVALID_TOKEN", "无效的访问令牌", 401)
+
+    @jwt.revoked_token_loader
+    def revoked_token(jwt_header, jwt_payload):
+        return error_response("TOKEN_REVOKED", "登录已失效，请重新登录", 401)

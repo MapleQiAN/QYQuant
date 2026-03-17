@@ -3,7 +3,6 @@ import sys
 from pathlib import Path
 
 import pytest
-from werkzeug.security import generate_password_hash
 
 
 os.environ.setdefault('CELERY_TASK_ALWAYS_EAGER', '1')
@@ -22,6 +21,9 @@ def app(tmp_path, monkeypatch):
     monkeypatch.setenv('FERNET_KEY', 'fVFLNI0cSfGIaULo353R6ivdsuEVw7xdl5Hknr0bHFU=')
     monkeypatch.setenv('CELERY_TASK_ALWAYS_EAGER', '1')
     monkeypatch.setenv('REDIS_URL', 'redis://localhost:6379/1')
+    monkeypatch.setenv('JWT_SECRET', 'test-jwt-secret-key-with-sufficient-length-123456')
+    monkeypatch.setenv('AUTH_FIXED_SMS_CODE', '123456')
+    monkeypatch.setenv('BACKTEST_DATA_PROVIDER', 'mock')
 
     from app import create_app
     from app.extensions import db
@@ -37,6 +39,15 @@ def client(app):
     return app.test_client()
 
 
+@pytest.fixture(autouse=True)
+def reset_auth_state():
+    from app.utils.redis_client import reset_auth_store
+    from app.utils.sms import reset_sms_sender
+
+    reset_auth_store()
+    reset_sms_sender()
+
+
 @pytest.fixture()
 def seed_user(app):
     from app.extensions import db
@@ -44,10 +55,8 @@ def seed_user(app):
 
     with app.app_context():
         user = User(
-            email='admin@example.com',
-            name='Admin',
-            password_hash=generate_password_hash('admin123'),
-            avatar='',
+            phone='13800000000',
+            nickname='Admin',
         )
         db.session.add(user)
         db.session.commit()

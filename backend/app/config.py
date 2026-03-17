@@ -1,5 +1,6 @@
 import os
 from pathlib import Path
+from datetime import timedelta
 
 from dotenv import load_dotenv
 
@@ -32,6 +33,16 @@ class BaseConfig:
         self.CORS_ORIGINS = os.getenv('CORS_ORIGINS', 'http://localhost:5173,http://localhost:5174').split(',')
         self.JSON_SORT_KEYS = False
         self.PROPAGATE_EXCEPTIONS = True
+        self.JWT_ACCESS_TOKEN_EXPIRES = timedelta(minutes=int(os.getenv('JWT_ACCESS_TOKEN_MINUTES', '15')))
+        self.JWT_REFRESH_TOKEN_EXPIRES = timedelta(days=int(os.getenv('JWT_REFRESH_TOKEN_DAYS', '30')))
+        self.JWT_TOKEN_LOCATION = ["headers"]
+        self.JWT_COOKIE_SECURE = os.getenv('JWT_COOKIE_SECURE', 'false').lower() == 'true'
+        self.JWT_COOKIE_SAMESITE = os.getenv('JWT_COOKIE_SAMESITE', 'Strict')
+        self.AUTH_SMS_CODE_TTL = int(os.getenv('AUTH_SMS_CODE_TTL', '300'))
+        self.AUTH_SMS_THROTTLE_SECONDS = int(os.getenv('AUTH_SMS_THROTTLE_SECONDS', '60'))
+        self.AUTH_SMS_MAX_FAILURES = int(os.getenv('AUTH_SMS_MAX_FAILURES', '5'))
+        self.AUTH_SMS_LOCK_SECONDS = int(os.getenv('AUTH_SMS_LOCK_SECONDS', '1800'))
+        self.AUTH_FIXED_SMS_CODE = os.getenv('AUTH_FIXED_SMS_CODE')
 
 
 class DevConfig(BaseConfig):
@@ -45,6 +56,8 @@ class TestConfig(BaseConfig):
         super().__init__()
         self.TESTING = True
         self.DEBUG = False
+        self.AUTH_FIXED_SMS_CODE = '123456'
+        self.JWT_COOKIE_SECURE = False
 
 
 class ProdConfig(BaseConfig):
