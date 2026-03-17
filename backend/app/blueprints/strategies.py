@@ -7,7 +7,7 @@ from flask_smorest import Blueprint
 
 from ..extensions import db
 from ..models import BacktestJob, File, Strategy, StrategyVersion
-from ..schemas import StrategySchema
+from ..schemas import StrategyParameterSchema, StrategySchema
 from ..services.strategy_import import StrategyImportError, import_strategy_package
 from ..strategy_runtime import StrategyRuntimeError
 from ..strategy_runtime.loader import load_strategy_package
@@ -101,6 +101,31 @@ def runtime_descriptor(strategy_id):
     )
 
 
+@bp.get("/v1/strategies/<strategy_id>/parameters")
+@jwt_required()
+def get_strategy_parameters(strategy_id):
+    user_id = get_jwt_identity()
+    strategy = _get_accessible_strategy(strategy_id, user_id)
+    if strategy is None:
+        return error_response("STRATEGY_NOT_FOUND", "Strategy not found", 404)
+
+    strategy_version = (
+        StrategyVersion.query.filter_by(strategy_id=strategy_id)
+        .order_by(StrategyVersion.created_at.desc())
+        .first()
+    )
+    if strategy_version is None:
+        return error_response("STRATEGY_VERSION_NOT_FOUND", "Strategy version not found", 404)
+
+    try:
+        loaded = load_strategy_package(strategy_id, strategy_version.version)
+    except StrategyRuntimeError as exc:
+        return error_response("STRATEGY_PARAMETERS_UNAVAILABLE", exc.message, 422, details=exc.details)
+
+    parameters = [_normalize_parameter_definition(item) for item in (loaded.get("manifest") or {}).get("parameters") or []]
+    return ok(StrategyParameterSchema(many=True).dump(parameters))
+
+
 @bp.get("/v1/strategies/")
 @jwt_required()
 def list_strategies():
@@ -172,6 +197,46 @@ def _build_import_payload(strategy, version, file_record):
             "size": file_record.size,
             "path": file_record.path,
         },
+    }
+
+
+def _get_accessible_strategy(strategy_id, user_id):
+    strategy = db.session.get(Strategy, strategy_id)
+    if strategy is None:
+        return None
+    if strategy.owner_id not in {None, user_id}:
+        return None
+    return strategy
+
+
+def _normalize_parameter_definition(definition):
+    raw_type = str(definition.get("type") or "string").lower()
+    options = definition.get("options")
+    if options is None:
+        options = definition.get("enum")
+
+    if raw_type in {"integer", "int"}:
+        normalized_type = "int"
+    elif raw_type in {"number", "float"}:
+        normalized_type = "float"
+    elif raw_type == "boolean":
+        normalized_type = "enum"
+        options = [True, False] if options is None else options
+    elif raw_type == "enum" or options is not None:
+        normalized_type = "enum"
+    else:
+        normalized_type = "string"
+
+    return {
+        "name": definition.get("name") or definition.get("key"),
+        "type": normalized_type,
+        "default": definition.get("default"),
+        "required": bool(definition.get("required", False)),
+        "min": definition.get("min"),
+        "max": definition.get("max"),
+        "step": definition.get("step"),
+        "description": definition.get("description"),
+        "options": options,
     }
 
 

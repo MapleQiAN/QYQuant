@@ -7,6 +7,7 @@ import ForumView from '../views/ForumView.vue'
 import SettingsView from '../views/SettingsView.vue'
 import NewStrategyView from '../views/NewStrategyView.vue'
 import StrategyLibraryView from '../views/StrategyLibraryView.vue'
+import StrategyDetailView from '../views/StrategyDetailView.vue'
 
 const router = createRouter({
   history: createWebHistory(),
@@ -14,6 +15,7 @@ const router = createRouter({
     { path: '/', name: 'dashboard', component: DashboardView },
     { path: '/strategies', name: 'strategy-library', component: StrategyLibraryView },
     { path: '/strategies/new', name: 'strategy-new', component: NewStrategyView },
+    { path: '/strategies/:strategyId/parameters', name: 'strategy-detail', component: StrategyDetailView },
     { path: '/backtests', name: 'backtests', component: BacktestsView },
     { path: '/backtests/:jobId/report', name: 'backtest-report', component: BacktestResultView },
     { path: '/bots', name: 'bots', component: BotsView },

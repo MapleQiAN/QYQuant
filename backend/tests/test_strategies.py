@@ -10,7 +10,7 @@ from app.extensions import db
 from app.models import BacktestJob, File, Strategy, StrategyVersion
 
 
-def _seed_runtime_strategy(app, tmp_path):
+def _seed_runtime_strategy(app, tmp_path, *, owner_id=None, parameters=None):
     strategy_id = str(uuid.uuid4())
     version = '1.2.3'
     package_path = tmp_path / 'runtime-test.qys'
@@ -23,7 +23,8 @@ def _seed_runtime_strategy(app, tmp_path):
         "language": "python",
         "runtime": {"name": "python", "version": "3.11"},
         "entrypoint": {"path": "src/strategy.py", "callable": "Strategy", "interface": "event_v1"},
-        "parameters": [
+        "parameters": parameters
+        or [
             {"key": "window", "type": "integer", "default": 20, "min": 1, "max": 200},
             {"key": "enabled", "type": "boolean", "default": True},
         ],
@@ -43,6 +44,7 @@ class Strategy:
             name='Runtime Descriptor Strategy',
             symbol='BTCUSDT',
             status='draft',
+            owner_id=owner_id,
             returns=0,
             win_rate=0,
             max_drawdown=0,
@@ -165,6 +167,65 @@ def test_runtime_descriptor_returns_parameters(client, app, tmp_path):
     assert data['strategyVersion'] == version
     assert data['interface'] == 'event_v1'
     assert len(data['parameters']) == 2
+
+
+def test_get_strategy_parameters_returns_normalized_manifest_parameters(client, app, tmp_path):
+    token, user_id = _login_user(client, phone="13800138026", nickname="ParameterOwner")
+    strategy_id, _ = _seed_runtime_strategy(
+        app,
+        tmp_path,
+        owner_id=user_id,
+        parameters=[
+            {
+                "key": "window",
+                "type": "integer",
+                "default": 20,
+                "min": 5,
+                "max": 200,
+                "step": 1,
+                "description": "Lookback period",
+            },
+            {
+                "name": "trade_direction",
+                "type": "string",
+                "default": "long",
+                "options": ["long", "short", "both"],
+                "description": "Trade direction",
+            },
+        ],
+    )
+
+    response = client.get(
+        f"/api/v1/strategies/{strategy_id}/parameters",
+        headers=_auth_headers(token),
+    )
+
+    assert response.status_code == 200
+    data = response.json["data"]
+    assert data == [
+        {
+            "name": "window",
+            "type": "int",
+            "default": 20,
+            "min": 5,
+            "max": 200,
+            "step": 1,
+            "description": "Lookback period",
+            "options": None,
+            "required": False,
+        },
+        {
+            "name": "trade_direction",
+            "type": "enum",
+            "default": "long",
+            "min": None,
+            "max": None,
+            "step": None,
+            "description": "Trade direction",
+            "options": ["long", "short", "both"],
+            "required": False,
+        },
+    ]
 
 
 def test_import_strategy_encrypts_entrypoint_source(client, app, tmp_path):

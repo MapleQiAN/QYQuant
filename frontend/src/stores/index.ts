@@ -1,5 +1,6 @@
 export { useBacktestsStore } from './backtests'
 export { useBotsStore } from './bots'
 export { useForumStore } from './forum'
+export { usePresetsStore } from './usePresetsStore'
 export { useStrategiesStore } from './strategies'
 export { useUserStore } from './user'

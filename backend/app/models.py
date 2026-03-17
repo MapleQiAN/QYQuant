@@ -94,6 +94,20 @@ class StrategyVersion(db.Model):
     created_at = db.Column(db.BigInteger, default=now_ms)
 
 
+class StrategyParameterPreset(db.Model):
+    __tablename__ = 'strategy_parameter_presets'
+    __table_args__ = (
+        db.Index('ix_strategy_parameter_presets_strategy_user', 'strategy_id', 'user_id'),
+    )
+
+    id = db.Column(db.String, primary_key=True, default=gen_id)
+    strategy_id = db.Column(db.String, db.ForeignKey('strategies.id'), nullable=False)
+    user_id = db.Column(db.String, db.ForeignKey('users.id'), nullable=False)
+    name = db.Column(db.String(100), nullable=False)
+    parameters = db.Column(job_json_type, nullable=False, default=dict)
+    created_at = db.Column(db.DateTime(timezone=True), nullable=False, default=now_utc)
+
+
 class BacktestJob(db.Model):
     __tablename__ = 'backtest_jobs'
     __table_args__ = (

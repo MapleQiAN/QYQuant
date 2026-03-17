@@ -20,6 +20,7 @@ if str(BACKEND_DIR) not in sys.path:
 @pytest.fixture()
 def app(tmp_path, monkeypatch):
     db_path = tmp_path / 'test.db'
+    storage_root = tmp_path / 'storage'
     monkeypatch.setenv('FLASK_ENV', 'testing')
     monkeypatch.setenv('DATABASE_URL', f"sqlite:///{db_path.as_posix()}")
     monkeypatch.setenv('FERNET_KEY', 'fVFLNI0cSfGIaULo353R6ivdsuEVw7xdl5Hknr0bHFU=')
@@ -30,6 +31,8 @@ def app(tmp_path, monkeypatch):
     monkeypatch.setenv('JWT_SECRET', 'test-jwt-secret-key-with-sufficient-length-123456')
     monkeypatch.setenv('AUTH_FIXED_SMS_CODE', '123456')
     monkeypatch.setenv('BACKTEST_DATA_PROVIDER', 'mock')
+    monkeypatch.setenv('BACKTEST_STORAGE_DIR', storage_root.as_posix())
+    monkeypatch.setenv('STRATEGY_STORAGE_DIR', storage_root.as_posix())
     monkeypatch.setenv('STRATEGY_ENCRYPT_KEY', 'MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=')
     monkeypatch.setenv('E2B_API_KEY', 'test-e2b-api-key')
 

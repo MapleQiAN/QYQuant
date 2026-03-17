@@ -1,6 +1,8 @@
 import { createHttpClient } from './http'
 import type {
   Strategy,
+  StrategyParameterDefinition,
+  StrategyPreset,
   StrategyImportResult,
   StrategyListResult,
   StrategyRuntimeDescriptor
@@ -62,4 +64,48 @@ export function deleteStrategy(strategyId: string): Promise<{ deletedId: string 
 export function fetchRuntimeDescriptor(strategyId: string, version?: string): Promise<StrategyRuntimeDescriptor> {
   const params = version ? { version } : undefined
   return client.request({ method: 'get', url: `/strategies/${strategyId}/runtime`, params })
+}
+
+export function fetchStrategyParameters(strategyId: string): Promise<StrategyParameterDefinition[]> {
+  return client.request({
+    method: 'get',
+    url: `/v1/strategies/${strategyId}/parameters`
+  })
+}
+
+export function fetchStrategyPresets(strategyId: string): Promise<StrategyPreset[]> {
+  return client.request({
+    method: 'get',
+    url: `/v1/strategies/${strategyId}/presets`
+  })
+}
+
+export function createStrategyPreset(
+  strategyId: string,
+  payload: { name: string; parameters: Record<string, unknown> }
+): Promise<StrategyPreset> {
+  return client.request({
+    method: 'post',
+    url: `/v1/strategies/${strategyId}/presets`,
+    data: payload
+  })
+}
+
+export function updateStrategyPreset(
+  strategyId: string,
+  presetId: string,
+  payload: { name: string; parameters: Record<string, unknown> }
+): Promise<StrategyPreset> {
+  return client.request({
+    method: 'put',
+    url: `/v1/strategies/${strategyId}/presets/${presetId}`,
+    data: payload
+  })
+}
+
+export function deleteStrategyPreset(strategyId: string, presetId: string): Promise<{ deletedId: string }> {
+  return client.request({
+    method: 'delete',
+    url: `/v1/strategies/${strategyId}/presets/${presetId}`
+  })
 }

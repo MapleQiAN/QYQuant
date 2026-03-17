@@ -4,7 +4,7 @@ import pytest
 from sqlalchemy.exc import IntegrityError
 
 from app.extensions import db
-from app.models import BacktestJob, RefreshToken, Strategy, User, UserQuota
+from app.models import BacktestJob, RefreshToken, Strategy, StrategyParameterPreset, User, UserQuota
 
 
 def test_user_model_fields(app):
@@ -85,3 +85,26 @@ def test_user_quota_requires_unique_user_id(app):
         with pytest.raises(IntegrityError):
             db.session.commit()
         db.session.rollback()
+
+
+def test_strategy_parameter_preset_persists_json_payload(app):
+    with app.app_context():
+        user = User(phone="13800138002", nickname="预设用户")
+        strategy = Strategy(name="Preset Strategy", symbol="BTCUSDT", status="draft")
+        db.session.add_all([user, strategy])
+        db.session.flush()
+
+        preset = StrategyParameterPreset(
+            strategy_id=strategy.id,
+            user_id=user.id,
+            name="稳健版",
+            parameters={"window": 20, "direction": "long"},
+        )
+        db.session.add(preset)
+        db.session.commit()
+
+        saved = db.session.get(StrategyParameterPreset, preset.id)
+        assert saved is not None
+        assert saved.name == "稳健版"
+        assert saved.parameters == {"window": 20, "direction": "long"}
+        assert saved.created_at is not None

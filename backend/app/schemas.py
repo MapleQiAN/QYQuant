@@ -60,6 +60,27 @@ class StrategySchema(Schema):
     createdAt = fields.Int(attribute='created_at')
 
 
+class StrategyParameterSchema(Schema):
+    name = fields.Str(required=True)
+    type = fields.Str(required=True)
+    default = fields.Raw(allow_none=True)
+    required = fields.Bool(required=True)
+    min = fields.Float(allow_none=True)
+    max = fields.Float(allow_none=True)
+    step = fields.Float(allow_none=True)
+    description = fields.Str(allow_none=True)
+    options = fields.List(fields.Raw(), allow_none=True)
+
+
+class StrategyParameterPresetSchema(Schema):
+    id = fields.Str()
+    strategyId = fields.Str(attribute='strategy_id')
+    userId = fields.Str(attribute='user_id')
+    name = fields.Str(required=True)
+    parameters = fields.Dict(required=True)
+    createdAt = fields.Function(lambda obj: format_beijing_iso(_value(obj, "created_at")))
+
+
 class BacktestSummarySchema(Schema):
     totalReturn = fields.Float()
     annualizedReturn = fields.Float(allow_none=True)

@@ -9,6 +9,7 @@ vi.mock('../views/ForumView.vue', () => ({ default: { template: '<div />' } }))
 vi.mock('../views/SettingsView.vue', () => ({ default: { template: '<div />' } }))
 vi.mock('../views/NewStrategyView.vue', () => ({ default: { template: '<div />' } }))
 vi.mock('../views/StrategyLibraryView.vue', () => ({ default: { template: '<div />' } }))
+vi.mock('../views/StrategyDetailView.vue', () => ({ default: { template: '<div />' } }))
 
 import router from './index'
 
@@ -31,5 +32,10 @@ describe('router', () => {
   it('contains strategy library route', () => {
     const hasStrategyLibrary = router.getRoutes().some((route) => route.path === '/strategies')
     expect(hasStrategyLibrary).toBe(true)
+  })
+
+  it('contains strategy parameter route', () => {
+    const hasStrategyDetail = router.getRoutes().some((route) => route.path === '/strategies/:strategyId/parameters')
+    expect(hasStrategyDetail).toBe(true)
   })
 })

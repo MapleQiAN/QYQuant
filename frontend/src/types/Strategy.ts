@@ -41,6 +41,30 @@ export interface StrategyImportResult {
   next?: string
 }
 
+export type StrategyParameterValue = string | number | boolean | null
+export type StrategyParameterDefinitionType = 'int' | 'float' | 'string' | 'enum'
+
+export interface StrategyParameterDefinition {
+  name: string
+  type: StrategyParameterDefinitionType
+  default?: StrategyParameterValue
+  required: boolean
+  min?: number | null
+  max?: number | null
+  step?: number | null
+  description?: string | null
+  options?: StrategyParameterValue[] | null
+}
+
+export interface StrategyPreset {
+  id: string
+  strategyId: string
+  userId?: string
+  name: string
+  parameters: Record<string, unknown>
+  createdAt?: string
+}
+
 export type StrategyParamType = 'integer' | 'number' | 'string' | 'boolean' | 'enum' | 'array' | 'object'
 
 export interface StrategyParameter {
