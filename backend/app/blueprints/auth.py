@@ -9,6 +9,16 @@ from flask_smorest import Blueprint
 
 from ..extensions import db
 from ..models import AuditLog, RefreshToken, User
+from ..utils.auth import (
+    REFRESH_COOKIE_NAME,
+    as_utc,
+    blacklist_refresh_tokens,
+    clear_refresh_cookie,
+    revoke_all_user_tokens,
+    revoke_token_record,
+    seconds_until,
+    validate_code_shape,
+)
 from ..utils.redis_client import get_auth_store
 from ..utils.response import error_response, ok
 from ..utils.sms import get_sms_sender
@@ -18,8 +28,6 @@ from ..utils.time import now_utc
 bp = Blueprint('auth', __name__, url_prefix='/api/v1/auth')
 
 PHONE_RE = re.compile(r'^1[3-9]\d{9}$')
-CODE_RE = re.compile(r'^\d{6}$')
-REFRESH_COOKIE_NAME = 'refresh_token'
 
 
 def _hash_token(token):
@@ -28,20 +36,6 @@ def _hash_token(token):
 
 def _mask_phone(phone):
     return f"{phone[:3]}****{phone[-4:]}"
-
-
-def _now_ts():
-    return datetime.now(timezone.utc)
-
-
-def _as_utc(value):
-    if value.tzinfo is None:
-        return value.replace(tzinfo=timezone.utc)
-    return value.astimezone(timezone.utc)
-
-
-def _seconds_until(expires_at):
-    return max(int((_as_utc(expires_at) - _now_ts()).total_seconds()), 0)
 
 
 def _build_login_payload(user, access_token):
@@ -62,19 +56,6 @@ def _set_refresh_cookie(response, token, max_age):
         REFRESH_COOKIE_NAME,
         token,
         max_age=max_age,
-        httponly=True,
-        secure=current_app.config["JWT_COOKIE_SECURE"],
-        samesite=current_app.config["JWT_COOKIE_SAMESITE"],
-        path='/api/v1/auth',
-    )
-
-
-def _clear_refresh_cookie(response):
-    response.set_cookie(
-        REFRESH_COOKIE_NAME,
-        '',
-        max_age=0,
-        expires=0,
         httponly=True,
         secure=current_app.config["JWT_COOKIE_SECURE"],
         samesite=current_app.config["JWT_COOKIE_SAMESITE"],
@@ -116,12 +97,6 @@ def _validate_phone(phone):
     return None
 
 
-def _validate_code_shape(code):
-    if not CODE_RE.match(code or ""):
-        return error_response("INVALID_CODE", "验证码错误或已过期", 422)
-    return None
-
-
 def _issue_code():
     fixed_code = current_app.config.get("AUTH_FIXED_SMS_CODE")
     if fixed_code:
@@ -132,18 +107,6 @@ def _issue_code():
 def _find_refresh_record(token):
     token_hash = _hash_token(token)
     return RefreshToken.query.filter_by(token_hash=token_hash).one_or_none()
-
-
-def _revoke_token_record(record):
-    if record and record.revoked_at is None:
-        record.revoked_at = now_utc()
-
-
-def _revoke_all_user_tokens(user_id):
-    active_tokens = RefreshToken.query.filter_by(user_id=user_id).filter(RefreshToken.revoked_at.is_(None)).all()
-    for token in active_tokens:
-        token.revoked_at = now_utc()
-        get_auth_store().blacklist_token(token.jti, _seconds_until(token.expires_at))
 
 
 @bp.post('/send-code')
@@ -183,7 +146,7 @@ def login():
     if phone_error:
         return phone_error
 
-    code_error = _validate_code_shape(code)
+    code_error = validate_code_shape(code)
     if code_error:
         return code_error
 
@@ -199,6 +162,8 @@ def login():
         return error_response("INVALID_CODE", "验证码错误或已过期", 422)
 
     user = User.query.filter_by(phone=phone).one_or_none()
+    if user is not None and user.deleted_at is not None:
+        user = None
     if user is None:
         if not nickname:
             return error_response("NICKNAME_REQUIRED", "首次登录需要填写昵称", 422)
@@ -227,7 +192,7 @@ def login():
         status=200,
         mimetype='application/json',
     )
-    _set_refresh_cookie(response, refresh_token, _seconds_until(token_record.expires_at))
+    _set_refresh_cookie(response, refresh_token, seconds_until(token_record.expires_at))
     return response
 
 
@@ -242,16 +207,17 @@ def refresh():
         return error_response("TOKEN_REVOKED", "登录已失效，请重新登录", 401)
 
     record = _find_refresh_record(token)
-    if record is None or _as_utc(record.expires_at) <= _now_ts():
+    if record is None or as_utc(record.expires_at) <= datetime.now(timezone.utc):
         return error_response("TOKEN_EXPIRED", "登录已过期，请重新登录", 401)
 
     if record.revoked_at is not None:
-        _revoke_all_user_tokens(record.user_id)
+        revoked_tokens = revoke_all_user_tokens(record.user_id)
         db.session.commit()
+        blacklist_refresh_tokens(revoked_tokens)
         return error_response("TOKEN_REVOKED", "登录已失效，请重新登录", 401)
 
-    _revoke_token_record(record)
-    store.blacklist_token(record.jti, _seconds_until(record.expires_at))
+    revoke_token_record(record)
+    store.blacklist_token(record.jti, seconds_until(record.expires_at))
 
     user = db.session.get(User, record.user_id)
     access_token = create_access_token(identity=user.id)
@@ -264,7 +230,7 @@ def refresh():
         status=200,
         mimetype='application/json',
     )
-    _set_refresh_cookie(response, refresh_token, _seconds_until(new_record.expires_at))
+    _set_refresh_cookie(response, refresh_token, seconds_until(new_record.expires_at))
     return response
 
 
@@ -276,8 +242,8 @@ def logout():
 
     record = _find_refresh_record(token)
     if record is not None:
-        _revoke_token_record(record)
-        get_auth_store().blacklist_token(decoded["jti"], _seconds_until(record.expires_at))
+        revoke_token_record(record)
+        get_auth_store().blacklist_token(decoded["jti"], seconds_until(record.expires_at))
         db.session.commit()
 
     payload = ok({"message": "已成功登出"})
@@ -286,5 +252,5 @@ def logout():
         status=200,
         mimetype='application/json',
     )
-    _clear_refresh_cookie(response)
+    clear_refresh_cookie(response)
     return response

@@ -12,6 +12,7 @@ from .blueprints.users import bp as users_bp
 from .config import get_config
 from .errors import register_error_handlers
 from .extensions import api, cors, db, jwt, migrate
+from .models import User
 from .utils.redis_client import get_auth_store
 from .utils.response import error_response
 from .utils.request_id import register_request_id
@@ -51,6 +52,17 @@ def create_app(env=None):
 
 
 def _register_jwt_callbacks():
+    @jwt.user_lookup_loader
+    def user_lookup_callback(_jwt_header, jwt_payload):
+        user = db.session.get(User, jwt_payload["sub"])
+        if user is None or user.deleted_at is not None:
+            return None
+        return user
+
+    @jwt.user_lookup_error_loader
+    def user_lookup_error(_jwt_header, _jwt_payload):
+        return error_response("UNAUTHORIZED", "未登录", 401)
+
     @jwt.token_in_blocklist_loader
     def token_in_blocklist(jwt_header, jwt_payload):
         return get_auth_store().is_token_blacklisted(jwt_payload["jti"])
