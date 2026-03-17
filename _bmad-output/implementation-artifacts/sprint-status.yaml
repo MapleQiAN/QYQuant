@@ -84,8 +84,8 @@ development_status:
   epic-4: in-progress
   4-1-新手引导3步互动卡片: ready-for-dev
   4-2-首次回测全流程引导: ready-for-dev
-  4-3-帮助文档与faq随时访问: backlog
-  4-4-全站分层合规免责声明: backlog
+  4-3-帮助文档与faq随时访问: ready-for-dev
+  4-4-全站分层合规免责声明: ready-for-dev
   epic-4-retrospective: optional
 
   # ─────────────────────────────────────────────────────────────
@@ -102,11 +102,11 @@ development_status:
   # ─────────────────────────────────────────────────────────────
   # Epic 6: 社区互动
   # ─────────────────────────────────────────────────────────────
-  epic-6: backlog
-  6-1-发布帖子: backlog
-  6-2-点赞与收藏帖子: backlog
-  6-3-评论帖子: backlog
-  6-4-查看用户个人主页: backlog
+  epic-6: in-progress
+  6-1-发布帖子: ready-for-dev
+  6-2-点赞与收藏帖子: ready-for-dev
+  6-3-评论帖子: ready-for-dev
+  6-4-查看用户个人主页: ready-for-dev
   epic-6-retrospective: optional
 
   # ─────────────────────────────────────────────────────────────
