@@ -530,3 +530,244 @@ def test_backtest_run_marks_strategy_timeout_jobs(monkeypatch, client, app, tmp_
     with app.app_context():
         job = db.session.get(BacktestJob, job_id)
         assert job.status == 'timeout'
+
+
+def _build_report_fixture():
+    base_time = 1700000000000
+    kline = [
+        {
+            "time": base_time,
+            "open": 100.0,
+            "high": 101.0,
+            "low": 99.0,
+            "close": 100.0,
+            "volume": 1000,
+        },
+        {
+            "time": base_time + 86_400_000,
+            "open": 100.0,
+            "high": 108.0,
+            "low": 99.0,
+            "close": 105.0,
+            "volume": 1100,
+        },
+        {
+            "time": base_time + 2 * 86_400_000,
+            "open": 105.0,
+            "high": 111.0,
+            "low": 104.0,
+            "close": 110.0,
+            "volume": 1200,
+        },
+        {
+            "time": base_time + 3 * 86_400_000,
+            "open": 110.0,
+            "high": 112.0,
+            "low": 107.0,
+            "close": 108.0,
+            "volume": 1250,
+        },
+        {
+            "time": base_time + 4 * 86_400_000,
+            "open": 108.0,
+            "high": 109.0,
+            "low": 101.0,
+            "close": 102.0,
+            "volume": 1300,
+        },
+    ]
+    trades = [
+        {
+            "symbol": "BTCUSDT",
+            "side": "buy",
+            "price": 100.0,
+            "quantity": 10.0,
+            "timestamp": base_time,
+            "pnl": None,
+        },
+        {
+            "symbol": "BTCUSDT",
+            "side": "sell",
+            "price": 110.0,
+            "quantity": 10.0,
+            "timestamp": base_time + 2 * 86_400_000,
+            "pnl": 100.0,
+        },
+        {
+            "symbol": "BTCUSDT",
+            "side": "buy",
+            "price": 108.0,
+            "quantity": 5.0,
+            "timestamp": base_time + 3 * 86_400_000,
+            "pnl": None,
+        },
+        {
+            "symbol": "BTCUSDT",
+            "side": "sell",
+            "price": 102.0,
+            "quantity": 5.0,
+            "timestamp": base_time + 4 * 86_400_000,
+            "pnl": -30.0,
+        },
+    ]
+    return {
+        "kline": kline,
+        "trades": trades,
+        "dataSource": "mock",
+    }
+
+
+def test_worker_generates_report_summary_and_storage_artifacts(monkeypatch, app, tmp_path):
+    from app.extensions import db
+    from app.models import BacktestJob, Strategy, User, UserQuota
+    from app.tasks.backtests import _run_job
+
+    storage_dir = tmp_path / "storage"
+    monkeypatch.setenv("BACKTEST_STORAGE_DIR", storage_dir.as_posix())
+
+    with app.app_context():
+        user = User(phone="13800138007", nickname="ReportOwner")
+        db.session.add(user)
+        db.session.flush()
+        db.session.add(
+            Strategy(
+                id="report-strategy",
+                name="Report Strategy",
+                symbol="BTCUSDT",
+                status="draft",
+                owner_id=user.id,
+            )
+        )
+        db.session.add(UserQuota(user_id=user.id, plan_level="free", used_count=0))
+        job = BacktestJob(
+            user_id=user.id,
+            strategy_id="report-strategy",
+            params={"symbol": "BTCUSDT"},
+        )
+        db.session.add(job)
+        db.session.commit()
+        job_id = job.id
+
+    monkeypatch.setattr("app.tasks.backtests.run_backtest", lambda *args, **kwargs: _build_report_fixture())
+
+    _run_job(job_id)
+
+    with app.app_context():
+        job = db.session.get(BacktestJob, job_id)
+        assert job.status == "completed"
+        assert job.result_storage_key == f"backtest-results/{job_id}"
+        assert job.result_summary is not None
+        assert {
+            "totalReturn",
+            "annualizedReturn",
+            "maxDrawdown",
+            "sharpeRatio",
+            "volatility",
+            "sortinoRatio",
+            "calmarRatio",
+            "winRate",
+            "profitLossRatio",
+            "maxConsecutiveLosses",
+            "totalTrades",
+        }.issubset(set(job.result_summary.keys()))
+
+    assert (storage_dir / "backtest-results" / job_id / "equity_curve.json").exists()
+    assert (storage_dir / "backtest-results" / job_id / "trades.json").exists()
+
+
+def test_get_backtest_report_returns_saved_artifacts_for_owner(client, app, tmp_path, monkeypatch):
+    import json
+
+    from app.extensions import db
+    from app.models import BacktestJob, BacktestJobStatus, Strategy
+
+    storage_dir = tmp_path / "storage"
+    monkeypatch.setenv("BACKTEST_STORAGE_DIR", storage_dir.as_posix())
+
+    token, user_id = _login_user(client, phone="13800138008", nickname="ReportReader")
+
+    with app.app_context():
+        db.session.add(
+            Strategy(
+                id="report-reader-strategy",
+                name="Reader Strategy",
+                symbol="BTCUSDT",
+                status="draft",
+                owner_id=user_id,
+            )
+        )
+        job = BacktestJob(
+            user_id=user_id,
+            strategy_id="report-reader-strategy",
+            status=BacktestJobStatus.COMPLETED.value,
+            params={"symbol": "BTCUSDT"},
+            result_summary={"totalReturn": 7.5, "maxDrawdown": -2.0, "sharpeRatio": 1.2},
+            result_storage_key="backtest-results/report-job",
+        )
+        db.session.add(job)
+        db.session.commit()
+        job_id = job.id
+
+    storage_root = storage_dir / "backtest-results" / "report-job"
+    storage_root.mkdir(parents=True)
+    (storage_root / "equity_curve.json").write_text(
+        json.dumps([{"timestamp": 1700000000000, "equity": 100000.0}], ensure_ascii=False),
+        encoding="utf-8",
+    )
+    (storage_root / "trades.json").write_text(
+        json.dumps(
+            [{"symbol": "BTCUSDT", "side": "buy", "price": 100.0, "quantity": 1.0, "timestamp": 1700000000000}],
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
+
+    response = client.get(f"/api/v1/backtest/{job_id}/report", headers=_auth_headers(token))
+
+    assert response.status_code == 200
+    data = response.json["data"]
+    assert data["job_id"] == job_id
+    assert data["status"] == "completed"
+    assert data["result_summary"]["totalReturn"] == 7.5
+    assert data["equity_curve"][0]["equity"] == 100000.0
+    assert data["trades"][0]["side"] == "buy"
+
+
+def test_get_backtest_report_hides_non_owner_jobs(client, app, tmp_path, monkeypatch):
+    from app.extensions import db
+    from app.models import BacktestJob, BacktestJobStatus, Strategy
+
+    monkeypatch.setenv("BACKTEST_STORAGE_DIR", (tmp_path / "storage").as_posix())
+
+    owner_token, owner_id = _login_user(client, phone="13800138009", nickname="Owner")
+    reader_token, reader_id = _login_user(client, phone="13800138010", nickname="Reader")
+
+    with app.app_context():
+        db.session.add(
+            Strategy(
+                id="hidden-report-strategy",
+                name="Hidden Report Strategy",
+                symbol="BTCUSDT",
+                status="draft",
+                owner_id=owner_id,
+            )
+        )
+        job = BacktestJob(
+            user_id=owner_id,
+            strategy_id="hidden-report-strategy",
+            status=BacktestJobStatus.COMPLETED.value,
+            params={"symbol": "BTCUSDT"},
+            result_summary={"totalReturn": 1.0},
+            result_storage_key="backtest-results/hidden-job",
+        )
+        db.session.add(job)
+        db.session.commit()
+        job_id = job.id
+
+    assert owner_token != reader_token
+    assert owner_id != reader_id
+
+    response = client.get(f"/api/v1/backtest/{job_id}/report", headers=_auth_headers(reader_token))
+
+    assert response.status_code == 404
+    assert response.json["error"]["code"] == "JOB_NOT_FOUND"

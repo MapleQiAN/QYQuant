@@ -1,9 +1,12 @@
 import { createHttpClient } from './http'
 import type {
+  BacktestReportResponse,
+  BacktestStatusResponse,
   BacktestJobResponse,
   BacktestLatestResponse,
   RunBacktestPayload,
   RunBacktestResponse,
+  SubmitBacktestPayload,
 } from '../types/Backtest'
 
 const client = createHttpClient()
@@ -27,4 +30,16 @@ export function runBacktest(payload: RunBacktestPayload): Promise<RunBacktestRes
 
 export function fetchBacktestJob(jobId: string): Promise<BacktestJobResponse> {
   return client.request({ method: 'get', url: `/backtests/job/${jobId}` })
+}
+
+export function submitBacktest(payload: SubmitBacktestPayload): Promise<RunBacktestResponse> {
+  return client.request({ method: 'post', url: '/v1/backtest/', data: payload })
+}
+
+export function fetchBacktestStatus(jobId: string): Promise<BacktestStatusResponse> {
+  return client.request({ method: 'get', url: `/v1/backtest/${jobId}` })
+}
+
+export function fetchBacktestReport(jobId: string): Promise<BacktestReportResponse> {
+  return client.request({ method: 'get', url: `/v1/backtest/${jobId}/report` })
 }

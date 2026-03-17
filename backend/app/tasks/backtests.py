@@ -6,7 +6,9 @@ from ..celery_app import celery_app
 from ..extensions import db
 from ..models import BacktestJob, BacktestJobStatus
 from ..quota import consume_quota
+from ..services.metrics import build_backtest_report
 from ..strategy_runtime import StrategyRuntimeError
+from ..utils.storage import build_backtest_storage_key, write_json
 from ..utils.time import now_utc
 
 
@@ -64,10 +66,34 @@ def _run_job(job_id):
         db.session.commit()
         return {"status": job.status}
 
+    try:
+        if result.get('kline') or result.get('trades'):
+            report = build_backtest_report(result.get('kline') or [], result.get('trades') or [])
+        else:
+            report = {
+                "result_summary": result.get('summary') or {},
+                "equity_curve": [],
+                "trades": result.get('trades') or [],
+            }
+        storage_key = build_backtest_storage_key(job.id)
+        write_json(f"{storage_key}/equity_curve.json", report["equity_curve"])
+        write_json(f"{storage_key}/trades.json", report["trades"])
+    except Exception as exc:
+        job.status = BacktestJobStatus.FAILED.value
+        job.error_message = str(exc)
+        job.completed_at = now_utc()
+        db.session.commit()
+        return {"status": job.status}
+
     job.status = BacktestJobStatus.COMPLETED.value
-    job.result_summary = result.get('summary')
+    job.result_storage_key = storage_key
+    job.result_summary = report["result_summary"]
     job.completed_at = now_utc()
     db.session.commit()
+
+    result["summary"] = report["result_summary"]
+    result["equity_curve"] = report["equity_curve"]
+    result["trades"] = report["trades"]
     return result
 
 

@@ -11,10 +11,12 @@ from ..quota import ensure_user_quota, has_remaining_quota, serialize_plan_limit
 from ..strategy_runtime import StrategyRuntimeError, as_response, preflight_strategy
 from ..tasks.backtests import run_backtest_task
 from ..utils.response import error_response, ok
+from ..utils.storage import build_backtest_storage_key, read_json
 from ..utils.time import format_beijing_iso
 
 
 AVERAGE_BACKTEST_SECONDS = 30
+REPORT_DISCLAIMER = "回测结果仅供研究参考，不构成任何投资建议。"
 
 bp = Blueprint("backtests", __name__, url_prefix="/api")
 
@@ -202,6 +204,37 @@ def get_job_status(job_id):
     if job_record is None or job_record.user_id != user_id:
         return error_response("JOB_NOT_FOUND", "回测任务不存在", 404)
     return ok(_serialize_job_status(job_record))
+
+
+@bp.get("/v1/backtest/<job_id>/report")
+@jwt_required()
+def get_backtest_report(job_id):
+    user_id = get_jwt_identity()
+    job_record = db.session.get(BacktestJob, job_id)
+    if job_record is None or job_record.user_id != user_id:
+        return error_response("JOB_NOT_FOUND", "回测任务不存在", 404)
+    if job_record.status != BacktestJobStatus.COMPLETED.value:
+        return error_response("REPORT_NOT_READY", "回测报告尚未生成", 409)
+
+    storage_key = job_record.result_storage_key or build_backtest_storage_key(job_record.id)
+    try:
+        equity_curve = read_json(f"{storage_key}/equity_curve.json")
+        trades = read_json(f"{storage_key}/trades.json")
+    except FileNotFoundError:
+        return error_response("REPORT_NOT_FOUND", "回测报告不存在", 404)
+
+    return ok(
+        {
+            "job_id": job_record.id,
+            "status": job_record.status,
+            "params": job_record.params,
+            "result_summary": job_record.result_summary or {},
+            "equity_curve": equity_curve,
+            "trades": trades,
+            "completed_at": format_beijing_iso(job_record.completed_at),
+            "disclaimer": REPORT_DISCLAIMER,
+        }
+    )
 
 
 @bp.post("/v1/backtest/")

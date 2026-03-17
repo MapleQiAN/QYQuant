@@ -24,19 +24,8 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import * as echarts from 'echarts/core'
+import * as echarts from 'echarts'
 import type { ECharts as EChartsInstance, EChartsOption } from 'echarts'
-import { CandlestickChart, BarChart, LineChart } from 'echarts/charts'
-import {
-  AxisPointerComponent,
-  DataZoomComponent,
-  GridComponent,
-  LegendComponent,
-  MarkPointComponent,
-  TitleComponent,
-  TooltipComponent
-} from 'echarts/components'
-import { CanvasRenderer } from 'echarts/renderers'
 import { mapTradeSignalsToBars, simpleMovingAverage, toEpochMs } from '../lib/chartIndicators'
 import type { KlineBar } from '../types/KlineBar'
 import type { Trade } from '../types/Trade'
@@ -60,20 +49,6 @@ const emit = defineEmits<{
 
 const { t, locale } = useI18n()
 const chartRef = ref<HTMLDivElement | null>(null)
-
-echarts.use([
-  AxisPointerComponent,
-  BarChart,
-  CandlestickChart,
-  CanvasRenderer,
-  DataZoomComponent,
-  GridComponent,
-  LegendComponent,
-  LineChart,
-  MarkPointComponent,
-  TitleComponent,
-  TooltipComponent
-])
 
 let chart: EChartsInstance | null = null
 let resizeObserver: ResizeObserver | null = null

@@ -1,9 +1,9 @@
 export interface Trade {
-  id: string
+  id?: string
   symbol: string
   side: 'buy' | 'sell'
   price: number
   quantity: number
   pnl?: number
-  timestamp: string
+  timestamp: number | string
 }

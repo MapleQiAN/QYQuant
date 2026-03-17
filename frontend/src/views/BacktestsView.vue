@@ -11,7 +11,7 @@
           <label class="field">
             <span class="field-label">Strategy</span>
             <select class="field-input" v-model="runForm.strategyId">
-              <option value="">None (price-only summary)</option>
+              <option value="">Select a strategy</option>
               <option v-for="item in strategies" :key="item.id" :value="item.id">
                 {{ item.name }} ({{ item.symbol }})
               </option>
@@ -33,6 +33,17 @@
             <label class="field">
               <span class="field-label">Bars</span>
               <input v-model.number="runForm.limit" class="field-input" type="number" min="10" max="3000" />
+            </label>
+          </div>
+
+          <div class="field-row">
+            <label class="field">
+              <span class="field-label">Start Date</span>
+              <input v-model="runForm.startDate" class="field-input" type="date" />
+            </label>
+            <label class="field">
+              <span class="field-label">End Date</span>
+              <input v-model="runForm.endDate" class="field-input" type="date" />
             </label>
           </div>
 
@@ -104,32 +115,22 @@
         </div>
 
         <div class="card panel">
-          <h3 class="panel-title">Result</h3>
-          <div v-if="latestResult" class="result-grid">
-            <div class="result-item">
-              <span class="result-label">Total Return</span>
-              <span class="result-value">{{ latestResult.summary.totalReturn }}%</span>
+          <h3 class="panel-title">Report Status</h3>
+          <div class="result-grid">
+            <div class="result-item wide">
+              <span class="result-label">Current State</span>
+              <span class="result-value">{{ runState.status || 'Fill the form and submit a backtest task.' }}</span>
             </div>
-            <div class="result-item">
-              <span class="result-label">Sharpe</span>
-              <span class="result-value">{{ latestResult.summary.sharpeRatio ?? '-' }}</span>
+            <div v-if="runState.jobId" class="result-item wide">
+              <span class="result-label">Job ID</span>
+              <span class="result-value">{{ runState.jobId }}</span>
             </div>
-            <div class="result-item">
-              <span class="result-label">Max Drawdown</span>
-              <span class="result-value">{{ latestResult.summary.maxDrawdown ?? '-' }}%</span>
-            </div>
-            <div class="result-item">
-              <span class="result-label">Trades</span>
-              <span class="result-value">{{ latestResult.trades.length }}</span>
-            </div>
-            <div v-if="latestResult.runtime" class="result-item wide">
-              <span class="result-label">Runtime</span>
-              <span class="result-value">
-                {{ latestResult.runtime.strategyId }} @ {{ latestResult.runtime.strategyVersion }}
-              </span>
+            <div v-if="runState.completedJobId" class="result-item wide">
+              <button class="btn btn-primary" type="button" @click="openReport(runState.completedJobId)">
+                Open Report
+              </button>
             </div>
           </div>
-          <p v-else class="message">Run a backtest to see metrics.</p>
         </div>
       </div>
     </div>
@@ -138,9 +139,10 @@
 
 <script setup lang="ts">
 import { onMounted, reactive, ref, watch } from 'vue'
+import { useRouter } from 'vue-router'
 import { fetchRecent, fetchRuntimeDescriptor } from '../api/strategies'
-import { fetchBacktestJob, runBacktest } from '../api/backtests'
-import type { BacktestLatestResponse, RunBacktestPayload } from '../types/Backtest'
+import { fetchBacktestStatus, submitBacktest } from '../api/backtests'
+import type { SubmitBacktestPayload } from '../types/Backtest'
 import type { Strategy, StrategyParameter, StrategyRuntimeDescriptor } from '../types/Strategy'
 
 const strategies = ref<Strategy[]>([])
@@ -148,19 +150,37 @@ const strategiesError = ref('')
 const runtimeDescriptor = ref<StrategyRuntimeDescriptor | null>(null)
 const runtimeLoading = ref(false)
 const runtimeError = ref('')
-const latestResult = ref<BacktestLatestResponse | null>(null)
+const router = useRouter()
+
+function formatDateInput(date: Date) {
+  return date.toISOString().slice(0, 10)
+}
+
+function defaultStartDate() {
+  const value = new Date()
+  value.setDate(value.getDate() - 30)
+  return formatDateInput(value)
+}
+
+function defaultEndDate() {
+  return formatDateInput(new Date())
+}
 
 const runForm = reactive({
   strategyId: '',
   symbol: 'BTCUSDT',
   interval: '1m',
   limit: 120,
+  startDate: defaultStartDate(),
+  endDate: defaultEndDate(),
 })
 
 const runState = reactive({
   running: false,
   status: '',
   error: '',
+  jobId: '',
+  completedJobId: '',
 })
 
 const paramValues = reactive<Record<string, any>>({})
@@ -269,44 +289,56 @@ function sleep(ms: number) {
   })
 }
 
-async function waitJobSuccess(jobId: string): Promise<BacktestLatestResponse> {
+async function waitJobSuccess(jobId: string): Promise<string> {
   for (let attempt = 0; attempt < 60; attempt += 1) {
-    const job = await fetchBacktestJob(jobId)
-    if (job.status === 'SUCCESS' && job.result) {
-      return job.result
+    const job = await fetchBacktestStatus(jobId)
+    if (job.status === 'completed') {
+      return jobId
     }
-    if (job.status === 'FAILURE' || job.status === 'REVOKED') {
+    if (job.status === 'failed' || job.status === 'timeout') {
       throw new Error(`Backtest job failed: ${job.status}`)
     }
-    await sleep(500)
+    runState.status = `Task ${job.status}...`
+    await sleep(1000)
   }
   throw new Error('Backtest job timeout')
+}
+
+function openReport(jobId: string) {
+  void router.push({ name: 'backtest-report', params: { jobId } })
 }
 
 async function handleRun() {
   runState.error = ''
   runState.status = ''
   runState.running = true
+  runState.jobId = ''
+  runState.completedJobId = ''
 
   try {
-    const payload: RunBacktestPayload = {
-      symbol: runForm.symbol,
-      interval: runForm.interval,
-      limit: runForm.limit,
+    if (!runForm.strategyId) {
+      throw new Error('Please select a strategy before running a backtest')
     }
 
-    if (runForm.strategyId && runtimeDescriptor.value) {
-      payload.strategyId = runForm.strategyId
-      payload.strategyVersion = runtimeDescriptor.value.strategyVersion
-      payload.strategyParams = buildStrategyParams(runtimeDescriptor.value.parameters)
+    const payload: SubmitBacktestPayload = {
+      strategy_id: runForm.strategyId,
+      symbols: [runForm.symbol],
+      start_date: runForm.startDate,
+      end_date: runForm.endDate,
+    }
+
+    if (runtimeDescriptor.value) {
+      payload.parameters = buildStrategyParams(runtimeDescriptor.value.parameters)
     }
 
     runState.status = 'Submitting backtest task...'
-    const runResponse = await runBacktest(payload)
+    const runResponse = await submitBacktest(payload)
+    runState.jobId = runResponse.job_id
 
     runState.status = `Waiting for result (${runResponse.job_id})...`
-    latestResult.value = await waitJobSuccess(runResponse.job_id)
-    runState.status = 'Backtest completed'
+    runState.completedJobId = await waitJobSuccess(runResponse.job_id)
+    runState.status = 'Backtest completed. Opening report...'
+    openReport(runResponse.job_id)
   } catch (error: any) {
     runState.error = error?.message || 'Failed to run backtest'
   } finally {
