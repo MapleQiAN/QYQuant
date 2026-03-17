@@ -61,7 +61,7 @@ development_status:
   2-1-手机号验证码注册: ready-for-dev
   2-2-登录与token刷新: ready-for-dev
   2-3-个人主页信息管理: ready-for-dev
-  2-4-账号注销与数据删除: ready-for-dev
+  2-4-账号注销与数据删除: done
   epic-2-retrospective: optional
 
   # ─────────────────────────────────────────────────────────────
@@ -91,12 +91,12 @@ development_status:
   # ─────────────────────────────────────────────────────────────
   # Epic 5: 策略广场与发现
   # ─────────────────────────────────────────────────────────────
-  epic-5: backlog
-  5-1-策略广场列表与精选推荐位: backlog
-  5-2-策略详情页: backlog
-  5-3-一键导入策略库并发起回测试用: backlog
-  5-4-策略发布-免费分享模式: backlog
-  5-5-策略搜索与条件筛选: backlog
+  epic-5: in-progress
+  5-1-策略广场列表与精选推荐位: ready-for-dev
+  5-2-策略详情页: ready-for-dev
+  5-3-一键导入策略库并发起回测试用: ready-for-dev
+  5-4-策略发布-免费分享模式: ready-for-dev
+  5-5-策略搜索与条件筛选: ready-for-dev
   epic-5-retrospective: optional
 
   # ─────────────────────────────────────────────────────────────
