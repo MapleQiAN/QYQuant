@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>QYQuant - UX 设计方向探索</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Inter', sans-serif; background: #F0F2F5; color: #1E293B; }
+
+  /* ── 顶部导航 ── */
+  .selector { position: sticky; top: 0; z-index: 100; background: #fff; border-bottom: 1px solid #E5E5E5; padding: 12px 24px; display: flex; gap: 12px; align-items: center; }
+  .selector h1 { font-size: 14px; font-weight: 600; color: #64748B; margin-right: 8px; white-space: nowrap; }
+  .dir-btn { padding: 7px 20px; border-radius: 9999px; border: 1.5px solid #E5E5E5; background: #fff; font-size: 13px; font-weight: 500; cursor: pointer; transition: all 0.15s; color: #64748B; }
+  .dir-btn:hover { border-color: #1A1A1A; color: #1A1A1A; }
+  .dir-btn.active { background: #F5E642; border-color: #D4C400; color: #1A1A1A; font-weight: 600; }
+
+  /* ── 方向面板 ── */
+  .direction { display: none; padding: 32px 24px; max-width: 1440px; margin: 0 auto; }
+  .direction.active { display: block; }
+  .dir-label { display: inline-block; padding: 4px 14px; border-radius: 9999px; font-size: 12px; font-weight: 600; margin-bottom: 16px; }
+
+  /* ── 通用卡片 ── */
+  .card { background: #fff; border: 1px solid #E5E5E5; border-radius: 12px; padding: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.06); }
+  .card-title { font-size: 13px; font-weight: 600; color: #64748B; margin-bottom: 12px; text-transform: uppercase; letter-spacing: 0.05em; }
+
+  /* ══════════════════════════════
+     方向 A：紧凑仪表盘风
+  ══════════════════════════════ */
+  .dir-a-nav { background: #fff; border: 1px solid #E5E5E5; border-radius: 12px; padding: 8px; display: flex; justify-content: center; gap: 4px; margin-bottom: 20px; width: fit-content; margin-left: auto; margin-right: auto; }
+  .dir-a-nav .tab { padding: 7px 20px; border-radius: 9999px; font-size: 14px; font-weight: 500; cursor: pointer; color: #64748B; transition: all 0.15s; }
+  .dir-a-nav .tab.on { background: #F5E642; color: #1A1A1A; font-weight: 600; }
+
+  .dir-a-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; margin-bottom: 20px; }
+  .dir-a-stat { background: #fff; border: 1px solid #E5E5E5; border-radius: 12px; padding: 20px; }
+  .dir-a-stat .val { font-size: 28px; font-weight: 700; }
+  .dir-a-stat .val.up { color: #E53935; }
+  .dir-a-stat .val.down { color: #26A69A; }
+  .dir-a-stat .lbl { font-size: 12px; color: #94A3B8; margin-top: 4px; }
+  .dir-a-stat .sub { font-size: 13px; color: #64748B; margin-top: 6px; }
+
+  .dir-a-main { display: grid; grid-template-columns: 1fr 380px; gap: 16px; }
+  .dir-a-chart { background: #fff; border: 1px solid #E5E5E5; border-radius: 12px; padding: 20px; min-height: 320px; }
+  .dir-a-chart .chart-title { font-size: 15px; font-weight: 600; margin-bottom: 4px; }
+  .dir-a-chart .chart-sub { font-size: 12px; color: #94A3B8; margin-bottom: 16px; }
+  .chart-mock { width: 100%; height: 220px; background: linear-gradient(180deg, rgba(229,57,53,0.04) 0%, rgba(229,57,53,0.01) 100%); border-radius: 8px; position: relative; overflow: hidden; }
+  .chart-line { position: absolute; bottom: 0; left: 0; right: 0; }
+  .chart-label { display: flex; gap: 16px; margin-top: 8px; }
+  .chart-label span { font-size: 11px; color: #94A3B8; }
+
+  .dir-a-side { display: flex; flex-direction: column; gap: 16px; }
+  .strategy-card { background: #fff; border: 1px solid #E5E5E5; border-radius: 12px; padding: 16px; }
+  .strategy-card .s-name { font-size: 14px; font-weight: 600; margin-bottom: 6px; }
+  .strategy-card .s-badge { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 9999px; background: rgba(24,144,255,0.1); color: #1890FF; font-size: 11px; font-weight: 600; margin-bottom: 8px; }
+  .strategy-card .s-metrics { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px; }
+  .strategy-card .s-m { text-align: center; background: #F8FAFC; border-radius: 8px; padding: 8px; }
+  .strategy-card .s-m .sv { font-size: 16px; font-weight: 700; color: #E53935; }
+  .strategy-card .s-m .sk { font-size: 11px; color: #94A3B8; }
+  .btn-black { width: 100%; padding: 10px; background: #1A1A1A; color: #fff; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; transition: background 0.15s; }
+  .btn-black:hover { background: #333; }
+
+  /* ══════════════════════════════
+     方向 B：沉浸图表风
+  ══════════════════════════════ */
+  .dir-b-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }
+  .dir-b-header h2 { font-size: 20px; font-weight: 700; }
+  .dir-b-tabs { display: flex; gap: 4px; background: #F1F5F9; border-radius: 9999px; padding: 4px; }
+  .dir-b-tabs .tab { padding: 6px 18px; border-radius: 9999px; font-size: 13px; font-weight: 500; color: #64748B; cursor: pointer; transition: all 0.15s; }
+  .dir-b-tabs .tab.on { background: #F5E642; color: #1A1A1A; font-weight: 600; }
+
+  .dir-b-hero { background: #fff; border: 1px solid #E5E5E5; border-radius: 16px; padding: 28px; margin-bottom: 16px; }
+  .dir-b-hero-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px; }
+  .dir-b-hero-meta .name { font-size: 18px; font-weight: 700; }
+  .dir-b-hero-meta .desc { font-size: 13px; color: #94A3B8; margin-top: 4px; }
+  .dir-b-hero-val { text-align: right; }
+  .dir-b-hero-val .big { font-size: 36px; font-weight: 700; color: #E53935; line-height: 1; }
+  .dir-b-hero-val .sub { font-size: 13px; color: #94A3B8; margin-top: 4px; }
+  .dir-b-chart-area { height: 260px; background: linear-gradient(180deg, rgba(229,57,53,0.06) 0%, rgba(229,57,53,0.01) 100%); border-radius: 10px; position: relative; display: flex; align-items: flex-end; padding: 16px; }
+  .chart-svg-mock { width: 100%; height: 200px; }
+
+  .dir-b-metrics { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 16px; }
+  .dir-b-metric { background: #fff; border: 1px solid #E5E5E5; border-radius: 10px; padding: 16px; text-align: center; }
+  .dir-b-metric .mv { font-size: 20px; font-weight: 700; }
+  .dir-b-metric .mv.up { color: #E53935; }
+  .dir-b-metric .mv.down { color: #26A69A; }
+  .dir-b-metric .mk { font-size: 11px; color: #94A3B8; margin-top: 4px; }
+
+  /* ══════════════════════════════
+     方向 C：策略广场风
+  ══════════════════════════════ */
+  .dir-c-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+  .dir-c-search { display: flex; align-items: center; gap: 8px; background: #fff; border: 1px solid #E5E5E5; border-radius: 9999px; padding: 8px 16px; width: 300px; }
+  .dir-c-search input { border: none; outline: none; font-size: 14px; color: #1E293B; background: transparent; width: 100%; }
+  .dir-c-search input::placeholder { color: #94A3B8; }
+  .dir-c-filters { display: flex; gap: 8px; margin-bottom: 20px; flex-wrap: wrap; }
+  .filter-chip { padding: 5px 14px; border-radius: 9999px; border: 1px solid #E5E5E5; font-size: 12px; font-weight: 500; color: #64748B; cursor: pointer; background: #fff; transition: all 0.15s; }
+  .filter-chip:hover, .filter-chip.on { background: #F5E642; border-color: #D4C400; color: #1A1A1A; }
+
+  .dir-c-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+  .strat-card { background: #fff; border: 1px solid #E5E5E5; border-radius: 12px; padding: 18px; transition: box-shadow 0.15s, transform 0.15s; cursor: pointer; }
+  .strat-card:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.08); transform: translateY(-2px); }
+  .strat-card-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; }
+  .strat-card-top .sn { font-size: 14px; font-weight: 600; }
+  .verify-badge { display: inline-flex; align-items: center; gap: 3px; padding: 2px 7px; border-radius: 9999px; background: rgba(24,144,255,0.1); color: #1890FF; font-size: 10px; font-weight: 600; }
+  .strat-mini-chart { height: 60px; background: linear-gradient(90deg, rgba(229,57,53,0.08), rgba(229,57,53,0.15)); border-radius: 6px; margin: 10px 0; position: relative; overflow: hidden; }
+  .strat-metrics-row { display: flex; justify-content: space-between; margin-bottom: 12px; }
+  .strat-metrics-row .sm { text-align: center; }
+  .strat-metrics-row .sm .sv { font-size: 14px; font-weight: 700; color: #E53935; }
+  .strat-metrics-row .sm .sk { font-size: 10px; color: #94A3B8; }
+  .strat-footer { display: flex; justify-content: space-between; align-items: center; }
+  .strat-author { display: flex; align-items: center; gap: 6px; }
+  .avatar-xs { width: 22px; height: 22px; border-radius: 9999px; background: linear-gradient(135deg, #E53935, #FF7043); display: flex; align-items: center; justify-content: center; color: #fff; font-size: 10px; font-weight: 700; }
+  .strat-author span { font-size: 11px; color: #94A3B8; }
+  .btn-outline { padding: 5px 12px; border-radius: 6px; border: 1px solid #1A1A1A; font-size: 12px; font-weight: 600; background: transparent; cursor: pointer; transition: all 0.15s; }
+  .btn-outline:hover { background: #1A1A1A; color: #fff; }
+
+  /* ── 描述区域 ── */
+  .dir-desc { background: #fff; border: 1px solid #E5E5E5; border-radius: 12px; padding: 20px; margin-top: 20px; display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+  .dir-desc h3 { font-size: 14px; font-weight: 700; margin-bottom: 10px; color: #1E293B; }
+  .dir-desc ul { list-style: none; display: flex; flex-direction: column; gap: 6px; }
+  .dir-desc ul li { font-size: 13px; color: #64748B; padding-left: 14px; position: relative; }
+  .dir-desc ul li::before { content: '✓'; position: absolute; left: 0; color: #10B981; font-weight: 700; }
+  .dir-desc ul li.con::before { content: '○'; color: #F59E0B; }
+
+  /* SVG curves */
+  .curve-red { fill: none; stroke: #E53935; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; }
+  .curve-green { fill: none; stroke: #26A69A; stroke-width: 1.5; stroke-dasharray: 4 3; opacity: 0.5; }
+  .area-red { fill: url(#redGrad); }
+</style>
+</head>
+<body>
+
+<div class="selector">
+  <h1>QYQuant 设计方向</h1>
+  <button class="dir-btn active" onclick="show('a')">方向 A · 紧凑仪表盘</button>
+  <button class="dir-btn" onclick="show('b')">方向 B · 沉浸图表</button>
+  <button class="dir-btn" onclick="show('c')">方向 C · 策略广场</button>
+</div>
+
+<!-- ══ 方向 A ══ -->
+<div class="direction active" id="dir-a">
+  <span class="dir-label" style="background:#FFF9C4;color:#B45309;">方向 A · 紧凑仪表盘风 — 信息密度适中，数据导向</span>
+
+  <div class="dir-a-nav">
+    <div class="tab on">回测</div>
+    <div class="tab">托管</div>
+    <div class="tab">广场</div>
+  </div>
+
+  <div class="dir-a-grid">
+    <div class="dir-a-stat card">
+      <div class="val up">+24.8%</div>
+      <div class="lbl">累计收益率</div>
+      <div class="sub">本月 +3.2%</div>
+    </div>
+    <div class="dir-a-stat card">
+      <div class="val" style="color:#1E293B;">-8.3%</div>
+      <div class="lbl">最大回撤</div>
+      <div class="sub">优于市场均值</div>
+    </div>
+    <div class="dir-a-stat card">
+      <div class="val" style="color:#1E293B;">1.82</div>
+      <div class="lbl">夏普比率</div>
+      <div class="sub">
+        <span style="display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:9999px;background:rgba(24,144,255,0.1);color:#1890FF;font-size:11px;font-weight:600;">
+          ✓ 平台验证
+        </span>
+      </div>
+    </div>
+  </div>
+
+  <div class="dir-a-main">
+    <div class="dir-a-chart card">
+      <div class="chart-title">资金曲线 (Equity Curve)</div>
+      <div class="chart-sub">2020-01-01 ~ 2024-12-31 · 沪深300均线趋势策略</div>
+      <div class="chart-mock">
+        <svg viewBox="0 0 600 200" preserveAspectRatio="none" style="width:100%;height:100%;">
+          <defs>
+            <linearGradient id="redGrad" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="#E53935" stop-opacity="0.15"/>
+              <stop offset="100%" stop-color="#E53935" stop-opacity="0.01"/>
+            </linearGradient>
+          </defs>
+          <path class="area-red" d="M0,160 C50,155 80,140 120,120 C160,100 180,130 220,110 C260,90 280,70 320,50 C360,30 380,60 420,40 C460,20 500,30 540,20 L600,15 L600,200 L0,200 Z"/>
+          <path class="curve-red" d="M0,160 C50,155 80,140 120,120 C160,100 180,130 220,110 C260,90 280,70 320,50 C360,30 380,60 420,40 C460,20 500,30 540,20 L600,15"/>
+          <path class="curve-green" d="M0,170 C100,165 200,155 300,145 C400,135 500,128 600,125"/>
+        </svg>
+      </div>
+      <div class="chart-label">
+        <span>● 策略收益</span>
+        <span style="color:#26A69A;">- - 基准 (沪深300)</span>
+        <span style="margin-left:auto;">悬停查看详情</span>
+      </div>
+    </div>
+
+    <div class="dir-a-side">
+      <div class="strategy-card">
+        <div class="s-name">沪深300均线趋势策略</div>
+        <div class="s-badge">✓ 平台验证回测</div>
+        <div class="s-metrics">
+          <div class="s-m"><div class="sv">+24.8%</div><div class="sk">年化收益</div></div>
+          <div class="s-m"><div class="sv" style="color:#1E293B;">-8.3%</div><div class="sk">最大回撤</div></div>
+          <div class="s-m"><div class="sv" style="color:#1E293B;">1.82</div><div class="sk">夏普比率</div></div>
+          <div class="s-m"><div class="sv" style="color:#1E293B;">68%</div><div class="sk">胜率</div></div>
+        </div>
+        <button class="btn-black">免费回测试用</button>
+      </div>
+
+      <div class="card">
+        <div class="card-title">回测配置</div>
+        <div style="display:flex;flex-direction:column;gap:10px;">
+          <div>
+            <div style="font-size:12px;color:#94A3B8;margin-bottom:4px;">标的</div>
+            <div style="padding:8px 12px;background:#F8FAFC;border-radius:8px;font-size:14px;">沪深300 (000300)</div>
+          </div>
+          <div>
+            <div style="font-size:12px;color:#94A3B8;margin-bottom:4px;">时间段</div>
+            <div style="padding:8px 12px;background:#F8FAFC;border-radius:8px;font-size:14px;">2020-01-01 ~ 2024-12-31</div>
+          </div>
+          <div>
+            <div style="font-size:12px;color:#94A3B8;margin-bottom:4px;">初始资金</div>
+            <div style="padding:8px 12px;background:#F8FAFC;border-radius:8px;font-size:14px;">¥ 100,000</div>
+          </div>
+          <button class="btn-black">立即运行</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="dir-desc">
+    <div>
+      <h3>方向 A 优点</h3>
+      <ul>
+        <li>三项核心指标首屏直接可见，数据导向</li>
+        <li>配置面板与图表并排，操作效率高</li>
+        <li>适合回测重度用户（爱好者/开发者）</li>
+        <li>信息层级清晰，扫描成本低</li>
+      </ul>
+    </div>
+    <div>
+      <h3>方向 A 权衡</h3>
+      <ul>
+        <li class="con">小白用户首屏信息量稍多</li>
+        <li class="con">需要引导才能理解各区块用途</li>
+        <li class="con">移动端需要重新布局</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- ══ 方向 B ══ -->
+<div class="direction" id="dir-b">
+  <span class="dir-label" style="background:#E8F5E9;color:#2E7D32;">方向 B · 沉浸图表风 — 图表为主角，视觉冲击强</span>
+
+  <div class="dir-b-header">
+    <div>
+      <h2>量化回测</h2>
+      <div style="font-size:13px;color:#94A3B8;margin-top:4px;">本月已用 43 / 100 次</div>
+    </div>
+    <div class="dir-b-tabs">
+      <div class="tab on">回测</div>
+      <div class="tab">托管</div>
+      <div class="tab">广场</div>
+    </div>
+  </div>
+
+  <div class="dir-b-hero">
+    <div class="dir-b-hero-top">
+      <div class="dir-b-hero-meta">
+        <div class="name">沪深300均线趋势策略</div>
+        <div class="desc">2020-01-01 至 2024-12-31 · 5年回测</div>
+        <div style="margin-top:8px;">
+          <span style="display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:9999px;background:rgba(24,144,255,0.1);color:#1890FF;font-size:12px;font-weight:600;">✓ 平台验证回测</span>
+        </div>
+      </div>
+      <div class="dir-b-hero-val">
+        <div class="big">+24.8%</div>
+        <div class="sub">累计收益率</div>
+        <div style="font-size:12px;color:#E53935;margin-top:4px;font-weight:600;">↑ 超越基准 +12.3%</div>
+      </div>
+    </div>
+
+    <div class="dir-b-chart-area">
+      <svg class="chart-svg-mock" viewBox="0 0 800 200" preserveAspectRatio="none">
+        <defs>
+          <linearGradient id="redGrad2" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#E53935" stop-opacity="0.2"/>
+            <stop offset="100%" stop-color="#E53935" stop-opacity="0.02"/>
+          </linearGradient>
+        </defs>
+        <path fill="url(#redGrad2)" d="M0,170 C80,165 120,145 180,125 C240,105 260,135 320,115 C380,95 400,65 460,45 C520,25 560,40 620,28 C680,16 740,22 800,15 L800,200 L0,200 Z"/>
+        <path fill="none" stroke="#E53935" stroke-width="3" stroke-linecap="round" d="M0,170 C80,165 120,145 180,125 C240,105 260,135 320,115 C380,95 400,65 460,45 C520,25 560,40 620,28 C680,16 740,22 800,15"/>
+        <path fill="none" stroke="#26A69A" stroke-width="1.5" stroke-dasharray="5 4" opacity="0.6" d="M0,175 C200,168 400,158 600,148 C700,143 750,140 800,138"/>
+        <!-- 买点标记 -->
+        <circle cx="180" cy="125" r="5" fill="#1890FF" opacity="0.8"/>
+        <circle cx="460" cy="45" r="5" fill="#1890FF" opacity="0.8"/>
+        <!-- 卖点标记 -->
+        <circle cx="320" cy="115" r="5" fill="#E53935" opacity="0.8"/>
+        <circle cx="620" cy="28" r="5" fill="#E53935" opacity="0.8"/>
+      </svg>
+      <div style="position:absolute;bottom:12px;right:16px;display:flex;gap:12px;">
+        <span style="font-size:11px;color:#64748B;">● 买入点</span>
+        <span style="font-size:11px;color:#E53935;">● 卖出点</span>
+        <span style="font-size:11px;color:#26A69A;">- - 基准</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="dir-b-metrics">
+    <div class="dir-b-metric">
+      <div class="mv up">+24.8%</div>
+      <div class="mk">累计收益率</div>
+    </div>
+    <div class="dir-b-metric">
+      <div class="mv" style="color:#1E293B;">-8.3%</div>
+      <div class="mk">最大回撤</div>
+    </div>
+    <div class="dir-b-metric">
+      <div class="mv" style="color:#1E293B;">1.82</div>
+      <div class="mk">夏普比率</div>
+    </div>
+    <div class="dir-b-metric">
+      <div class="mv" style="color:#1E293B;">68%</div>
+      <div class="mk">胜率</div>
+    </div>
+  </div>
+
+  <div style="display:flex;gap:12px;">
+    <button class="btn-black" style="flex:1;padding:12px;">导入策略库</button>
+    <button style="flex:1;padding:12px;border-radius:8px;border:1.5px solid #1A1A1A;background:transparent;font-size:14px;font-weight:600;cursor:pointer;">开启模拟托管</button>
+  </div>
+
+  <div class="dir-desc">
+    <div>
+      <h3>方向 B 优点</h3>
+      <ul>
+        <li>Equity Curve 占据视觉主导，震撼感强</li>
+        <li>买卖点标注清晰可见，直观易懂</li>
+        <li>适合小白用户的"看图做决策"心智</li>
+        <li>超大收益数字带来情感冲击</li>
+      </ul>
+    </div>
+    <div>
+      <h3>方向 B 权衡</h3>
+      <ul>
+        <li class="con">配置区域不够突出，需要滚动</li>
+        <li class="con">回测配置入口需要另开面板</li>
+        <li class="con">在结果页之前的配置页设计挑战大</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- ══ 方向 C ══ -->
+<div class="direction" id="dir-c">
+  <span class="dir-label" style="background:#E3F2FD;color:#1565C0;">方向 C · 策略广场风 — 内容发现，社区驱动</span>
+
+  <div class="dir-c-header">
+    <div>
+      <h2 style="font-size:20px;font-weight:700;">策略广场</h2>
+      <div style="font-size:13px;color:#94A3B8;margin-top:2px;">发现 · 回测 · 分享</div>
+    </div>
+    <div class="dir-c-search">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#94A3B8" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+      <input type="text" placeholder="搜索策略名称、标的、标签…">
+    </div>
+  </div>
+
+  <div class="dir-c-filters">
+    <div class="filter-chip on">全部</div>
+    <div class="filter-chip">趋势跟踪</div>
+    <div class="filter-chip">均值回归</div>
+    <div class="filter-chip">动量策略</div>
+    <div class="filter-chip">多因子</div>
+    <div class="filter-chip">年化 &gt;20%</div>
+    <div class="filter-chip">回撤 &lt;10%</div>
+    <div class="filter-chip">✓ 平台验证</div>
+  </div>
+
+  <div class="dir-c-grid">
+    <!-- 卡片1 -->
+    <div class="strat-card">
+      <div class="strat-card-top">
+        <div class="sn">沪深300均线趋势策略</div>
+        <div class="verify-badge">✓ 验证</div>
+      </div>
+      <div style="font-size:12px;color:#94A3B8;margin-bottom:8px;">趋势跟踪 · A股 · 日线</div>
+      <div class="strat-mini-chart">
+        <svg viewBox="0 0 240 60" preserveAspectRatio="none" style="width:100%;height:100%;">
+          <path fill="none" stroke="#E53935" stroke-width="2" d="M0,48 C40,45 60,35 90,25 C120,15 140,30 180,18 C210,10 230,8 240,5"/>
+        </svg>
+      </div>
+      <div class="strat-metrics-row">
+        <div class="sm"><div class="sv">+24.8%</div><div class="sk">年化收益</div></div>
+        <div class="sm"><div class="sv" style="color:#1E293B;">-8.3%</div><div class="sk">最大回撤</div></div>
+        <div class="sm"><div class="sv" style="color:#1E293B;">1.82</div><div class="sk">夏普</div></div>
+      </div>
+      <div class="strat-footer">
+        <div class="strat-author">
+          <div class="avatar-xs">王</div>
+          <span>量化老王 · 312 次使用</span>
+        </div>
+        <button class="btn-outline">回测试用</button>
+      </div>
+    </div>
+
+    <!-- 卡片2 -->
+    <div class="strat-card">
+      <div class="strat-card-top">
+        <div class="sn">黄金动量突破策略</div>
+        <div class="verify-badge">✓ 验证</div>
+      </div>
+      <div style="font-size:12px;color:#94A3B8;margin-bottom:8px;">动量策略 · 黄金ETF · 日线</div>
+      <div class="strat-mini-chart">
+        <svg viewBox="0 0 240 60" preserveAspectRatio="none" style="width:100%;height:100%;">
+          <path fill="none" stroke="#E53935" stroke-width="2" d="M0,52 C30,50 50,48 80,42 C110,36 120,40 150,28 C170,20 200,12 240,8"/>
+        </svg>
+      </div>
+      <div class="strat-metrics-row">
+        <div class="sm"><div class="sv">+31.2%</div><div class="sk">年化收益</div></div>
+        <div class="sm"><div class="sv" style="color:#1E293B;">-12.1%</div><div class="sk">最大回撤</div></div>
+        <div class="sm"><div class="sv" style="color:#1E293B;">2.14</div><div class="sk">夏普</div></div>
+      </div>
+      <div class="strat-footer">
+        <div class="strat-author">
+          <div class="avatar-xs" style="background:linear-gradient(135deg,#1890FF,#36CFC9);">L</div>
+          <span>Lisa量化 · 88 次使用</span>
+        </div>
+        <button class="btn-outline">回测试用</button>
+      </div>
+    </div>
+
+    <!-- 卡片3 -->
+    <div class="strat-card">
+      <div class="strat-card-top">
+        <div class="sn">中证500双均线策略</div>
+        <div style="padding:2px 8px;border-radius:9999px;background:#F1F5F9;color:#64748B;font-size:11px;">社区</div>
+      </div>
+      <div style="font-size:12px;color:#94A3B8;margin-bottom:8px;">趋势跟踪 · 中证500 · 日线</div>
+      <div class="strat-mini-chart">
+        <svg viewBox="0 0 240 60" preserveAspectRatio="none" style="width:100%;height:100%;">
+          <path fill="none" stroke="#E53935" stroke-width="2" d="M0,45 C40,43 70,40 100,35 C130,30 140,38 170,30 C200,22 220,18 240,14"/>
+        </svg>
+      </div>
+      <div class="strat-metrics-row">
+        <div class="sm"><div class="sv">+18.6%</div><div class="sk">年化收益</div></div>
+        <div class="sm"><div class="sv" style="color:#1E293B;">-9.8%</div><div class="sk">最大回撤</div></div>
+        <div class="sm"><div class="sv" style="color:#1E293B;">1.45</div><div class="sk">夏普</div></div>
+      </div>
+      <div class="strat-footer">
+        <div class="strat-author">
+          <div class="avatar-xs" style="background:linear-gradient(135deg,#26A69A,#4CAF50);">小</div>
+          <span>小明量化 · 203 次使用</span>
+        </div>
+        <button class="btn-outline">回测试用</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="dir-desc">
+    <div>
+      <h3>方向 C 优点</h3>
+      <ul>
+        <li>内容发现体验强，策略消费路径清晰</li>
+        <li>卡片信息密度适中，支持快速扫描对比</li>
+        <li>社区感强，驱动内容生态冷启动</li>
+        <li>筛选系统让不同用户快速找到目标策略</li>
+      </ul>
+    </div>
+    <div>
+      <h3>方向 C 权衡</h3>
+      <ul>
+        <li class="con">回测报告需要跳转到独立页面</li>
+        <li class="con">初期策略少时卡片流显得空旷</li>
+        <li class="con">专注策略广场，仪表盘场景需额外页面</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<script>
+function show(id) {
+  document.querySelectorAll('.direction').forEach(d => d.classList.remove('active'));
+  document.querySelectorAll('.dir-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('dir-' + id).classList.add('active');
+  event.currentTarget.classList.add('active');
+}
+</script>
+</body>
+</html>
