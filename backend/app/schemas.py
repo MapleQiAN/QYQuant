@@ -88,12 +88,16 @@ class BacktestTradeSchema(Schema):
 
 class BacktestSchema(Schema):
     id = fields.Str()
-    name = fields.Str()
-    symbol = fields.Str()
     status = fields.Str()
-    startedAt = fields.Int(attribute='started_at')
-    finishedAt = fields.Int(attribute='finished_at', allow_none=True)
-    summary = fields.Nested(BacktestSummarySchema, allow_none=True)
+    userId = fields.Str(attribute='user_id', allow_none=True)
+    strategyId = fields.Str(attribute='strategy_id', allow_none=True)
+    params = fields.Dict(allow_none=True)
+    resultSummary = fields.Dict(attribute='result_summary', allow_none=True)
+    resultStorageKey = fields.Str(attribute='result_storage_key', allow_none=True)
+    errorMessage = fields.Str(attribute='error_message', allow_none=True)
+    startedAt = fields.Function(lambda obj: format_beijing_iso(_value(obj, "started_at")))
+    completedAt = fields.Function(lambda obj: format_beijing_iso(_value(obj, "completed_at")))
+    createdAt = fields.Function(lambda obj: format_beijing_iso(_value(obj, "created_at")))
 
 
 class BotSchema(Schema):

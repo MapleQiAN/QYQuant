@@ -1,4 +1,8 @@
 import uuid
+from enum import Enum
+
+from sqlalchemy import JSON, Text
+from sqlalchemy.dialects.postgresql import JSONB
 
 from .extensions import db
 from .utils.time import now_ms, now_utc
@@ -6,6 +10,17 @@ from .utils.time import now_ms, now_utc
 
 def gen_id():
     return str(uuid.uuid4())
+
+
+job_json_type = JSON().with_variant(JSONB(astext_type=Text()), 'postgresql')
+
+
+class BacktestJobStatus(str, Enum):
+    PENDING = 'pending'
+    RUNNING = 'running'
+    COMPLETED = 'completed'
+    FAILED = 'failed'
+    TIMEOUT = 'timeout'
 
 
 class User(db.Model):
@@ -73,31 +88,56 @@ class StrategyVersion(db.Model):
     created_at = db.Column(db.BigInteger, default=now_ms)
 
 
-class Backtest(db.Model):
-    __tablename__ = 'backtests'
+class BacktestJob(db.Model):
+    __tablename__ = 'backtest_jobs'
+    __table_args__ = (
+        db.Index('ix_backtest_jobs_user_id_created_at', 'user_id', 'created_at'),
+        db.Index('ix_backtest_jobs_status', 'status'),
+        db.Index('ix_backtest_jobs_strategy_id', 'strategy_id'),
+    )
+
     id = db.Column(db.String, primary_key=True, default=gen_id)
-    name = db.Column(db.String, nullable=False)
-    symbol = db.Column(db.String, nullable=False)
-    status = db.Column(db.String, nullable=False)
-    started_at = db.Column(db.BigInteger, nullable=False)
-    finished_at = db.Column(db.BigInteger, nullable=True)
-    summary = db.Column(db.JSON, nullable=True)
-    job_id = db.Column(db.String, nullable=True)
-    user_id = db.Column(db.String, db.ForeignKey('users.id'))
-    created_at = db.Column(db.BigInteger, default=now_ms)
-    updated_at = db.Column(db.BigInteger, default=now_ms)
+    user_id = db.Column(db.String, db.ForeignKey('users.id'), nullable=True)
+    strategy_id = db.Column(db.String, db.ForeignKey('strategies.id'), nullable=True)
+    status = db.Column(
+        db.Enum(
+            BacktestJobStatus,
+            values_callable=lambda enum_cls: [member.value for member in enum_cls],
+            native_enum=False,
+            validate_strings=True,
+            name='backtest_job_status',
+        ),
+        nullable=False,
+        default=BacktestJobStatus.PENDING.value,
+    )
+    params = db.Column(job_json_type, nullable=False, default=dict)
+    result_summary = db.Column(job_json_type, nullable=True)
+    result_storage_key = db.Column(db.Text, nullable=True)
+    error_message = db.Column(db.Text, nullable=True)
+    started_at = db.Column(db.DateTime(timezone=True), nullable=True)
+    completed_at = db.Column(db.DateTime(timezone=True), nullable=True)
+    created_at = db.Column(db.DateTime(timezone=True), nullable=False, default=now_utc)
 
 
 class BacktestTrade(db.Model):
     __tablename__ = 'backtest_trades'
     id = db.Column(db.String, primary_key=True, default=gen_id)
-    backtest_id = db.Column(db.String, db.ForeignKey('backtests.id'))
+    backtest_id = db.Column(db.String, db.ForeignKey('backtest_jobs.id'))
     symbol = db.Column(db.String, nullable=False)
     side = db.Column(db.String, nullable=False)
     price = db.Column(db.Float, nullable=False)
     quantity = db.Column(db.Float, nullable=False)
     pnl = db.Column(db.Float, nullable=True)
     timestamp = db.Column(db.BigInteger, nullable=False)
+
+
+class UserQuota(db.Model):
+    __tablename__ = 'user_quota'
+
+    user_id = db.Column(db.String, db.ForeignKey('users.id'), primary_key=True)
+    plan_level = db.Column(db.String(32), nullable=False, default='free')
+    used_count = db.Column(db.Integer, nullable=False, default=0)
+    reset_at = db.Column(db.DateTime(timezone=True), nullable=True)
 
 
 class BotInstance(db.Model):

@@ -179,10 +179,39 @@ pending → running → completed
 
 ### Agent Model Used
 
-<!-- 由 dev-story 执行时填写 -->
+GPT-5 Codex
 
 ### Debug Log References
 
+- `py -m py_compile backend/app/models.py backend/app/config.py backend/app/celery_app.py backend/app/tasks/backtests.py backend/app/blueprints/backtests.py backend/app/schemas.py backend/migrations/versions/4d2f6b3a9c1e_backtest_jobs_infra.py`
+- `py -m pytest backend/tests/test_backtests.py backend/tests/test_models.py backend/tests/test_auth.py backend/tests/test_schemas.py backend/tests/test_backtest_summary.py -v`
+- `py -m pytest backend/tests -v`
+
 ### Completion Notes List
 
+- 用 `BacktestJob` 直接替换旧 `Backtest` 模型，并新增 `UserQuota` 模型。
+- `/api/backtests/run` 与 `/api/backtests/job/<job_id>` 已切到 `backtest_jobs` 语义，任务状态以数据库为准。
+- Celery 回测任务已改为 `job_id` 驱动，持久化 `pending/running/completed/failed/timeout` 状态，并保留成功任务的完整结果用于调试。
+- `/api/backtests/latest` 继续保留为同步调试入口，不写入任务表。
+- 新增 Redis 分库和生产级 Celery 配置，并补充本地 Docker Compose 的 worker/Flower 支持。
+- 新增 Alembic 迁移：将旧 `backtests` 重命名迁移到 `backtest_jobs`，保留历史数据并创建 `user_quota`。
+- 已完成完整后端回归验证。
+
 ### File List
+
+- `backend/app/models.py`
+- `backend/app/config.py`
+- `backend/app/celery_app.py`
+- `backend/app/tasks/backtests.py`
+- `backend/app/blueprints/backtests.py`
+- `backend/app/schemas.py`
+- `backend/tests/conftest.py`
+- `backend/tests/test_backtests.py`
+- `backend/tests/test_models.py`
+- `backend/tests/test_strategy_runtime.py`
+- `backend/docker-compose.yml`
+- `backend/Dockerfile.celery`
+- `backend/.env.test`
+- `backend/.env.development`
+- `backend/.env.production`
+- `backend/migrations/versions/4d2f6b3a9c1e_backtest_jobs_infra.py`

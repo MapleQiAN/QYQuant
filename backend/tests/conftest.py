@@ -6,7 +6,9 @@ import pytest
 
 
 os.environ.setdefault('CELERY_TASK_ALWAYS_EAGER', '1')
-os.environ.setdefault('REDIS_URL', 'redis://localhost:6379/1')
+os.environ.setdefault('REDIS_URL', 'redis://localhost:6379/0')
+os.environ.setdefault('CELERY_BROKER_URL', 'redis://localhost:6379/1')
+os.environ.setdefault('CELERY_RESULT_BACKEND', 'redis://localhost:6379/1')
 
 BACKEND_DIR = Path(__file__).resolve().parents[1]
 if str(BACKEND_DIR) not in sys.path:
@@ -20,7 +22,9 @@ def app(tmp_path, monkeypatch):
     monkeypatch.setenv('DATABASE_URL', f"sqlite:///{db_path.as_posix()}")
     monkeypatch.setenv('FERNET_KEY', 'fVFLNI0cSfGIaULo353R6ivdsuEVw7xdl5Hknr0bHFU=')
     monkeypatch.setenv('CELERY_TASK_ALWAYS_EAGER', '1')
-    monkeypatch.setenv('REDIS_URL', 'redis://localhost:6379/1')
+    monkeypatch.setenv('REDIS_URL', 'redis://localhost:6379/0')
+    monkeypatch.setenv('CELERY_BROKER_URL', 'redis://localhost:6379/1')
+    monkeypatch.setenv('CELERY_RESULT_BACKEND', 'redis://localhost:6379/1')
     monkeypatch.setenv('JWT_SECRET', 'test-jwt-secret-key-with-sufficient-length-123456')
     monkeypatch.setenv('AUTH_FIXED_SMS_CODE', '123456')
     monkeypatch.setenv('BACKTEST_DATA_PROVIDER', 'mock')
@@ -28,6 +32,7 @@ def app(tmp_path, monkeypatch):
     from app import create_app
     from app.extensions import db
 
+    monkeypatch.setenv('BACKTEST_DATA_PROVIDER', 'mock')
     app = create_app('testing')
     with app.app_context():
         db.create_all()

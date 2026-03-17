@@ -11,3 +11,34 @@ services:
     image: redis:7
     ports:
       - "6379:6379"
+  celery-worker:
+    build:
+      context: .
+      dockerfile: Dockerfile.celery
+    environment:
+      FLASK_ENV: development
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/qyquant
+      REDIS_URL: redis://redis:6379/0
+      CELERY_BROKER_URL: redis://redis:6379/1
+      CELERY_RESULT_BACKEND: redis://redis:6379/1
+      CELERYD_CONCURRENCY: 10
+      CELERY_TASK_SOFT_TIME_LIMIT: 300
+      CELERY_TASK_TIME_LIMIT: 330
+      SECRET_KEY: dev-secret
+      JWT_SECRET: dev-jwt-secret
+      FERNET_KEY: fVFLNI0cSfGIaULo353R6ivdsuEVw7xdl5Hknr0bHFU=
+      BACKTEST_DATA_PROVIDER: auto
+    depends_on:
+      - postgres
+      - redis
+  flower:
+    image: mher/flower:2.0
+    command:
+      - celery
+      - --broker=redis://redis:6379/1
+      - flower
+      - --port=5555
+    ports:
+      - "5555:5555"
+    depends_on:
+      - redis

@@ -137,7 +137,7 @@ def test_runtime_executes_strategy_package(client, app, tmp_path):
 
     status = client.get(f'/api/backtests/job/{job_id}')
     assert status.status_code == 200
-    assert status.json['data']['status'] == 'SUCCESS'
+    assert status.json['data']['status'] == 'completed'
     result = status.json['data']['result']
     assert len(result['trades']) > 0
     assert result['runtime']['strategyId'] == strategy_id

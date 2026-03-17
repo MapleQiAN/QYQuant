@@ -25,4 +25,4 @@ RUN useradd -m -u 1000 appuser && chown -R appuser:appuser /app
 USER appuser
 
 # 启动 Celery Worker
-CMD ["celery", "-A", "app.celery_app", "worker", "--loglevel=info", "--concurrency=4"]
+CMD ["sh", "-lc", "celery -A app.celery_app worker --loglevel=info --concurrency=${CELERYD_CONCURRENCY:-10} -Q backtest"]

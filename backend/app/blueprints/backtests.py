@@ -4,9 +4,12 @@ from flask_smorest import Blueprint
 
 from ..backtest.engine import run_backtest
 from ..celery_app import celery_app
+from ..extensions import db
+from ..models import BacktestJob
 from ..strategy_runtime import StrategyRuntimeError, as_response, preflight_strategy
 from ..tasks.backtests import run_backtest_task
 from ..utils.response import ok
+from ..utils.time import format_beijing_iso
 
 bp = Blueprint('backtests', __name__, url_prefix='/api/backtests')
 
@@ -35,27 +38,48 @@ def run():
         except StrategyRuntimeError as exc:
             return as_response(exc), 400
 
-    job = run_backtest_task.delay(
-        symbol,
-        interval,
-        limit,
-        start_time,
-        end_time,
-        strategy_id,
-        strategy_version,
-        strategy_params,
-        data_source,
+    job_record = BacktestJob(
+        user_id=payload.get('userId', payload.get('user_id')),
+        strategy_id=strategy_id,
+        params={
+            "symbol": symbol,
+            "interval": interval,
+            "limit": limit,
+            "start_time": start_time,
+            "end_time": end_time,
+            "strategy_id": strategy_id,
+            "strategy_version": strategy_version,
+            "strategy_params": strategy_params,
+            "data_source": data_source,
+        },
     )
-    return ok({"job_id": job.id})
+    db.session.add(job_record)
+    db.session.commit()
+
+    run_backtest_task.apply_async(args=[job_record.id], task_id=job_record.id, queue='backtest')
+    return ok({"job_id": job_record.id})
 
 
 @bp.get('/job/<job_id>')
 def job(job_id):
+    job_record = db.session.get(BacktestJob, job_id)
+    if job_record is None:
+        return {"code": 40400, "message": "job_not_found", "details": None}, 404
+
     result = AsyncResult(job_id, app=celery_app)
-    status = result.status
-    data = {"status": status}
-    if status == 'SUCCESS':
-        data['result'] = result.result
+    data = {
+        "job_id": job_record.id,
+        "status": job_record.status,
+        "params": job_record.params,
+        "result_summary": job_record.result_summary,
+        "error_message": job_record.error_message,
+        "started_at": format_beijing_iso(job_record.started_at),
+        "completed_at": format_beijing_iso(job_record.completed_at),
+        "created_at": format_beijing_iso(job_record.created_at),
+        "celery_status": result.status,
+    }
+    if result.status == 'SUCCESS':
+        data["result"] = result.result
     return ok(data)
 
 
