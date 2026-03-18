@@ -1,0 +1,84 @@
+<h2>策略广场首页结构</h2>
+<p class="subtitle">先只确定“精选推荐位”和“策略列表”的关系。我的默认推荐是 A，它最贴近 story 文档，也最容易做出稳定的首屏层级。</p>
+
+<div class="cards">
+  <div class="card" data-choice="a" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div class="mockup">
+        <div class="mockup-header">A. 顶部横向精选 + 下方标准列表</div>
+        <div class="mockup-body">
+          <div class="mock-nav">策略广场 / 发现 · 回测 · 分享</div>
+          <div style="padding: 12px 0 8px;">
+            <div class="label">精选推荐</div>
+            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:8px;">
+              <div class="placeholder" style="height:88px;">精选卡 1</div>
+              <div class="placeholder" style="height:88px;">精选卡 2</div>
+              <div class="placeholder" style="height:88px;">精选卡 3</div>
+            </div>
+          </div>
+          <div style="padding-top: 10px;">
+            <div class="label">全部策略</div>
+            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:8px;">
+              <div class="placeholder" style="height:124px;">策略卡</div>
+              <div class="placeholder" style="height:124px;">策略卡</div>
+              <div class="placeholder" style="height:124px;">策略卡</div>
+              <div class="placeholder" style="height:124px;">策略卡</div>
+              <div class="placeholder" style="height:124px;">策略卡</div>
+              <div class="placeholder" style="height:124px;">策略卡</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>推荐</h3>
+      <p>运营位清晰，列表结构稳定，最符合 story 里的“顶部推荐位 + 卡片列表 + 分页”要求。</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="b" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div class="mockup">
+        <div class="mockup-header">B. Hero 大推荐 + 列表跟随</div>
+        <div class="mockup-body">
+          <div class="mock-nav">策略广场 / 发现 · 回测 · 分享</div>
+          <div class="placeholder" style="height:120px;margin:12px 0;">1 个大推荐位 + 2 个副推荐</div>
+          <div class="label">全部策略</div>
+          <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-top:8px;">
+            <div class="placeholder" style="height:126px;">策略卡</div>
+            <div class="placeholder" style="height:126px;">策略卡</div>
+            <div class="placeholder" style="height:126px;">策略卡</div>
+            <div class="placeholder" style="height:126px;">策略卡</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>强调推荐</h3>
+      <p>推荐更强，但会稀释“广场列表”感，也需要额外定义 hero 卡的内容密度和响应式。</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="c" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div class="mockup">
+        <div class="mockup-header">C. 精选和列表混排</div>
+        <div class="mockup-body">
+          <div class="mock-nav">策略广场 / 发现 · 回测 · 分享</div>
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:12px;">
+            <div class="placeholder" style="height:124px;">精选</div>
+            <div class="placeholder" style="height:124px;">精选</div>
+            <div class="placeholder" style="height:124px;">普通</div>
+            <div class="placeholder" style="height:124px;">普通</div>
+            <div class="placeholder" style="height:124px;">精选</div>
+            <div class="placeholder" style="height:124px;">普通</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>内容流优先</h3>
+      <p>信息流感更强，但“精选推荐位”不再独立，和 story 文档偏差最大。</p>
+    </div>
+  </div>
+</div>

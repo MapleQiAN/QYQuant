@@ -29,13 +29,20 @@
 
         <template v-else>
           <div :class="['metrics-grid', { 'onboarding-highlight': userStore.onboardingHighlightTarget === 'backtest-results-section' }]" data-onboarding-target="backtest-results-section">
-          <article v-for="metric in coreMetrics" :key="metric.label" class="metric-card">
-            <span class="metric-label">
-              {{ metric.label }}
-              <MetricTooltip :metric-key="metric.metricKey" />
-            </span>
-            <strong class="metric-value" :class="metric.tone">{{ metric.value }}</strong>
-          </article>
+            <StatCard
+              v-for="metric in coreMetrics"
+              :key="metric.label"
+              :label="metric.label"
+              :show-disclaimer="metric.showDisclaimer"
+              :show-sign="metric.showSign"
+              :suffix="metric.suffix"
+              :value="metric.value"
+              :variant="metric.variant"
+            >
+              <template #label-extra>
+                <MetricTooltip :metric-key="metric.metricKey" />
+              </template>
+            </StatCard>
           </div>
 
           <EquityCurveChart class="chart-block" :points="report.equity_curve || []" :trades="report.trades || []" />
@@ -53,10 +60,7 @@
             </div>
           </details>
 
-          <div class="card disclaimer-card">
-            <p class="disclaimer-title">Disclaimer</p>
-            <p class="disclaimer-text">{{ report.disclaimer }}</p>
-          </div>
+          <DisclaimerFooter />
         </template>
       </template>
     </div>
@@ -66,8 +70,10 @@
 <script setup lang="ts">
 import { computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import StatCard from '../components/StatCard.vue'
 import EquityCurveChart from '../components/backtest/EquityCurveChart.vue'
 import ErrorDisplay from '../components/backtest/ErrorDisplay.vue'
+import DisclaimerFooter from '../components/disclaimer/DisclaimerFooter.vue'
 import MetricTooltip from '../components/help/MetricTooltip.vue'
 import { useUserStore } from '../stores'
 import { useBacktestsStore } from '../stores/backtests'
@@ -93,20 +99,37 @@ const coreMetrics = computed(() => ([
   {
     label: 'Total Return',
     metricKey: 'total_return',
-    value: formatMetric(summary.value.totalReturn, 2, '%'),
-    tone: (summary.value.totalReturn ?? 0) >= 0 ? 'positive' : 'negative'
+    value: formatMetric(summary.value.totalReturn, 2),
+    suffix: '%',
+    variant: 'up' as const,
+    showSign: true,
+    showDisclaimer: true
+  },
+  {
+    label: 'Annualized Return',
+    metricKey: 'annualized_return',
+    value: formatMetric(summary.value.annualizedReturn, 2),
+    suffix: '%',
+    variant: 'info' as const,
+    showSign: true,
+    showDisclaimer: true
   },
   {
     label: 'Max Drawdown',
     metricKey: 'max_drawdown',
-    value: formatMetric(summary.value.maxDrawdown, 2, '%'),
-    tone: 'negative'
+    value: formatMetric(summary.value.maxDrawdown, 2),
+    suffix: '%',
+    variant: 'down' as const,
+    showSign: true,
+    showDisclaimer: false
   },
   {
     label: 'Sharpe Ratio',
     metricKey: 'sharpe_ratio',
     value: formatMetric(summary.value.sharpeRatio, 2),
-    tone: 'neutral'
+    variant: 'default' as const,
+    showSign: false,
+    showDisclaimer: false
   }
 ]))
 
@@ -192,45 +215,9 @@ onMounted(() => {
 
 .metrics-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: var(--spacing-md);
   margin-bottom: var(--spacing-lg);
-}
-
-.metric-card {
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
-  background: var(--color-surface);
-  padding: var(--spacing-md);
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.metric-label {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  font-size: var(--font-size-sm);
-  color: var(--color-text-muted);
-}
-
-.metric-value {
-  font-size: 2rem;
-  line-height: 1;
-  color: var(--color-text-primary);
-}
-
-.metric-value.positive {
-  color: #0f766e;
-}
-
-.metric-value.negative {
-  color: #b91c1c;
-}
-
-.metric-value.neutral {
-  color: #1d4ed8;
 }
 
 .chart-block {
@@ -275,29 +262,18 @@ onMounted(() => {
   font-weight: var(--font-weight-semibold);
 }
 
-.disclaimer-card {
-  padding: var(--spacing-md);
-  border-left: 4px solid #f59e0b;
-}
-
-.disclaimer-title {
-  margin: 0 0 var(--spacing-xs);
-  color: var(--color-text-primary);
-  font-weight: var(--font-weight-semibold);
-}
-
-.disclaimer-text {
-  margin: 0;
-  color: var(--color-text-secondary);
-  line-height: 1.6;
-}
-
 @media (max-width: 900px) {
   .metrics-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .details-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .metrics-grid {
     grid-template-columns: 1fr;
   }
 }

@@ -10,6 +10,7 @@ vi.mock('../views/SettingsView.vue', () => ({ default: { template: '<div />' } }
 vi.mock('../views/NewStrategyView.vue', () => ({ default: { template: '<div />' } }))
 vi.mock('../views/StrategyLibraryView.vue', () => ({ default: { template: '<div />' } }))
 vi.mock('../views/StrategyDetailView.vue', () => ({ default: { template: '<div />' } }))
+vi.mock('../views/MarketplaceStrategyDetailView.vue', () => ({ default: { template: '<div />' } }))
 
 import router from './index'
 
@@ -37,5 +38,12 @@ describe('router', () => {
   it('contains strategy parameter route', () => {
     const hasStrategyDetail = router.getRoutes().some((route) => route.path === '/strategies/:strategyId/parameters')
     expect(hasStrategyDetail).toBe(true)
+  })
+
+  it('contains marketplace strategy detail route', () => {
+    const hasMarketplaceStrategyDetail = router.getRoutes().some(
+      (route) => route.path === '/marketplace/strategies/:strategyId'
+    )
+    expect(hasMarketplaceStrategyDetail).toBe(true)
   })
 })

@@ -86,3 +86,28 @@ export interface StrategyRuntimeDescriptor {
   interface: string
   parameters: StrategyParameter[]
 }
+
+export interface MarketplaceStrategyAuthor {
+  nickname: string
+  avatar_url: string
+}
+
+export interface MarketplaceStrategyDetail {
+  id: string
+  title: string
+  description?: string | null
+  category?: string | null
+  tags: string[]
+  display_metrics: Record<string, string | number | boolean | null>
+  is_verified: boolean
+  created_at?: string | null
+  author: MarketplaceStrategyAuthor
+  already_imported: boolean
+  imported_strategy_id?: string | null
+  has_equity_curve?: boolean
+}
+
+export interface MarketplaceStrategyEquityCurve {
+  dates: Array<number | string>
+  values: number[]
+}

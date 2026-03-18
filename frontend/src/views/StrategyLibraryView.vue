@@ -30,9 +30,14 @@
                 <span v-for="tag in strategy.tags" :key="tag" class="pill">{{ tag }}</span>
               </div>
             </div>
-            <button class="btn btn-primary" type="button" @click="handleGuidedSelect(strategy.id)">
-              Use this strategy
-            </button>
+            <div class="guided-actions">
+              <button class="btn btn-secondary" type="button" @click="handleGuidedPreview(strategy.id)">
+                View details
+              </button>
+              <button class="btn btn-primary" type="button" @click="handleGuidedSelect(strategy.id)">
+                Use this strategy
+              </button>
+            </div>
           </article>
         </div>
       </section>
@@ -256,9 +261,16 @@ async function handleGuidedSelect(strategyId: string) {
   userStore.setGuidedBacktestStep(2)
   userStore.setOnboardingHighlightTarget('guided-run-button')
   await router.push({
-    name: 'strategy-detail',
+    name: 'strategy-parameters',
     params: { strategyId },
     query: { guided: 'true' },
+  })
+}
+
+async function handleGuidedPreview(strategyId: string) {
+  await router.push({
+    name: 'strategy-detail',
+    params: { strategyId },
   })
 }
 
@@ -313,6 +325,11 @@ function formatCreatedAt(value?: string | number) {
 
 .guided-row {
   align-items: center;
+}
+
+.guided-actions {
+  display: flex;
+  gap: var(--spacing-sm);
 }
 
 .import-card,
@@ -465,7 +482,8 @@ function formatCreatedAt(value?: string | number) {
   .page-header,
   .layout-grid,
   .strategy-row,
-  .pagination {
+  .pagination,
+  .guided-actions {
     display: flex;
     flex-direction: column;
   }

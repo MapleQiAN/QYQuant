@@ -61,6 +61,28 @@ vi.mock('../components/help/MetricTooltip.vue', () => ({
   },
 }))
 
+vi.mock('../components/StatCard.vue', () => ({
+  default: {
+    props: ['label', 'value', 'suffix', 'showDisclaimer'],
+    template: `
+      <div
+        class="stat-card-stub"
+        :data-label="label"
+        :data-show-disclaimer="showDisclaimer ? 'true' : 'false'"
+        data-test="stat-card"
+      >
+        {{ label }} {{ value }}{{ suffix || '' }}
+      </div>
+    `,
+  },
+}))
+
+vi.mock('../components/disclaimer/DisclaimerFooter.vue', () => ({
+  default: {
+    template: '<div data-test="disclaimer-footer">基于历史数据，不构成投资建议</div>',
+  },
+}))
+
 vi.mock('../components/backtest/ErrorDisplay.vue', () => ({
   default: {
     props: ['error', 'supportedPackages'],
@@ -116,14 +138,18 @@ describe('BacktestResultView', () => {
     storeState.supportedPackagesLoading = false
   })
 
-  it('renders core metrics and disclaimer', async () => {
+  it('renders core metrics with earnings disclaimers and footer disclaimer', async () => {
     const wrapper = mount(BacktestResultView)
+    const statCards = wrapper.findAll('[data-test="stat-card"]')
+    const disclaimerCards = statCards.filter((item) => item.attributes('data-show-disclaimer') === 'true')
 
     expect(loadReportMock).toHaveBeenCalledWith('job-1')
     expect(wrapper.text()).toContain('12.50%')
     expect(wrapper.text()).toContain('-3.20%')
     expect(wrapper.text()).toContain('1.80')
-    expect(wrapper.text()).toContain('For research only. Not investment advice.')
+    expect(statCards).toHaveLength(4)
+    expect(disclaimerCards).toHaveLength(2)
+    expect(wrapper.get('[data-test="disclaimer-footer"]').text()).toContain('基于历史数据，不构成投资建议')
   })
 
   it('renders structured error details for failed report', async () => {

@@ -69,7 +69,7 @@ function handleOpenParameters(strategyId: string) {
   userStore.setGuidedBacktestStrategy(strategyId)
   userStore.setGuidedBacktestStep(2)
   userStore.setOnboardingHighlightTarget('guided-run-button')
-  void router.push({ name: 'strategy-detail', params: { strategyId }, query: { guided: 'true' } })
+  void router.push({ name: 'strategy-parameters', params: { strategyId }, query: { guided: 'true' } })
 }
 
 function handleOpenReport(jobId: string) {

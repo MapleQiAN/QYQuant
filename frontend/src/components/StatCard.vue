@@ -8,6 +8,7 @@
     <div class="stat-content">
       <div class="stat-label">
         <span>{{ label }}</span>
+        <DisclaimerTooltip v-if="showDisclaimer" />
         <slot name="label-extra" />
       </div>
       <div class="stat-value">
@@ -25,6 +26,7 @@
 
 <script setup lang="ts">
 import { computed, h } from 'vue'
+import DisclaimerTooltip from './disclaimer/DisclaimerTooltip.vue'
 
 interface Props {
   label: string
@@ -36,6 +38,7 @@ interface Props {
   variant?: 'default' | 'success' | 'warning' | 'danger' | 'info' | 'up' | 'down'
   iconBg?: string
   showSign?: boolean
+  showDisclaimer?: boolean
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -43,7 +46,8 @@ const props = withDefaults(defineProps<Props>(), {
   suffix: '',
   variant: 'default',
   iconBg: 'var(--color-primary-bg)',
-  showSign: false
+  showSign: false,
+  showDisclaimer: false
 })
 
 const DefaultIcon = () => h('svg', {

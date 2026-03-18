@@ -1,5 +1,7 @@
 import { createHttpClient } from './http'
 import type {
+  MarketplaceStrategyDetail,
+  MarketplaceStrategyEquityCurve,
   Strategy,
   StrategyParameterDefinition,
   StrategyPreset,
@@ -39,6 +41,20 @@ export function fetchMarketplaceStrategies(params?: { tag?: string }): Promise<S
     method: 'get',
     url: '/v1/marketplace/strategies',
     params,
+  })
+}
+
+export function fetchMarketplaceStrategyDetail(strategyId: string): Promise<MarketplaceStrategyDetail> {
+  return client.request({
+    method: 'get',
+    url: `/v1/marketplace/strategies/${strategyId}`,
+  })
+}
+
+export function fetchMarketplaceStrategyEquityCurve(strategyId: string): Promise<MarketplaceStrategyEquityCurve> {
+  return client.request({
+    method: 'get',
+    url: `/v1/marketplace/strategies/${strategyId}/equity-curve`,
   })
 }
 

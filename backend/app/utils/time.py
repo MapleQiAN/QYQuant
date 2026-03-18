@@ -24,3 +24,16 @@ def format_beijing_iso(dt):
     if dt is None:
         return None
     return to_beijing(ensure_aware_utc(dt)).isoformat()
+
+
+def format_beijing_iso_ms(value):
+    if value is None:
+        return None
+
+    try:
+        timestamp_ms = int(value)
+    except (TypeError, ValueError):
+        return None
+
+    dt = datetime.fromtimestamp(timestamp_ms / 1000, tz=timezone.utc)
+    return format_beijing_iso(dt)
