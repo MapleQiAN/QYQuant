@@ -86,3 +86,33 @@ export interface StrategyRuntimeDescriptor {
   interface: string
   parameters: StrategyParameter[]
 }
+
+export interface MarketplaceStrategyAuthor {
+  nickname: string
+  avatarUrl: string
+}
+
+export type MarketplaceDisplayMetrics = Record<string, number | string | null>
+
+export interface MarketplaceStrategy {
+  id: string
+  title: string
+  name: string
+  description?: string | null
+  category?: string | null
+  tags: string[]
+  isVerified: boolean
+  displayMetrics: MarketplaceDisplayMetrics
+  author: MarketplaceStrategyAuthor
+}
+
+export interface MarketplaceMeta {
+  total: number
+  page: number
+  pageSize: number
+}
+
+export interface MarketplaceStrategyListResult {
+  data: MarketplaceStrategy[]
+  meta: MarketplaceMeta
+}

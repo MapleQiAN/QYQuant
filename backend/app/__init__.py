@@ -7,6 +7,7 @@ from .blueprints.bots import bp as bots_bp
 from .blueprints.files import bp as files_bp
 from .blueprints.forum import bp as forum_bp
 from .blueprints.health import bp as health_bp
+from .blueprints.marketplace import bp as marketplace_bp
 from .blueprints.presets import bp as presets_bp
 from .blueprints.users import bp as users_bp
 from .config import get_config
@@ -49,6 +50,7 @@ def create_app(env=None):
     app.register_blueprint(users_bp)
     if strategies_bp is not None:
         app.register_blueprint(strategies_bp)
+    app.register_blueprint(marketplace_bp)
     app.register_blueprint(presets_bp)
     app.register_blueprint(backtests_bp)
     app.register_blueprint(bots_bp)

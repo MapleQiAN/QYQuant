@@ -1,8 +1,10 @@
 from flask import g
 
 
-def ok(data=None, message='ok', code=0):
+def ok(data=None, message='ok', code=0, meta=None):
     payload = {"code": code, "message": message, "data": data}
+    if meta is not None:
+        payload["meta"] = meta
     if getattr(g, 'request_id', None):
         payload['request_id'] = g.request_id
     return payload

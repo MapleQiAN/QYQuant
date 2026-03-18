@@ -63,13 +63,35 @@ class AuditLog(db.Model):
 
 class Strategy(db.Model):
     __tablename__ = 'strategies'
+    __table_args__ = (
+        db.Index('ix_strategies_category', 'category'),
+        db.Index(
+            'ix_strategies_marketplace_public_verified',
+            'is_public',
+            'is_verified',
+            postgresql_where=db.text('is_public = true'),
+            sqlite_where=db.text('is_public = 1'),
+        ),
+        db.Index(
+            'ix_strategies_marketplace_featured',
+            'is_featured',
+            postgresql_where=db.text('is_featured = true'),
+            sqlite_where=db.text('is_featured = 1'),
+        ),
+    )
     id = db.Column(db.String, primary_key=True, default=gen_id)
     name = db.Column(db.String, nullable=False)
+    title = db.Column(db.String, nullable=True)
     symbol = db.Column(db.String, nullable=False)
     status = db.Column(db.String, nullable=False)
     description = db.Column(db.Text, nullable=True)
     category = db.Column(db.String(64), nullable=True)
     source = db.Column(db.String(32), nullable=False, default='upload')
+    is_public = db.Column(db.Boolean, nullable=False, default=False)
+    is_featured = db.Column(db.Boolean, nullable=False, default=False)
+    is_verified = db.Column(db.Boolean, nullable=False, default=False)
+    review_status = db.Column(db.String(32), nullable=False, default='pending')
+    display_metrics = db.Column(db.JSON, nullable=False, default=dict)
     returns = db.Column(db.Float, default=0)
     win_rate = db.Column(db.Float, default=0)
     max_drawdown = db.Column(db.Float, default=0)
@@ -82,6 +104,26 @@ class Strategy(db.Model):
     code_hash = db.Column(db.String(64), nullable=True)
     created_at = db.Column(db.BigInteger, default=now_ms)
     updated_at = db.Column(db.BigInteger, default=now_ms)
+
+    def to_card_dict(self, *, author=None):
+        author_payload = {
+            "nickname": getattr(author, "nickname", ""),
+            "avatar_url": getattr(author, "avatar_url", ""),
+        }
+        tags = self.tags if isinstance(self.tags, list) else []
+        metrics = self.display_metrics if isinstance(self.display_metrics, dict) else {}
+
+        return {
+            "id": self.id,
+            "title": self.title or self.name,
+            "name": self.name,
+            "description": self.description,
+            "category": self.category,
+            "tags": [str(tag) for tag in tags],
+            "is_verified": bool(self.is_verified),
+            "display_metrics": metrics,
+            "author": author_payload,
+        }
 
 
 class StrategyVersion(db.Model):
