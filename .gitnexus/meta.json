@@ -1,12 +1,12 @@
 {
-  "repoPath": "E:/QYQuant",
-  "lastCommit": "906bff22cecd2ca36a529b8d9bd3139c43140424",
-  "indexedAt": "2026-03-17T02:51:18.750Z",
+  "repoPath": "E:/QYQuant/.worktrees/codex-gitnexus-refresh",
+  "lastCommit": "f1bd8c41a60201be4d3ce3ef435cc043ffbb7f5a",
+  "indexedAt": "2026-03-18T07:19:54.507Z",
   "stats": {
-    "files": 477,
-    "nodes": 1314,
-    "edges": 2540,
-    "communities": 87,
-    "processes": 76
+    "files": 566,
+    "nodes": 1817,
+    "edges": 3921,
+    "communities": 119,
+    "processes": 114
   }
 }
