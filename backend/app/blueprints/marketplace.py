@@ -13,28 +13,56 @@ from ..utils.response import error_response, ok
 from ..utils.storage import read_json
 from ..utils.time import format_beijing_iso_ms, now_ms
 
-
 bp = Blueprint("marketplace", __name__, url_prefix="/api/v1/marketplace")
 
 
 @bp.get("/strategies")
 def list_marketplace_strategies():
+    featured = _bool_arg("featured", default=False)
     tag = (request.args.get("tag") or "").strip().lower()
+    page = _int_arg("page", default=1, minimum=1)
+    page_size = _int_arg("page_size", default=20, minimum=1, maximum=100)
+
     if tag == "onboarding":
         _ensure_onboarding_strategy()
-
-    items = (
-        Strategy.query
-        .filter(_marketplace_visibility_clause())
-        .order_by(Strategy.last_update.desc(), Strategy.created_at.desc())
-        .all()
-    )
-    if tag:
+        items = (
+            Strategy.query
+            .filter(Strategy.owner_id.is_(None), _marketplace_visibility_clause())
+            .order_by(Strategy.last_update.desc(), Strategy.created_at.desc())
+            .all()
+        )
         items = [
             item for item in items
             if any(str(entry).strip().lower() == tag for entry in (item.tags or []))
         ]
-    return ok(StrategySchema(many=True).dump(items))
+        return ok(StrategySchema(many=True).dump(items))
+
+    base_query = (
+        db.session.query(Strategy, User)
+        .outerjoin(User, Strategy.owner_id == User.id)
+        .filter(_marketplace_visibility_clause())
+    )
+
+    if featured:
+        query = (
+            base_query
+            .filter(Strategy.is_featured.is_(True))
+            .order_by(Strategy.last_update.desc(), Strategy.created_at.desc(), Strategy.id.desc())
+        )
+        total = query.count()
+        items = query.limit(6).all()
+        return ok(
+            [strategy.to_card_dict(author=author) for strategy, author in items],
+            meta={"total": total, "page": 1, "page_size": 6},
+        )
+
+    query = base_query.order_by(Strategy.last_update.desc(), Strategy.created_at.desc(), Strategy.id.desc())
+    total = query.count()
+    items = query.offset((page - 1) * page_size).limit(page_size).all()
+    return ok(
+        [strategy.to_card_dict(author=author) for strategy, author in items],
+        meta={"total": total, "page": page, "page_size": page_size},
+    )
 
 
 @bp.get("/strategies/<strategy_id>")
@@ -48,7 +76,7 @@ def get_marketplace_strategy_detail(strategy_id):
     imported_strategy = _find_imported_strategy(user_id, strategy)
     payload = {
         "id": strategy.id,
-        "title": strategy.name,
+        "title": strategy.title or strategy.name,
         "description": strategy.description,
         "category": strategy.category,
         "tags": strategy.tags or [],
@@ -80,6 +108,26 @@ def get_marketplace_strategy_equity_curve(strategy_id):
 
     dates, values = _extract_equity_curve(raw_points)
     return ok({"dates": dates, "values": values})
+
+
+def _bool_arg(name, *, default=False):
+    raw = request.args.get(name)
+    if raw is None:
+        return default
+    return str(raw).strip().lower() in {"1", "true", "yes", "on"}
+
+
+def _int_arg(name, *, default, minimum=None, maximum=None):
+    raw = request.args.get(name)
+    try:
+        value = int(raw) if raw is not None else default
+    except (TypeError, ValueError):
+        value = default
+    if minimum is not None:
+        value = max(value, minimum)
+    if maximum is not None:
+        value = min(value, maximum)
+    return value
 
 
 def _get_public_strategy(strategy_id):
@@ -150,12 +198,16 @@ def _find_imported_strategy(user_id, marketplace_strategy):
     )
 
 
+def _onboarding_package_path():
+    return Path(__file__).resolve().parents[2] / "strategy_store" / "GoldStepByStep.qys"
+
+
 def _ensure_onboarding_strategy():
-    existing = Strategy.query.filter_by(is_public=True, review_status="approved").all()
+    existing = Strategy.query.filter(Strategy.owner_id.is_(None), _marketplace_visibility_clause()).all()
     if any(any(str(tag).strip().lower() == "onboarding" for tag in (item.tags or [])) for item in existing):
         return
 
-    package_path = Path(__file__).resolve().parents[2] / "strategy_store" / "GoldStepByStep.qys"
+    package_path = _onboarding_package_path()
     if not package_path.exists():
         return
 
@@ -168,6 +220,7 @@ def _ensure_onboarding_strategy():
         strategy = Strategy(
             id=strategy_id,
             name="Gold Step-By-Step",
+            title="Gold Step-By-Step",
             symbol="XAUUSD",
             status="running",
             description="Default onboarding strategy for the guided first backtest.",
@@ -180,6 +233,7 @@ def _ensure_onboarding_strategy():
             trades=0,
             owner_id=None,
             is_public=True,
+            is_featured=False,
             is_verified=True,
             review_status="approved",
             display_metrics={
@@ -196,7 +250,9 @@ def _ensure_onboarding_strategy():
     else:
         strategy.tags = list({*(strategy.tags or []), "onboarding", "gold", "guided"})
         strategy.owner_id = None
+        strategy.title = strategy.title or "Gold Step-By-Step"
         strategy.is_public = True
+        strategy.is_featured = False
         strategy.is_verified = True
         strategy.review_status = "approved"
         strategy.display_metrics = strategy.display_metrics or {
@@ -205,6 +261,9 @@ def _ensure_onboarding_strategy():
             "sharpeRatio": 0,
             "winRate": 0,
         }
+        strategy.storage_key = f"strategy_store/{package_path.name}"
+        strategy.last_update = now_ms()
+        strategy.updated_at = now_ms()
 
     file_record = db.session.get(File, file_id)
     if file_record is None:

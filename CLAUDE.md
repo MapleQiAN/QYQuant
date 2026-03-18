@@ -5,7 +5,7 @@ This project is indexed by GitNexus as **QYQuant** (1785 symbols, 3822 relations
 
 ## Always Start Here
 
-1. **Read `gitnexus://repo/{name}/context`** — codebase overview + check index freshness
+1. **Read `gitnexus://repo/{name}/context`** - codebase overview + check index freshness
 2. **Match your task to a skill below** and **read that skill file**
 3. **Follow the skill's workflow and checklist**
 

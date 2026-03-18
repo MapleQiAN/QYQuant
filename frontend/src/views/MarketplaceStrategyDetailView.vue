@@ -6,13 +6,13 @@
           <div class="eyebrow">Marketplace strategy</div>
           <div class="headline-row">
             <h1 class="page-title">{{ strategy?.title || 'Strategy detail' }}</h1>
-            <VerifiedBadge v-if="strategy?.is_verified" />
+            <VerifiedBadge v-if="strategy?.isVerified" />
           </div>
           <p v-if="strategy?.description" class="page-subtitle">{{ strategy.description }}</p>
         </div>
 
         <div class="cta-block">
-          <div v-if="strategy?.already_imported" class="import-state" data-test="imported-state">
+          <div v-if="strategy?.alreadyImported" class="import-state" data-test="imported-state">
             Already in strategy library
           </div>
           <button
@@ -34,8 +34,8 @@
         <div class="meta-strip">
           <div class="author-chip">
             <img
-              v-if="strategy.author.avatar_url"
-              :src="strategy.author.avatar_url"
+              v-if="strategy.author.avatarUrl"
+              :src="strategy.author.avatarUrl"
               alt=""
               class="author-avatar"
             />
@@ -51,7 +51,7 @@
           </div>
           <div class="meta-chip">
             <div class="meta-label">Published</div>
-            <div class="meta-value">{{ strategy.created_at || 'Unknown' }}</div>
+            <div class="meta-value">{{ strategy.createdAt || 'Unknown' }}</div>
           </div>
         </div>
 
@@ -124,7 +124,7 @@ const loading = computed(() => marketplaceStore.loading || marketplaceStore.curv
 const error = computed(() => marketplaceStore.error)
 
 const ctaLabel = computed(() => {
-  if (strategy.value?.already_imported) {
+  if (strategy.value?.alreadyImported) {
     return 'Open imported strategy'
   }
   return 'Free backtest trial'
@@ -148,7 +148,7 @@ const chartPoints = computed(() => {
 })
 
 const metricEntries = computed(() => {
-  const metrics = strategy.value?.display_metrics || {}
+  const metrics = strategy.value?.displayMetrics || {}
   const preferred = [
     ['totalReturn', 'Total return'],
     ['maxDrawdown', 'Max drawdown'],
@@ -183,10 +183,10 @@ const metricEntries = computed(() => {
 async function handleCta() {
   if (!strategy.value) return
 
-  if (strategy.value.already_imported && strategy.value.imported_strategy_id) {
+  if (strategy.value.alreadyImported && strategy.value.importedStrategyId) {
     await router.push({
       name: 'strategy-parameters',
-      params: { strategyId: strategy.value.imported_strategy_id },
+      params: { strategyId: strategy.value.importedStrategyId },
     })
     return
   }

@@ -89,7 +89,32 @@ export interface StrategyRuntimeDescriptor {
 
 export interface MarketplaceStrategyAuthor {
   nickname: string
-  avatar_url: string
+  avatarUrl: string
+}
+
+export type MarketplaceDisplayMetrics = Record<string, number | string | boolean | null>
+
+export interface MarketplaceStrategy {
+  id: string
+  title: string
+  name: string
+  description?: string | null
+  category?: string | null
+  tags: string[]
+  isVerified: boolean
+  displayMetrics: MarketplaceDisplayMetrics
+  author: MarketplaceStrategyAuthor
+}
+
+export interface MarketplaceMeta {
+  total: number
+  page: number
+  pageSize: number
+}
+
+export interface MarketplaceStrategyListResult {
+  data: MarketplaceStrategy[]
+  meta: MarketplaceMeta
 }
 
 export interface MarketplaceStrategyDetail {
@@ -98,13 +123,13 @@ export interface MarketplaceStrategyDetail {
   description?: string | null
   category?: string | null
   tags: string[]
-  display_metrics: Record<string, string | number | boolean | null>
-  is_verified: boolean
-  created_at?: string | null
+  displayMetrics: MarketplaceDisplayMetrics
+  isVerified: boolean
+  createdAt?: string | null
   author: MarketplaceStrategyAuthor
-  already_imported: boolean
-  imported_strategy_id?: string | null
-  has_equity_curve?: boolean
+  alreadyImported: boolean
+  importedStrategyId?: string | null
+  hasEquityCurve?: boolean
 }
 
 export interface MarketplaceStrategyEquityCurve {

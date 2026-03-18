@@ -269,7 +269,7 @@ async function handleGuidedSelect(strategyId: string) {
 
 async function handleGuidedPreview(strategyId: string) {
   await router.push({
-    name: 'strategy-detail',
+    name: 'marketplace-strategy-detail',
     params: { strategyId },
   })
 }

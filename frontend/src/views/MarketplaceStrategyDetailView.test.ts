@@ -57,20 +57,20 @@ describe('MarketplaceStrategyDetailView', () => {
       description: 'Trend-following breakout strategy for gold.',
       category: 'trend-following',
       tags: ['gold', 'breakout'],
-      display_metrics: {
+      displayMetrics: {
         totalReturn: 18.6,
         maxDrawdown: -6.2,
         sharpeRatio: 1.54,
         winRate: 62,
       },
-      is_verified: true,
-      created_at: '2026-03-18T12:00:00+08:00',
+      isVerified: true,
+      createdAt: '2026-03-18T12:00:00+08:00',
       author: {
         nickname: 'QuantAlice',
-        avatar_url: 'https://example.com/avatar.png',
+        avatarUrl: 'https://example.com/avatar.png',
       },
-      already_imported: false,
-      imported_strategy_id: null,
+      alreadyImported: false,
+      importedStrategyId: null,
     })
 
     const wrapper = mount(MarketplaceStrategyDetailView, {
@@ -102,17 +102,17 @@ describe('MarketplaceStrategyDetailView', () => {
       description: 'Trend-following breakout strategy for gold.',
       category: 'trend-following',
       tags: ['gold'],
-      display_metrics: {
+      displayMetrics: {
         totalReturn: 18.6,
       },
-      is_verified: false,
-      created_at: '2026-03-18T12:00:00+08:00',
+      isVerified: false,
+      createdAt: '2026-03-18T12:00:00+08:00',
       author: {
         nickname: 'QuantAlice',
-        avatar_url: 'https://example.com/avatar.png',
+        avatarUrl: 'https://example.com/avatar.png',
       },
-      already_imported: true,
-      imported_strategy_id: 'imported-1',
+      alreadyImported: true,
+      importedStrategyId: 'imported-1',
     })
 
     const wrapper = mount(MarketplaceStrategyDetailView, {
