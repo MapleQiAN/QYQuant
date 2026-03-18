@@ -1,17 +1,22 @@
 import { beforeEach, describe, it, expect, vi } from 'vitest'
 import * as strategies from './strategies'
 
-const { requestMock } = vi.hoisted(() => ({
-  requestMock: vi.fn().mockResolvedValue({ ok: true })
+const { requestMock, requestWithMetaMock } = vi.hoisted(() => ({
+  requestMock: vi.fn().mockResolvedValue({ ok: true }),
+  requestWithMetaMock: vi.fn().mockResolvedValue({
+    data: [],
+    meta: { total: 0, page: 1, page_size: 20 }
+  })
 }))
 
 vi.mock('./http', () => ({
-  createHttpClient: () => ({ request: requestMock }),
+  createHttpClient: () => ({ request: requestMock, requestWithMeta: requestWithMetaMock }),
 }))
 
 describe('strategies api', () => {
   beforeEach(() => {
     requestMock.mockClear()
+    requestWithMetaMock.mockClear()
   })
 
   it('calls strategy library endpoint', async () => {
@@ -94,6 +99,56 @@ describe('strategies api', () => {
       method: 'delete',
       url: '/v1/strategies/strategy-id/presets/preset-id'
     })
+  })
+
+  it('normalizes marketplace envelope and field names', async () => {
+    requestWithMetaMock.mockResolvedValueOnce({
+      data: [
+        {
+          id: 'market-1',
+          title: 'Gold Prime',
+          name: 'gold-prime',
+          description: 'desc',
+          category: 'momentum',
+          tags: ['gold'],
+          is_verified: true,
+          display_metrics: {
+            annualized_return: 18.2,
+            max_drawdown: -7.3,
+            sharpe_ratio: 1.44
+          },
+          author: {
+            nickname: 'Market Author',
+            avatar_url: 'https://example.com/a.png'
+          }
+        }
+      ],
+      meta: {
+        total: 24,
+        page: 2,
+        page_size: 20
+      }
+    })
+
+    const result = await strategies.fetchMarketplaceStrategies({ page: 2, pageSize: 20 })
+
+    expect(requestWithMetaMock).toHaveBeenCalledWith({
+      method: 'get',
+      url: '/v1/marketplace/strategies',
+      params: {
+        page: 2,
+        page_size: 20,
+        featured: undefined
+      }
+    })
+    expect(result.meta.pageSize).toBe(20)
+    expect(result.data[0].isVerified).toBe(true)
+    expect(result.data[0].displayMetrics).toEqual({
+      annualized_return: 18.2,
+      max_drawdown: -7.3,
+      sharpe_ratio: 1.44
+    })
+    expect(result.data[0].author.avatarUrl).toBe('https://example.com/a.png')
   })
 })
 

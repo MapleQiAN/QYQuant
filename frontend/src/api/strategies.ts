@@ -5,7 +5,10 @@ import type {
   StrategyPreset,
   StrategyImportResult,
   StrategyListResult,
-  StrategyRuntimeDescriptor
+  StrategyRuntimeDescriptor,
+  MarketplaceMeta,
+  MarketplaceStrategy,
+  MarketplaceStrategyListResult
 } from '../types/Strategy'
 
 const client = createHttpClient()
@@ -34,12 +37,97 @@ export function fetchStrategies(params?: {
   })
 }
 
-export function fetchMarketplaceStrategies(params?: { tag?: string }): Promise<Strategy[]> {
-  return client.request({
+interface MarketplaceStrategyDto {
+  id: string
+  title?: string | null
+  name: string
+  description?: string | null
+  category?: string | null
+  tags?: string[]
+  is_verified?: boolean
+  display_metrics?: Record<string, number | string | null>
+  author?: {
+    nickname?: string
+    avatar_url?: string
+  }
+}
+
+interface MarketplaceParams {
+  page?: number
+  pageSize?: number
+  featured?: boolean
+}
+
+export function fetchMarketplaceStrategies(params: { tag: string }): Promise<Strategy[]>
+export function fetchMarketplaceStrategies(params?: MarketplaceParams): Promise<MarketplaceStrategyListResult>
+export async function fetchMarketplaceStrategies(
+  params?: { tag: string } | MarketplaceParams
+): Promise<Strategy[] | MarketplaceStrategyListResult> {
+  if (params && 'tag' in params) {
+    return client.request({
+      method: 'get',
+      url: '/v1/marketplace/strategies',
+      params
+    })
+  }
+
+  const page = params?.page ?? 1
+  const pageSize = params?.pageSize ?? 20
+  const response = await client.requestWithMeta<MarketplaceStrategyDto[]>({
     method: 'get',
     url: '/v1/marketplace/strategies',
-    params,
+    params: {
+      page,
+      page_size: pageSize,
+      featured: params?.featured
+    }
   })
+
+  return {
+    data: (response.data ?? []).map((item) => mapMarketplaceStrategy(item)),
+    meta: normalizeMarketplaceMeta(response.meta, page, pageSize)
+  }
+}
+
+function normalizeMarketplaceMeta(
+  meta: Record<string, unknown> | undefined,
+  fallbackPage: number,
+  fallbackPageSize: number
+): MarketplaceMeta {
+  const total = toNumber(meta?.total, 0)
+  const page = toNumber(meta?.page, fallbackPage)
+  const pageSize = toNumber(meta?.page_size ?? meta?.pageSize, fallbackPageSize)
+  return { total, page, pageSize }
+}
+
+function toNumber(value: unknown, fallback: number): number {
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return value
+  }
+  if (typeof value === 'string') {
+    const parsed = Number(value)
+    if (Number.isFinite(parsed)) {
+      return parsed
+    }
+  }
+  return fallback
+}
+
+function mapMarketplaceStrategy(item: MarketplaceStrategyDto): MarketplaceStrategy {
+  return {
+    id: item.id,
+    title: item.title || item.name,
+    name: item.name,
+    description: item.description ?? '',
+    category: item.category ?? '',
+    tags: Array.isArray(item.tags) ? item.tags : [],
+    isVerified: Boolean(item.is_verified),
+    displayMetrics: item.display_metrics && typeof item.display_metrics === 'object' ? item.display_metrics : {},
+    author: {
+      nickname: item.author?.nickname ?? '',
+      avatarUrl: item.author?.avatar_url ?? ''
+    }
+  }
 }
 
 export function createStrategy(payload: {
