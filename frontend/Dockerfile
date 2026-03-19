@@ -1,6 +1,6 @@
 # 多阶段构建：前端 Vue 应用
 # 阶段1：构建阶段
-FROM node:20-alpine as builder
+FROM node:20-alpine AS builder
 
 # 设置工作目录
 WORKDIR /app
@@ -15,7 +15,7 @@ RUN npm ci
 COPY . .
 
 # 构建应用
-RUN npm run build
+RUN npm run build:docker
 
 # 阶段2：生产阶段（使用 nginx 提供静态文件）
 FROM nginx:alpine
