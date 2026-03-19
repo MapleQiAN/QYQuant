@@ -15,7 +15,11 @@
       "Bash(git log:*)",
       "Bash(cd:*)",
       "Bash(uv sync:*)",
-      "Bash(ls:*)"
+      "Bash(ls:*)",
+      "Bash(python -m pytest tests/test_sandbox_service.py tests/test_marketplace.py tests/test_strategies.py -x -q)",
+      "Bash(python -m pytest tests/test_sandbox_service.py tests/test_marketplace.py tests/test_strategies.py -q)",
+      "Bash(python -m pytest tests/test_marketplace.py tests/test_strategies.py -q)",
+      "Bash(npx vitest:*)"
     ]
   }
 }

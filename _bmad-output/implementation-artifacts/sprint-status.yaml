@@ -70,7 +70,7 @@ development_status:
   epic-3: in-progress
   3-1-celery-redis任务队列基础设施: ready-for-dev
   3-2-历史行情数据缓存层: done
-  3-3-e2b沙箱集成与策略安全执行: review
+  3-3-e2b沙箱集成与策略安全执行: done
   3-4-回测任务提交与额度管理: ready-for-dev
   3-5-回测报告展示-equity-curve-11项指标: ready-for-dev
   3-6-智能错误提示与依赖库清单: ready-for-dev
@@ -92,9 +92,9 @@ development_status:
   # Epic 5: 策略广场与发现
   # ─────────────────────────────────────────────────────────────
   epic-5: in-progress
-  5-1-策略广场列表与精选推荐位: ready-for-dev
-  5-2-策略详情页: ready-for-dev
-  5-3-一键导入策略库并发起回测试用: ready-for-dev
+  5-1-策略广场列表与精选推荐位: done
+  5-2-策略详情页: done
+  5-3-一键导入策略库并发起回测试用: done
   5-4-策略发布-免费分享模式: ready-for-dev
   5-5-策略搜索与条件筛选: ready-for-dev
   epic-5-retrospective: optional
@@ -112,8 +112,8 @@ development_status:
   # ─────────────────────────────────────────────────────────────
   # Epic 7: 模拟托管
   # ─────────────────────────────────────────────────────────────
-  epic-7: backlog
-  7-1-创建模拟托管机器人与免责提示: backlog
+  epic-7: in-progress
+  7-1-创建模拟托管机器人与免责提示: ready-for-dev
   7-2-celery-beat定时执行模拟策略: backlog
   7-3-查看机器人运行状态与持仓: backlog
   7-4-查看模拟收益曲线与买卖信号-sse实时推送: backlog
