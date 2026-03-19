@@ -1,0 +1,140 @@
+<h2>Stories 5.4 + 5.5 UI Draft</h2>
+<p class="subtitle">Left: publish entry in strategy library with 3-step drawer. Right: marketplace search and filter states.</p>
+
+<div class="split">
+  <div class="mockup">
+    <div class="mockup-header">Strategy Library / Publish Flow</div>
+    <div class="mockup-body">
+      <div class="section">
+        <div class="label">Library Row</div>
+        <div style="border:1px solid #d7dde5;border-radius:14px;padding:16px;background:#fff;">
+          <div style="display:flex;justify-content:space-between;gap:16px;align-items:flex-start;">
+            <div style="flex:1;">
+              <div style="font-weight:700;">均线趋势增强版</div>
+              <div style="font-size:13px;color:#64748b;margin-top:6px;">trend-following · upload · 2026/03/19</div>
+              <div style="margin-top:10px;color:#334155;font-size:14px;">带仓位控制和止损规则的趋势跟踪策略。</div>
+              <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;">
+                <span style="padding:4px 10px;border-radius:999px;background:#f8fafc;border:1px solid #e2e8f0;font-size:12px;">趋势</span>
+                <span style="padding:4px 10px;border-radius:999px;background:#f8fafc;border:1px solid #e2e8f0;font-size:12px;">沪深300</span>
+                <span style="padding:4px 10px;border-radius:999px;background:#fff8cc;border:1px solid #d4c400;font-size:12px;">待审核</span>
+              </div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:8px;min-width:140px;">
+              <button class="mock-button" style="background:#f5e642;color:#1a1a1a;">发布到策略广场</button>
+              <button class="mock-button" style="background:#f8fafc;color:#334155;border:1px solid #d7dde5;">删除</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="label">Drawer Step 1</div>
+        <div style="border:1px solid #d7dde5;border-radius:18px;padding:18px;background:linear-gradient(180deg,#ffffff,#f8fafc);">
+          <div style="font-weight:700;">发布策略</div>
+          <div style="font-size:13px;color:#64748b;margin-top:4px;">1. 填写展示信息  2. 代码保护说明  3. 提交完成</div>
+          <div style="margin-top:14px;display:grid;gap:10px;">
+            <input class="mock-input" value="均线趋势增强版" />
+            <div class="mock-content" style="min-height:76px;">Markdown 描述：说明策略思路、适用市场、风险提示。</div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;">
+              <span style="padding:5px 10px;border-radius:999px;background:#111827;color:#fff;font-size:12px;">趋势</span>
+              <span style="padding:5px 10px;border-radius:999px;background:#111827;color:#fff;font-size:12px;">中频</span>
+              <span style="padding:5px 10px;border-radius:999px;background:#111827;color:#fff;font-size:12px;">风控</span>
+            </div>
+            <div class="mock-input">分类：trend-following</div>
+            <div style="border:1px dashed #d7dde5;border-radius:14px;padding:12px;">
+              <div style="font-size:13px;color:#64748b;">展示指标</div>
+              <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:8px;">
+                <div style="padding:10px;border-radius:12px;background:#fff8cc;">Sharpe 1.45</div>
+                <div style="padding:10px;border-radius:12px;background:#fff8cc;">Max DD -15.2%</div>
+                <div style="padding:10px;border-radius:12px;background:#fff8cc;">Total Return 45.6%</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="label">Drawer Step 2 / 3</div>
+        <div style="display:grid;gap:10px;">
+          <div style="border:1px solid #d7dde5;border-radius:16px;padding:14px;background:#fff;">
+            <div style="font-weight:700;">代码保护机制说明</div>
+            <div style="margin-top:8px;color:#475569;font-size:14px;">策略代码以加密形式存储，仅在沙箱环境执行。其他用户只能获得运行权限，无法查看、下载或导出源码。</div>
+            <div style="margin-top:10px;padding:10px;border-radius:12px;background:#f8fafc;">☑ 我已确认知识产权协议与分享规则</div>
+          </div>
+          <div style="border:1px solid #cce5d0;border-radius:16px;padding:14px;background:#f1fbf3;">
+            <div style="font-weight:700;color:#166534;">策略已提交审核</div>
+            <div style="margin-top:8px;color:#166534;font-size:14px;">审核状态已更新为 pending，并已生成站内通知。</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="mockup">
+    <div class="mockup-header">Marketplace / Search & Filter</div>
+    <div class="mockup-body">
+      <div class="section">
+        <div class="label">Search</div>
+        <div style="display:flex;align-items:center;gap:10px;border:1px solid #e5e5e5;border-radius:999px;padding:12px 16px;background:#fff;">
+          <span style="color:#94a3b8;">⌕</span>
+          <span style="color:#0f172a;">均线</span>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="label">Filter Chips</div>
+        <div style="display:flex;flex-wrap:wrap;gap:10px;">
+          <div style="padding:8px 14px;border-radius:9999px;background:#fff;border:1px solid #e5e5e5;color:#64748b;">全部</div>
+          <div style="padding:8px 14px;border-radius:9999px;background:#f5e642;border:1px solid #d4c400;color:#1a1a1a;">趋势跟踪</div>
+          <div style="padding:8px 14px;border-radius:9999px;background:#fff;border:1px solid #e5e5e5;color:#64748b;">均值回归</div>
+          <div style="padding:8px 14px;border-radius:9999px;background:#fff;border:1px solid #e5e5e5;color:#64748b;">动量策略</div>
+          <div style="padding:8px 14px;border-radius:9999px;background:#f5e642;border:1px solid #d4c400;color:#1a1a1a;">回撤&lt;10%</div>
+          <div style="padding:8px 14px;border-radius:9999px;background:#fff;border:1px solid #e5e5e5;color:#64748b;">年化&gt;20%</div>
+          <div style="padding:8px 14px;border-radius:9999px;background:#fff;border:1px solid #e5e5e5;color:#64748b;">☑ 平台验证</div>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="label">Result State</div>
+        <div style="display:grid;gap:10px;">
+          <div style="border:1px solid #e2e8f0;border-radius:14px;padding:14px;background:#fff;">
+            <div style="display:flex;justify-content:space-between;gap:10px;">
+              <div>
+                <div style="font-weight:700;">双均线趋势策略</div>
+                <div style="font-size:13px;color:#64748b;margin-top:6px;">趋势跟踪 · 已验证</div>
+              </div>
+              <div style="font-size:13px;color:#64748b;">Sharpe 1.62</div>
+            </div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;">
+              <span style="padding:4px 10px;border-radius:999px;background:#f8fafc;border:1px solid #e2e8f0;font-size:12px;">均线</span>
+              <span style="padding:4px 10px;border-radius:999px;background:#f8fafc;border:1px solid #e2e8f0;font-size:12px;">趋势</span>
+            </div>
+          </div>
+          <div style="border:1px solid #e2e8f0;border-radius:14px;padding:14px;background:#fff;">
+            <div style="display:flex;justify-content:space-between;gap:10px;">
+              <div>
+                <div style="font-weight:700;">沪深300 趋势轮动</div>
+                <div style="font-size:13px;color:#64748b;margin-top:6px;">趋势跟踪 · 社区分享</div>
+              </div>
+              <div style="font-size:13px;color:#64748b;">Max DD -8.4%</div>
+            </div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;">
+              <span style="padding:4px 10px;border-radius:999px;background:#f8fafc;border:1px solid #e2e8f0;font-size:12px;">A股</span>
+              <span style="padding:4px 10px;border-radius:999px;background:#f8fafc;border:1px solid #e2e8f0;font-size:12px;">中频</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="label">Empty State</div>
+        <div style="border:1px dashed #d7dde5;border-radius:16px;padding:18px;text-align:center;color:#64748b;background:#f8fafc;">
+          未找到符合“均线 + 回撤&lt;10%”的策略
+          <div style="margin-top:10px;">
+            <button class="mock-button" style="background:#fff;color:#334155;border:1px solid #d7dde5;">清除筛选</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
