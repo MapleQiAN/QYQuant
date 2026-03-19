@@ -16,14 +16,33 @@
             Already in strategy library
           </div>
           <button
+            v-if="!strategy?.alreadyImported"
             class="btn btn-primary detail-cta"
             data-test="detail-cta"
             type="button"
-            :disabled="loading"
-            @click="handleCta"
+            :disabled="busy"
+            @click="handleImport"
           >
             {{ ctaLabel }}
           </button>
+          <template v-else>
+            <button
+              class="btn btn-secondary detail-cta imported-cta"
+              data-test="detail-cta"
+              type="button"
+              disabled
+            >
+              Already in strategy library
+            </button>
+            <button
+              class="btn btn-link direct-backtest-link"
+              data-test="direct-backtest-link"
+              type="button"
+              @click="goToBacktestConfiguration"
+            >
+              Direct backtest
+            </button>
+          </template>
         </div>
       </div>
 
@@ -97,11 +116,13 @@ import { useRoute, useRouter } from 'vue-router'
 import EquityCurveChart from '../components/backtest/EquityCurveChart.vue'
 import VerifiedBadge from '../components/strategy/VerifiedBadge.vue'
 import { useMarketplaceStore } from '../stores'
+import { useUserStore } from '../stores/user'
 
 const route = useRoute()
 const router = useRouter()
 const marketplaceStore = useMarketplaceStore()
-const strategyId = computed(() => String(route.params.strategyId || ''))
+const userStore = useUserStore()
+const strategyId = computed(() => String(route.params.strategyId || route.query.strategy_id || ''))
 
 onMounted(async () => {
   if (!strategyId.value) return
@@ -113,6 +134,13 @@ onMounted(async () => {
   } catch {
     // Store error state is rendered by the view.
   }
+  if (!marketplaceStore.error && userStore.profile.id) {
+    try {
+      await marketplaceStore.checkImportStatus(strategyId.value)
+    } catch {
+      // Import status check failure is non-critical.
+    }
+  }
 })
 
 onBeforeUnmount(() => {
@@ -121,11 +149,12 @@ onBeforeUnmount(() => {
 
 const strategy = computed(() => marketplaceStore.currentStrategy)
 const loading = computed(() => marketplaceStore.loading || marketplaceStore.curveLoading)
+const busy = computed(() => loading.value || marketplaceStore.importLoading || marketplaceStore.importStatusLoading)
 const error = computed(() => marketplaceStore.error)
 
 const ctaLabel = computed(() => {
-  if (strategy.value?.alreadyImported) {
-    return 'Open imported strategy'
+  if (marketplaceStore.importLoading) {
+    return 'Importing...'
   }
   return 'Free backtest trial'
 })
@@ -180,21 +209,15 @@ const metricEntries = computed(() => {
   return entries
 })
 
-async function handleCta() {
+async function handleImport() {
   if (!strategy.value) return
+  const result = await marketplaceStore.importStrategy(strategy.value.id)
+  await router.push(result.redirectTo || buildBacktestConfigurePath(result.strategyId))
+}
 
-  if (strategy.value.alreadyImported && strategy.value.importedStrategyId) {
-    await router.push({
-      name: 'strategy-parameters',
-      params: { strategyId: strategy.value.importedStrategyId },
-    })
-    return
-  }
-
-  await router.push({
-    name: 'strategy-library',
-    query: { marketplaceStrategyId: strategy.value.id },
-  })
+async function goToBacktestConfiguration() {
+  if (!strategy.value?.importedStrategyId) return
+  await router.push(buildBacktestConfigurePath(strategy.value.importedStrategyId))
 }
 
 function humanizeMetricKey(key: string) {
@@ -215,6 +238,10 @@ function formatMetricValue(key: string, value: string | number | boolean | null)
     return Number.isInteger(value) ? String(value) : value.toFixed(2)
   }
   return String(value)
+}
+
+function buildBacktestConfigurePath(importedStrategyId: string) {
+  return `/backtest/configure?strategy_id=${encodeURIComponent(importedStrategyId)}`
 }
 </script>
 
@@ -274,6 +301,11 @@ function formatMetricValue(key: string, value: string | number | boolean | null)
   min-width: 220px;
 }
 
+.imported-cta {
+  background: #d4d4d8;
+  color: #3f3f46;
+}
+
 .import-state {
   padding: 8px 12px;
   border-radius: 999px;
@@ -281,6 +313,13 @@ function formatMetricValue(key: string, value: string | number | boolean | null)
   color: #0f766e;
   font-size: var(--font-size-sm);
   font-weight: var(--font-weight-semibold);
+}
+
+.direct-backtest-link {
+  padding: 0;
+  min-width: auto;
+  color: #0f172a;
+  text-decoration: underline;
 }
 
 .feedback {

@@ -18,6 +18,7 @@ const router = createRouter({
     { path: '/strategies', name: 'strategy-library', component: StrategyLibraryView },
     { path: '/strategies/new', name: 'strategy-new', component: NewStrategyView },
     { path: '/strategies/:strategyId/parameters', name: 'strategy-parameters', component: StrategyDetailView },
+    { path: '/backtest/configure', name: 'backtest-configure', component: StrategyDetailView },
     { path: '/marketplace', name: 'marketplace', component: MarketplaceView },
     { path: '/marketplace/strategies/:strategyId', name: 'marketplace-strategy-detail', component: MarketplaceStrategyDetailView },
     { path: '/backtests', name: 'backtests', component: BacktestsView },

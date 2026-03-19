@@ -103,7 +103,7 @@ import type { StrategyParameterDefinition } from '../types/Strategy'
 const route = useRoute()
 const router = useRouter()
 const userStore = useUserStore()
-const strategyId = String(route.params.strategyId || '')
+const strategyId = String(route.params.strategyId || route.query.strategy_id || '')
 const isGuidedMode = route.query.guided === 'true'
 const presetsStore = usePresetsStore()
 

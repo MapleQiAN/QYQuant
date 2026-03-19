@@ -2,12 +2,16 @@ import { defineStore } from 'pinia'
 import {
   fetchMarketplaceStrategies,
   fetchMarketplaceStrategyDetail,
-  fetchMarketplaceStrategyEquityCurve
+  fetchMarketplaceStrategyEquityCurve,
+  fetchMarketplaceStrategyImportStatus,
+  importMarketplaceStrategy
 } from '../api/strategies'
 import type {
   MarketplaceStrategy,
   MarketplaceStrategyDetail,
-  MarketplaceStrategyEquityCurve
+  MarketplaceStrategyEquityCurve,
+  MarketplaceStrategyImportResult,
+  MarketplaceStrategyImportStatus
 } from '../types/Strategy'
 
 const DEFAULT_PAGE_SIZE = 20
@@ -27,7 +31,10 @@ export const useMarketplaceStore = defineStore('marketplace', {
     loading: false,
     featuredLoading: false,
     curveLoading: false,
+    importLoading: false,
+    importStatusLoading: false,
     featuredError: null as string | null,
+    curveError: null as string | null,
     error: null as string | null,
     total: 0,
     page: 1,
@@ -76,14 +83,55 @@ export const useMarketplaceStore = defineStore('marketplace', {
     },
     async fetchEquityCurve(strategyId: string) {
       this.curveLoading = true
-      this.error = null
+      this.curveError = null
       try {
         this.equityCurve = await fetchMarketplaceStrategyEquityCurve(strategyId)
       } catch (error: any) {
-        this.error = error?.message || 'Failed to load equity curve'
-        throw error
+        this.curveError = error?.message || 'Failed to load equity curve'
       } finally {
         this.curveLoading = false
+      }
+    },
+    async checkImportStatus(strategyId: string): Promise<MarketplaceStrategyImportStatus> {
+      this.importStatusLoading = true
+      try {
+        const result = await fetchMarketplaceStrategyImportStatus(strategyId)
+        if (this.currentStrategy?.id === strategyId) {
+          this.currentStrategy = {
+            ...this.currentStrategy,
+            alreadyImported: result.imported,
+            importedStrategyId: result.userStrategyId
+          }
+        }
+        return result
+      } catch (error: any) {
+        if (error?.status === 401) {
+          return { imported: false, userStrategyId: null }
+        }
+        this.error = error?.message || 'Failed to check marketplace import status'
+        throw error
+      } finally {
+        this.importStatusLoading = false
+      }
+    },
+    async importStrategy(strategyId: string): Promise<MarketplaceStrategyImportResult> {
+      this.importLoading = true
+      this.error = null
+      try {
+        const result = await importMarketplaceStrategy(strategyId)
+        if (this.currentStrategy?.id === strategyId) {
+          this.currentStrategy = {
+            ...this.currentStrategy,
+            alreadyImported: true,
+            importedStrategyId: result.strategyId
+          }
+        }
+        return result
+      } catch (error: any) {
+        this.error = error?.message || 'Failed to import marketplace strategy'
+        throw error
+      } finally {
+        this.importLoading = false
       }
     },
     reset() {
@@ -92,7 +140,10 @@ export const useMarketplaceStore = defineStore('marketplace', {
       this.loading = false
       this.featuredLoading = false
       this.curveLoading = false
+      this.importLoading = false
+      this.importStatusLoading = false
       this.featuredError = null
+      this.curveError = null
       this.error = null
     }
   }

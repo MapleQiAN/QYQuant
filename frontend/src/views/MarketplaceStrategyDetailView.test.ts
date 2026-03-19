@@ -3,15 +3,20 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { flushPromises, mount } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import MarketplaceStrategyDetailView from './MarketplaceStrategyDetailView.vue'
+import { useUserStore } from '../stores/user'
 
 const {
   pushMock,
   fetchMarketplaceStrategyDetailMock,
   fetchMarketplaceStrategyEquityCurveMock,
+  fetchMarketplaceStrategyImportStatusMock,
+  importMarketplaceStrategyMock,
 } = vi.hoisted(() => ({
   pushMock: vi.fn(),
   fetchMarketplaceStrategyDetailMock: vi.fn(),
   fetchMarketplaceStrategyEquityCurveMock: vi.fn(),
+  fetchMarketplaceStrategyImportStatusMock: vi.fn(),
+  importMarketplaceStrategyMock: vi.fn(),
 }))
 
 vi.mock('vue-router', () => ({
@@ -29,6 +34,8 @@ vi.mock('vue-router', () => ({
 vi.mock('../api/strategies', () => ({
   fetchMarketplaceStrategyDetail: fetchMarketplaceStrategyDetailMock,
   fetchMarketplaceStrategyEquityCurve: fetchMarketplaceStrategyEquityCurveMock,
+  fetchMarketplaceStrategyImportStatus: fetchMarketplaceStrategyImportStatusMock,
+  importMarketplaceStrategy: importMarketplaceStrategyMock,
 }))
 
 vi.mock('../components/backtest/EquityCurveChart.vue', () => ({
@@ -40,17 +47,26 @@ vi.mock('../components/backtest/EquityCurveChart.vue', () => ({
 
 describe('MarketplaceStrategyDetailView', () => {
   beforeEach(() => {
-    setActivePinia(createPinia())
+    const pinia = createPinia()
+    setActivePinia(pinia)
+    const userStore = useUserStore(pinia)
+    userStore.profile.id = 'test-user-id'
     pushMock.mockReset()
     fetchMarketplaceStrategyDetailMock.mockReset()
     fetchMarketplaceStrategyEquityCurveMock.mockReset()
+    fetchMarketplaceStrategyImportStatusMock.mockReset()
+    importMarketplaceStrategyMock.mockReset()
     fetchMarketplaceStrategyEquityCurveMock.mockResolvedValue({
       dates: [1700000000000, 1700086400000],
       values: [100000, 101250.5],
     })
+    fetchMarketplaceStrategyImportStatusMock.mockResolvedValue({
+      imported: false,
+      userStrategyId: null,
+    })
   })
 
-  it('renders marketplace strategy detail and routes trial CTA to import flow', async () => {
+  it('renders marketplace strategy detail and imports on trial CTA click', async () => {
     fetchMarketplaceStrategyDetailMock.mockResolvedValue({
       id: 'strategy-1',
       title: 'Golden Breakout',
@@ -72,6 +88,10 @@ describe('MarketplaceStrategyDetailView', () => {
       alreadyImported: false,
       importedStrategyId: null,
     })
+    importMarketplaceStrategyMock.mockResolvedValue({
+      strategyId: 'imported-1',
+      redirectTo: '/backtest/configure?strategy_id=imported-1',
+    })
 
     const wrapper = mount(MarketplaceStrategyDetailView, {
       global: {
@@ -82,17 +102,17 @@ describe('MarketplaceStrategyDetailView', () => {
 
     expect(fetchMarketplaceStrategyDetailMock).toHaveBeenCalledWith('strategy-1')
     expect(fetchMarketplaceStrategyEquityCurveMock).toHaveBeenCalledWith('strategy-1')
+    expect(fetchMarketplaceStrategyImportStatusMock).toHaveBeenCalledWith('strategy-1')
     expect(wrapper.text()).toContain('Golden Breakout')
     expect(wrapper.text()).toContain('QuantAlice')
     expect(wrapper.text()).toContain('18.6')
     expect(wrapper.get('[data-test="equity-chart"]').text()).toBe('2')
 
     await wrapper.get('[data-test="detail-cta"]').trigger('click')
+    await flushPromises()
 
-    expect(pushMock).toHaveBeenCalledWith({
-      name: 'strategy-library',
-      query: { marketplaceStrategyId: 'strategy-1' },
-    })
+    expect(importMarketplaceStrategyMock).toHaveBeenCalledWith('strategy-1')
+    expect(pushMock).toHaveBeenCalledWith('/backtest/configure?strategy_id=imported-1')
   })
 
   it('shows imported state and routes to the imported strategy configuration', async () => {
@@ -114,6 +134,10 @@ describe('MarketplaceStrategyDetailView', () => {
       alreadyImported: true,
       importedStrategyId: 'imported-1',
     })
+    fetchMarketplaceStrategyImportStatusMock.mockResolvedValue({
+      imported: true,
+      userStrategyId: 'imported-1',
+    })
 
     const wrapper = mount(MarketplaceStrategyDetailView, {
       global: {
@@ -123,12 +147,11 @@ describe('MarketplaceStrategyDetailView', () => {
     await flushPromises()
 
     expect(wrapper.text()).toContain('Already in strategy library')
+    expect(wrapper.find('[data-test="direct-backtest-link"]').exists()).toBe(true)
 
-    await wrapper.get('[data-test="detail-cta"]').trigger('click')
+    await wrapper.get('[data-test="direct-backtest-link"]').trigger('click')
+    await flushPromises()
 
-    expect(pushMock).toHaveBeenCalledWith({
-      name: 'strategy-parameters',
-      params: { strategyId: 'imported-1' },
-    })
+    expect(pushMock).toHaveBeenCalledWith('/backtest/configure?strategy_id=imported-1')
   })
 })

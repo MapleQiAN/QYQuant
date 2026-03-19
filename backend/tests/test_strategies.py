@@ -276,6 +276,7 @@ def test_marketplace_strategies_can_filter_onboarding_tag(client, app):
 
 
 def test_import_strategy_encrypts_entrypoint_source(client, app, tmp_path):
+    token, user_id = _login_user(client, phone="13800138027", nickname="EncryptUser")
     strategy_id = str(uuid.uuid4())
     version = '2.0.0'
     package_path = tmp_path / 'encrypted-import.qys'
@@ -302,6 +303,7 @@ class Strategy:
     with package_path.open('rb') as handle:
         response = client.post(
             '/api/strategies/import',
+            headers=_auth_headers(token),
             data={"file": (io.BytesIO(handle.read()), package_path.name)},
             content_type='multipart/form-data',
         )
@@ -311,6 +313,7 @@ class Strategy:
     with app.app_context():
         strategy = db.session.get(Strategy, strategy_id)
         assert strategy is not None
+        assert strategy.owner_id == user_id
         assert strategy.code_encrypted is not None
         assert strategy.code_encrypted != source.encode('utf-8')
         assert strategy.code_hash is not None

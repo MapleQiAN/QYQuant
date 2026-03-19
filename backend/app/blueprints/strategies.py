@@ -18,7 +18,9 @@ bp = Blueprint("strategies", __name__, url_prefix="/api")
 
 
 @bp.post("/strategies")
+@jwt_required()
 def create_strategy():
+    user_id = get_jwt_identity()
     payload = request.get_json() or {}
     name = (payload.get("name") or "").strip()
     symbol = (payload.get("symbol") or "").strip()
@@ -40,6 +42,7 @@ def create_strategy():
         symbol=symbol,
         status=status,
         source="manual",
+        owner_id=user_id,
         returns=0,
         win_rate=0,
         max_drawdown=0,
@@ -53,13 +56,15 @@ def create_strategy():
 
 
 @bp.post("/strategies/import")
+@jwt_required()
 def import_strategy_legacy():
+    user_id = get_jwt_identity()
     incoming = request.files.get("file")
     if not incoming:
         return {"code": 40000, "message": "file_required", "details": None}, 400
 
     try:
-        strategy, version, file_record = import_strategy_package(incoming, owner_id=None)
+        strategy, version, file_record = import_strategy_package(incoming, owner_id=user_id)
     except StrategyImportError as exc:
         return error_response(exc.code, exc.message, exc.status, details=exc.details)
 
@@ -75,8 +80,12 @@ def recent():
 @bp.get("/strategies/<strategy_id>/runtime")
 def runtime_descriptor(strategy_id):
     requested_version = request.args.get("version")
+    strategy = db.session.get(Strategy, strategy_id)
+    if strategy is None:
+        return error_response("STRATEGY_NOT_FOUND", "Strategy not found", 404)
+    runtime_strategy_id = strategy.source_strategy_id or strategy.id
 
-    query = StrategyVersion.query.filter_by(strategy_id=strategy_id)
+    query = StrategyVersion.query.filter_by(strategy_id=runtime_strategy_id)
     if requested_version:
         query = query.filter_by(version=requested_version)
     strategy_version = query.order_by(StrategyVersion.created_at.desc()).first()
@@ -108,9 +117,10 @@ def get_strategy_parameters(strategy_id):
     strategy = _get_accessible_strategy(strategy_id, user_id)
     if strategy is None:
         return error_response("STRATEGY_NOT_FOUND", "Strategy not found", 404)
+    runtime_strategy_id = strategy.source_strategy_id or strategy.id
 
     strategy_version = (
-        StrategyVersion.query.filter_by(strategy_id=strategy_id)
+        StrategyVersion.query.filter_by(strategy_id=runtime_strategy_id)
         .order_by(StrategyVersion.created_at.desc())
         .first()
     )
@@ -274,7 +284,7 @@ def _delete_strategy_assets(strategy):
             _remove_path(file_record.path)
             db.session.delete(file_record)
 
-    if strategy.storage_key:
+    if strategy.storage_key and not strategy.source_strategy_id:
         storage_root = Path(os.getenv("STRATEGY_STORAGE_DIR") or Path(__file__).resolve().parents[2] / "storage")
         _remove_path((storage_root / strategy.storage_key).as_posix())
 

@@ -5,6 +5,8 @@ import type {
   MarketplaceStrategy,
   MarketplaceStrategyDetail,
   MarketplaceStrategyEquityCurve,
+  MarketplaceStrategyImportResult,
+  MarketplaceStrategyImportStatus,
   Strategy,
   StrategyParameterDefinition,
   StrategyPreset,
@@ -77,6 +79,16 @@ interface MarketplaceParams {
   page?: number
   pageSize?: number
   featured?: boolean
+}
+
+interface MarketplaceStrategyImportDto {
+  strategy_id?: string
+  redirect_to?: string
+}
+
+interface MarketplaceStrategyImportStatusDto {
+  imported?: boolean
+  user_strategy_id?: string | null
 }
 
 export function fetchMarketplaceStrategies(params: { tag: string }): Promise<Strategy[]>
@@ -184,6 +196,30 @@ export function fetchMarketplaceStrategyEquityCurve(strategyId: string): Promise
     method: 'get',
     url: `/v1/marketplace/strategies/${strategyId}/equity-curve`
   })
+}
+
+export async function importMarketplaceStrategy(strategyId: string): Promise<MarketplaceStrategyImportResult> {
+  const response = await client.request<MarketplaceStrategyImportDto>({
+    method: 'post',
+    url: `/v1/marketplace/strategies/${strategyId}/import`
+  })
+
+  return {
+    strategyId: response.strategy_id || '',
+    redirectTo: response.redirect_to || ''
+  }
+}
+
+export async function fetchMarketplaceStrategyImportStatus(strategyId: string): Promise<MarketplaceStrategyImportStatus> {
+  const response = await client.request<MarketplaceStrategyImportStatusDto>({
+    method: 'get',
+    url: `/v1/marketplace/strategies/${strategyId}/import-status`
+  })
+
+  return {
+    imported: Boolean(response.imported),
+    userStrategyId: response.user_strategy_id ?? null
+  }
 }
 
 export function createStrategy(payload: {

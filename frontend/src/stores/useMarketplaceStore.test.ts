@@ -5,17 +5,23 @@ import { useMarketplaceStore } from './useMarketplaceStore'
 const {
   fetchMarketplaceStrategiesMock,
   fetchMarketplaceStrategyDetailMock,
-  fetchMarketplaceStrategyEquityCurveMock
+  fetchMarketplaceStrategyEquityCurveMock,
+  importMarketplaceStrategyMock,
+  fetchMarketplaceStrategyImportStatusMock
 } = vi.hoisted(() => ({
   fetchMarketplaceStrategiesMock: vi.fn(),
   fetchMarketplaceStrategyDetailMock: vi.fn(),
-  fetchMarketplaceStrategyEquityCurveMock: vi.fn()
+  fetchMarketplaceStrategyEquityCurveMock: vi.fn(),
+  importMarketplaceStrategyMock: vi.fn(),
+  fetchMarketplaceStrategyImportStatusMock: vi.fn()
 }))
 
 vi.mock('../api/strategies', () => ({
   fetchMarketplaceStrategies: fetchMarketplaceStrategiesMock,
   fetchMarketplaceStrategyDetail: fetchMarketplaceStrategyDetailMock,
-  fetchMarketplaceStrategyEquityCurve: fetchMarketplaceStrategyEquityCurveMock
+  fetchMarketplaceStrategyEquityCurve: fetchMarketplaceStrategyEquityCurveMock,
+  importMarketplaceStrategy: importMarketplaceStrategyMock,
+  fetchMarketplaceStrategyImportStatus: fetchMarketplaceStrategyImportStatusMock
 }))
 
 describe('useMarketplaceStore', () => {
@@ -24,6 +30,8 @@ describe('useMarketplaceStore', () => {
     fetchMarketplaceStrategiesMock.mockReset()
     fetchMarketplaceStrategyDetailMock.mockReset()
     fetchMarketplaceStrategyEquityCurveMock.mockReset()
+    importMarketplaceStrategyMock.mockReset()
+    fetchMarketplaceStrategyImportStatusMock.mockReset()
   })
 
   it('loads marketplace list and stores meta state', async () => {
@@ -144,5 +152,56 @@ describe('useMarketplaceStore', () => {
     expect(store.currentStrategy?.title).toBe('Golden Breakout')
     expect(store.equityCurve.values).toEqual([100000, 101250.5])
     expect(store.error).toBeNull()
+  })
+
+  it('checks import status and merges it into the loaded strategy detail', async () => {
+    fetchMarketplaceStrategyDetailMock.mockResolvedValue({
+      id: 'strategy-1',
+      title: 'Golden Breakout',
+      author: { nickname: 'QuantAlice', avatarUrl: 'https://example.com/avatar.png' },
+      displayMetrics: { sharpeRatio: 1.54 },
+      alreadyImported: false,
+      importedStrategyId: null
+    })
+    fetchMarketplaceStrategyImportStatusMock.mockResolvedValue({
+      imported: true,
+      userStrategyId: 'imported-1'
+    })
+
+    const store = useMarketplaceStore()
+    await store.fetchStrategyDetail('strategy-1')
+    await store.checkImportStatus('strategy-1')
+
+    expect(fetchMarketplaceStrategyImportStatusMock).toHaveBeenCalledWith('strategy-1')
+    expect(store.currentStrategy?.alreadyImported).toBe(true)
+    expect(store.currentStrategy?.importedStrategyId).toBe('imported-1')
+  })
+
+  it('imports a marketplace strategy and updates the current strategy state', async () => {
+    fetchMarketplaceStrategyDetailMock.mockResolvedValue({
+      id: 'strategy-1',
+      title: 'Golden Breakout',
+      author: { nickname: 'QuantAlice', avatarUrl: 'https://example.com/avatar.png' },
+      displayMetrics: {},
+      alreadyImported: false,
+      importedStrategyId: null
+    })
+    importMarketplaceStrategyMock.mockResolvedValue({
+      strategyId: 'imported-1',
+      redirectTo: '/backtest/configure?strategy_id=imported-1'
+    })
+
+    const store = useMarketplaceStore()
+    await store.fetchStrategyDetail('strategy-1')
+
+    const result = await store.importStrategy('strategy-1')
+
+    expect(importMarketplaceStrategyMock).toHaveBeenCalledWith('strategy-1')
+    expect(result).toEqual({
+      strategyId: 'imported-1',
+      redirectTo: '/backtest/configure?strategy_id=imported-1'
+    })
+    expect(store.currentStrategy?.alreadyImported).toBe(true)
+    expect(store.currentStrategy?.importedStrategyId).toBe('imported-1')
   })
 })

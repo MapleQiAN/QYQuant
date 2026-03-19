@@ -1,5 +1,6 @@
 import json
 import uuid
+import zipfile
 
 from app.extensions import db
 from app.models import BacktestJob, BacktestJobStatus, File, Strategy, StrategyVersion, User
@@ -41,6 +42,29 @@ def _auth_headers(token):
 
 def _seed_marketplace_strategy(app, tmp_path):
     strategy_id = "public-marketplace-strategy"
+    version = "1.0.0"
+    storage_key = f"strategies/{strategy_id}.qys"
+    package_path = tmp_path / "storage" / storage_key
+    package_path.parent.mkdir(parents=True, exist_ok=True)
+
+    manifest = {
+        "schemaVersion": "1.0",
+        "kind": "QYStrategy",
+        "id": strategy_id,
+        "name": "Golden Breakout",
+        "version": version,
+        "description": "Trend-following breakout strategy for gold.",
+        "language": "python",
+        "runtime": {"name": "python", "version": "3.11"},
+        "entrypoint": {"path": "src/strategy.py", "callable": "Strategy", "interface": "event_v1"},
+        "parameters": [],
+        "tags": ["gold", "breakout"],
+        "ui": {"category": "trend-following"},
+    }
+    source_code = "class Strategy:\n    def on_bar(self, ctx, bar):\n        return None\n"
+    with zipfile.ZipFile(package_path, "w", compression=zipfile.ZIP_DEFLATED) as archive:
+        archive.writestr("strategy.json", json.dumps(manifest))
+        archive.writestr("src/strategy.py", source_code)
 
     with app.app_context():
         author = _create_user("marketplace-author", "QuantAlice", "https://example.com/avatar.png")
@@ -72,8 +96,29 @@ def _seed_marketplace_strategy(app, tmp_path):
                 "sharpeRatio": 1.54,
                 "winRate": 62.0,
             },
+            storage_key=storage_key,
         )
         db.session.add(strategy)
+
+        file_record = File(
+            id="marketplace-strategy-file",
+            owner_id=author.id,
+            filename=package_path.name,
+            content_type="application/zip",
+            size=package_path.stat().st_size,
+            path=package_path.as_posix(),
+        )
+        db.session.add(file_record)
+
+        db.session.add(
+            StrategyVersion(
+                id="marketplace-strategy-version",
+                strategy_id=strategy.id,
+                version=version,
+                file_id=file_record.id,
+                checksum="marketplace-version-checksum",
+            )
+        )
 
         job = BacktestJob(
             id="marketplace-job",
@@ -407,8 +452,9 @@ def test_get_marketplace_strategy_detail_returns_imported_state_for_authenticate
             symbol="XAUUSD",
             status="draft",
             owner_id=user_id,
-            code_hash="marketplace-strategy-hash",
-            source="upload",
+            source="marketplace",
+            source_strategy_id=strategy_id,
+            storage_key="strategy_store/original.qys",
         )
         db.session.add(imported_strategy)
         db.session.commit()
@@ -422,6 +468,135 @@ def test_get_marketplace_strategy_detail_returns_imported_state_for_authenticate
     assert response.status_code == 200
     assert response.json["data"]["already_imported"] is True
     assert response.json["data"]["imported_strategy_id"] == imported_strategy_id
+
+
+def test_marketplace_import_requires_auth(client, app, tmp_path):
+    strategy_id = _seed_marketplace_strategy(app, tmp_path)
+
+    response = client.post(f"/api/v1/marketplace/strategies/{strategy_id}/import")
+
+    assert response.status_code == 401
+    assert response.json["error"]["code"] == "UNAUTHORIZED"
+
+
+def test_marketplace_import_status_requires_auth(client, app, tmp_path):
+    strategy_id = _seed_marketplace_strategy(app, tmp_path)
+
+    response = client.get(f"/api/v1/marketplace/strategies/{strategy_id}/import-status")
+
+    assert response.status_code == 401
+    assert response.json["error"]["code"] == "UNAUTHORIZED"
+
+
+def test_marketplace_import_creates_user_strategy_and_returns_redirect(client, app, tmp_path):
+    token, user_id = _login_user(client, phone="13800138103", nickname="MarketplaceImporter")
+    strategy_id = _seed_marketplace_strategy(app, tmp_path)
+
+    response = client.post(
+        f"/api/v1/marketplace/strategies/{strategy_id}/import",
+        headers=_auth_headers(token),
+    )
+
+    assert response.status_code == 200
+    assert response.json["data"]["redirect_to"].startswith("/backtest/configure?strategy_id=")
+    imported_strategy_id = response.json["data"]["strategy_id"]
+
+    with app.app_context():
+        imported_strategy = db.session.get(Strategy, imported_strategy_id)
+        assert imported_strategy is not None
+        assert imported_strategy.owner_id == user_id
+        assert imported_strategy.source == "marketplace"
+        assert imported_strategy.source_strategy_id == strategy_id
+        assert imported_strategy.title == "Golden Breakout"
+        assert imported_strategy.description == "Trend-following breakout strategy for gold."
+        assert imported_strategy.category == "trend-following"
+        assert imported_strategy.tags == ["gold", "breakout"]
+        assert imported_strategy.storage_key == "strategies/public-marketplace-strategy.qys"
+        assert imported_strategy.code_encrypted is None
+
+
+def test_marketplace_import_returns_conflict_when_strategy_already_imported(client, app, tmp_path):
+    token, user_id = _login_user(client, phone="13800138104", nickname="MarketplaceImporterTwice")
+    strategy_id = _seed_marketplace_strategy(app, tmp_path)
+
+    with app.app_context():
+        db.session.add(
+            Strategy(
+                id=f"imported-{uuid.uuid4().hex[:8]}",
+                name="Imported Golden Breakout",
+                title="Golden Breakout",
+                symbol="XAUUSD",
+                status="draft",
+                owner_id=user_id,
+                source="marketplace",
+                source_strategy_id=strategy_id,
+                storage_key="strategies/public-marketplace-strategy.qys",
+            )
+        )
+        db.session.commit()
+
+    response = client.post(
+        f"/api/v1/marketplace/strategies/{strategy_id}/import",
+        headers=_auth_headers(token),
+    )
+
+    assert response.status_code == 409
+    assert response.json["error"]["code"] == "ALREADY_IMPORTED"
+
+
+def test_marketplace_import_status_reports_imported_state(client, app, tmp_path):
+    token, user_id = _login_user(client, phone="13800138105", nickname="ImportStatusUser")
+    strategy_id = _seed_marketplace_strategy(app, tmp_path)
+
+    response = client.get(
+        f"/api/v1/marketplace/strategies/{strategy_id}/import-status",
+        headers=_auth_headers(token),
+    )
+    assert response.status_code == 200
+    assert response.json["data"] == {"imported": False, "user_strategy_id": None}
+
+    with app.app_context():
+        imported_strategy = Strategy(
+            id=f"imported-{uuid.uuid4().hex[:8]}",
+            name="Imported Golden Breakout",
+            title="Golden Breakout",
+            symbol="XAUUSD",
+            status="draft",
+            owner_id=user_id,
+            source="marketplace",
+            source_strategy_id=strategy_id,
+            storage_key="strategies/public-marketplace-strategy.qys",
+        )
+        db.session.add(imported_strategy)
+        db.session.commit()
+        imported_strategy_id = imported_strategy.id
+
+    response = client.get(
+        f"/api/v1/marketplace/strategies/{strategy_id}/import-status",
+        headers=_auth_headers(token),
+    )
+
+    assert response.status_code == 200
+    assert response.json["data"] == {"imported": True, "user_strategy_id": imported_strategy_id}
+
+
+def test_imported_marketplace_strategy_uses_source_package_for_parameter_loading(client, app, tmp_path):
+    token, user_id = _login_user(client, phone="13800138106", nickname="ImportedParamUser")
+    strategy_id = _seed_marketplace_strategy(app, tmp_path)
+
+    response = client.post(
+        f"/api/v1/marketplace/strategies/{strategy_id}/import",
+        headers=_auth_headers(token),
+    )
+    imported_strategy_id = response.json["data"]["strategy_id"]
+
+    response = client.get(
+        f"/api/v1/strategies/{imported_strategy_id}/parameters",
+        headers=_auth_headers(token),
+    )
+
+    assert response.status_code == 200
+    assert response.json["data"] == []
 
 
 def test_get_marketplace_strategy_detail_returns_404_for_non_public_strategy(client, app):

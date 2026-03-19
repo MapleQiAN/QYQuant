@@ -5,6 +5,7 @@ from flask import request
 from flask_jwt_extended import get_jwt_identity, jwt_required
 from flask_smorest import Blueprint
 from sqlalchemy import and_
+from sqlalchemy.exc import IntegrityError
 
 from ..extensions import db
 from ..models import BacktestJob, BacktestJobStatus, File, Strategy, StrategyVersion, User
@@ -14,6 +15,7 @@ from ..utils.storage import read_json
 from ..utils.time import format_beijing_iso_ms, now_ms
 
 bp = Blueprint("marketplace", __name__, url_prefix="/api/v1/marketplace")
+BACKTEST_CONFIGURE_PATH = "/backtest/configure"
 
 
 @bp.get("/strategies")
@@ -69,11 +71,16 @@ def list_marketplace_strategies():
 @jwt_required(optional=True)
 def get_marketplace_strategy_detail(strategy_id):
     user_id = get_jwt_identity()
-    strategy = _get_public_strategy(strategy_id)
-    if strategy is None:
+    row = _get_public_strategy_with_author(strategy_id)
+    if row is None:
         return error_response("STRATEGY_NOT_FOUND", "Strategy not found", 404)
 
+    strategy, author = row
     imported_strategy = _find_imported_strategy(user_id, strategy)
+    author_payload = {
+        "nickname": getattr(author, "nickname", None) or "QYQuant",
+        "avatar_url": getattr(author, "avatar_url", None) or "",
+    }
     payload = {
         "id": strategy.id,
         "title": strategy.title or strategy.name,
@@ -83,7 +90,7 @@ def get_marketplace_strategy_detail(strategy_id):
         "display_metrics": strategy.display_metrics or {},
         "is_verified": bool(strategy.is_verified),
         "created_at": format_beijing_iso_ms(strategy.created_at),
-        "author": _serialize_author(strategy.owner_id),
+        "author": author_payload,
         "already_imported": imported_strategy is not None,
         "imported_strategy_id": imported_strategy.id if imported_strategy else None,
         "has_equity_curve": _find_latest_completed_job(strategy.id) is not None,
@@ -110,6 +117,71 @@ def get_marketplace_strategy_equity_curve(strategy_id):
     return ok({"dates": dates, "values": values})
 
 
+@bp.post("/strategies/<strategy_id>/import")
+@jwt_required()
+def import_marketplace_strategy(strategy_id):
+    user_id = get_jwt_identity()
+    strategy = _get_public_strategy(strategy_id)
+    if strategy is None:
+        return error_response("STRATEGY_NOT_FOUND", "Strategy not found", 404)
+
+    existing = _find_imported_strategy(user_id, strategy)
+    if existing is not None:
+        return error_response("ALREADY_IMPORTED", "Strategy already imported", 409)
+
+    imported_strategy = Strategy(
+        name=strategy.name,
+        title=strategy.title or strategy.name,
+        symbol=strategy.symbol,
+        status="draft",
+        description=strategy.description,
+        category=strategy.category,
+        source="marketplace",
+        source_strategy_id=strategy.id,
+        tags=list(strategy.tags or []),
+        owner_id=user_id,
+        storage_key=strategy.storage_key,
+        is_verified=strategy.is_verified,
+        last_update=now_ms(),
+        updated_at=now_ms(),
+        created_at=now_ms(),
+        returns=0,
+        win_rate=0,
+        max_drawdown=0,
+        trades=0,
+    )
+    db.session.add(imported_strategy)
+    try:
+        db.session.commit()
+    except IntegrityError:
+        db.session.rollback()
+        return error_response("ALREADY_IMPORTED", "Strategy already imported", 409)
+
+    return ok(
+        {
+            "strategy_id": imported_strategy.id,
+            "redirect_to": f"{BACKTEST_CONFIGURE_PATH}?strategy_id={imported_strategy.id}",
+        }
+    )
+
+
+@bp.get("/strategies/<strategy_id>/import-status")
+@jwt_required()
+def get_marketplace_import_status(strategy_id):
+    user_id = get_jwt_identity()
+    strategy = _get_public_strategy(strategy_id)
+    if strategy is None:
+        return error_response("STRATEGY_NOT_FOUND", "Strategy not found", 404)
+
+    imported_strategy = _find_imported_strategy(user_id, strategy)
+    return ok(
+        {
+            "imported": imported_strategy is not None,
+            "user_strategy_id": imported_strategy.id if imported_strategy else None,
+        }
+    )
+
+
 def _bool_arg(name, *, default=False):
     raw = request.args.get(name)
     if raw is None:
@@ -133,6 +205,15 @@ def _int_arg(name, *, default, minimum=None, maximum=None):
 def _get_public_strategy(strategy_id):
     return (
         Strategy.query
+        .filter(Strategy.id == strategy_id, _marketplace_visibility_clause())
+        .first()
+    )
+
+
+def _get_public_strategy_with_author(strategy_id):
+    return (
+        db.session.query(Strategy, User)
+        .outerjoin(User, Strategy.owner_id == User.id)
         .filter(Strategy.id == strategy_id, _marketplace_visibility_clause())
         .first()
     )
@@ -169,33 +250,23 @@ def _extract_equity_curve(raw_points):
     return dates, values
 
 
-def _serialize_author(user_id):
-    if not user_id:
-        return {"nickname": "QYQuant", "avatar_url": ""}
-
-    user = db.session.get(User, user_id)
-    if user is None:
-        return {"nickname": "QYQuant", "avatar_url": ""}
-    return {
-        "nickname": user.nickname,
-        "avatar_url": user.avatar_url,
-    }
-
-
 def _find_imported_strategy(user_id, marketplace_strategy):
-    if not user_id or not marketplace_strategy.code_hash:
+    if not user_id:
         return None
 
     return (
         Strategy.query
         .filter(
             Strategy.owner_id == user_id,
-            Strategy.code_hash == marketplace_strategy.code_hash,
-            Strategy.id != marketplace_strategy.id,
+            Strategy.source == "marketplace",
+            Strategy.source_strategy_id == marketplace_strategy.id,
         )
         .order_by(Strategy.created_at.desc())
         .first()
     )
+
+
+_onboarding_seeded = False
 
 
 def _onboarding_package_path():
@@ -203,8 +274,12 @@ def _onboarding_package_path():
 
 
 def _ensure_onboarding_strategy():
+    global _onboarding_seeded
+    if _onboarding_seeded:
+        return
     existing = Strategy.query.filter(Strategy.owner_id.is_(None), _marketplace_visibility_clause()).all()
     if any(any(str(tag).strip().lower() == "onboarding" for tag in (item.tags or [])) for item in existing):
+        _onboarding_seeded = True
         return
 
     package_path = _onboarding_package_path()
@@ -293,6 +368,7 @@ def _ensure_onboarding_strategy():
         )
 
     db.session.commit()
+    _onboarding_seeded = True
 
 
 def _marketplace_visibility_clause():

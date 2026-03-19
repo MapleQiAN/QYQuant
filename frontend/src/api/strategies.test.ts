@@ -150,5 +150,25 @@ describe('strategies api', () => {
     })
     expect(result.data[0].author.avatarUrl).toBe('https://example.com/a.png')
   })
+
+  it('calls marketplace import endpoint', async () => {
+    const data = await strategies.importMarketplaceStrategy('strategy-id')
+
+    expect(data).toEqual({ strategyId: '', redirectTo: '' })
+    expect(requestMock).toHaveBeenCalledWith({
+      method: 'post',
+      url: '/v1/marketplace/strategies/strategy-id/import'
+    })
+  })
+
+  it('calls marketplace import status endpoint', async () => {
+    const data = await strategies.fetchMarketplaceStrategyImportStatus('strategy-id')
+
+    expect(data).toEqual({ imported: false, userStrategyId: null })
+    expect(requestMock).toHaveBeenCalledWith({
+      method: 'get',
+      url: '/v1/marketplace/strategies/strategy-id/import-status'
+    })
+  })
 })
 

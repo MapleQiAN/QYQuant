@@ -64,6 +64,7 @@ class AuditLog(db.Model):
 class Strategy(db.Model):
     __tablename__ = 'strategies'
     __table_args__ = (
+        db.UniqueConstraint('owner_id', 'source_strategy_id', name='uq_user_imported_strategy'),
         db.Index('ix_strategies_category', 'category'),
         db.Index(
             'ix_strategies_marketplace_public_verified',
@@ -87,11 +88,12 @@ class Strategy(db.Model):
     description = db.Column(db.Text, nullable=True)
     category = db.Column(db.String(64), nullable=True)
     source = db.Column(db.String(32), nullable=False, default='upload')
+    source_strategy_id = db.Column(db.String, db.ForeignKey('strategies.id'), nullable=True)
     is_public = db.Column(db.Boolean, nullable=False, default=False)
     is_featured = db.Column(db.Boolean, nullable=False, default=False)
     is_verified = db.Column(db.Boolean, nullable=False, default=False)
     review_status = db.Column(db.String(32), nullable=False, default='pending')
-    display_metrics = db.Column(db.JSON, nullable=False, default=dict)
+    display_metrics = db.Column(job_json_type, nullable=True, default=dict)
     returns = db.Column(db.Float, default=0)
     win_rate = db.Column(db.Float, default=0)
     max_drawdown = db.Column(db.Float, default=0)
@@ -99,10 +101,6 @@ class Strategy(db.Model):
     last_update = db.Column(db.BigInteger, default=now_ms)
     trades = db.Column(db.Integer, default=0)
     owner_id = db.Column(db.String, db.ForeignKey('users.id'))
-    is_public = db.Column(db.Boolean, nullable=False, default=False)
-    is_verified = db.Column(db.Boolean, nullable=False, default=False)
-    review_status = db.Column(db.String(32), nullable=False, default='pending')
-    display_metrics = db.Column(job_json_type, nullable=True, default=dict)
     storage_key = db.Column(db.String, nullable=True)
     code_encrypted = db.Column(db.LargeBinary, nullable=True)
     code_hash = db.Column(db.String(64), nullable=True)

@@ -136,3 +136,13 @@ export interface MarketplaceStrategyEquityCurve {
   dates: Array<number | string>
   values: number[]
 }
+
+export interface MarketplaceStrategyImportStatus {
+  imported: boolean
+  userStrategyId: string | null
+}
+
+export interface MarketplaceStrategyImportResult {
+  strategyId: string
+  redirectTo: string
+}

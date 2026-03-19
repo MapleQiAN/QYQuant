@@ -9,8 +9,22 @@ from .errors import StrategyRuntimeError
 from .manifest import normalize_zip_path, validate_manifest
 
 
-def _find_strategy_version(strategy_id, version):
-    query = StrategyVersion.query.filter_by(strategy_id=strategy_id)
+def _resolve_runtime_strategy(strategy_id):
+    strategy = db.session.get(Strategy, strategy_id)
+    if strategy is None:
+        raise StrategyRuntimeError('strategy_not_found')
+
+    source_strategy = strategy
+    if strategy.source_strategy_id:
+        source_strategy = db.session.get(Strategy, strategy.source_strategy_id)
+        if source_strategy is None:
+            raise StrategyRuntimeError('strategy_source_not_found')
+
+    return strategy, source_strategy
+
+
+def _find_strategy_version(strategy, source_strategy, version):
+    query = StrategyVersion.query.filter_by(strategy_id=source_strategy.id)
     if version:
         query = query.filter_by(version=version)
     strategy_version = query.order_by(StrategyVersion.created_at.desc()).first()
@@ -22,11 +36,9 @@ def _find_strategy_version(strategy_id, version):
 def load_strategy_package(strategy_id, version):
     if not strategy_id:
         raise StrategyRuntimeError('strategy_id_required')
-    if not version:
-        raise StrategyRuntimeError('strategy_version_required')
 
-    strategy_version = _find_strategy_version(strategy_id, version)
-    strategy = db.session.get(Strategy, strategy_id)
+    strategy, source_strategy = _resolve_runtime_strategy(strategy_id)
+    strategy_version = _find_strategy_version(strategy, source_strategy, version)
     file_record = db.session.get(File, strategy_version.file_id)
     if not file_record:
         raise StrategyRuntimeError('strategy_file_not_found')
@@ -49,9 +61,9 @@ def load_strategy_package(strategy_id, version):
 
             manifest = validate_manifest(manifest)
 
-            if manifest.get('id') and manifest.get('id') != strategy_id:
+            if manifest.get('id') and manifest.get('id') != source_strategy.id:
                 raise StrategyRuntimeError('manifest_strategy_mismatch')
-            if manifest.get('version') and manifest.get('version') != version:
+            if manifest.get('version') and manifest.get('version') != strategy_version.version:
                 raise StrategyRuntimeError('manifest_version_mismatch')
 
             entrypoint = manifest.get('entrypoint') or {}
@@ -59,12 +71,13 @@ def load_strategy_package(strategy_id, version):
             if entrypoint_path not in names:
                 raise StrategyRuntimeError('entrypoint_missing')
 
-            if strategy and strategy.code_encrypted:
+            code_strategy = strategy if strategy.code_encrypted else source_strategy
+            if code_strategy and code_strategy.code_encrypted:
                 try:
-                    source_bytes = decrypt_strategy(strategy.code_encrypted)
+                    source_bytes = decrypt_strategy(code_strategy.code_encrypted)
                 except ValueError as exc:
                     raise StrategyRuntimeError('strategy_decrypt_error', {"reason": str(exc)}) from exc
-                if strategy.code_hash and hash_strategy_source(source_bytes) != strategy.code_hash:
+                if code_strategy.code_hash and hash_strategy_source(source_bytes) != code_strategy.code_hash:
                     raise StrategyRuntimeError('strategy_code_integrity_error')
                 source = source_bytes.decode('utf-8')
             else:
@@ -77,7 +90,7 @@ def load_strategy_package(strategy_id, version):
 
     return {
         "strategy_id": strategy_id,
-        "version": version,
+        "version": strategy_version.version,
         "manifest": manifest,
         "entrypoint_path": entrypoint_path,
         "entrypoint_callable": entrypoint.get('callable'),
