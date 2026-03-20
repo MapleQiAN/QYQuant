@@ -6,6 +6,7 @@ vi.mock('../views/BacktestsView.vue', () => ({ default: { template: '<div />' } 
 vi.mock('../views/BacktestResultView.vue', () => ({ default: { template: '<div />' } }))
 vi.mock('../views/BotsView.vue', () => ({ default: { template: '<div />' } }))
 vi.mock('../views/ForumView.vue', () => ({ default: { template: '<div />' } }))
+vi.mock('../views/PostDetailView.vue', () => ({ default: { template: '<div />' } }))
 vi.mock('../views/SettingsView.vue', () => ({ default: { template: '<div />' } }))
 vi.mock('../views/NewStrategyView.vue', () => ({ default: { template: '<div />' } }))
 vi.mock('../views/StrategyLibraryView.vue', () => ({ default: { template: '<div />' } }))
@@ -51,5 +52,10 @@ describe('router', () => {
       (route) => route.path === '/marketplace/strategies/:strategyId'
     )
     expect(hasMarketplaceStrategyDetail).toBe(true)
+  })
+
+  it('contains forum post detail route', () => {
+    const hasForumPostDetail = router.getRoutes().some((route) => route.path === '/forum/posts/:postId')
+    expect(hasForumPostDetail).toBe(true)
   })
 })

@@ -287,6 +287,40 @@ class Post(db.Model):
     timestamp = db.Column(db.BigInteger, nullable=False)
     tags = db.Column(db.JSON, default=list)
     user_id = db.Column(db.String, db.ForeignKey('users.id'))
+    content = db.Column(db.Text, nullable=True)
+    strategy_id = db.Column(db.String, db.ForeignKey('strategies.id'), nullable=True)
+    likes_count = db.Column(db.Integer, nullable=False, default=0)
+    comments_count = db.Column(db.Integer, nullable=False, default=0)
+    created_at = db.Column(db.DateTime(timezone=True), nullable=True, default=now_utc)
+
+
+class PostInteraction(db.Model):
+    __tablename__ = 'post_interactions'
+    __table_args__ = (
+        db.UniqueConstraint('user_id', 'post_id', 'type', name='uq_post_interactions_user_post_type'),
+        db.Index('ix_post_interactions_user_id', 'user_id'),
+        db.Index('ix_post_interactions_post_id', 'post_id'),
+    )
+
+    id = db.Column(db.String, primary_key=True, default=gen_id)
+    user_id = db.Column(db.String, db.ForeignKey('users.id'), nullable=False)
+    post_id = db.Column(db.String, db.ForeignKey('posts.id'), nullable=False)
+    type = db.Column(db.String(20), nullable=False)
+    created_at = db.Column(db.DateTime(timezone=True), nullable=False, default=now_utc)
+
+
+class PostComment(db.Model):
+    __tablename__ = 'post_comments'
+    __table_args__ = (
+        db.Index('ix_post_comments_post_id', 'post_id'),
+        db.Index('ix_post_comments_created_at', 'created_at'),
+    )
+
+    id = db.Column(db.String, primary_key=True, default=gen_id)
+    post_id = db.Column(db.String, db.ForeignKey('posts.id'), nullable=False)
+    user_id = db.Column(db.String, db.ForeignKey('users.id'), nullable=False)
+    content = db.Column(db.Text, nullable=False)
+    created_at = db.Column(db.DateTime(timezone=True), nullable=False, default=now_utc)
 
 
 class Comment(db.Model):
