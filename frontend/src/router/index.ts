@@ -4,6 +4,7 @@ import BacktestsView from '../views/BacktestsView.vue'
 import BacktestResultView from '../views/BacktestResultView.vue'
 import BotsView from '../views/BotsView.vue'
 import ForumView from '../views/ForumView.vue'
+import PostDetailView from '../views/PostDetailView.vue'
 import SettingsView from '../views/SettingsView.vue'
 import NewStrategyView from '../views/NewStrategyView.vue'
 import StrategyLibraryView from '../views/StrategyLibraryView.vue'
@@ -25,6 +26,7 @@ const router = createRouter({
     { path: '/backtests/:jobId/report', name: 'backtest-report', component: BacktestResultView },
     { path: '/bots', name: 'bots', component: BotsView },
     { path: '/forum', name: 'forum', component: ForumView },
+    { path: '/forum/posts/:postId', name: 'forum-post-detail', component: PostDetailView },
     { path: '/settings', name: 'settings', component: SettingsView }
   ]
 })
