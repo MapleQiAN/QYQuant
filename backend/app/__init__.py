@@ -4,6 +4,7 @@ from . import models  # noqa: F401
 from .blueprints.auth import bp as auth_bp
 from .blueprints.backtests import bp as backtests_bp
 from .blueprints.bots import bp as bots_bp
+from .blueprints.community import bp as community_bp
 from .blueprints.files import bp as files_bp
 from .blueprints.forum import bp as forum_bp
 from .blueprints.health import bp as health_bp
@@ -54,6 +55,7 @@ def create_app(env=None):
     app.register_blueprint(presets_bp)
     app.register_blueprint(backtests_bp)
     app.register_blueprint(bots_bp)
+    app.register_blueprint(community_bp)
     app.register_blueprint(forum_bp)
     app.register_blueprint(files_bp)
 
