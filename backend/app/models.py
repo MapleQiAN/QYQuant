@@ -2,7 +2,7 @@ import uuid
 from enum import Enum
 
 from sqlalchemy import JSON, Text
-from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.dialects.postgresql import JSONB, TSVECTOR
 
 from .extensions import db
 from .utils.time import now_ms, now_utc
@@ -13,6 +13,7 @@ def gen_id():
 
 
 job_json_type = JSON().with_variant(JSONB(astext_type=Text()), 'postgresql')
+search_vector_type = Text().with_variant(TSVECTOR(), 'postgresql')
 
 
 class BacktestJobStatus(str, Enum):
@@ -61,6 +62,27 @@ class AuditLog(db.Model):
     created_at = db.Column(db.DateTime(timezone=True), nullable=False, default=now_utc)
 
 
+class Notification(db.Model):
+    __tablename__ = 'notifications'
+    __table_args__ = (
+        db.Index(
+            'ix_notifications_user_unread',
+            'user_id',
+            'is_read',
+            postgresql_where=db.text('is_read = false'),
+            sqlite_where=db.text('is_read = 0'),
+        ),
+    )
+
+    id = db.Column(db.String, primary_key=True, default=gen_id)
+    user_id = db.Column(db.String, db.ForeignKey('users.id'), nullable=False)
+    type = db.Column(db.String(50), nullable=False)
+    title = db.Column(db.String(200), nullable=False)
+    content = db.Column(db.Text, nullable=True)
+    is_read = db.Column(db.Boolean, nullable=False, default=False)
+    created_at = db.Column(db.DateTime(timezone=True), nullable=False, default=now_utc)
+
+
 class Strategy(db.Model):
     __tablename__ = 'strategies'
     __table_args__ = (
@@ -94,6 +116,8 @@ class Strategy(db.Model):
     is_verified = db.Column(db.Boolean, nullable=False, default=False)
     review_status = db.Column(db.String(32), nullable=False, default='pending')
     display_metrics = db.Column(job_json_type, nullable=True, default=dict)
+    title_tsv = db.Column(search_vector_type, nullable=True)
+    description_tsv = db.Column(search_vector_type, nullable=True)
     returns = db.Column(db.Float, default=0)
     win_rate = db.Column(db.Float, default=0)
     max_drawdown = db.Column(db.Float, default=0)

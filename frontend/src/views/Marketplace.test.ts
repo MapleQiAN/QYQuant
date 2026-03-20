@@ -6,10 +6,14 @@ import Marketplace from './Marketplace.vue'
 const {
   fetchStrategiesMock,
   fetchFeaturedMock,
+  setFilterMock,
+  clearFiltersMock,
   storeState
 } = vi.hoisted(() => ({
   fetchStrategiesMock: vi.fn(),
   fetchFeaturedMock: vi.fn(),
+  setFilterMock: vi.fn(),
+  clearFiltersMock: vi.fn(),
   storeState: {
     strategies: [] as any[],
     featuredStrategies: [] as any[],
@@ -19,7 +23,14 @@ const {
     error: null as string | null,
     total: 0,
     page: 1,
-    pageSize: 20
+    pageSize: 20,
+    filters: {
+      q: '',
+      category: null as string | null,
+      verified: false,
+      annualReturnGte: null,
+      maxDrawdownLte: null
+    }
   }
 }))
 
@@ -27,7 +38,9 @@ vi.mock('../stores', () => ({
   useMarketplaceStore: () => ({
     ...storeState,
     fetchStrategies: fetchStrategiesMock,
-    fetchFeatured: fetchFeaturedMock
+    fetchFeatured: fetchFeaturedMock,
+    setFilter: setFilterMock,
+    clearFilters: clearFiltersMock
   })
 }))
 
@@ -41,6 +54,8 @@ describe('Marketplace view', () => {
   beforeEach(() => {
     fetchStrategiesMock.mockReset()
     fetchFeaturedMock.mockReset()
+    setFilterMock.mockReset()
+    clearFiltersMock.mockReset()
     storeState.strategies = []
     storeState.featuredStrategies = []
     storeState.loading = false
@@ -50,6 +65,13 @@ describe('Marketplace view', () => {
     storeState.total = 0
     storeState.page = 1
     storeState.pageSize = 20
+    storeState.filters = {
+      q: '',
+      category: null as string | null,
+      verified: false,
+      annualReturnGte: null,
+      maxDrawdownLte: null
+    }
   })
 
   it('loads featured and normal list on mount', () => {
@@ -136,5 +158,38 @@ describe('Marketplace view', () => {
     expect(wrapper.find('[data-test="marketplace-grid"]').exists()).toBe(true)
     expect(wrapper.text()).toContain('Primary Grid Strategy')
     expect(wrapper.find('[data-test="featured-error"]').exists()).toBe(true)
+  })
+
+  it('debounces search input before refetching', async () => {
+    vi.useFakeTimers()
+
+    const wrapper = mount(Marketplace)
+    fetchStrategiesMock.mockClear()
+    await wrapper.get('[data-test="marketplace-search-input"]').setValue('均线')
+
+    expect(setFilterMock).not.toHaveBeenCalled()
+    vi.advanceTimersByTime(299)
+    expect(fetchStrategiesMock).not.toHaveBeenCalled()
+
+    vi.advanceTimersByTime(1)
+    expect(setFilterMock).toHaveBeenCalledWith('q', '均线')
+    expect(fetchStrategiesMock).toHaveBeenCalledWith(1)
+    vi.useRealTimers()
+  })
+
+  it('clears active filters from the empty state', async () => {
+    storeState.filters = {
+      q: '均线',
+      category: 'trend-following' as string | null,
+      verified: false,
+      annualReturnGte: null,
+      maxDrawdownLte: null
+    }
+    const wrapper = mount(Marketplace)
+
+    await wrapper.get('[data-test="marketplace-clear-filters"]').trigger('click')
+
+    expect(clearFiltersMock).toHaveBeenCalledTimes(1)
+    expect(fetchStrategiesMock).toHaveBeenCalledWith(1)
   })
 })

@@ -2,6 +2,9 @@ import { createHttpClient } from './http'
 import type {
   MarketplaceDisplayMetrics,
   MarketplaceMeta,
+  MarketplacePublishPayload,
+  MarketplacePublishResult,
+  MarketplacePublishStatus,
   MarketplaceStrategy,
   MarketplaceStrategyDetail,
   MarketplaceStrategyEquityCurve,
@@ -79,6 +82,11 @@ interface MarketplaceParams {
   page?: number
   pageSize?: number
   featured?: boolean
+  q?: string
+  category?: string | null
+  verified?: boolean
+  annualReturnGte?: number | null
+  maxDrawdownLte?: number | null
 }
 
 interface MarketplaceStrategyImportDto {
@@ -89,6 +97,16 @@ interface MarketplaceStrategyImportDto {
 interface MarketplaceStrategyImportStatusDto {
   imported?: boolean
   user_strategy_id?: string | null
+}
+
+interface MarketplacePublishDto {
+  strategy_id?: string
+  review_status?: string
+}
+
+interface MarketplacePublishStatusDto {
+  review_status?: string
+  is_public?: boolean
 }
 
 export function fetchMarketplaceStrategies(params: { tag: string }): Promise<Strategy[]>
@@ -112,7 +130,12 @@ export async function fetchMarketplaceStrategies(
     params: {
       page,
       page_size: pageSize,
-      featured: params?.featured
+      featured: params?.featured,
+      q: params?.q,
+      category: params?.category ?? undefined,
+      verified: params?.verified || undefined,
+      annual_return_gte: params?.annualReturnGte ?? undefined,
+      max_drawdown_lte: params?.maxDrawdownLte ?? undefined
     }
   })
 
@@ -155,7 +178,7 @@ function mapMarketplaceStrategy(item: MarketplaceStrategyDto): MarketplaceStrate
     category: item.category ?? '',
     tags: Array.isArray(item.tags) ? item.tags : [],
     isVerified: Boolean(item.is_verified),
-    displayMetrics: item.display_metrics && typeof item.display_metrics === 'object' ? item.display_metrics : {},
+    displayMetrics: normalizeMarketplaceDisplayMetrics(item.display_metrics),
     author: {
       nickname: item.author?.nickname ?? '',
       avatarUrl: item.author?.avatar_url ?? ''
@@ -170,7 +193,7 @@ function mapMarketplaceStrategyDetail(item: MarketplaceStrategyDetailDto): Marke
     description: item.description ?? '',
     category: item.category ?? '',
     tags: Array.isArray(item.tags) ? item.tags : [],
-    displayMetrics: item.display_metrics && typeof item.display_metrics === 'object' ? item.display_metrics : {},
+    displayMetrics: normalizeMarketplaceDisplayMetrics(item.display_metrics),
     isVerified: Boolean(item.is_verified),
     createdAt: item.created_at ?? null,
     author: {
@@ -219,6 +242,38 @@ export async function fetchMarketplaceStrategyImportStatus(strategyId: string): 
   return {
     imported: Boolean(response.imported),
     userStrategyId: response.user_strategy_id ?? null
+  }
+}
+
+export async function publishMarketplaceStrategy(payload: MarketplacePublishPayload): Promise<MarketplacePublishResult> {
+  const response = await client.request<MarketplacePublishDto>({
+    method: 'post',
+    url: '/v1/marketplace/strategies',
+    data: {
+      strategy_id: payload.strategyId,
+      title: payload.title,
+      description: payload.description,
+      tags: payload.tags,
+      category: payload.category,
+      display_metrics: payload.displayMetrics
+    }
+  })
+
+  return {
+    strategyId: response.strategy_id || '',
+    reviewStatus: normalizeReviewStatus(response.review_status)
+  }
+}
+
+export async function fetchMarketplacePublishStatus(strategyId: string): Promise<MarketplacePublishStatus> {
+  const response = await client.request<MarketplacePublishStatusDto>({
+    method: 'get',
+    url: `/v1/marketplace/strategies/${strategyId}/publish-status`
+  })
+
+  return {
+    reviewStatus: normalizeReviewStatus(response.review_status),
+    isPublic: Boolean(response.is_public)
   }
 }
 
@@ -296,4 +351,22 @@ export function deleteStrategyPreset(strategyId: string, presetId: string): Prom
     method: 'delete',
     url: `/v1/strategies/${strategyId}/presets/${presetId}`
   })
+}
+
+function normalizeMarketplaceDisplayMetrics(
+  metrics: MarketplaceDisplayMetrics | undefined
+): MarketplaceDisplayMetrics {
+  if (!metrics || typeof metrics !== 'object') {
+    return {}
+  }
+
+  const normalized = { ...metrics }
+  if (normalized.annualized_return == null && normalized.annual_return != null) {
+    normalized.annualized_return = normalized.annual_return
+  }
+  return normalized
+}
+
+function normalizeReviewStatus(value: unknown): MarketplacePublishStatus['reviewStatus'] {
+  return value === 'pending' || value === 'approved' || value === 'rejected' ? value : 'draft'
 }

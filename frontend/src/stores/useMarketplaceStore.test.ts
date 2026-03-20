@@ -7,13 +7,17 @@ const {
   fetchMarketplaceStrategyDetailMock,
   fetchMarketplaceStrategyEquityCurveMock,
   importMarketplaceStrategyMock,
-  fetchMarketplaceStrategyImportStatusMock
+  fetchMarketplaceStrategyImportStatusMock,
+  publishMarketplaceStrategyMock,
+  fetchMarketplacePublishStatusMock
 } = vi.hoisted(() => ({
   fetchMarketplaceStrategiesMock: vi.fn(),
   fetchMarketplaceStrategyDetailMock: vi.fn(),
   fetchMarketplaceStrategyEquityCurveMock: vi.fn(),
   importMarketplaceStrategyMock: vi.fn(),
-  fetchMarketplaceStrategyImportStatusMock: vi.fn()
+  fetchMarketplaceStrategyImportStatusMock: vi.fn(),
+  publishMarketplaceStrategyMock: vi.fn(),
+  fetchMarketplacePublishStatusMock: vi.fn()
 }))
 
 vi.mock('../api/strategies', () => ({
@@ -21,7 +25,9 @@ vi.mock('../api/strategies', () => ({
   fetchMarketplaceStrategyDetail: fetchMarketplaceStrategyDetailMock,
   fetchMarketplaceStrategyEquityCurve: fetchMarketplaceStrategyEquityCurveMock,
   importMarketplaceStrategy: importMarketplaceStrategyMock,
-  fetchMarketplaceStrategyImportStatus: fetchMarketplaceStrategyImportStatusMock
+  fetchMarketplaceStrategyImportStatus: fetchMarketplaceStrategyImportStatusMock,
+  publishMarketplaceStrategy: publishMarketplaceStrategyMock,
+  fetchMarketplacePublishStatus: fetchMarketplacePublishStatusMock
 }))
 
 describe('useMarketplaceStore', () => {
@@ -32,6 +38,8 @@ describe('useMarketplaceStore', () => {
     fetchMarketplaceStrategyEquityCurveMock.mockReset()
     importMarketplaceStrategyMock.mockReset()
     fetchMarketplaceStrategyImportStatusMock.mockReset()
+    publishMarketplaceStrategyMock.mockReset()
+    fetchMarketplacePublishStatusMock.mockReset()
   })
 
   it('loads marketplace list and stores meta state', async () => {
@@ -59,7 +67,15 @@ describe('useMarketplaceStore', () => {
     const store = useMarketplaceStore()
     await store.fetchStrategies(2)
 
-    expect(fetchMarketplaceStrategiesMock).toHaveBeenCalledWith({ page: 2, pageSize: 20 })
+    expect(fetchMarketplaceStrategiesMock).toHaveBeenCalledWith({
+      page: 2,
+      pageSize: 20,
+      q: undefined,
+      category: null,
+      verified: false,
+      annualReturnGte: null,
+      maxDrawdownLte: null
+    })
     expect(store.strategies).toHaveLength(1)
     expect(store.page).toBe(2)
     expect(store.total).toBe(24)
@@ -203,5 +219,76 @@ describe('useMarketplaceStore', () => {
     })
     expect(store.currentStrategy?.alreadyImported).toBe(true)
     expect(store.currentStrategy?.importedStrategyId).toBe('imported-1')
+  })
+
+  it('forwards active filters when loading marketplace list', async () => {
+    fetchMarketplaceStrategiesMock.mockResolvedValue({
+      data: [],
+      meta: {
+        total: 0,
+        page: 1,
+        pageSize: 20
+      }
+    })
+
+    const store = useMarketplaceStore()
+    store.setFilter('q', '均线')
+    store.setFilter('category', 'trend-following')
+    store.setFilter('verified', true)
+    store.setFilter('annualReturnGte', 20)
+
+    await store.fetchStrategies(1)
+
+    expect(fetchMarketplaceStrategiesMock).toHaveBeenCalledWith({
+      page: 1,
+      pageSize: 20,
+      q: '均线',
+      category: 'trend-following',
+      verified: true,
+      annualReturnGte: 20,
+      maxDrawdownLte: null
+    })
+  })
+
+  it('publishes a strategy and fetches latest publish status', async () => {
+    publishMarketplaceStrategyMock.mockResolvedValue({
+      strategyId: 'strategy-1',
+      reviewStatus: 'pending'
+    })
+    fetchMarketplacePublishStatusMock.mockResolvedValue({
+      reviewStatus: 'pending',
+      isPublic: false
+    })
+
+    const store = useMarketplaceStore()
+    const publishResult = await store.publishStrategy({
+      strategyId: 'strategy-1',
+      title: '均线趋势增强版',
+      description: 'desc',
+      tags: ['均线'],
+      category: 'trend-following',
+      displayMetrics: {
+        sharpe_ratio: 1.4,
+        max_drawdown: -8.2,
+        total_return: 20.1
+      }
+    })
+    const status = await store.getPublishStatus('strategy-1')
+
+    expect(publishMarketplaceStrategyMock).toHaveBeenCalledWith({
+      strategyId: 'strategy-1',
+      title: '均线趋势增强版',
+      description: 'desc',
+      tags: ['均线'],
+      category: 'trend-following',
+      displayMetrics: {
+        sharpe_ratio: 1.4,
+        max_drawdown: -8.2,
+        total_return: 20.1
+      }
+    })
+    expect(fetchMarketplacePublishStatusMock).toHaveBeenCalledWith('strategy-1')
+    expect(publishResult.reviewStatus).toBe('pending')
+    expect(status).toEqual({ reviewStatus: 'pending', isPublic: false })
   })
 })

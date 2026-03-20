@@ -5,23 +5,39 @@ from flask import request
 from flask_jwt_extended import get_jwt_identity, jwt_required
 from flask_smorest import Blueprint
 from sqlalchemy import and_
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.exc import IntegrityError
 
 from ..extensions import db
 from ..models import BacktestJob, BacktestJobStatus, File, Strategy, StrategyVersion, User
 from ..schemas import StrategySchema
+from ..services.notifications import create_notification
+from ..utils.audit import log_audit
 from ..utils.response import error_response, ok
 from ..utils.storage import read_json
 from ..utils.time import format_beijing_iso_ms, now_ms
 
 bp = Blueprint("marketplace", __name__, url_prefix="/api/v1/marketplace")
 BACKTEST_CONFIGURE_PATH = "/backtest/configure"
+ALLOWED_MARKETPLACE_CATEGORIES = {
+    "trend-following",
+    "mean-reversion",
+    "momentum",
+    "multi-indicator",
+    "other",
+}
+REQUIRED_DISPLAY_METRICS = {"sharpe_ratio", "max_drawdown", "total_return"}
 
 
 @bp.get("/strategies")
 def list_marketplace_strategies():
     featured = _bool_arg("featured", default=False)
     tag = (request.args.get("tag") or "").strip().lower()
+    search_term = (request.args.get("q") or "").strip()
+    category = (request.args.get("category") or "").strip()
+    verified = _bool_arg("verified", default=False)
+    annual_return_gte = _float_arg("annual_return_gte")
+    max_drawdown_lte = _float_arg("max_drawdown_lte")
     page = _int_arg("page", default=1, minimum=1)
     page_size = _int_arg("page_size", default=20, minimum=1, maximum=100)
 
@@ -58,7 +74,18 @@ def list_marketplace_strategies():
             meta={"total": total, "page": 1, "page_size": 6},
         )
 
-    query = base_query.order_by(Strategy.last_update.desc(), Strategy.created_at.desc(), Strategy.id.desc())
+    query, rank_expr = _apply_marketplace_filters(
+        base_query,
+        search_term=search_term,
+        category=category,
+        verified=verified,
+        annual_return_gte=annual_return_gte,
+        max_drawdown_lte=max_drawdown_lte,
+    )
+    if rank_expr is not None:
+        query = query.order_by(rank_expr.desc(), Strategy.last_update.desc(), Strategy.created_at.desc(), Strategy.id.desc())
+    else:
+        query = query.order_by(Strategy.last_update.desc(), Strategy.created_at.desc(), Strategy.id.desc())
     total = query.count()
     items = query.offset((page - 1) * page_size).limit(page_size).all()
     return ok(
@@ -115,6 +142,61 @@ def get_marketplace_strategy_equity_curve(strategy_id):
 
     dates, values = _extract_equity_curve(raw_points)
     return ok({"dates": dates, "values": values})
+
+
+@bp.post("/strategies")
+@jwt_required()
+def publish_marketplace_strategy():
+    user_id = get_jwt_identity()
+    payload = request.get_json() or {}
+    strategy_id = (payload.get("strategy_id") or "").strip()
+    if not strategy_id:
+        return error_response("STRATEGY_ID_REQUIRED", "Strategy id is required", 422)
+
+    strategy = Strategy.query.filter_by(id=strategy_id).first()
+    if strategy is None:
+        return error_response("STRATEGY_NOT_FOUND", "Strategy not found", 404)
+    if strategy.owner_id != user_id:
+        return error_response("STRATEGY_FORBIDDEN", "Strategy does not belong to current user", 403)
+    if strategy.review_status in {"pending", "approved"}:
+        return error_response("STRATEGY_ALREADY_SUBMITTED", "Strategy is already pending review", 409)
+
+    validation_error = _validate_publish_payload(payload)
+    if validation_error is not None:
+        return validation_error
+
+    if _find_latest_completed_job(strategy.id) is None:
+        return error_response("STRATEGY_BACKTEST_REQUIRED", "A completed backtest is required before publishing", 422)
+
+    strategy.title = payload["title"].strip()
+    strategy.description = payload["description"].strip()
+    strategy.tags = [str(tag).strip() for tag in payload["tags"] if str(tag).strip()]
+    strategy.category = payload["category"].strip()
+    strategy.display_metrics = dict(payload["display_metrics"])
+    strategy.review_status = "pending"
+    strategy.updated_at = now_ms()
+    strategy.last_update = now_ms()
+
+    create_notification(
+        user_id=user_id,
+        type="strategy_review_submitted",
+        title="Strategy submitted for review",
+        content="Your strategy has been submitted for marketplace review.",
+    )
+    log_audit(
+        operator_id=user_id,
+        action="marketplace_strategy_submitted",
+        target_type="strategy",
+        target_id=strategy.id,
+        details={
+            "title": strategy.title,
+            "category": strategy.category,
+            "tags": strategy.tags,
+            "display_metrics": strategy.display_metrics,
+        },
+    )
+    db.session.commit()
+    return ok({"strategy_id": strategy.id, "review_status": strategy.review_status})
 
 
 @bp.post("/strategies/<strategy_id>/import")
@@ -182,6 +264,19 @@ def get_marketplace_import_status(strategy_id):
     )
 
 
+@bp.get("/strategies/<strategy_id>/publish-status")
+@jwt_required()
+def get_marketplace_publish_status(strategy_id):
+    user_id = get_jwt_identity()
+    strategy = Strategy.query.filter_by(id=strategy_id).first()
+    if strategy is None:
+        return error_response("STRATEGY_NOT_FOUND", "Strategy not found", 404)
+    if strategy.owner_id != user_id:
+        return error_response("STRATEGY_FORBIDDEN", "Strategy does not belong to current user", 403)
+
+    return ok({"review_status": strategy.review_status, "is_public": bool(strategy.is_public)})
+
+
 def _bool_arg(name, *, default=False):
     raw = request.args.get(name)
     if raw is None:
@@ -200,6 +295,106 @@ def _int_arg(name, *, default, minimum=None, maximum=None):
     if maximum is not None:
         value = min(value, maximum)
     return value
+
+
+def _float_arg(name):
+    raw = request.args.get(name)
+    if raw is None or str(raw).strip() == "":
+        return None
+    try:
+        return float(raw)
+    except (TypeError, ValueError):
+        return None
+
+
+def _validate_publish_payload(payload):
+    title = payload.get("title")
+    description = payload.get("description")
+    tags = payload.get("tags")
+    category = payload.get("category")
+    display_metrics = payload.get("display_metrics")
+
+    if not isinstance(title, str) or not title.strip():
+        return error_response("TITLE_REQUIRED", "Title is required", 422)
+    if len(title.strip()) > 200:
+        return error_response("TITLE_TOO_LONG", "Title must be 200 characters or fewer", 422)
+    if not isinstance(description, str) or not description.strip():
+        return error_response("DESCRIPTION_REQUIRED", "Description is required", 422)
+    if not isinstance(tags, list) or not [str(tag).strip() for tag in tags if str(tag).strip()]:
+        return error_response("TAGS_REQUIRED", "At least one tag is required", 422)
+    if not isinstance(category, str) or category.strip() not in ALLOWED_MARKETPLACE_CATEGORIES:
+        return error_response("CATEGORY_INVALID", "Category is invalid", 422)
+    if not isinstance(display_metrics, dict):
+        return error_response("DISPLAY_METRICS_REQUIRED", "Display metrics are required", 422)
+    missing_metrics = sorted(REQUIRED_DISPLAY_METRICS.difference(display_metrics.keys()))
+    if missing_metrics:
+        return error_response(
+            "DISPLAY_METRICS_INVALID",
+            "Display metrics are missing required keys",
+            422,
+            details={"missing": missing_metrics},
+        )
+    return None
+
+
+def _apply_marketplace_filters(query, *, search_term, category, verified, annual_return_gte, max_drawdown_lte):
+    rank_expr = None
+
+    if search_term:
+        query_expr = db.func.plainto_tsquery("chinese", search_term)
+        title_vector = _search_vector_for_column(Strategy.title_tsv, Strategy.title)
+        description_vector = _search_vector_for_column(Strategy.description_tsv, Strategy.description)
+        query = query.filter(
+            db.or_(
+                title_vector.op("@@")(query_expr),
+                description_vector.op("@@")(query_expr),
+            )
+        )
+        rank_expr = db.func.ts_rank(title_vector, query_expr) + db.func.ts_rank(description_vector, query_expr)
+
+    if category:
+        query = query.filter(Strategy.category == category)
+
+    if verified:
+        query = query.filter(Strategy.is_verified.is_(True))
+
+    if annual_return_gte is not None:
+        annual_return_text = _json_metric_text("annual_return")
+        annual_return_expr = db.cast(annual_return_text, db.Float)
+        query = query.filter(
+            annual_return_text.isnot(None),
+            annual_return_expr >= annual_return_gte,
+        )
+
+    if max_drawdown_lte is not None:
+        max_drawdown_text = _json_metric_text("max_drawdown")
+        max_drawdown_expr = db.cast(max_drawdown_text, db.Float)
+        # Product copy is expressed as positive percentages, while storage uses negative values.
+        query = query.filter(
+            max_drawdown_text.isnot(None),
+            db.func.abs(max_drawdown_expr) <= max_drawdown_lte,
+        )
+
+    raw_tags = request.args.getlist("tags")
+    if raw_tags:
+        requested_tags = [tag.strip() for tag in raw_tags if tag.strip()]
+        if requested_tags:
+            tags_expr = db.cast(Strategy.tags, JSONB)
+            tag_filters = [tags_expr.contains([tag]) for tag in requested_tags]
+            query = query.filter(db.or_(*tag_filters))
+
+    return query, rank_expr
+
+
+def _search_vector_for_column(stored_vector, source_column):
+    return db.func.coalesce(
+        stored_vector,
+        db.func.to_tsvector("chinese", db.func.coalesce(source_column, "")),
+    )
+
+
+def _json_metric_text(metric_name):
+    return db.cast(Strategy.display_metrics, JSONB).op("->>")(metric_name)
 
 
 def _get_public_strategy(strategy_id):

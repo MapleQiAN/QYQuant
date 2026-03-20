@@ -4,9 +4,15 @@ import {
   fetchMarketplaceStrategyDetail,
   fetchMarketplaceStrategyEquityCurve,
   fetchMarketplaceStrategyImportStatus,
-  importMarketplaceStrategy
+  fetchMarketplacePublishStatus,
+  importMarketplaceStrategy,
+  publishMarketplaceStrategy
 } from '../api/strategies'
 import type {
+  MarketplaceFilters,
+  MarketplacePublishPayload,
+  MarketplacePublishResult,
+  MarketplacePublishStatus,
   MarketplaceStrategy,
   MarketplaceStrategyDetail,
   MarketplaceStrategyEquityCurve,
@@ -22,6 +28,14 @@ const emptyEquityCurve: MarketplaceStrategyEquityCurve = {
   values: []
 }
 
+const defaultFilters = (): MarketplaceFilters => ({
+  q: '',
+  category: null,
+  verified: false,
+  annualReturnGte: null,
+  maxDrawdownLte: null
+})
+
 export const useMarketplaceStore = defineStore('marketplace', {
   state: () => ({
     strategies: [] as MarketplaceStrategy[],
@@ -36,6 +50,7 @@ export const useMarketplaceStore = defineStore('marketplace', {
     featuredError: null as string | null,
     curveError: null as string | null,
     error: null as string | null,
+    filters: defaultFilters() as MarketplaceFilters,
     total: 0,
     page: 1,
     pageSize: DEFAULT_PAGE_SIZE
@@ -45,7 +60,15 @@ export const useMarketplaceStore = defineStore('marketplace', {
       this.loading = true
       this.error = null
       try {
-        const result = await fetchMarketplaceStrategies({ page, pageSize: this.pageSize })
+        const result = await fetchMarketplaceStrategies({
+          page,
+          pageSize: this.pageSize,
+          q: this.filters.q || undefined,
+          category: this.filters.category,
+          verified: this.filters.verified,
+          annualReturnGte: this.filters.annualReturnGte,
+          maxDrawdownLte: this.filters.maxDrawdownLte
+        })
         this.strategies = result.data
         this.total = toNumber((result.meta as any).total, 0)
         this.page = toNumber((result.meta as any).page, page)
@@ -134,6 +157,36 @@ export const useMarketplaceStore = defineStore('marketplace', {
         this.importLoading = false
       }
     },
+    setFilter<Key extends keyof MarketplaceFilters>(key: Key, value: MarketplaceFilters[Key]) {
+      this.filters[key] = value
+    },
+    clearFilters() {
+      this.filters = defaultFilters()
+    },
+    async publishStrategy(payload: MarketplacePublishPayload): Promise<MarketplacePublishResult> {
+      this.loading = true
+      this.error = null
+      try {
+        return await publishMarketplaceStrategy(payload)
+      } catch (error: any) {
+        this.error = error?.message || 'Failed to publish strategy'
+        throw error
+      } finally {
+        this.loading = false
+      }
+    },
+    async getPublishStatus(strategyId: string): Promise<MarketplacePublishStatus> {
+      this.loading = true
+      this.error = null
+      try {
+        return await fetchMarketplacePublishStatus(strategyId)
+      } catch (error: any) {
+        this.error = error?.message || 'Failed to load publish status'
+        throw error
+      } finally {
+        this.loading = false
+      }
+    },
     reset() {
       this.currentStrategy = null
       this.equityCurve = { ...emptyEquityCurve }
@@ -145,6 +198,7 @@ export const useMarketplaceStore = defineStore('marketplace', {
       this.featuredError = null
       this.curveError = null
       this.error = null
+      this.filters = defaultFilters()
     }
   }
 })

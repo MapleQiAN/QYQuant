@@ -3,6 +3,8 @@ import sys
 from pathlib import Path
 
 import pytest
+from sqlalchemy import create_engine, text
+from sqlalchemy.engine import make_url
 
 
 os.environ.setdefault('CELERY_TASK_ALWAYS_EAGER', '1')
@@ -17,12 +19,38 @@ if str(BACKEND_DIR) not in sys.path:
     sys.path.insert(0, str(BACKEND_DIR))
 
 
+def _ensure_postgres_database(database_url):
+    target_url = make_url(database_url)
+    database_name = target_url.database
+    if not database_name:
+        return
+
+    admin_database = "postgres" if database_name != "postgres" else "template1"
+    admin_url = target_url.set(database=admin_database)
+    engine = create_engine(admin_url, isolation_level="AUTOCOMMIT")
+    try:
+        with engine.connect() as connection:
+            exists = connection.execute(
+                text("SELECT 1 FROM pg_database WHERE datname = :name"),
+                {"name": database_name},
+            ).scalar()
+            if not exists:
+                connection.execute(text(f'CREATE DATABASE "{database_name}"'))
+    finally:
+        engine.dispose()
+
+
 @pytest.fixture()
 def app(tmp_path, monkeypatch):
     db_path = tmp_path / 'test.db'
     storage_root = tmp_path / 'storage'
+    postgres_test_url = os.getenv('QYQUANT_TEST_DATABASE_URL')
     monkeypatch.setenv('FLASK_ENV', 'testing')
-    monkeypatch.setenv('DATABASE_URL', f"sqlite:///{db_path.as_posix()}")
+    if postgres_test_url:
+        _ensure_postgres_database(postgres_test_url)
+        monkeypatch.setenv('DATABASE_URL', postgres_test_url)
+    else:
+        monkeypatch.setenv('DATABASE_URL', f"sqlite:///{db_path.as_posix()}")
     monkeypatch.setenv('FERNET_KEY', 'fVFLNI0cSfGIaULo353R6ivdsuEVw7xdl5Hknr0bHFU=')
     monkeypatch.setenv('CELERY_TASK_ALWAYS_EAGER', '1')
     monkeypatch.setenv('REDIS_URL', 'redis://localhost:6379/0')
@@ -42,7 +70,22 @@ def app(tmp_path, monkeypatch):
     monkeypatch.setenv('BACKTEST_DATA_PROVIDER', 'mock')
     app = create_app('testing')
     with app.app_context():
+        if postgres_test_url:
+            db.session.execute(db.text('DROP SCHEMA IF EXISTS public CASCADE'))
+            db.session.execute(db.text('CREATE SCHEMA public'))
+            db.session.commit()
         db.create_all()
+        if postgres_test_url:
+            db.session.execute(db.text('CREATE EXTENSION IF NOT EXISTS zhparser'))
+            db.session.execute(db.text('DROP TEXT SEARCH CONFIGURATION IF EXISTS chinese CASCADE'))
+            db.session.execute(db.text('CREATE TEXT SEARCH CONFIGURATION chinese (PARSER = zhparser)'))
+            db.session.execute(
+                db.text(
+                    "ALTER TEXT SEARCH CONFIGURATION chinese "
+                    "ADD MAPPING FOR n,v,a,i,e,l WITH simple"
+                )
+            )
+            db.session.commit()
     return app
 
 

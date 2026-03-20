@@ -8,6 +8,39 @@
         </div>
       </header>
 
+      <section class="toolbar-card">
+        <label class="search-shell">
+          <span class="search-icon">⌕</span>
+          <input
+            v-model="searchInput"
+            data-test="marketplace-search-input"
+            class="search-input"
+            type="search"
+            placeholder="Search strategy name, category, or tags"
+          />
+        </label>
+        <div class="chip-row">
+          <button
+            type="button"
+            class="filter-chip"
+            :class="{ active: !hasActiveFilters }"
+            @click="clearAllFilters"
+          >
+            All
+          </button>
+          <button
+            v-for="chip in filterChips"
+            :key="chip.key"
+            type="button"
+            class="filter-chip"
+            :class="{ active: chip.active }"
+            @click="chip.onClick"
+          >
+            {{ chip.label }}
+          </button>
+        </div>
+      </section>
+
       <section
         v-if="store.featuredStrategies.length > 0"
         class="featured-section"
@@ -31,7 +64,7 @@
       <section class="grid-section">
         <div class="section-title-row">
           <h2 class="section-title">All Strategies</h2>
-          <span class="section-meta">{{ store.total }} total</span>
+          <span class="section-meta">{{ store.total }} results</span>
         </div>
 
         <div v-if="store.loading" class="empty-state">Loading marketplace strategies...</div>
@@ -41,7 +74,16 @@
           class="empty-state"
           data-test="marketplace-empty"
         >
-          No public strategies yet.
+          <p>{{ hasActiveFilters ? 'No strategies match the current search and filters.' : 'No public strategies yet.' }}</p>
+          <button
+            v-if="hasActiveFilters"
+            data-test="marketplace-clear-filters"
+            type="button"
+            class="btn btn-secondary"
+            @click="clearAllFilters"
+          >
+            Clear filters
+          </button>
         </div>
         <div v-else class="strategy-grid" data-test="marketplace-grid">
           <StrategyCard
@@ -76,17 +118,89 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import FeaturedStrategyCard from '../components/strategy/FeaturedStrategyCard.vue'
 import StrategyCard from '../components/strategy/StrategyCard.vue'
 import { useMarketplaceStore } from '../stores'
 
 const store = useMarketplaceStore()
+const searchInput = ref(store.filters.q)
+let searchTimer: number | undefined
+
 const totalPages = computed(() => Math.max(1, Math.ceil(store.total / Math.max(store.pageSize, 1))))
+const hasActiveFilters = computed(
+  () =>
+    Boolean(store.filters.q) ||
+    Boolean(store.filters.category) ||
+    store.filters.verified ||
+    store.filters.annualReturnGte !== null ||
+    store.filters.maxDrawdownLte !== null
+)
+
+const filterChips = computed(() => [
+  {
+    key: 'trend-following',
+    label: 'Trend Following',
+    active: store.filters.category === 'trend-following',
+    onClick: () => toggleCategory('trend-following')
+  },
+  {
+    key: 'mean-reversion',
+    label: 'Mean Reversion',
+    active: store.filters.category === 'mean-reversion',
+    onClick: () => toggleCategory('mean-reversion')
+  },
+  {
+    key: 'momentum',
+    label: 'Momentum',
+    active: store.filters.category === 'momentum',
+    onClick: () => toggleCategory('momentum')
+  },
+  {
+    key: 'multi-indicator',
+    label: 'Multi Indicator',
+    active: store.filters.category === 'multi-indicator',
+    onClick: () => toggleCategory('multi-indicator')
+  },
+  {
+    key: 'annual-return',
+    label: 'Annual > 20%',
+    active: store.filters.annualReturnGte === 20,
+    onClick: () => toggleMetric('annualReturnGte', 20)
+  },
+  {
+    key: 'drawdown',
+    label: 'Drawdown < 10%',
+    active: store.filters.maxDrawdownLte === 10,
+    onClick: () => toggleMetric('maxDrawdownLte', 10)
+  },
+  {
+    key: 'verified',
+    label: 'Platform Verified',
+    active: store.filters.verified,
+    onClick: () => toggleVerified()
+  }
+])
 
 onMounted(() => {
   void store.fetchFeatured()
   void store.fetchStrategies(1)
+})
+
+onBeforeUnmount(() => {
+  if (searchTimer) {
+    window.clearTimeout(searchTimer)
+  }
+})
+
+watch(searchInput, (value) => {
+  if (searchTimer) {
+    window.clearTimeout(searchTimer)
+  }
+  searchTimer = window.setTimeout(() => {
+    store.setFilter('q', value.trim())
+    void store.fetchStrategies(1)
+  }, 300)
 })
 
 function changePage(nextPage: number) {
@@ -94,6 +208,27 @@ function changePage(nextPage: number) {
     return
   }
   void store.fetchStrategies(nextPage)
+}
+
+function toggleCategory(category: string) {
+  store.setFilter('category', store.filters.category === category ? null : category)
+  void store.fetchStrategies(1)
+}
+
+function toggleMetric(key: 'annualReturnGte' | 'maxDrawdownLte', value: number) {
+  store.setFilter(key, store.filters[key] === value ? null : value)
+  void store.fetchStrategies(1)
+}
+
+function toggleVerified() {
+  store.setFilter('verified', !store.filters.verified)
+  void store.fetchStrategies(1)
+}
+
+function clearAllFilters() {
+  searchInput.value = ''
+  store.clearFilters()
+  void store.fetchStrategies(1)
 }
 </script>
 
@@ -117,6 +252,64 @@ function changePage(nextPage: number) {
 .page-subtitle {
   margin: var(--spacing-xs) 0 0;
   color: var(--color-text-muted);
+}
+
+.toolbar-card {
+  margin-bottom: var(--spacing-lg);
+  padding: var(--spacing-lg);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--color-border-light);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(247, 248, 250, 0.95));
+}
+
+.search-shell {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  padding: 0 var(--spacing-md);
+  border-radius: 999px;
+  border: 1px solid #e5e5e5;
+  background: #fff;
+}
+
+.search-icon {
+  color: #94a3b8;
+  font-size: var(--font-size-md);
+}
+
+.search-input {
+  width: 100%;
+  padding: 14px 0;
+  border: 0;
+  background: transparent;
+  color: var(--color-text-primary);
+}
+
+.search-input:focus {
+  outline: none;
+}
+
+.chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-sm);
+  margin-top: var(--spacing-md);
+}
+
+.filter-chip {
+  padding: 8px 14px;
+  border-radius: 9999px;
+  border: 1px solid #e5e5e5;
+  background: #fff;
+  color: #64748b;
+  font-size: 12px;
+  transition: background-color var(--transition-fast), border-color var(--transition-fast), color var(--transition-fast);
+}
+
+.filter-chip.active {
+  background: #f5e642;
+  border-color: #d4c400;
+  color: #1a1a1a;
 }
 
 .section-title-row {
@@ -190,6 +383,10 @@ function changePage(nextPage: number) {
 @media (max-width: 768px) {
   .page-header {
     flex-direction: column;
+  }
+
+  .toolbar-card {
+    padding: var(--spacing-md);
   }
 
   .strategy-grid {

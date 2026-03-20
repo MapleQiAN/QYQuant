@@ -151,6 +151,33 @@ describe('strategies api', () => {
     expect(result.data[0].author.avatarUrl).toBe('https://example.com/a.png')
   })
 
+  it('forwards marketplace search and filter params', async () => {
+    await strategies.fetchMarketplaceStrategies({
+      page: 3,
+      pageSize: 10,
+      q: '均线',
+      category: 'trend-following',
+      verified: true,
+      annualReturnGte: 20,
+      maxDrawdownLte: 10
+    })
+
+    expect(requestWithMetaMock).toHaveBeenCalledWith({
+      method: 'get',
+      url: '/v1/marketplace/strategies',
+      params: {
+        page: 3,
+        page_size: 10,
+        featured: undefined,
+        q: '均线',
+        category: 'trend-following',
+        verified: true,
+        annual_return_gte: 20,
+        max_drawdown_lte: 10
+      }
+    })
+  })
+
   it('calls marketplace import endpoint', async () => {
     const data = await strategies.importMarketplaceStrategy('strategy-id')
 
@@ -168,6 +195,49 @@ describe('strategies api', () => {
     expect(requestMock).toHaveBeenCalledWith({
       method: 'get',
       url: '/v1/marketplace/strategies/strategy-id/import-status'
+    })
+  })
+
+  it('calls marketplace publish endpoint', async () => {
+    const data = await strategies.publishMarketplaceStrategy({
+      strategyId: 'strategy-id',
+      title: '均线趋势增强版',
+      description: 'desc',
+      tags: ['均线', '趋势'],
+      category: 'trend-following',
+      displayMetrics: {
+        sharpe_ratio: 1.45,
+        max_drawdown: -9.2,
+        total_return: 28.4
+      }
+    })
+
+    expect(data).toEqual({ strategyId: '', reviewStatus: 'draft' })
+    expect(requestMock).toHaveBeenCalledWith({
+      method: 'post',
+      url: '/v1/marketplace/strategies',
+      data: {
+        strategy_id: 'strategy-id',
+        title: '均线趋势增强版',
+        description: 'desc',
+        tags: ['均线', '趋势'],
+        category: 'trend-following',
+        display_metrics: {
+          sharpe_ratio: 1.45,
+          max_drawdown: -9.2,
+          total_return: 28.4
+        }
+      }
+    })
+  })
+
+  it('calls marketplace publish status endpoint', async () => {
+    const data = await strategies.fetchMarketplacePublishStatus('strategy-id')
+
+    expect(data).toEqual({ reviewStatus: 'draft', isPublic: false })
+    expect(requestMock).toHaveBeenCalledWith({
+      method: 'get',
+      url: '/v1/marketplace/strategies/strategy-id/publish-status'
     })
   })
 })

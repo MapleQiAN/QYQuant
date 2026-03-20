@@ -99,10 +99,17 @@
           <div v-else class="strategy-list">
             <article v-for="strategy in items" :key="strategy.id" class="strategy-row">
               <div class="row-main">
-                <div class="row-title">{{ strategy.name }}</div>
+                <div class="row-title">{{ strategy.title || strategy.name }}</div>
                 <div class="row-meta">
                   <span>{{ strategy.category || 'other' }}</span>
                   <span>{{ strategy.source || 'upload' }}</span>
+                  <span
+                    class="status-pill"
+                    :class="statusClass(strategy.reviewStatus)"
+                    :data-test="`publish-status-${strategy.id}`"
+                  >
+                    {{ publishStatusLabel(strategy.reviewStatus) }}
+                  </span>
                   <span>{{ formatCreatedAt(strategy.createdAt) }}</span>
                 </div>
                 <p class="row-description">{{ strategy.description || 'No description provided.' }}</p>
@@ -110,14 +117,25 @@
                   <span v-for="tag in strategy.tags" :key="tag" class="pill">{{ tag }}</span>
                 </div>
               </div>
-              <button
-                class="btn btn-secondary danger"
-                type="button"
-                :data-test="`delete-${strategy.id}`"
-                @click="handleDelete(strategy.id)"
-              >
-                Delete
-              </button>
+              <div class="row-actions">
+                <button
+                  class="btn btn-secondary"
+                  type="button"
+                  :data-test="`publish-open-${strategy.id}`"
+                  :disabled="isPublishDisabled(strategy.reviewStatus)"
+                  @click="openPublishFlow(strategy)"
+                >
+                  {{ publishButtonLabel(strategy.reviewStatus) }}
+                </button>
+                <button
+                  class="btn btn-secondary danger"
+                  type="button"
+                  :data-test="`delete-${strategy.id}`"
+                  @click="handleDelete(strategy.id)"
+                >
+                  Delete
+                </button>
+              </div>
             </article>
           </div>
 
@@ -138,19 +156,31 @@
         </div>
       </div>
     </div>
+
+    <StrategyPublishFlow
+      :open="publishOpen"
+      :strategy="selectedStrategy"
+      :submitting="publishSubmitting"
+      :submitted="publishSubmitted"
+      :submit-error="publishError"
+      @close="closePublishFlow"
+      @submit="handlePublishSubmit"
+    />
   </section>
 </template>
 
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
+import StrategyPublishFlow from '../components/strategy/StrategyPublishFlow.vue'
 import { deleteStrategy, fetchMarketplaceStrategies, fetchStrategies, importStrategy } from '../api/strategies'
-import type { Strategy } from '../types/Strategy'
-import { useUserStore } from '../stores'
+import type { MarketplacePublishPayload, MarketplaceReviewStatus, Strategy } from '../types/Strategy'
+import { useMarketplaceStore, useUserStore } from '../stores'
 
 const router = useRouter()
 const route = useRoute()
 const userStore = useUserStore()
+const marketplaceStore = useMarketplaceStore()
 
 const items = ref<Strategy[]>([])
 const guidedStrategies = ref<Strategy[]>([])
@@ -166,6 +196,11 @@ const preview = ref<Strategy | null>(null)
 const page = ref(1)
 const perPage = ref(10)
 const total = ref(0)
+const publishOpen = ref(false)
+const publishSubmitting = ref(false)
+const publishSubmitted = ref(false)
+const publishError = ref('')
+const selectedStrategy = ref<Strategy | null>(null)
 
 const totalPages = computed(() => Math.max(1, Math.ceil(total.value / perPage.value)))
 const isGuidedMode = computed(() => route.query.guided === 'true')
@@ -182,7 +217,11 @@ async function loadPage(nextPage: number) {
   loadError.value = ''
   try {
     const result = await fetchStrategies({ page: nextPage, perPage: perPage.value })
-    items.value = result.items
+    items.value = result.items.map((item) => ({
+      ...item,
+      reviewStatus: item.reviewStatus || 'draft',
+      isPublic: Boolean(item.isPublic),
+    }))
     page.value = result.page
     perPage.value = result.perPage
     total.value = result.total
@@ -256,6 +295,50 @@ async function handleDelete(strategyId: string) {
   await loadPage(fallbackPage)
 }
 
+function openPublishFlow(strategy: Strategy) {
+  selectedStrategy.value = strategy
+  publishOpen.value = true
+  publishSubmitting.value = false
+  publishSubmitted.value = false
+  publishError.value = ''
+}
+
+function closePublishFlow() {
+  publishOpen.value = false
+  publishSubmitting.value = false
+  publishSubmitted.value = false
+  publishError.value = ''
+  selectedStrategy.value = null
+}
+
+async function handlePublishSubmit(payload: MarketplacePublishPayload) {
+  publishSubmitting.value = true
+  publishError.value = ''
+  try {
+    const result = await marketplaceStore.publishStrategy(payload)
+    const latestStatus = await marketplaceStore.getPublishStatus(payload.strategyId)
+    items.value = items.value.map((item) =>
+      item.id === payload.strategyId
+        ? {
+            ...item,
+            title: payload.title,
+            description: payload.description,
+            tags: payload.tags,
+            category: payload.category,
+            reviewStatus: latestStatus.reviewStatus || result.reviewStatus,
+            isPublic: latestStatus.isPublic,
+          }
+        : item
+    )
+    selectedStrategy.value = items.value.find((item) => item.id === payload.strategyId) || selectedStrategy.value
+    publishSubmitted.value = true
+  } catch (error: any) {
+    publishError.value = error?.message || 'Failed to submit strategy for review'
+  } finally {
+    publishSubmitting.value = false
+  }
+}
+
 async function handleGuidedSelect(strategyId: string) {
   userStore.setGuidedBacktestStrategy(strategyId)
   userStore.setGuidedBacktestStep(2)
@@ -286,6 +369,28 @@ function formatCreatedAt(value?: string | number) {
   const numeric = typeof value === 'string' ? Number(value) : value
   if (!Number.isFinite(numeric)) return String(value)
   return new Date(numeric).toLocaleDateString()
+}
+
+function publishStatusLabel(status?: MarketplaceReviewStatus) {
+  if (status === 'pending') return 'Pending review'
+  if (status === 'approved') return 'Approved'
+  if (status === 'rejected') return 'Rejected'
+  return 'Not published'
+}
+
+function publishButtonLabel(status?: MarketplaceReviewStatus) {
+  return status === 'rejected' ? 'Resubmit' : 'Publish to marketplace'
+}
+
+function isPublishDisabled(status?: MarketplaceReviewStatus) {
+  return status === 'pending' || status === 'approved'
+}
+
+function statusClass(status?: MarketplaceReviewStatus) {
+  if (status === 'pending') return 'status-pending'
+  if (status === 'approved') return 'status-approved'
+  if (status === 'rejected') return 'status-rejected'
+  return 'status-draft'
 }
 </script>
 
@@ -428,6 +533,14 @@ function formatCreatedAt(value?: string | number) {
   min-width: 0;
 }
 
+.row-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: var(--spacing-sm);
+  min-width: 180px;
+}
+
 .row-meta {
   display: flex;
   flex-wrap: wrap;
@@ -450,6 +563,35 @@ function formatCreatedAt(value?: string | number) {
   background: var(--color-background);
   color: var(--color-text-secondary);
   font-size: var(--font-size-xs);
+}
+
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+}
+
+.status-draft {
+  background: rgba(100, 116, 139, 0.12);
+  color: var(--color-text-muted);
+}
+
+.status-pending {
+  background: rgba(245, 230, 66, 0.22);
+  color: #6f6000;
+}
+
+.status-approved {
+  background: rgba(34, 197, 94, 0.14);
+  color: #137333;
+}
+
+.status-rejected {
+  background: rgba(239, 68, 68, 0.14);
+  color: #b42318;
 }
 
 .pagination {
@@ -483,7 +625,8 @@ function formatCreatedAt(value?: string | number) {
   .layout-grid,
   .strategy-row,
   .pagination,
-  .guided-actions {
+  .guided-actions,
+  .row-actions {
     display: flex;
     flex-direction: column;
   }

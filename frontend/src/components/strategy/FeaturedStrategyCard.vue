@@ -56,7 +56,7 @@ const metrics = computed(() => [
   }
 ])
 
-function formatMetric(value: string | number | null | undefined, percent: boolean) {
+function formatMetric(value: string | number | boolean | null | undefined, percent: boolean) {
   if (typeof value === 'number' && Number.isFinite(value)) {
     return percent ? `${value.toFixed(2)}%` : value.toFixed(2)
   }

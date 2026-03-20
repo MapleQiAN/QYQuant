@@ -1,13 +1,17 @@
 export type StrategyStatus = 'draft' | 'running' | 'paused' | 'stopped' | 'completed'
+export type MarketplaceReviewStatus = 'draft' | 'pending' | 'approved' | 'rejected'
 
 export interface Strategy {
   id: string
   name: string
+  title?: string | null
   symbol: string
   status: StrategyStatus
   description?: string | null
   category?: string | null
   source?: string | null
+  reviewStatus?: MarketplaceReviewStatus
+  isPublic?: boolean
   returns: number
   winRate: number
   maxDrawdown: number
@@ -145,4 +149,31 @@ export interface MarketplaceStrategyImportStatus {
 export interface MarketplaceStrategyImportResult {
   strategyId: string
   redirectTo: string
+}
+
+export interface MarketplacePublishStatus {
+  reviewStatus: MarketplaceReviewStatus
+  isPublic: boolean
+}
+
+export interface MarketplacePublishPayload {
+  strategyId: string
+  title: string
+  description: string
+  tags: string[]
+  category: string
+  displayMetrics: Record<string, number>
+}
+
+export interface MarketplacePublishResult {
+  strategyId: string
+  reviewStatus: MarketplaceReviewStatus
+}
+
+export interface MarketplaceFilters {
+  q: string
+  category: string | null
+  verified: boolean
+  annualReturnGte: number | null
+  maxDrawdownLte: number | null
 }

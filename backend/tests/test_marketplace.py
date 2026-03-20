@@ -3,7 +3,7 @@ import uuid
 import zipfile
 
 from app.extensions import db
-from app.models import BacktestJob, BacktestJobStatus, File, Strategy, StrategyVersion, User
+from app.models import AuditLog, BacktestJob, BacktestJobStatus, File, Strategy, StrategyVersion, User
 
 
 def _create_user(user_id, nickname, avatar_url):
@@ -38,6 +38,42 @@ def _login_user(client, phone="13800138100", nickname="MarketplaceUser"):
 
 def _auth_headers(token):
     return {"Authorization": f"Bearer {token}"}
+
+
+def _seed_owned_private_strategy(app, owner_id, *, strategy_id="owned-private-strategy", with_completed_job=True):
+    with app.app_context():
+        strategy = Strategy(
+            id=strategy_id,
+            name="Owned Private Strategy",
+            title="Owned Private Strategy",
+            symbol="BTCUSDT",
+            status="draft",
+            description="Private strategy ready for publishing.",
+            category="trend-following",
+            source="upload",
+            tags=["trend"],
+            owner_id=owner_id,
+            created_at=1700000000000,
+            updated_at=1700000000000,
+            last_update=1700000000000,
+            is_public=False,
+            is_verified=False,
+            review_status="draft",
+            display_metrics={},
+        )
+        db.session.add(strategy)
+        if with_completed_job:
+            db.session.add(
+                BacktestJob(
+                    id=f"{strategy_id}-job",
+                    strategy_id=strategy_id,
+                    status=BacktestJobStatus.COMPLETED.value,
+                    result_summary={"totalReturn": 12.3},
+                    result_storage_key=f"backtest-results/{strategy_id}-job",
+                )
+            )
+        db.session.commit()
+    return strategy_id
 
 
 def _seed_marketplace_strategy(app, tmp_path):
@@ -371,6 +407,368 @@ def test_marketplace_card_includes_author_and_excludes_encrypted_code(client, ap
     assert card["author"]["nickname"] == "Market Author"
     assert card["author"]["avatar_url"] == "https://cdn.example.com/author-4.png"
     assert "code_encrypted" not in card
+
+
+def test_marketplace_search_suite_requires_postgres(app):
+    assert app.config["SQLALCHEMY_DATABASE_URI"].startswith("postgresql")
+
+
+def test_publish_creates_review_submitted_notification(client, app):
+    token, user_id = _login_user(client, phone="13800138107", nickname="Publisher")
+    strategy_id = _seed_owned_private_strategy(app, user_id, strategy_id="publishable-strategy")
+
+    payload = {
+        "strategy_id": strategy_id,
+        "title": "Moving Average Trend Pro",
+        "description": "Markdown-compatible description",
+        "tags": ["trend", "medium-frequency", "risk-control"],
+        "category": "trend-following",
+        "display_metrics": {
+            "sharpe_ratio": 1.45,
+            "max_drawdown": -15.2,
+            "total_return": 45.6,
+        },
+    }
+
+    response = client.post(
+        "/api/v1/marketplace/strategies",
+        json=payload,
+        headers=_auth_headers(token),
+    )
+
+    assert response.status_code == 200
+    with app.app_context():
+        from app.models import Notification
+
+        notification = Notification.query.filter_by(
+            user_id=user_id,
+            type="strategy_review_submitted",
+        ).first()
+        assert notification is not None
+        assert notification.title
+
+
+def test_publish_owned_strategy_sets_pending_without_making_public(client, app):
+    token, user_id = _login_user(client, phone="13800138109", nickname="PublisherPending")
+    strategy_id = _seed_owned_private_strategy(app, user_id, strategy_id="publishable-strategy-pending")
+
+    payload = {
+        "strategy_id": strategy_id,
+        "title": "Moving Average Trend Pro",
+        "description": "Markdown-compatible description",
+        "tags": ["trend", "medium-frequency", "risk-control"],
+        "category": "trend-following",
+        "display_metrics": {
+            "sharpe_ratio": 1.45,
+            "max_drawdown": -15.2,
+            "total_return": 45.6,
+        },
+    }
+
+    response = client.post(
+        "/api/v1/marketplace/strategies",
+        json=payload,
+        headers=_auth_headers(token),
+    )
+
+    assert response.status_code == 200
+    assert response.json["data"] == {"strategy_id": strategy_id, "review_status": "pending"}
+    with app.app_context():
+        strategy = db.session.get(Strategy, strategy_id)
+        assert strategy.review_status == "pending"
+        assert strategy.is_public is False
+        assert strategy.title == payload["title"]
+
+
+def test_publish_rejects_non_owner_with_403(client, app):
+    owner_token, owner_id = _login_user(client, phone="13800138110", nickname="Owner")
+    other_token, _ = _login_user(client, phone="13800138111", nickname="OtherUser")
+    strategy_id = _seed_owned_private_strategy(app, owner_id, strategy_id="publishable-non-owner")
+
+    payload = {
+        "strategy_id": strategy_id,
+        "title": "Moving Average Trend Pro",
+        "description": "Markdown-compatible description",
+        "tags": ["trend"],
+        "category": "trend-following",
+        "display_metrics": {
+            "sharpe_ratio": 1.45,
+            "max_drawdown": -15.2,
+            "total_return": 45.6,
+        },
+    }
+
+    response = client.post(
+        "/api/v1/marketplace/strategies",
+        json=payload,
+        headers=_auth_headers(other_token),
+    )
+
+    assert owner_token  # keep login path exercised for real owner creation
+    assert response.status_code == 403
+    assert response.json["error"]["code"] == "STRATEGY_FORBIDDEN"
+
+
+def test_publish_rejects_strategy_without_completed_backtest(client, app):
+    token, user_id = _login_user(client, phone="13800138112", nickname="NoBacktestUser")
+    strategy_id = _seed_owned_private_strategy(
+        app,
+        user_id,
+        strategy_id="publishable-without-backtest",
+        with_completed_job=False,
+    )
+
+    payload = {
+        "strategy_id": strategy_id,
+        "title": "Moving Average Trend Pro",
+        "description": "Markdown-compatible description",
+        "tags": ["trend"],
+        "category": "trend-following",
+        "display_metrics": {
+            "sharpe_ratio": 1.45,
+            "max_drawdown": -15.2,
+            "total_return": 45.6,
+        },
+    }
+
+    response = client.post(
+        "/api/v1/marketplace/strategies",
+        json=payload,
+        headers=_auth_headers(token),
+    )
+
+    assert response.status_code == 422
+    assert response.json["error"]["code"] == "STRATEGY_BACKTEST_REQUIRED"
+
+
+def test_get_publish_status_returns_owner_visible_status(client, app):
+    token, user_id = _login_user(client, phone="13800138113", nickname="StatusUser")
+    strategy_id = _seed_owned_private_strategy(app, user_id, strategy_id="publish-status-strategy")
+
+    with app.app_context():
+        strategy = db.session.get(Strategy, strategy_id)
+        strategy.review_status = "pending"
+        strategy.is_public = False
+        db.session.commit()
+
+    response = client.get(
+        f"/api/v1/marketplace/strategies/{strategy_id}/publish-status",
+        headers=_auth_headers(token),
+    )
+
+    assert response.status_code == 200
+    assert response.json["data"] == {"review_status": "pending", "is_public": False}
+
+
+def test_publish_writes_marketplace_audit_log(client, app):
+    token, user_id = _login_user(client, phone="13800138108", nickname="PublisherAudit")
+    strategy_id = _seed_owned_private_strategy(app, user_id, strategy_id="publishable-strategy-audit")
+
+    payload = {
+        "strategy_id": strategy_id,
+        "title": "Moving Average Trend Pro",
+        "description": "Markdown-compatible description",
+        "tags": ["trend", "medium-frequency", "risk-control"],
+        "category": "trend-following",
+        "display_metrics": {
+            "sharpe_ratio": 1.45,
+            "max_drawdown": -15.2,
+            "total_return": 45.6,
+        },
+    }
+
+    response = client.post(
+        "/api/v1/marketplace/strategies",
+        json=payload,
+        headers=_auth_headers(token),
+    )
+
+    assert response.status_code == 200
+    with app.app_context():
+        audit = AuditLog.query.filter_by(
+            operator_id=user_id,
+            action="marketplace_strategy_submitted",
+            target_id=strategy_id,
+        ).first()
+        assert audit is not None
+        assert audit.target_type == "strategy"
+
+
+def test_marketplace_search_matches_chinese_title_and_description(client, app):
+    with app.app_context():
+        author = _create_user("search-author-1", "Search Author", "https://cdn.example.com/search-author-1.png")
+        db.session.add(author)
+        db.session.flush()
+        db.session.add_all(
+            [
+                Strategy(
+                    id="ma-strategy",
+                    name="ma-strategy",
+                    title="均线趋势策略",
+                    symbol="BTCUSDT",
+                    status="running",
+                    description="适合震荡后突破行情的均线系统",
+                    owner_id=author.id,
+                    is_public=True,
+                    review_status="approved",
+                    is_verified=True,
+                    display_metrics={"annual_return": 24.0, "max_drawdown": -8.5},
+                    tags=["均线", "趋势"],
+                    created_at=1200,
+                    updated_at=1200,
+                    last_update=1200,
+                ),
+                Strategy(
+                    id="irrelevant-strategy",
+                    name="irrelevant-strategy",
+                    title="布林带反转",
+                    symbol="ETHUSDT",
+                    status="running",
+                    description="适合短线均值回归",
+                    owner_id=author.id,
+                    is_public=True,
+                    review_status="approved",
+                    is_verified=False,
+                    display_metrics={"annual_return": 11.0, "max_drawdown": -15.0},
+                    tags=["反转"],
+                    created_at=1100,
+                    updated_at=1100,
+                    last_update=1100,
+                ),
+            ]
+        )
+        db.session.commit()
+
+    response = client.get("/api/v1/marketplace/strategies?q=均线")
+
+    assert response.status_code == 200
+    assert [item["id"] for item in response.json["data"]] == ["ma-strategy"]
+
+
+def test_marketplace_filters_combine_with_search(client, app):
+    with app.app_context():
+        author = _create_user("search-author-2", "Search Author 2", "https://cdn.example.com/search-author-2.png")
+        db.session.add(author)
+        db.session.flush()
+        db.session.add_all(
+            [
+                Strategy(
+                    id="combo-match",
+                    name="combo-match",
+                    title="均线趋势增强版",
+                    symbol="BTCUSDT",
+                    status="running",
+                    description="平台验证过的均线趋势策略",
+                    category="trend-following",
+                    owner_id=author.id,
+                    is_public=True,
+                    review_status="approved",
+                    is_verified=True,
+                    display_metrics={"annual_return": 26.0, "max_drawdown": -9.0},
+                    tags=["均线", "趋势"],
+                    created_at=2200,
+                    updated_at=2200,
+                    last_update=2200,
+                ),
+                Strategy(
+                    id="combo-wrong-category",
+                    name="combo-wrong-category",
+                    title="均线均值回归版",
+                    symbol="ETHUSDT",
+                    status="running",
+                    description="均线相关，但分类不对",
+                    category="mean-reversion",
+                    owner_id=author.id,
+                    is_public=True,
+                    review_status="approved",
+                    is_verified=True,
+                    display_metrics={"annual_return": 30.0, "max_drawdown": -8.0},
+                    tags=["均线"],
+                    created_at=2100,
+                    updated_at=2100,
+                    last_update=2100,
+                ),
+                Strategy(
+                    id="combo-not-verified",
+                    name="combo-not-verified",
+                    title="均线趋势未验证版",
+                    symbol="XAUUSD",
+                    status="running",
+                    description="趋势方向对，但没验证",
+                    category="trend-following",
+                    owner_id=author.id,
+                    is_public=True,
+                    review_status="approved",
+                    is_verified=False,
+                    display_metrics={"annual_return": 28.0, "max_drawdown": -7.0},
+                    tags=["均线", "趋势"],
+                    created_at=2000,
+                    updated_at=2000,
+                    last_update=2000,
+                ),
+            ]
+        )
+        db.session.commit()
+
+    response = client.get(
+        "/api/v1/marketplace/strategies?q=均线&category=trend-following&verified=true&annual_return_gte=20"
+    )
+
+    assert response.status_code == 200
+    assert [item["id"] for item in response.json["data"]] == ["combo-match"]
+
+
+def test_marketplace_filter_drawdown_uses_absolute_threshold_rule(client, app):
+    with app.app_context():
+        author = _create_user("search-author-3", "Search Author 3", "https://cdn.example.com/search-author-3.png")
+        db.session.add(author)
+        db.session.flush()
+        db.session.add_all(
+            [
+                Strategy(
+                    id="drawdown-match",
+                    name="drawdown-match",
+                    title="低回撤策略",
+                    symbol="BTCUSDT",
+                    status="running",
+                    description="绝对回撤较低",
+                    category="trend-following",
+                    owner_id=author.id,
+                    is_public=True,
+                    review_status="approved",
+                    is_verified=True,
+                    display_metrics={"annual_return": 21.0, "max_drawdown": -8.4},
+                    tags=["低回撤"],
+                    created_at=3200,
+                    updated_at=3200,
+                    last_update=3200,
+                ),
+                Strategy(
+                    id="drawdown-too-deep",
+                    name="drawdown-too-deep",
+                    title="高回撤策略",
+                    symbol="ETHUSDT",
+                    status="running",
+                    description="绝对回撤过深",
+                    category="trend-following",
+                    owner_id=author.id,
+                    is_public=True,
+                    review_status="approved",
+                    is_verified=True,
+                    display_metrics={"annual_return": 35.0, "max_drawdown": -12.1},
+                    tags=["高回撤"],
+                    created_at=3100,
+                    updated_at=3100,
+                    last_update=3100,
+                ),
+            ]
+        )
+        db.session.commit()
+
+    response = client.get("/api/v1/marketplace/strategies?max_drawdown_lte=10")
+
+    assert response.status_code == 200
+    assert [item["id"] for item in response.json["data"]] == ["drawdown-match"]
 
 
 def test_strategy_marketplace_index_contract_present(app):
