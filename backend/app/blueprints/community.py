@@ -3,7 +3,7 @@ from flask_jwt_extended import get_jwt_identity, jwt_required
 from flask_smorest import Blueprint
 
 from ..extensions import db
-from ..models import Post, PostInteraction, Strategy, User
+from ..models import Post, PostComment, PostInteraction, Strategy, User
 from ..utils.response import error_response, ok
 from ..utils.time import format_beijing_iso, now_ms, now_utc
 
@@ -85,6 +85,19 @@ def _serialize_post(post, *, author=None, strategy=None, liked=False, collected=
         "strategy": _strategy_payload(strategy),
         "liked": liked,
         "collected": collected,
+    }
+
+
+def _serialize_comment(comment, *, author=None):
+    return {
+        "id": comment.id,
+        "content": comment.content,
+        "user_id": comment.user_id,
+        "created_at": format_beijing_iso(comment.created_at),
+        "author": {
+            "nickname": getattr(author, "nickname", None) or "",
+            "avatar_url": getattr(author, "avatar_url", None) or "",
+        },
     }
 
 
@@ -189,3 +202,108 @@ def get_post_detail(post_id):
             collected=collected_map.get(post.id, False),
         )
     )
+
+
+@bp.post("/posts/<post_id>/like")
+@jwt_required()
+def toggle_like(post_id):
+    user_id = get_jwt_identity()
+    post, error = _get_community_post_or_404(post_id)
+    if error:
+        return error
+
+    existing = (
+        PostInteraction.query
+        .filter_by(user_id=user_id, post_id=post.id, type="like")
+        .first()
+    )
+    if existing is None:
+        db.session.add(PostInteraction(user_id=user_id, post_id=post.id, type="like"))
+        Post.query.filter_by(id=post.id).update({Post.likes_count: Post.likes_count + 1})
+        liked = True
+    else:
+        db.session.delete(existing)
+        Post.query.filter_by(id=post.id).update(
+            {Post.likes_count: db.case((Post.likes_count > 0, Post.likes_count - 1), else_=0)}
+        )
+        liked = False
+
+    db.session.commit()
+    refreshed = db.session.get(Post, post.id)
+    return ok({"liked": liked, "likes_count": refreshed.likes_count or 0})
+
+
+@bp.post("/posts/<post_id>/collect")
+@jwt_required()
+def toggle_collect(post_id):
+    user_id = get_jwt_identity()
+    post, error = _get_community_post_or_404(post_id)
+    if error:
+        return error
+
+    existing = (
+        PostInteraction.query
+        .filter_by(user_id=user_id, post_id=post.id, type="collect")
+        .first()
+    )
+    if existing is None:
+        db.session.add(PostInteraction(user_id=user_id, post_id=post.id, type="collect"))
+        collected = True
+    else:
+        db.session.delete(existing)
+        collected = False
+
+    db.session.commit()
+    return ok({"collected": collected})
+
+
+@bp.get("/posts/<post_id>/comments")
+def get_comments(post_id):
+    post, error = _get_community_post_or_404(post_id)
+    if error:
+        return error
+
+    page = _int_arg("page", default=1, minimum=1)
+    per_page = _int_arg("per_page", default=20, minimum=1, maximum=50)
+    query = PostComment.query.filter_by(post_id=post.id)
+    total = query.count()
+    comments = (
+        query
+        .order_by(PostComment.created_at.asc(), PostComment.id.asc())
+        .offset((page - 1) * per_page)
+        .limit(per_page)
+        .all()
+    )
+    author_ids = {comment.user_id for comment in comments if comment.user_id}
+    authors = {user.id: user for user in User.query.filter(User.id.in_(author_ids)).all()} if author_ids else {}
+    items = [_serialize_comment(comment, author=authors.get(comment.user_id)) for comment in comments]
+    return ok({"items": items, "total": total, "page": page, "per_page": per_page})
+
+
+@bp.post("/posts/<post_id>/comments")
+@jwt_required()
+def create_comment(post_id):
+    user_id = get_jwt_identity()
+    post, error = _get_community_post_or_404(post_id)
+    if error:
+        return error
+
+    payload = request.get_json() or {}
+    content = str(payload.get("content") or "").strip()
+    if not content:
+        return error_response("CONTENT_REQUIRED", "content is required", 422)
+    if len(content) > 500:
+        return error_response("CONTENT_TOO_LONG", "content must be 500 characters or fewer", 422)
+
+    comment = PostComment(
+        post_id=post.id,
+        user_id=user_id,
+        content=content,
+        created_at=now_utc(),
+    )
+    db.session.add(comment)
+    Post.query.filter_by(id=post.id).update({Post.comments_count: Post.comments_count + 1})
+    db.session.commit()
+
+    author = db.session.get(User, user_id)
+    return ok(_serialize_comment(comment, author=author))
