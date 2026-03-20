@@ -1,8 +1,9 @@
-FROM python:3.11-slim AS builder
+FROM python:3.11-slim-bookworm AS builder
 
 WORKDIR /build
 
-RUN apt-get update && apt-get install -y \
+RUN apt-get update -o Acquire::Retries=5 -o Acquire::http::Timeout=30 \
+    && apt-get install -y --no-install-recommends \
     gcc \
     g++ \
     postgresql-client \
@@ -11,20 +12,20 @@ RUN apt-get update && apt-get install -y \
 COPY backend/requirements.txt ./backend/requirements.txt
 COPY packages/qysp ./packages/qysp
 
-RUN pip install --no-cache-dir --user -r backend/requirements.txt \
-    && pip install --no-cache-dir --user ./packages/qysp
+RUN pip install --no-cache-dir -r backend/requirements.txt \
+    && pip install --no-cache-dir ./packages/qysp
 
-FROM python:3.11-slim
+FROM python:3.11-slim-bookworm
 
 WORKDIR /app
 
-RUN apt-get update && apt-get install -y \
+RUN apt-get update -o Acquire::Retries=5 -o Acquire::http::Timeout=30 \
+    && apt-get install -y --no-install-recommends \
     postgresql-client \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
-COPY --from=builder /root/.local /root/.local
-ENV PATH=/root/.local/bin:$PATH
+COPY --from=builder /usr/local /usr/local
 
 COPY backend ./backend
 
