@@ -109,7 +109,6 @@ onBeforeUnmount(() => {
 
 :deep(.onboarding-highlight) {
   position: relative;
-  box-shadow: 0 0 0 3px rgba(245, 230, 66, 0.95), 0 20px 40px rgba(15, 23, 42, 0.18);
   border-radius: 16px;
   z-index: 2;
 }
