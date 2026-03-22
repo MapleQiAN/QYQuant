@@ -5,20 +5,24 @@
         <div class="logo-icon">
           <img :src="logoUrl" alt="QY Quant Logo" class="logo-image" />
         </div>
-        <span class="logo-text">QY Quant</span>
+        <div>
+          <span class="logo-text">QY Quant</span>
+        </div>
       </div>
 
-      <div class="nav-links">
-        <RouterLink
-          v-for="item in navItems"
-          :key="item.id"
-          :to="item.to"
-          :class="['nav-link', { active: route.path === item.to, 'onboarding-highlight': onboardingHighlightTarget === item.target }]"
-          :data-onboarding-target="item.target"
-        >
-          <component :is="getIcon(item.icon)" class="nav-icon" />
-          <span>{{ $t(item.label) }}</span>
-        </RouterLink>
+      <div class="nav-links-shell">
+        <div class="nav-links">
+          <RouterLink
+            v-for="item in navItems"
+            :key="item.id"
+            :to="item.to"
+            :class="['nav-link', { active: route.path === item.to, 'onboarding-highlight': onboardingHighlightTarget === item.target }]"
+            :data-onboarding-target="item.target"
+          >
+            <component :is="getIcon(item.icon)" class="nav-icon" />
+            <span>{{ $t(item.label) }}</span>
+          </RouterLink>
+        </div>
       </div>
 
       <div class="nav-right">
@@ -26,20 +30,22 @@
           <SearchIcon class="search-icon" />
           <input type="text" :placeholder="$t('common.searchPlaceholder')" class="search-input" />
         </div>
-        <button class="nav-btn" type="button" aria-label="打开帮助中心" @click="userStore.setHelpPanelOpen(true)">
-          <HelpIcon />
-        </button>
+        <div class="nav-actions">
+          <button class="nav-btn" type="button" aria-label="打开帮助中心" @click="userStore.setHelpPanelOpen(true)">
+            <HelpIcon />
+          </button>
 
-        <button class="nav-btn notification-btn">
-          <BellIcon />
-          <span v-if="profile.notifications > 0" class="notification-badge">
-            {{ profile.notifications }}
-          </span>
-        </button>
+          <button class="nav-btn notification-btn" type="button" aria-label="打开通知中心">
+            <BellIcon />
+            <span v-if="notificationCount > 0" class="notification-badge">
+              {{ notificationCount }}
+            </span>
+          </button>
 
-        <div class="user-avatar">
-          <span class="avatar-text">{{ profile.avatar }}</span>
-          <span class="user-level">{{ profile.level }}</span>
+          <div class="user-avatar">
+            <span class="avatar-text">{{ profile.avatar }}</span>
+            <span class="user-level">{{ profile.level }}</span>
+          </div>
         </div>
       </div>
     </div>
@@ -47,7 +53,7 @@
 </template>
 
 <script setup lang="ts">
-import { h } from 'vue'
+import { computed, h } from 'vue'
 import { storeToRefs } from 'pinia'
 import { RouterLink, useRoute } from 'vue-router'
 import { useUserStore } from '../stores/user'
@@ -65,6 +71,7 @@ const navItems = [
 
 const userStore = useUserStore()
 const { profile, onboardingHighlightTarget } = storeToRefs(userStore)
+const notificationCount = computed(() => profile.value.notifications ?? 0)
 
 const ChartIcon = () => h('svg', {
   width: 18,
@@ -190,33 +197,41 @@ function getIcon(iconName: string) {
   position: sticky;
   top: 0;
   z-index: 100;
-  background: var(--glass-background);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.92), rgba(248, 250, 252, 0.86));
   backdrop-filter: var(--glass-backdrop);
   -webkit-backdrop-filter: var(--glass-backdrop);
-  border-bottom: 1px solid var(--color-border-light);
+  border-bottom: 1px solid rgba(203, 213, 225, 0.8);
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.04);
 }
 
 .nav-content {
   max-width: var(--container-max-width);
   margin: 0 auto;
-  padding: var(--spacing-md) var(--spacing-lg);
+  padding: 12px var(--spacing-lg);
   display: flex;
   align-items: center;
-  gap: var(--spacing-xl);
+  gap: 18px;
 }
 
 .nav-logo {
   display: flex;
   align-items: center;
-  gap: var(--spacing-sm);
+  gap: 10px;
+  min-width: 172px;
 }
 
 .logo-icon {
-  width: 40px;
-  height: 40px;
+  width: 38px;
+  height: 38px;
   display: flex;
   align-items: center;
   justify-content: center;
+  padding: 6px;
+  border-radius: 10px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(241, 245, 249, 0.92));
+  border: 1px solid rgba(203, 213, 225, 0.9);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8);
 }
 
 .logo-image {
@@ -226,49 +241,81 @@ function getIcon(iconName: string) {
 }
 
 .logo-text {
-  font-size: var(--font-size-lg);
+  font-size: 17px;
   font-weight: var(--font-weight-bold);
   color: var(--color-text-primary);
+  line-height: 1.1;
+  letter-spacing: 0.01em;
+}
+
+.nav-links-shell {
+  display: flex;
+  align-items: center;
+  flex: 1;
+  min-width: 0;
+  padding: 4px;
+  border-radius: 14px;
+  background: rgba(148, 163, 184, 0.08);
+  border: 1px solid rgba(226, 232, 240, 0.95);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.85);
 }
 
 .nav-links {
   display: flex;
   align-items: center;
-  gap: var(--spacing-xs);
+  gap: 4px;
+  min-width: 0;
 }
 
 .nav-link {
   display: flex;
   align-items: center;
-  gap: var(--spacing-sm);
-  padding: var(--spacing-sm) var(--spacing-md);
+  gap: 8px;
+  min-height: 38px;
+  padding: 8px 12px;
   font-size: var(--font-size-sm);
-  font-weight: var(--font-weight-medium);
-  color: var(--color-text-secondary);
-  border-radius: var(--radius-md);
-  transition: all var(--transition-fast);
+  font-weight: var(--font-weight-semibold);
+  color: #475569;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  transition:
+    color var(--transition-fast),
+    background-color var(--transition-fast),
+    border-color var(--transition-fast),
+    box-shadow var(--transition-fast);
   text-decoration: none;
+  white-space: nowrap;
 }
 
 .nav-link:hover {
-  background: var(--color-primary-bg);
-  color: var(--color-primary);
+  background: rgba(255, 255, 255, 0.72);
+  border-color: rgba(226, 232, 240, 0.95);
+  color: var(--color-text-primary);
 }
 
 .nav-link.active {
-  background: var(--color-primary-bg);
-  color: var(--color-primary);
+  background: linear-gradient(180deg, rgba(238, 242, 255, 0.95), rgba(224, 231, 255, 0.86));
+  border-color: rgba(165, 180, 252, 0.55);
+  color: #4338ca;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.75);
 }
 
 .nav-icon {
-  opacity: 0.8;
+  opacity: 0.72;
+  flex-shrink: 0;
+}
+
+.nav-link:hover .nav-icon,
+.nav-link.active .nav-icon {
+  opacity: 1;
 }
 
 .nav-right {
   display: flex;
   align-items: center;
-  gap: var(--spacing-md);
+  gap: 12px;
   margin-left: auto;
+  flex-shrink: 0;
 }
 
 .search-box {
@@ -279,30 +326,42 @@ function getIcon(iconName: string) {
 
 .search-icon {
   position: absolute;
-  left: var(--spacing-md);
+  left: 12px;
   color: var(--color-text-muted);
   pointer-events: none;
 }
 
 .search-input {
   width: 240px;
-  padding: var(--spacing-sm) var(--spacing-md);
-  padding-left: 40px;
+  height: 40px;
+  padding: 0 14px 0 38px;
   font-size: var(--font-size-sm);
-  background: var(--color-background);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-full);
+  color: var(--color-text-primary);
+  background: rgba(248, 250, 252, 0.92);
+  border: 1px solid rgba(203, 213, 225, 0.95);
+  border-radius: 12px;
   outline: none;
-  transition: all var(--transition-fast);
+  transition:
+    border-color var(--transition-fast),
+    box-shadow var(--transition-fast),
+    background-color var(--transition-fast);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.82);
 }
 
 .search-input:focus {
-  border-color: var(--color-primary-light);
-  box-shadow: 0 0 0 3px var(--color-primary-bg);
+  background: rgba(255, 255, 255, 0.98);
+  border-color: rgba(129, 140, 248, 0.72);
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
 }
 
 .search-input::placeholder {
   color: var(--color-text-muted);
+}
+
+.nav-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
 
 .nav-btn {
@@ -312,71 +371,163 @@ function getIcon(iconName: string) {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: transparent;
-  border: none;
-  border-radius: var(--radius-md);
+  background: rgba(248, 250, 252, 0.92);
+  border: 1px solid rgba(203, 213, 225, 0.95);
+  border-radius: 11px;
   color: var(--color-text-secondary);
   cursor: pointer;
-  transition: all var(--transition-fast);
+  transition:
+    color var(--transition-fast),
+    border-color var(--transition-fast),
+    background-color var(--transition-fast),
+    box-shadow var(--transition-fast);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.82);
 }
 
 .nav-btn:hover {
-  background: var(--color-background);
-  color: var(--color-primary);
+  background: rgba(255, 255, 255, 0.98);
+  border-color: rgba(165, 180, 252, 0.42);
+  color: var(--color-primary-dark);
+}
+
+.nav-btn:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.12);
 }
 
 .notification-badge {
   position: absolute;
-  top: 4px;
-  right: 4px;
-  min-width: 18px;
-  height: 18px;
-  padding: 0 5px;
-  font-size: 11px;
+  top: -4px;
+  right: -4px;
+  min-width: 17px;
+  height: 17px;
+  padding: 0 4px;
+  font-size: 10px;
   font-weight: var(--font-weight-semibold);
   background: var(--color-danger);
   color: var(--color-text-inverse);
+  border: 2px solid rgba(255, 255, 255, 0.95);
   border-radius: var(--radius-full);
   display: flex;
   align-items: center;
   justify-content: center;
+  line-height: 1;
 }
 
 .user-avatar {
   display: flex;
   align-items: center;
-  gap: var(--spacing-sm);
-  padding: var(--spacing-xs);
-  padding-right: var(--spacing-md);
-  background: var(--color-background);
-  border-radius: var(--radius-full);
+  gap: 8px;
+  min-height: 40px;
+  padding: 4px 10px 4px 4px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(248, 250, 252, 0.92));
+  border: 1px solid rgba(203, 213, 225, 0.95);
+  border-radius: 12px;
   cursor: pointer;
-  transition: all var(--transition-fast);
+  transition:
+    border-color var(--transition-fast),
+    background-color var(--transition-fast),
+    box-shadow var(--transition-fast);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.85);
 }
 
 .user-avatar:hover {
-  background: var(--color-border-light);
+  background: rgba(255, 255, 255, 0.98);
+  border-color: rgba(165, 180, 252, 0.4);
 }
 
 .avatar-text {
-  width: 32px;
-  height: 32px;
+  width: 30px;
+  height: 30px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: var(--font-size-sm);
+  font-size: 13px;
   font-weight: var(--font-weight-semibold);
   background: linear-gradient(135deg, var(--color-primary), var(--color-primary-dark));
   color: var(--color-text-inverse);
-  border-radius: var(--radius-full);
+  border-radius: 9px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35);
 }
 
 .user-level {
-  font-size: var(--font-size-xs);
+  font-size: 11px;
   font-weight: var(--font-weight-semibold);
-  color: var(--color-primary);
-  background: var(--color-primary-bg);
-  padding: 2px 8px;
-  border-radius: var(--radius-full);
+  color: #4338ca;
+  background: rgba(238, 242, 255, 0.88);
+  padding: 3px 8px;
+  border-radius: 999px;
+  letter-spacing: 0.03em;
+}
+
+@media (max-width: 1024px) {
+  .nav-content {
+    gap: 14px;
+    padding: 10px var(--spacing-lg);
+  }
+
+  .nav-logo {
+    min-width: 156px;
+  }
+
+  .nav-link {
+    padding: 8px 10px;
+  }
+
+  .search-input {
+    width: 180px;
+  }
+}
+
+@media (max-width: 900px) {
+  .nav-content {
+    flex-wrap: wrap;
+  }
+
+  .nav-links-shell {
+    order: 3;
+    flex-basis: 100%;
+  }
+
+  .nav-right {
+    margin-left: auto;
+  }
+
+  .search-input {
+    width: 160px;
+  }
+}
+
+@media (max-width: 768px) {
+  .nav-content {
+    padding: 10px var(--spacing-md);
+  }
+
+  .nav-logo {
+    min-width: auto;
+  }
+
+  .nav-links {
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .nav-links::-webkit-scrollbar {
+    display: none;
+  }
+
+  .nav-right {
+    width: 100%;
+    justify-content: space-between;
+    margin-left: 0;
+  }
+
+  .search-box {
+    flex: 1;
+  }
+
+  .search-input {
+    width: 100%;
+  }
 }
 </style>
