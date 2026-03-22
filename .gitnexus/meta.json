@@ -1,12 +1,13 @@
 {
-  "repoPath": "E:/QYQuant",
-  "lastCommit": "fd43fe41f4aced547f097bceb7a2713cfe1b17e0",
-  "indexedAt": "2026-03-18T07:18:30.636Z",
+  "repoPath": "/Users/serendylin/Documents/QYQuant",
+  "lastCommit": "794c821c2034521e44e27ff59b9b93c9fddc9475",
+  "indexedAt": "2026-03-22T05:08:09.793Z",
   "stats": {
-    "files": 574,
-    "nodes": 1785,
-    "edges": 3822,
-    "communities": 113,
-    "processes": 110
+    "files": 582,
+    "nodes": 2060,
+    "edges": 4524,
+    "communities": 147,
+    "processes": 134,
+    "embeddings": 0
   }
 }

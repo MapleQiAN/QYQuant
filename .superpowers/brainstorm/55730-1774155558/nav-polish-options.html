@@ -1,0 +1,118 @@
+<h2>顶部菜单栏精修方向</h2>
+<p class="subtitle">保持现有布局，不改主色调，只优化一体感、层次与细节质感。建议优先看 B。</p>
+
+<div class="cards">
+  <div class="card" data-choice="A" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div style="background:#ffffffd9;border:1px solid #e5e7eb;border-radius:18px;padding:14px 18px;box-shadow:0 10px 24px rgba(15,23,42,0.06);">
+        <div style="display:flex;align-items:center;gap:18px;">
+          <div style="display:flex;align-items:center;gap:10px;min-width:170px;">
+            <div style="width:34px;height:34px;border-radius:10px;background:linear-gradient(135deg,#6366f1,#4f46e5);"></div>
+            <div style="font-weight:700;color:#0f172a;">QY Quant</div>
+          </div>
+          <div style="display:flex;gap:6px;flex:1;">
+            <div style="padding:8px 12px;border-radius:12px;background:#eef2ff;color:#4f46e5;font-weight:600;">概览</div>
+            <div style="padding:8px 12px;border-radius:12px;color:#64748b;">新建策略</div>
+            <div style="padding:8px 12px;border-radius:12px;color:#64748b;">回测</div>
+            <div style="padding:8px 12px;border-radius:12px;color:#64748b;">机器人</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px;">
+            <div style="width:180px;height:36px;border-radius:999px;background:#f8fafc;border:1px solid #e2e8f0;"></div>
+            <div style="width:36px;height:36px;border-radius:12px;background:#f8fafc;border:1px solid #e2e8f0;"></div>
+            <div style="width:36px;height:36px;border-radius:12px;background:#f8fafc;border:1px solid #e2e8f0;"></div>
+            <div style="width:92px;height:38px;border-radius:999px;background:#f8fafc;border:1px solid #e2e8f0;"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>A. 保守精修</h3>
+      <p>只做圆角、间距、描边和 active 态统一，改动最小，风险最低，但提升幅度也最有限。</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="B" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div style="background:linear-gradient(180deg,rgba(255,255,255,0.94),rgba(255,255,255,0.88));border:1px solid rgba(203,213,225,0.85);border-radius:16px;padding:12px 16px;box-shadow:0 14px 34px rgba(15,23,42,0.08);">
+        <div style="display:flex;align-items:center;gap:16px;">
+          <div style="display:flex;align-items:center;gap:10px;min-width:168px;">
+            <div style="width:34px;height:34px;border-radius:9px;background:linear-gradient(145deg,#6366f1,#4f46e5);box-shadow:inset 0 1px 0 rgba(255,255,255,.45);"></div>
+            <div style="display:flex;flex-direction:column;gap:2px;">
+              <div style="font-weight:700;letter-spacing:.01em;color:#0f172a;">QY Quant</div>
+              <div style="font-size:11px;color:#94a3b8;">Quant workspace</div>
+            </div>
+          </div>
+          <div style="display:flex;gap:4px;flex:1;padding:4px;border-radius:14px;background:rgba(148,163,184,0.08);border:1px solid rgba(226,232,240,0.9);">
+            <div style="padding:9px 13px;border-radius:10px;background:linear-gradient(180deg,#eef2ff,#e0e7ff);color:#4338ca;font-weight:700;box-shadow:inset 0 1px 0 rgba(255,255,255,.6);">概览</div>
+            <div style="padding:9px 13px;border-radius:10px;color:#475569;font-weight:600;">新建策略</div>
+            <div style="padding:9px 13px;border-radius:10px;color:#475569;font-weight:600;">回测</div>
+            <div style="padding:9px 13px;border-radius:10px;color:#475569;font-weight:600;">机器人</div>
+            <div style="padding:9px 13px;border-radius:10px;color:#475569;font-weight:600;">广场</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px;">
+            <div style="width:190px;height:38px;border-radius:12px;background:rgba(248,250,252,0.98);border:1px solid #dbe3ef;box-shadow:inset 0 1px 0 rgba(255,255,255,0.8);"></div>
+            <div style="width:38px;height:38px;border-radius:11px;background:#f8fafc;border:1px solid #dbe3ef;"></div>
+            <div style="width:38px;height:38px;border-radius:11px;background:#f8fafc;border:1px solid #dbe3ef;position:relative;">
+              <div style="position:absolute;right:-2px;top:-2px;width:16px;height:16px;border-radius:999px;background:#ef4444;"></div>
+            </div>
+            <div style="width:110px;height:40px;border-radius:12px;background:linear-gradient(180deg,#ffffff,#f8fafc);border:1px solid #dbe3ef;"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>B. 专业终端感</h3>
+      <p>把菜单区做成轻分组结构，降低软糯感，收紧圆角与控件厚度，整体更像专业金融产品。我推荐这一版。</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="C" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div style="background:#f8fafc;border:1px solid #cbd5e1;border-radius:12px;padding:10px 12px;box-shadow:0 8px 20px rgba(15,23,42,0.05);">
+        <div style="display:flex;align-items:center;gap:12px;">
+          <div style="display:flex;align-items:center;gap:10px;min-width:148px;">
+            <div style="width:30px;height:30px;border-radius:8px;background:linear-gradient(135deg,#6366f1,#4f46e5);"></div>
+            <div style="font-weight:700;color:#0f172a;">QY Quant</div>
+          </div>
+          <div style="display:flex;gap:2px;flex:1;">
+            <div style="padding:10px 11px;border-radius:8px;background:#312e81;color:white;font-weight:700;">概览</div>
+            <div style="padding:10px 11px;border-radius:8px;color:#334155;font-weight:600;">新建策略</div>
+            <div style="padding:10px 11px;border-radius:8px;color:#334155;font-weight:600;">回测</div>
+            <div style="padding:10px 11px;border-radius:8px;color:#334155;font-weight:600;">机器人</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px;">
+            <div style="width:170px;height:34px;border-radius:8px;background:white;border:1px solid #cbd5e1;"></div>
+            <div style="width:34px;height:34px;border-radius:8px;background:white;border:1px solid #cbd5e1;"></div>
+            <div style="width:34px;height:34px;border-radius:8px;background:white;border:1px solid #cbd5e1;"></div>
+            <div style="width:88px;height:36px;border-radius:8px;background:white;border:1px solid #cbd5e1;"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>C. 更硬朗压缩</h3>
+      <p>密度更高、棱角更分明，终端感更强，但容易显得偏旧，也更可能和现有页面主体不协调。</p>
+    </div>
+  </div>
+</div>
+
+<div class="pros-cons" style="margin-top:24px;">
+  <div class="pros">
+    <h4>本次会修的点</h4>
+    <ul>
+      <li>导航容器与右侧工具区的分组关系</li>
+      <li>菜单项激活态、hover 态、图标权重</li>
+      <li>搜索框、按钮、头像的尺寸与边界统一</li>
+      <li>顶部栏阴影、描边、圆角和粘性状态细节</li>
+    </ul>
+  </div>
+  <div class="cons">
+    <h4>本次不会动的点</h4>
+    <ul>
+      <li>站点主色体系</li>
+      <li>信息架构和菜单顺序</li>
+      <li>页面主体布局</li>
+      <li>大范围品牌重设计</li>
+    </ul>
+  </div>
+</div>
