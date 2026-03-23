@@ -28,6 +28,7 @@ class User(db.Model):
     __tablename__ = 'users'
     id = db.Column(db.String, primary_key=True, default=gen_id)
     phone = db.Column(db.String(20), unique=True, nullable=True)
+    email = db.Column(db.String(255), unique=True, nullable=True)
     nickname = db.Column(db.String(200), nullable=False)
     avatar_url = db.Column(db.String, nullable=False, default='')
     bio = db.Column(db.String(200), nullable=False, default='')
@@ -66,13 +67,8 @@ class AuditLog(db.Model):
 class Notification(db.Model):
     __tablename__ = 'notifications'
     __table_args__ = (
-        db.Index(
-            'ix_notifications_user_unread',
-            'user_id',
-            'is_read',
-            postgresql_where=db.text('is_read = false'),
-            sqlite_where=db.text('is_read = 0'),
-        ),
+        db.Index('ix_notifications_user_id', 'user_id'),
+        db.Index('ix_notifications_created_at', 'created_at'),
     )
 
     id = db.Column(db.String, primary_key=True, default=gen_id)

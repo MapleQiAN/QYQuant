@@ -39,7 +39,7 @@ celery_app.conf.update(
     task_serializer='json',
     result_serializer='json',
     accept_content=['json'],
-    imports=('app.tasks.backtests', 'app.tasks.simulation_tasks'),
+    imports=('app.tasks.backtests', 'app.tasks.notification_tasks', 'app.tasks.simulation_tasks'),
     worker_concurrency=int(os.getenv('CELERYD_CONCURRENCY', '10')),
     task_acks_late=True,
     task_reject_on_worker_lost=True,
@@ -48,6 +48,7 @@ celery_app.conf.update(
     task_default_queue='default',
     task_routes={
         'app.tasks.backtests.*': {'queue': 'backtest'},
+        'app.tasks.notification_tasks.*': {'queue': 'notification'},
         'app.tasks.simulation_tasks.*': {'queue': 'simulation'},
     },
     timezone='UTC',

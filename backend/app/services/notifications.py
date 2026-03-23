@@ -1,13 +1,12 @@
 from ..extensions import db
-from ..models import Notification
+from ..utils.notification import create_notification as _create_notification
 
 
 def create_notification(user_id, type, title, content=None):
-    notification = Notification(
+    return _create_notification(
+        db.session,
         user_id=user_id,
         type=type,
         title=title,
         content=content,
     )
-    db.session.add(notification)
-    return notification

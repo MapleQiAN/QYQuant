@@ -5,6 +5,7 @@ requires-python = ">=3.11"
 dependencies = [
     "flask>=3.0.0,<4.0.0",
     "flask-cors>=4.0.0,<5.0.0",
+    "flask-mail>=0.10.0,<1.0.0",
     "flask-smorest==0.44.0",
     "flask-sqlalchemy==3.1.1",
     "flask-migrate==4.0.7",

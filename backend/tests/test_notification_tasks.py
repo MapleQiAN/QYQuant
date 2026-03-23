@@ -22,9 +22,10 @@ def test_render_strategy_review_email_formats_subject_and_bodies():
 
 
 def test_send_email_notification_sends_strategy_review_result_email(monkeypatch, app):
-    from app.tasks.notification_tasks import send_email_notification
+    from app.tasks.notification_tasks import reset_email_idempotency_state, send_email_notification
 
     sent_messages = []
+    reset_email_idempotency_state()
 
     with app.app_context():
         user = User(phone="13800138907", nickname="MailOwner", email="owner@example.com")
@@ -86,10 +87,12 @@ def test_send_email_notification_is_idempotent_for_same_target(monkeypatch, app)
 
 
 def test_send_email_notification_retries_when_mail_send_fails(monkeypatch, app):
-    from app.tasks.notification_tasks import send_email_notification
+    from app.tasks.notification_tasks import reset_email_idempotency_state, send_email_notification
 
     class RetryTriggered(Exception):
         pass
+
+    reset_email_idempotency_state()
 
     with app.app_context():
         user = User(phone="13800138909", nickname="RetryOwner", email="retry@example.com")
@@ -101,7 +104,7 @@ def test_send_email_notification_retries_when_mail_send_fails(monkeypatch, app):
         "app.tasks.notification_tasks.mail",
         SimpleNamespace(send=lambda message: (_ for _ in ()).throw(RuntimeError("smtp unavailable"))),
     )
-    monkeypatch.setattr(send_email_notification, "request", SimpleNamespace(retries=1))
+    monkeypatch.setattr(send_email_notification, "_retry_count_override", 1, raising=False)
 
     def _retry(*, exc, countdown):
         raise RetryTriggered((str(exc), countdown))

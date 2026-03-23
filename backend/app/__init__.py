@@ -9,13 +9,14 @@ from .blueprints.files import bp as files_bp
 from .blueprints.forum import bp as forum_bp
 from .blueprints.health import bp as health_bp
 from .blueprints.marketplace import bp as marketplace_bp
+from .blueprints.notifications import bp as notifications_bp
 from .blueprints.payments import bp as payments_bp
 from .blueprints.presets import bp as presets_bp
 from .blueprints.simulation import bp as simulation_bp
 from .blueprints.users import bp as users_bp
 from .config import get_config
 from .errors import register_error_handlers
-from .extensions import api, cors, db, jwt, migrate
+from .extensions import api, cors, db, jwt, mail, migrate
 from .models import User
 from .utils.redis_client import get_auth_store
 from .utils.response import error_response
@@ -36,6 +37,7 @@ def create_app(env=None):
     db.init_app(app)
     migrate.init_app(app, db)
     jwt.init_app(app)
+    mail.init_app(app)
 
     app.config.setdefault('API_TITLE', 'QYQuant API')
     app.config.setdefault('API_VERSION', 'v1')
@@ -54,6 +56,7 @@ def create_app(env=None):
     if strategies_bp is not None:
         app.register_blueprint(strategies_bp)
     app.register_blueprint(marketplace_bp)
+    app.register_blueprint(notifications_bp)
     app.register_blueprint(presets_bp)
     app.register_blueprint(backtests_bp)
     app.register_blueprint(simulation_bp)

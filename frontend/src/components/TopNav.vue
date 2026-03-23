@@ -31,16 +31,19 @@
           <input type="text" :placeholder="$t('common.searchPlaceholder')" class="search-input" />
         </div>
         <div class="nav-actions">
-          <button class="nav-btn" type="button" aria-label="打开帮助中心" @click="userStore.setHelpPanelOpen(true)">
+          <button class="nav-btn" type="button" aria-label="鎵撳紑甯姪涓績" @click="userStore.setHelpPanelOpen(true)">
             <HelpIcon />
           </button>
 
-          <button class="nav-btn notification-btn" type="button" aria-label="打开通知中心">
-            <BellIcon />
-            <span v-if="notificationCount > 0" class="notification-badge">
-              {{ notificationCount }}
-            </span>
-          </button>
+          <div class="notification-shell">
+            <button class="nav-btn notification-btn" type="button" aria-label="鎵撳紑閫氱煡涓績" @click="toggleNotifications">
+              <BellIcon />
+              <span v-if="notificationCount > 0" class="notification-badge">
+                {{ notificationCount }}
+              </span>
+            </button>
+            <NotificationPanel v-if="isNotificationPanelOpen" />
+          </div>
 
           <div class="user-avatar">
             <span class="avatar-text">{{ profile.avatar }}</span>
@@ -53,9 +56,11 @@
 </template>
 
 <script setup lang="ts">
-import { computed, h } from 'vue'
+import { computed, h, onMounted, onUnmounted, ref } from 'vue'
 import { storeToRefs } from 'pinia'
 import { RouterLink, useRoute } from 'vue-router'
+import NotificationPanel from './NotificationPanel.vue'
+import { useNotificationStore } from '../stores/useNotificationStore'
 import { useUserStore } from '../stores/user'
 import logoUrl from '../logo.png'
 
@@ -70,8 +75,22 @@ const navItems = [
 ]
 
 const userStore = useUserStore()
+const notificationStore = useNotificationStore()
 const { profile, onboardingHighlightTarget } = storeToRefs(userStore)
-const notificationCount = computed(() => profile.value.notifications ?? 0)
+const notificationCount = computed(() => notificationStore.unreadCount)
+const isNotificationPanelOpen = ref(false)
+
+onMounted(() => {
+  notificationStore.startPolling()
+})
+
+onUnmounted(() => {
+  notificationStore.stopPolling()
+})
+
+function toggleNotifications() {
+  isNotificationPanelOpen.value = !isNotificationPanelOpen.value
+}
 
 const ChartIcon = () => h('svg', {
   width: 18,
@@ -393,6 +412,10 @@ function getIcon(iconName: string) {
 .nav-btn:focus-visible {
   outline: none;
   box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.12);
+}
+
+.notification-shell {
+  position: relative;
 }
 
 .notification-badge {
