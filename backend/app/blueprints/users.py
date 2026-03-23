@@ -4,13 +4,13 @@ from flask_smorest import Blueprint
 from marshmallow import ValidationError
 
 from ..extensions import db
-from ..models import User
+from ..models import Post, Strategy, User
 from ..schemas import UserPrivateSchema, UserPublicSchema, UserUpdateSchema
 from ..utils.audit import log_audit
 from ..utils.auth import blacklist_refresh_tokens, clear_refresh_cookie, consume_verification_code, revoke_all_user_tokens
 from ..utils.phone import mask_phone
 from ..utils.response import error_response, ok
-from ..utils.time import now_utc
+from ..utils.time import format_beijing_iso, now_utc
 
 bp = Blueprint('users', __name__, url_prefix='/api/v1/users')
 
@@ -118,6 +118,78 @@ def delete_me():
     )
     clear_refresh_cookie(response)
     return response
+
+
+@bp.get('/<user_id>/strategies')
+def get_user_strategies(user_id):
+    user, error = _get_user_or_404(user_id)
+    if error:
+        return error
+
+    page = request.args.get('page', 1, type=int)
+    per_page = min(request.args.get('per_page', 20, type=int), 50)
+
+    pagination = (
+        Strategy.query
+        .filter_by(owner_id=user.id, is_public=True)
+        .order_by(Strategy.created_at.desc())
+        .paginate(page=page, per_page=per_page, error_out=False)
+    )
+
+    items = [
+        {
+            "id": strategy.id,
+            "name": strategy.name,
+            "category": strategy.category,
+            "returns": strategy.returns,
+            "max_drawdown": strategy.max_drawdown,
+            "win_rate": strategy.win_rate,
+            "tags": strategy.tags or [],
+        }
+        for strategy in pagination.items
+    ]
+
+    return ok({
+        "items": items,
+        "total": pagination.total,
+        "page": pagination.page,
+        "per_page": pagination.per_page,
+    })
+
+
+@bp.get('/<user_id>/posts')
+def get_user_posts(user_id):
+    user, error = _get_user_or_404(user_id)
+    if error:
+        return error
+
+    page = request.args.get('page', 1, type=int)
+    per_page = min(request.args.get('per_page', 20, type=int), 50)
+
+    pagination = (
+        Post.query
+        .filter(Post.user_id == user.id, Post.content.isnot(None))
+        .order_by(Post.created_at.desc())
+        .paginate(page=page, per_page=per_page, error_out=False)
+    )
+
+    items = []
+    for post in pagination.items:
+        content = post.content or ""
+        items.append({
+            "id": post.id,
+            "content": content[:200],
+            "likes_count": post.likes_count or 0,
+            "comments_count": post.comments_count or 0,
+            "created_at": format_beijing_iso(post.created_at) if post.created_at else None,
+        })
+
+    return ok({
+        "items": items,
+        "total": pagination.total,
+        "page": pagination.page,
+        "per_page": pagination.per_page,
+    })
 
 
 @bp.get('/<user_id>')

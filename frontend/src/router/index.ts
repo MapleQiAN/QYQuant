@@ -11,6 +11,7 @@ import StrategyLibraryView from '../views/StrategyLibraryView.vue'
 import StrategyDetailView from '../views/StrategyDetailView.vue'
 import MarketplaceView from '../views/Marketplace.vue'
 import MarketplaceStrategyDetailView from '../views/MarketplaceStrategyDetailView.vue'
+import UserProfileView from '../views/UserProfileView.vue'
 
 const router = createRouter({
   history: createWebHistory(),
@@ -27,6 +28,7 @@ const router = createRouter({
     { path: '/bots', name: 'bots', component: BotsView },
     { path: '/forum', name: 'forum', component: ForumView },
     { path: '/forum/posts/:postId', name: 'forum-post-detail', component: PostDetailView },
+    { path: '/users/:id', name: 'user-profile', component: UserProfileView },
     { path: '/settings', name: 'settings', component: SettingsView }
   ]
 })

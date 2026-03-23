@@ -1,7 +1,17 @@
 import { createHttpClient } from './http'
-import type { UserProfileResponse } from '../types/User'
+import type {
+  PaginatedPosts,
+  PaginatedStrategies,
+  UserProfileResponse,
+  UserPublicProfile
+} from '../types/User'
 
 const client = createHttpClient()
+
+interface PaginationParams {
+  page?: number
+  per_page?: number
+}
 
 export function fetchProfile(): Promise<UserProfileResponse> {
   return client.request({
@@ -15,5 +25,28 @@ export function updateOnboardingCompleted(userId: string, completed: boolean): P
     method: 'put',
     url: `/v1/users/${userId}/onboarding-completed`,
     data: { completed },
+  })
+}
+
+export function getUserProfile(userId: string): Promise<UserPublicProfile> {
+  return client.request({
+    method: 'get',
+    url: `/v1/users/${userId}`
+  })
+}
+
+export function getUserStrategies(userId: string, params?: PaginationParams): Promise<PaginatedStrategies> {
+  return client.request({
+    method: 'get',
+    url: `/v1/users/${userId}/strategies`,
+    params
+  })
+}
+
+export function getUserPosts(userId: string, params?: PaginationParams): Promise<PaginatedPosts> {
+  return client.request({
+    method: 'get',
+    url: `/v1/users/${userId}/posts`,
+    params
   })
 }

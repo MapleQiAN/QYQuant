@@ -1,7 +1,7 @@
 from datetime import datetime, timezone
 
 from app.extensions import db
-from app.models import AuditLog, User
+from app.models import AuditLog, Post, Strategy, User
 
 
 def _seed_code(app, phone, code="123456", ttl=300):
@@ -45,6 +45,77 @@ def _extract_refresh_cookie_value(cookie_header):
     if not cookie_header:
         return ""
     return cookie_header.split(";", 1)[0].split("=", 1)[1]
+
+
+def _create_strategy(
+    app,
+    *,
+    owner_id,
+    strategy_id,
+    name,
+    created_at,
+    is_public,
+    category="trend-following",
+    returns=12.5,
+    max_drawdown=-4.2,
+    win_rate=58.0,
+    tags=None,
+):
+    with app.app_context():
+        strategy = Strategy(
+            id=strategy_id,
+            name=name,
+            title=name,
+            symbol="BTCUSDT",
+            status="published" if is_public else "draft",
+            description=f"{name} description",
+            category=category,
+            source="upload",
+            owner_id=owner_id,
+            created_at=created_at,
+            updated_at=created_at,
+            last_update=created_at,
+            is_public=is_public,
+            returns=returns,
+            max_drawdown=max_drawdown,
+            win_rate=win_rate,
+            tags=tags or [],
+        )
+        db.session.add(strategy)
+        db.session.commit()
+        return strategy.id
+
+
+def _create_post(
+    app,
+    *,
+    user_id,
+    post_id,
+    content,
+    created_at,
+    likes_count=0,
+    comments_count=0,
+):
+    with app.app_context():
+        post = Post(
+            id=post_id,
+            title=f"Title {post_id}",
+            author="Trader",
+            avatar="https://example.com/avatar.png",
+            likes=likes_count,
+            comments=comments_count,
+            timestamp=1700000000000,
+            tags=[],
+            user_id=user_id,
+            content=content,
+            strategy_id=None,
+            likes_count=likes_count,
+            comments_count=comments_count,
+            created_at=created_at,
+        )
+        db.session.add(post)
+        db.session.commit()
+        return post.id
 
 
 def test_get_me_requires_auth(client):
@@ -198,6 +269,215 @@ def test_get_public_profile_returns_404_for_deleted_user(client, app):
 
     assert response.status_code == 404
     assert response.json["error"]["code"] == "USER_NOT_FOUND"
+
+
+def test_get_user_strategies_returns_only_public_strategies_sorted_by_newest(client, app):
+    _, user_id = _login_user(client, phone="13900139001", nickname="StrategyOwner")
+    _, other_user_id = _login_user(client, phone="13900139002", nickname="OtherOwner")
+    older_public_id = _create_strategy(
+        app,
+        owner_id=user_id,
+        strategy_id="strategy-public-older",
+        name="Public Older",
+        created_at=1700000000000,
+        is_public=True,
+        tags=["alpha"],
+    )
+    newer_public_id = _create_strategy(
+        app,
+        owner_id=user_id,
+        strategy_id="strategy-public-newer",
+        name="Public Newer",
+        created_at=1700000001000,
+        is_public=True,
+        tags=["beta", "swing"],
+    )
+    _create_strategy(
+        app,
+        owner_id=user_id,
+        strategy_id="strategy-private",
+        name="Private Strategy",
+        created_at=1700000002000,
+        is_public=False,
+    )
+    _create_strategy(
+        app,
+        owner_id=other_user_id,
+        strategy_id="strategy-other-user",
+        name="Other User Strategy",
+        created_at=1700000003000,
+        is_public=True,
+    )
+
+    response = client.get(f"/api/v1/users/{user_id}/strategies")
+
+    assert response.status_code == 200
+    data = response.json["data"]
+    assert [item["id"] for item in data["items"]] == [newer_public_id, older_public_id]
+    assert data["total"] == 2
+    assert data["page"] == 1
+    assert data["per_page"] == 20
+    assert data["items"][0] == {
+        "id": newer_public_id,
+        "name": "Public Newer",
+        "category": "trend-following",
+        "returns": 12.5,
+        "max_drawdown": -4.2,
+        "win_rate": 58.0,
+        "tags": ["beta", "swing"],
+    }
+
+
+def test_get_user_strategies_returns_empty_list_when_no_public_strategies(client):
+    _, user_id = _login_user(client, phone="13900139003", nickname="NoPublicStrategy")
+
+    response = client.get(f"/api/v1/users/{user_id}/strategies")
+
+    assert response.status_code == 200
+    assert response.json["data"] == {
+        "items": [],
+        "total": 0,
+        "page": 1,
+        "per_page": 20,
+    }
+
+
+def test_get_user_strategies_returns_404_for_missing_user(client):
+    response = client.get("/api/v1/users/missing-user/strategies")
+
+    assert response.status_code == 404
+    assert response.json["error"]["code"] == "USER_NOT_FOUND"
+
+
+def test_get_user_strategies_allows_anonymous_requests(client, app):
+    _, user_id = _login_user(client, phone="13900139004", nickname="AnonymousVisible")
+    _create_strategy(
+        app,
+        owner_id=user_id,
+        strategy_id="strategy-anon",
+        name="Anonymous Visible Strategy",
+        created_at=1700000000000,
+        is_public=True,
+    )
+
+    response = client.get(f"/api/v1/users/{user_id}/strategies")
+
+    assert response.status_code == 200
+    assert response.json["data"]["total"] == 1
+
+
+def test_get_user_posts_returns_newest_public_community_posts(client, app):
+    _, user_id = _login_user(client, phone="13900139005", nickname="PostOwner")
+    _create_post(
+        app,
+        user_id=user_id,
+        post_id="post-older",
+        content="Older post",
+        created_at=datetime(2026, 3, 14, 10, 0, 0, tzinfo=timezone.utc),
+        likes_count=1,
+        comments_count=2,
+    )
+    newer_post_id = _create_post(
+        app,
+        user_id=user_id,
+        post_id="post-newer",
+        content="Newer post",
+        created_at=datetime(2026, 3, 14, 11, 0, 0, tzinfo=timezone.utc),
+        likes_count=5,
+        comments_count=8,
+    )
+
+    response = client.get(f"/api/v1/users/{user_id}/posts")
+
+    assert response.status_code == 200
+    data = response.json["data"]
+    assert [item["id"] for item in data["items"]] == [newer_post_id, "post-older"]
+    assert data["total"] == 2
+    assert data["items"][0] == {
+        "id": newer_post_id,
+        "content": "Newer post",
+        "likes_count": 5,
+        "comments_count": 8,
+        "created_at": "2026-03-14T19:00:00+08:00",
+    }
+
+
+def test_get_user_posts_returns_empty_list_when_no_posts(client):
+    _, user_id = _login_user(client, phone="13900139006", nickname="NoPosts")
+
+    response = client.get(f"/api/v1/users/{user_id}/posts")
+
+    assert response.status_code == 200
+    assert response.json["data"] == {
+        "items": [],
+        "total": 0,
+        "page": 1,
+        "per_page": 20,
+    }
+
+
+def test_get_user_posts_returns_404_for_missing_user(client):
+    response = client.get("/api/v1/users/missing-user/posts")
+
+    assert response.status_code == 404
+    assert response.json["error"]["code"] == "USER_NOT_FOUND"
+
+
+def test_get_user_posts_truncates_content_to_200_characters(client, app):
+    _, user_id = _login_user(client, phone="13900139007", nickname="LongPost")
+    _create_post(
+        app,
+        user_id=user_id,
+        post_id="post-long",
+        content="x" * 250,
+        created_at=datetime(2026, 3, 14, 12, 0, 0, tzinfo=timezone.utc),
+    )
+
+    response = client.get(f"/api/v1/users/{user_id}/posts")
+
+    assert response.status_code == 200
+    assert response.json["data"]["items"][0]["content"] == "x" * 200
+
+
+def test_get_user_posts_excludes_legacy_rows_without_content(client, app):
+    _, user_id = _login_user(client, phone="13900139008", nickname="LegacyFilter")
+    _create_post(
+        app,
+        user_id=user_id,
+        post_id="legacy-post",
+        content=None,
+        created_at=None,
+    )
+    _create_post(
+        app,
+        user_id=user_id,
+        post_id="community-post",
+        content="Community post",
+        created_at=datetime(2026, 3, 14, 13, 0, 0, tzinfo=timezone.utc),
+    )
+
+    response = client.get(f"/api/v1/users/{user_id}/posts")
+
+    assert response.status_code == 200
+    assert [item["id"] for item in response.json["data"]["items"]] == ["community-post"]
+
+
+def test_deleted_user_returns_404_for_profile_related_public_endpoints(client, app):
+    _, user_id = _login_user(client, phone="13900139009", nickname="DeletedPublicUser")
+
+    with app.app_context():
+        user = db.session.get(User, user_id)
+        user.deleted_at = datetime(2026, 3, 15, 10, 0, 0, tzinfo=timezone.utc)
+        db.session.commit()
+
+    for path in (
+        f"/api/v1/users/{user_id}",
+        f"/api/v1/users/{user_id}/strategies",
+        f"/api/v1/users/{user_id}/posts",
+    ):
+        response = client.get(path)
+        assert response.status_code == 404
+        assert response.json["error"]["code"] == "USER_NOT_FOUND"
 
 
 def test_delete_me_requires_auth(client):
