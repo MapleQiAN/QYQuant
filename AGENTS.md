@@ -1,7 +1,7 @@
 <!-- gitnexus:start -->
 # GitNexus MCP
 
-This project is indexed by GitNexus as **QYQuant** (2256 symbols, 5193 relationships, 146 execution flows).
+This project is indexed by GitNexus as **QYQuant** (2268 symbols, 5237 relationships, 146 execution flows).
 
 ## Always Start Here
 
