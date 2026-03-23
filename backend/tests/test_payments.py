@@ -351,3 +351,23 @@ def test_webhook_writes_audit_log(client, app):
         ).first()
         assert log is not None
         assert log.details['plan_level'] == 'pro'
+
+
+def test_webhook_sets_quota_reset_at_to_next_month_first_day(client, app):
+    token, user_id = _login_user(client, phone='13800138220', nickname='QuotaResetAtUser')
+    order_id = _create_pending_order(client, token, plan_level='lite', provider='wechat')
+
+    client.post('/api/v1/payments/webhook/wechat', json={'order_id': order_id})
+
+    with app.app_context():
+        from datetime import timedelta, timezone
+        from app.models import UserQuota
+
+        quota = UserQuota.query.filter_by(user_id=user_id).one()
+        beijing_tz = timezone(timedelta(hours=8))
+        reset_at = quota.reset_at.astimezone(beijing_tz)
+
+        assert quota.plan_level == 'lite'
+        assert reset_at.day == 1
+        assert reset_at.hour == 0
+        assert reset_at.minute == 0

@@ -39,7 +39,12 @@ celery_app.conf.update(
     task_serializer='json',
     result_serializer='json',
     accept_content=['json'],
-    imports=('app.tasks.backtests', 'app.tasks.notification_tasks', 'app.tasks.simulation_tasks'),
+    imports=(
+        'app.tasks.backtests',
+        'app.tasks.notification_tasks',
+        'app.tasks.simulation_tasks',
+        'app.tasks.quota_tasks',
+    ),
     worker_concurrency=int(os.getenv('CELERYD_CONCURRENCY', '10')),
     task_acks_late=True,
     task_reject_on_worker_lost=True,
@@ -59,5 +64,10 @@ celery_app.conf.beat_schedule = {
         'task': 'app.tasks.simulation_tasks.run_daily_simulation',
         'schedule': crontab(hour=8, minute=0),
         'options': {'queue': 'simulation'},
+    },
+    'reset-monthly-quotas': {
+        'task': 'app.tasks.quota_tasks.reset_monthly_quotas',
+        'schedule': crontab(day_of_month='1', hour=0, minute=0),
+        'options': {'queue': 'default'},
     },
 }

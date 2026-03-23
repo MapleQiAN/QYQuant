@@ -9,7 +9,7 @@ from ..models import AuditLog, PaymentOrder, Subscription, User
 from ..quota import ensure_user_quota, serialize_plan_limit
 from ..services.notifications import create_notification
 from ..utils.response import error_response, ok
-from ..utils.time import now_utc
+from ..utils.time import next_month_start_beijing, now_utc
 
 
 bp = Blueprint('payments', __name__, url_prefix='/api/v1/payments')
@@ -122,7 +122,8 @@ def _activate_subscription(order, provider_order_id=None):
     if user:
         user.plan_level = order.plan_level
 
-    ensure_user_quota(order.user_id, order.plan_level)
+    quota = ensure_user_quota(order.user_id, order.plan_level)
+    quota.reset_at = next_month_start_beijing(starts_at)
 
     audit = AuditLog(
         operator_id=None,

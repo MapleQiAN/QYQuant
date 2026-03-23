@@ -1,5 +1,5 @@
 import time
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 from qysp.utils.time import to_beijing
 
@@ -10,6 +10,16 @@ def now_ms():
 
 def now_utc():
     return datetime.now(timezone.utc)
+
+
+BEIJING_TZ = timezone(timedelta(hours=8))
+
+
+def next_month_start_beijing(now=None):
+    current = now.astimezone(BEIJING_TZ) if now is not None else datetime.now(BEIJING_TZ)
+    year = current.year + (1 if current.month == 12 else 0)
+    month = 1 if current.month == 12 else current.month + 1
+    return datetime(year, month, 1, 0, 0, tzinfo=BEIJING_TZ)
 
 
 def ensure_aware_utc(dt):
