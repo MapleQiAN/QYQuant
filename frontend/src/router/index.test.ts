@@ -19,6 +19,7 @@ vi.mock('../views/MarketplaceStrategyDetailView.vue', () => ({ default: { templa
 vi.mock('../views/PricingView.vue', () => ({ default: { template: '<div />' } }))
 vi.mock('../views/UserProfileView.vue', () => ({ default: { template: '<div />' } }))
 vi.mock('../views/admin/AdminDashboard.vue', () => ({ default: { template: '<div />' } }))
+vi.mock('../views/admin/StrategyReview.vue', () => ({ default: { template: '<div />' } }))
 
 import router from './index'
 import { useUserStore } from '../stores'
@@ -85,6 +86,13 @@ describe('router', () => {
 
     expect(adminRoute).toBeTruthy()
     expect(adminRoute?.meta.requiresAdmin).toBe(true)
+  })
+
+  it('contains admin strategy review route', () => {
+    const reviewRoute = router.getRoutes().find((route) => route.path === '/admin/strategies')
+
+    expect(reviewRoute).toBeTruthy()
+    expect(reviewRoute?.meta.requiresAdmin).toBe(true)
   })
 
   it('redirects non-admin users away from admin route', async () => {

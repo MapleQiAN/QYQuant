@@ -23,7 +23,12 @@ describe('AdminDashboard', () => {
   it('renders admin overview placeholders', () => {
     const wrapper = mount(AdminDashboard, {
       global: {
-        plugins: [createPinia()]
+        plugins: [createPinia()],
+        stubs: {
+          RouterLink: {
+            template: '<a><slot /></a>'
+          }
+        }
       }
     })
 

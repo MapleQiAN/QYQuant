@@ -25,7 +25,8 @@
         </article>
         <article class="admin-card">
           <h2>待扩展模块</h2>
-          <p>策略审核、用户管理、回测监控等模块将在后续 story 中补齐。</p>
+          <p>策略审核队列已就绪，后续可继续扩展用户管理、回测监控等模块。</p>
+          <RouterLink class="admin-card__link" to="/admin/strategies">进入策略审核</RouterLink>
         </article>
       </div>
     </div>
@@ -122,6 +123,14 @@ onMounted(() => {
 
 .admin-card h2 {
   margin-bottom: var(--spacing-sm);
+}
+
+.admin-card__link {
+  display: inline-flex;
+  margin-top: var(--spacing-md);
+  color: var(--color-primary);
+  text-decoration: none;
+  font-weight: 600;
 }
 
 @media (max-width: 960px) {

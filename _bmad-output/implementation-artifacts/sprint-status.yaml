@@ -143,7 +143,7 @@ development_status:
   # ─────────────────────────────────────────────────────────────
   epic-10: in-progress
   10-1-管理后台基础框架-路由守卫-admin蓝图: ready-for-dev
-  10-2-策略审核队列: backlog
+  10-2-策略审核队列: ready-for-dev
   10-3-用户举报处理与内容下架: backlog
   10-4-回测任务队列监控与手动干预: backlog
   10-5-用户账户管理-封禁与审计日志查看: backlog
