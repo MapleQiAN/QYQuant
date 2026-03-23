@@ -2,20 +2,30 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
 import { useSimulationStore } from './useSimulationStore'
 
-const { acceptSimDisclaimerMock, createSimBotMock } = vi.hoisted(() => ({
+const {
+  acceptSimDisclaimerMock,
+  createSimBotMock,
+  getSimBotsMock,
+  getSimPositionsMock,
+} = vi.hoisted(() => ({
   acceptSimDisclaimerMock: vi.fn().mockResolvedValue(undefined),
   createSimBotMock: vi.fn().mockResolvedValue({
     id: 'bot-1',
     strategy_id: 'strategy-1',
+    strategy_name: '双均线策略',
     initial_capital: '100000.00',
     status: 'active',
     created_at: '2026-03-23T16:00:00+08:00',
   }),
+  getSimBotsMock: vi.fn().mockResolvedValue([]),
+  getSimPositionsMock: vi.fn().mockResolvedValue([]),
 }))
 
 vi.mock('../api/simulation', () => ({
   acceptSimDisclaimer: acceptSimDisclaimerMock,
   createSimBot: createSimBotMock,
+  getSimBots: getSimBotsMock,
+  getSimPositions: getSimPositionsMock,
 }))
 
 describe('simulation store', () => {
@@ -23,6 +33,8 @@ describe('simulation store', () => {
     setActivePinia(createPinia())
     acceptSimDisclaimerMock.mockClear()
     createSimBotMock.mockClear()
+    getSimBotsMock.mockClear()
+    getSimPositionsMock.mockClear()
   })
 
   it('accepts disclaimer via api', async () => {
@@ -66,5 +78,55 @@ describe('simulation store', () => {
 
     expect(store.error).toBe('Current plan supports at most 1 active simulation bots')
     expect(store.errorCode).toBe('SIMULATION_SLOT_LIMIT_REACHED')
+  })
+
+  it('fetchBots updates state.bots from api', async () => {
+    const bots = [
+      {
+        id: 'bot-1',
+        strategy_id: 'strategy-1',
+        strategy_name: '双均线策略',
+        initial_capital: '50000.00',
+        status: 'active' as const,
+        created_at: '2026-03-23T16:00:00+08:00',
+      },
+    ]
+    getSimBotsMock.mockResolvedValueOnce(bots)
+
+    const store = useSimulationStore()
+    await store.fetchBots()
+
+    expect(getSimBotsMock).toHaveBeenCalledTimes(1)
+    expect(store.bots).toEqual(bots)
+    expect(store.isLoading).toBe(false)
+    expect(store.error).toBeNull()
+  })
+
+  it('fetchBots sets error on failure', async () => {
+    getSimBotsMock.mockRejectedValueOnce(new Error('网络错误'))
+
+    const store = useSimulationStore()
+    await store.fetchBots()
+
+    expect(store.error).toBe('网络错误')
+    expect(store.bots).toEqual([])
+  })
+
+  it('fetchPositions calls api and returns positions', async () => {
+    const positions = [
+      {
+        symbol: '000001.XSHG',
+        quantity: '1000.0000',
+        avg_cost: '52.0000',
+        updated_at: '2026-03-22T16:00:00+08:00',
+      },
+    ]
+    getSimPositionsMock.mockResolvedValueOnce(positions)
+
+    const store = useSimulationStore()
+    const result = await store.fetchPositions('bot-1')
+
+    expect(getSimPositionsMock).toHaveBeenCalledWith('bot-1')
+    expect(result).toEqual(positions)
   })
 })

@@ -1,7 +1,7 @@
 from decimal import Decimal
 
 from app.extensions import db
-from app.models import SimulationBot, SimulationPosition, Strategy, User
+from app.models import SimulationBot, SimulationPosition, SimulationRecord, Strategy, User
 
 
 def _seed_code(app, phone, code="123456", ttl=300):
@@ -272,6 +272,38 @@ def _create_bot(app, user_id, strategy_id, capital=100000):
         return bot.id
 
 
+def _create_record(app, bot_id, *, trade_date="2026-03-20", equity="105000.00", cash="55000.00", daily_return="0.000500"):
+    from datetime import date as date_cls
+
+    with app.app_context():
+        record = SimulationRecord(
+            bot_id=bot_id,
+            trade_date=date_cls.fromisoformat(trade_date),
+            equity=Decimal(equity),
+            cash=Decimal(cash),
+            daily_return=Decimal(daily_return),
+        )
+        db.session.add(record)
+        db.session.commit()
+
+
+def _create_trade(app, bot_id, *, trade_date="2026-03-20", symbol="000001.XSHG", side="buy", price="15.2300", quantity="1000.0000"):
+    from datetime import date as date_cls
+    from app.models import SimulationTrade
+
+    with app.app_context():
+        trade = SimulationTrade(
+            bot_id=bot_id,
+            trade_date=date_cls.fromisoformat(trade_date),
+            symbol=symbol,
+            side=side,
+            price=Decimal(price),
+            quantity=Decimal(quantity),
+        )
+        db.session.add(trade)
+        db.session.commit()
+
+
 def test_get_positions_empty(client, app):
     token, user_id = _login_user(client, phone="13800138205", nickname="PosEmpty")
 
@@ -358,6 +390,173 @@ def test_get_positions_other_user_bot(client, app):
 
 def test_get_positions_unauthenticated(client):
     response = client.get("/api/v1/simulation/bots/any-bot-id/positions")
+    assert response.status_code == 401
+
+
+# SSE endpoint is intentionally not unit-tested here because the long-lived
+# connection shape is better covered with higher-level integration testing.
+
+
+def test_get_records_empty(client, app):
+    token, user_id = _login_user(client, phone="13800138210", nickname="RecordEmpty")
+
+    with app.app_context():
+        _create_strategy("record-strategy", user_id)
+        db.session.commit()
+
+    bot_id = _create_bot(app, user_id, "record-strategy")
+
+    response = client.get(
+        f"/api/v1/simulation/bots/{bot_id}/records",
+        headers=_auth_headers(token),
+    )
+
+    assert response.status_code == 200
+    assert response.json["data"] == []
+
+
+def test_get_records_returns_data(client, app):
+    token, user_id = _login_user(client, phone="13800138211", nickname="RecordUser")
+
+    with app.app_context():
+        _create_strategy("record-strategy-2", user_id)
+        db.session.commit()
+
+    bot_id = _create_bot(app, user_id, "record-strategy-2")
+    _create_record(app, bot_id)
+
+    response = client.get(
+        f"/api/v1/simulation/bots/{bot_id}/records",
+        headers=_auth_headers(token),
+    )
+
+    assert response.status_code == 200
+    assert response.json["data"] == [
+        {
+            "trade_date": "2026-03-20",
+            "equity": "105000.00",
+            "cash": "55000.00",
+            "daily_return": "0.000500",
+        }
+    ]
+
+
+def test_get_records_bot_not_found(client):
+    token, _ = _login_user(client, phone="13800138212", nickname="RecordNotFound")
+
+    response = client.get(
+        "/api/v1/simulation/bots/nonexistent-bot-id/records",
+        headers=_auth_headers(token),
+    )
+
+    assert response.status_code == 404
+    assert response.json["error"]["code"] == "BOT_NOT_FOUND"
+
+
+def test_get_records_other_user_bot(client, app):
+    token_a, user_a = _login_user(client, phone="13800138213", nickname="RecordOwner")
+    token_b, _ = _login_user(client, phone="13800138214", nickname="RecordIntruder")
+
+    with app.app_context():
+        _create_strategy("record-owner-strategy", user_a)
+        db.session.commit()
+
+    bot_id = _create_bot(app, user_a, "record-owner-strategy")
+
+    response = client.get(
+        f"/api/v1/simulation/bots/{bot_id}/records",
+        headers=_auth_headers(token_b),
+    )
+
+    assert response.status_code == 404
+    assert response.json["error"]["code"] == "BOT_NOT_FOUND"
+
+
+def test_get_records_unauthenticated(client):
+    response = client.get("/api/v1/simulation/bots/any-bot-id/records")
+
+    assert response.status_code == 401
+
+
+def test_get_trades_empty(client, app):
+    token, user_id = _login_user(client, phone="13800138215", nickname="TradeEmpty")
+
+    with app.app_context():
+        _create_strategy("trade-strategy", user_id)
+        db.session.commit()
+
+    bot_id = _create_bot(app, user_id, "trade-strategy")
+
+    response = client.get(
+        f"/api/v1/simulation/bots/{bot_id}/trades",
+        headers=_auth_headers(token),
+    )
+
+    assert response.status_code == 200
+    assert response.json["data"] == []
+
+
+def test_get_trades_returns_data(client, app):
+    token, user_id = _login_user(client, phone="13800138216", nickname="TradeUser")
+
+    with app.app_context():
+        _create_strategy("trade-strategy-2", user_id)
+        db.session.commit()
+
+    bot_id = _create_bot(app, user_id, "trade-strategy-2")
+    _create_trade(app, bot_id)
+
+    response = client.get(
+        f"/api/v1/simulation/bots/{bot_id}/trades",
+        headers=_auth_headers(token),
+    )
+
+    assert response.status_code == 200
+    assert response.json["data"] == [
+        {
+            "trade_date": "2026-03-20",
+            "symbol": "000001.XSHG",
+            "side": "buy",
+            "price": "15.2300",
+            "quantity": "1000.0000",
+        }
+    ]
+
+
+def test_get_trades_bot_not_found(client):
+    token, _ = _login_user(client, phone="13800138217", nickname="TradeNotFound")
+
+    response = client.get(
+        "/api/v1/simulation/bots/nonexistent-bot-id/trades",
+        headers=_auth_headers(token),
+    )
+
+    assert response.status_code == 404
+    assert response.json["error"]["code"] == "BOT_NOT_FOUND"
+
+
+def test_get_trades_other_user_bot(client, app):
+    token_a, user_a = _login_user(client, phone="13800138218", nickname="TradeOwner")
+    token_b, _ = _login_user(client, phone="13800138219", nickname="TradeIntruder")
+
+    with app.app_context():
+        _create_strategy("trade-owner-strategy", user_a)
+        db.session.commit()
+
+    bot_id = _create_bot(app, user_a, "trade-owner-strategy")
+
+    response = client.get(
+        f"/api/v1/simulation/bots/{bot_id}/trades",
+        headers=_auth_headers(token_b),
+    )
+
+    assert response.status_code == 404
+    assert response.json["error"]["code"] == "BOT_NOT_FOUND"
+
+
+def test_get_trades_unauthenticated(client):
+    response = client.get("/api/v1/simulation/bots/any-bot-id/trades")
+
     assert response.status_code == 401
 
 

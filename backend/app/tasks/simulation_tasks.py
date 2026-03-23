@@ -7,7 +7,7 @@ from flask import has_app_context
 
 from ..celery_app import celery_app
 from ..extensions import db
-from ..models import SimulationBot, SimulationPosition, SimulationRecord
+from ..models import SimulationBot, SimulationPosition, SimulationRecord, SimulationTrade
 from ..strategy_runtime import StrategyRuntimeError, execute_backtest_strategy
 from ..strategy_runtime.loader import load_strategy_package
 from ..utils.time import now_utc
@@ -85,6 +85,19 @@ def _execute_single_bot(bot):
         for symbol, position in existing_by_symbol.items():
             if symbol not in incoming_symbols:
                 db.session.delete(position)
+
+    raw_trades = outcome.get('trades') or []
+    for payload in raw_trades:
+        db.session.add(
+            SimulationTrade(
+                bot_id=bot.id,
+                trade_date=trade_date,
+                symbol=str(payload.get('symbol', '')),
+                side=str(payload.get('side', 'buy')),
+                price=Decimal(str(payload.get('price', 0))),
+                quantity=Decimal(str(payload.get('quantity', 0))),
+            )
+        )
 
     db.session.commit()
     logger.info(

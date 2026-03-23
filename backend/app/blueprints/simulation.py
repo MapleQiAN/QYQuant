@@ -1,11 +1,14 @@
+import json
+import time
+from datetime import datetime
 from decimal import Decimal, InvalidOperation
 
-from flask import request
-from flask_jwt_extended import get_jwt_identity, jwt_required
+from flask import Response, request, stream_with_context
+from flask_jwt_extended import decode_token, get_jwt_identity, jwt_required
 from flask_smorest import Blueprint
 
 from ..extensions import db
-from ..models import SimulationBot, SimulationPosition, Strategy, User
+from ..models import SimulationBot, SimulationPosition, SimulationRecord, SimulationTrade, Strategy, User
 from ..utils.response import error_response, ok
 from ..utils.time import format_beijing_iso
 
@@ -20,6 +23,111 @@ def _get_user_or_404(user_id):
     if user is None or user.deleted_at is not None:
         return None, error_response('USER_NOT_FOUND', 'user not found', 404)
     return user, None
+
+
+def _get_bot_for_user(bot_id: str, user_id: str):
+    return SimulationBot.query.filter_by(id=bot_id, user_id=user_id).first()
+
+
+def _serialize_record(record: SimulationRecord):
+    return {
+        'trade_date': str(record.trade_date),
+        'equity': f'{record.equity:.2f}',
+        'cash': f'{record.cash:.2f}',
+        'daily_return': f'{record.daily_return:.6f}',
+    }
+
+
+def _serialize_position(position: SimulationPosition):
+    return {
+        'symbol': position.symbol,
+        'quantity': f'{position.quantity:.4f}',
+        'avg_cost': f'{position.avg_cost:.4f}',
+        'updated_at': format_beijing_iso(position.updated_at),
+    }
+
+
+def _serialize_trade(trade: SimulationTrade):
+    return {
+        'trade_date': str(trade.trade_date),
+        'symbol': trade.symbol,
+        'side': trade.side,
+        'price': f'{trade.price:.4f}',
+        'quantity': f'{trade.quantity:.4f}',
+    }
+
+
+def _build_bot_snapshot(bot_id: str):
+    records = (
+        SimulationRecord.query
+        .filter_by(bot_id=bot_id)
+        .order_by(SimulationRecord.trade_date.asc())
+        .all()
+    )
+    positions = (
+        SimulationPosition.query
+        .filter_by(bot_id=bot_id)
+        .order_by(SimulationPosition.symbol.asc())
+        .all()
+    )
+
+    serialized_records = [_serialize_record(record) for record in records]
+    return {
+        'records': [
+            {
+                'trade_date': record['trade_date'],
+                'equity': record['equity'],
+                'daily_return': record['daily_return'],
+            }
+            for record in serialized_records
+        ],
+        'positions': [
+            {
+                'symbol': position.symbol,
+                'quantity': f'{position.quantity:.4f}',
+                'avg_cost': f'{position.avg_cost:.4f}',
+            }
+            for position in positions
+        ],
+    }
+
+
+def _snapshot_version(bot_id: str):
+    latest_record_date = (
+        db.session.query(db.func.max(SimulationRecord.trade_date))
+        .filter(SimulationRecord.bot_id == bot_id)
+        .scalar()
+    )
+    latest_position_update = (
+        db.session.query(db.func.max(SimulationPosition.updated_at))
+        .filter(SimulationPosition.bot_id == bot_id)
+        .scalar()
+    )
+    return (
+        latest_record_date.isoformat() if latest_record_date else '',
+        latest_position_update.isoformat() if latest_position_update else '',
+    )
+
+
+def _resolve_stream_user_id():
+    token = request.args.get('token', '')
+    if not token:
+        return None, error_response('UNAUTHORIZED', 'Missing token', 401)
+
+    try:
+        decoded = decode_token(token)
+    except Exception:
+        return None, error_response('UNAUTHORIZED', 'Invalid token', 401)
+
+    user_id = decoded.get('sub')
+    if not user_id:
+        return None, error_response('UNAUTHORIZED', 'Invalid token', 401)
+
+    user = db.session.get(User, user_id)
+    if user is None or user.deleted_at is not None:
+        return None, error_response('UNAUTHORIZED', 'Invalid token', 401)
+
+    return user_id, None
 
 
 @bp.post('/disclaimer/accept')
@@ -125,21 +233,81 @@ def list_bots():
 @jwt_required()
 def get_bot_positions(bot_id: str):
     user_id = get_jwt_identity()
-
-    bot = SimulationBot.query.filter_by(id=bot_id, user_id=user_id).first()
+    bot = _get_bot_for_user(bot_id, user_id)
     if bot is None:
-        return error_response('BOT_NOT_FOUND', '机器人不存在或无权访问', 404)
+        return error_response('BOT_NOT_FOUND', 'Bot not found', 404)
 
     positions = SimulationPosition.query.filter_by(bot_id=bot_id).all()
+    return ok([_serialize_position(position) for position in positions])
 
-    result = [
-        {
-            'symbol': p.symbol,
-            'quantity': f'{p.quantity:.4f}',
-            'avg_cost': f'{p.avg_cost:.4f}',
-            'updated_at': format_beijing_iso(p.updated_at),
-        }
-        for p in positions
-    ]
 
-    return ok(result)
+@bp.get('/bots/<string:bot_id>/records')
+@jwt_required()
+def get_bot_records(bot_id: str):
+    user_id = get_jwt_identity()
+    bot = _get_bot_for_user(bot_id, user_id)
+    if bot is None:
+        return error_response('BOT_NOT_FOUND', 'Bot not found', 404)
+
+    records = (
+        SimulationRecord.query
+        .filter_by(bot_id=bot_id)
+        .order_by(SimulationRecord.trade_date.asc())
+        .all()
+    )
+    return ok([_serialize_record(record) for record in records])
+
+
+@bp.get('/bots/<string:bot_id>/trades')
+@jwt_required()
+def get_bot_trades(bot_id: str):
+    user_id = get_jwt_identity()
+    bot = _get_bot_for_user(bot_id, user_id)
+    if bot is None:
+        return error_response('BOT_NOT_FOUND', 'Bot not found', 404)
+
+    trades = (
+        SimulationTrade.query
+        .filter_by(bot_id=bot_id)
+        .order_by(SimulationTrade.trade_date.desc(), SimulationTrade.created_at.desc())
+        .all()
+    )
+    return ok([_serialize_trade(trade) for trade in trades])
+
+
+@bp.get('/bots/<string:bot_id>/stream')
+def stream_bot(bot_id: str):
+    user_id, error = _resolve_stream_user_id()
+    if error:
+        return error
+
+    bot = _get_bot_for_user(bot_id, user_id)
+    if bot is None:
+        return error_response('BOT_NOT_FOUND', 'Bot not found', 404)
+
+    def generate():
+        last_version = None
+        last_heartbeat_at = time.monotonic()
+
+        while True:
+            current_version = _snapshot_version(bot_id)
+            if current_version != last_version:
+                payload = json.dumps(_build_bot_snapshot(bot_id))
+                yield f'data: {payload}\n\n'
+                last_version = current_version
+                last_heartbeat_at = time.monotonic()
+            elif time.monotonic() - last_heartbeat_at >= 30:
+                yield f': heartbeat {datetime.utcnow().isoformat()}\n\n'
+                last_heartbeat_at = time.monotonic()
+
+            time.sleep(5)
+
+    return Response(
+        stream_with_context(generate()),
+        content_type='text/event-stream',
+        headers={
+            'Cache-Control': 'no-cache',
+            'Connection': 'keep-alive',
+            'X-Accel-Buffering': 'no',
+        },
+    )

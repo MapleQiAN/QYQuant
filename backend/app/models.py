@@ -306,6 +306,22 @@ class SimulationPosition(db.Model):
     updated_at = db.Column(db.DateTime(timezone=True), nullable=False, default=now_utc, onupdate=now_utc, server_default=db.func.now())
 
 
+class SimulationTrade(db.Model):
+    __tablename__ = 'simulation_trades'
+    __table_args__ = (
+        db.Index('idx_simulation_trades_bot_id', 'bot_id'),
+    )
+
+    id = db.Column(db.String, primary_key=True, default=gen_id)
+    bot_id = db.Column(db.String, db.ForeignKey('simulation_bots.id', ondelete='CASCADE'), nullable=False)
+    trade_date = db.Column(db.Date, nullable=False)
+    symbol = db.Column(db.String(20), nullable=False)
+    side = db.Column(db.String(4), nullable=False)
+    price = db.Column(db.Numeric(18, 4), nullable=False)
+    quantity = db.Column(db.Numeric(18, 4), nullable=False)
+    created_at = db.Column(db.DateTime(timezone=True), nullable=False, default=now_utc, server_default=db.func.now())
+
+
 class Order(db.Model):
     __tablename__ = 'orders'
     id = db.Column(db.String, primary_key=True, default=gen_id)

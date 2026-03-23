@@ -219,3 +219,46 @@ def test_run_daily_simulation_upserts_same_trade_date(monkeypatch, app, active_b
         assert len(records) == 1
         assert records[0].equity == Decimal("103000")
         assert records[0].cash == Decimal("55000")
+
+
+def test_run_daily_simulation_persists_trades(monkeypatch, app, active_bot):
+    from app.tasks.simulation_tasks import run_daily_simulation
+    from app.models import SimulationTrade
+
+    monkeypatch.setattr("app.tasks.simulation_tasks.date", _FixedDate)
+    monkeypatch.setattr(
+        "app.tasks.simulation_tasks.load_strategy_package",
+        lambda strategy_id, version=None: {
+            "strategy_id": strategy_id,
+            "manifest": {"symbol": "000001.XSHG"},
+        },
+    )
+    monkeypatch.setattr(
+        "app.tasks.simulation_tasks.execute_backtest_strategy",
+        lambda **kwargs: {
+            "equity": 100000,
+            "cash": 100000,
+            "positions": {},
+            "trades": [
+                {
+                    "symbol": "000001.XSHG",
+                    "side": "buy",
+                    "price": 15.23,
+                    "quantity": 1000,
+                }
+            ],
+        },
+    )
+
+    result = run_daily_simulation.run()
+
+    assert result == {"processed": 1}
+
+    with app.app_context():
+        trades = SimulationTrade.query.filter_by(bot_id=active_bot).all()
+        assert len(trades) == 1
+        assert trades[0].trade_date == date(2026, 3, 23)
+        assert trades[0].symbol == "000001.XSHG"
+        assert trades[0].side == "buy"
+        assert trades[0].price == Decimal("15.23")
+        assert trades[0].quantity == Decimal("1000")
