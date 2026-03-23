@@ -1,7 +1,7 @@
 from decimal import Decimal
 
 from app.extensions import db
-from app.models import SimulationBot, Strategy, User
+from app.models import SimulationBot, SimulationPosition, Strategy, User
 
 
 def _seed_code(app, phone, code="123456", ttl=300):
@@ -170,6 +170,198 @@ def test_create_bot_enforces_plan_slot_limit_and_ignores_paused_bots(client, app
 
     assert allowed.status_code == 201
     assert allowed.json["data"]["status"] == "active"
+
+
+# ── Story 7.3: GET /bots ──────────────────────────────────────────────────────
+
+
+def test_list_bots_returns_empty_for_new_user(client):
+    token, _ = _login_user(client, phone="13800138200", nickname="EmptyUser")
+    response = client.get("/api/v1/simulation/bots", headers=_auth_headers(token))
+    assert response.status_code == 200
+    assert response.json["data"] == []
+
+
+def test_list_bots_returns_user_bots(client, app):
+    token, user_id = _login_user(client, phone="13800138201", nickname="ListUser")
+
+    with app.app_context():
+        _create_strategy("list-strategy", user_id)
+        db.session.flush()
+        db.session.add(
+            SimulationBot(
+                user_id=user_id,
+                strategy_id="list-strategy",
+                initial_capital=Decimal("50000"),
+                status="active",
+            )
+        )
+        db.session.commit()
+
+    response = client.get("/api/v1/simulation/bots", headers=_auth_headers(token))
+    assert response.status_code == 200
+    data = response.json["data"]
+    assert len(data) == 1
+    bot = data[0]
+    assert bot["strategy_id"] == "list-strategy"
+    assert bot["strategy_name"] == "Strategy list-strategy"
+    assert bot["initial_capital"] == "50000.00"
+    assert bot["status"] == "active"
+    assert bot["created_at"].endswith("+08:00")
+
+
+def test_list_bots_unauthenticated(client):
+    response = client.get("/api/v1/simulation/bots")
+    assert response.status_code == 401
+
+
+def test_list_bots_only_current_user(client, app):
+    token_a, user_a = _login_user(client, phone="13800138202", nickname="UserA")
+    token_b, user_b = _login_user(client, phone="13800138203", nickname="UserB")
+
+    with app.app_context():
+        _create_strategy("strategy-a", user_a)
+        db.session.flush()
+        db.session.add(
+            SimulationBot(
+                user_id=user_a,
+                strategy_id="strategy-a",
+                initial_capital=Decimal("100000"),
+                status="active",
+            )
+        )
+        db.session.commit()
+
+    response = client.get("/api/v1/simulation/bots", headers=_auth_headers(token_b))
+    assert response.status_code == 200
+    assert response.json["data"] == []
+
+
+def test_list_bots_deleted_strategy_shows_placeholder(client, app):
+    token, user_id = _login_user(client, phone="13800138204", nickname="DeletedStrat")
+
+    with app.app_context():
+        db.session.add(
+            SimulationBot(
+                user_id=user_id,
+                strategy_id="nonexistent-strategy",
+                initial_capital=Decimal("10000"),
+                status="active",
+            )
+        )
+        db.session.commit()
+
+    response = client.get("/api/v1/simulation/bots", headers=_auth_headers(token))
+    assert response.status_code == 200
+    assert response.json["data"][0]["strategy_name"] == "(策略已删除)"
+
+
+# ── Story 7.3: GET /bots/:id/positions ───────────────────────────────────────
+
+
+def _create_bot(app, user_id, strategy_id, capital=100000):
+    with app.app_context():
+        bot = SimulationBot(
+            user_id=user_id,
+            strategy_id=strategy_id,
+            initial_capital=Decimal(str(capital)),
+            status="active",
+        )
+        db.session.add(bot)
+        db.session.commit()
+        return bot.id
+
+
+def test_get_positions_empty(client, app):
+    token, user_id = _login_user(client, phone="13800138205", nickname="PosEmpty")
+
+    with app.app_context():
+        _create_strategy("pos-strategy", user_id)
+        db.session.commit()
+
+    bot_id = _create_bot(app, user_id, "pos-strategy")
+
+    response = client.get(
+        f"/api/v1/simulation/bots/{bot_id}/positions",
+        headers=_auth_headers(token),
+    )
+    assert response.status_code == 200
+    assert response.json["data"] == []
+
+
+def test_get_positions_returns_positions(client, app):
+    token, user_id = _login_user(client, phone="13800138206", nickname="PosUser")
+
+    with app.app_context():
+        _create_strategy("pos-strategy-2", user_id)
+        db.session.flush()
+        bot = SimulationBot(
+            user_id=user_id,
+            strategy_id="pos-strategy-2",
+            initial_capital=Decimal("100000"),
+            status="active",
+        )
+        db.session.add(bot)
+        db.session.flush()
+        db.session.add(
+            SimulationPosition(
+                bot_id=bot.id,
+                symbol="000001.XSHG",
+                quantity=Decimal("1000.0000"),
+                avg_cost=Decimal("52.0000"),
+            )
+        )
+        db.session.commit()
+        bot_id = bot.id
+
+    response = client.get(
+        f"/api/v1/simulation/bots/{bot_id}/positions",
+        headers=_auth_headers(token),
+    )
+    assert response.status_code == 200
+    data = response.json["data"]
+    assert len(data) == 1
+    pos = data[0]
+    assert pos["symbol"] == "000001.XSHG"
+    assert pos["quantity"] == "1000.0000"
+    assert pos["avg_cost"] == "52.0000"
+    assert pos["updated_at"].endswith("+08:00")
+
+
+def test_get_positions_bot_not_found(client):
+    token, _ = _login_user(client, phone="13800138207", nickname="NotFoundUser")
+    response = client.get(
+        "/api/v1/simulation/bots/nonexistent-bot-id/positions",
+        headers=_auth_headers(token),
+    )
+    assert response.status_code == 404
+    assert response.json["error"]["code"] == "BOT_NOT_FOUND"
+
+
+def test_get_positions_other_user_bot(client, app):
+    token_a, user_a = _login_user(client, phone="13800138208", nickname="OwnerA")
+    token_b, user_b = _login_user(client, phone="13800138209", nickname="AttackerB")
+
+    with app.app_context():
+        _create_strategy("owner-strategy", user_a)
+        db.session.commit()
+
+    bot_id = _create_bot(app, user_a, "owner-strategy")
+
+    response = client.get(
+        f"/api/v1/simulation/bots/{bot_id}/positions",
+        headers=_auth_headers(token_b),
+    )
+    assert response.status_code == 404
+    assert response.json["error"]["code"] == "BOT_NOT_FOUND"
+
+
+def test_get_positions_unauthenticated(client):
+    response = client.get("/api/v1/simulation/bots/any-bot-id/positions")
+    assert response.status_code == 401
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 
 
 def test_users_me_includes_sim_disclaimer_accepted_flag(client, app):

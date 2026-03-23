@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
-import { acceptSimDisclaimer, createSimBot } from '../api/simulation'
-import type { CreateBotPayload, SimulationBot } from '../types/Simulation'
+import { acceptSimDisclaimer, createSimBot, getSimBots, getSimPositions } from '../api/simulation'
+import type { CreateBotPayload, SimulationBot, SimulationPosition } from '../types/Simulation'
 
 export const useSimulationStore = defineStore('simulation', {
   state: () => ({
@@ -16,6 +16,20 @@ export const useSimulationStore = defineStore('simulation', {
     },
     async acceptDisclaimer() {
       await acceptSimDisclaimer()
+    },
+    async fetchBots(): Promise<void> {
+      this.isLoading = true
+      this.error = null
+      try {
+        this.bots = await getSimBots()
+      } catch (e: any) {
+        this.error = e?.message ?? '加载机器人列表失败'
+      } finally {
+        this.isLoading = false
+      }
+    },
+    async fetchPositions(botId: string): Promise<SimulationPosition[]> {
+      return getSimPositions(botId)
     },
     async createBot(payload: CreateBotPayload): Promise<SimulationBot> {
       this.isLoading = true

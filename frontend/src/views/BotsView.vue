@@ -25,23 +25,34 @@
         @created="handleCreated"
       />
 
-      <div v-if="simulationStore.bots.length" class="bot-list">
-        <article
+      <div v-if="simulationStore.isLoading" class="loading-hint">加载中...</div>
+
+      <div v-else-if="simulationStore.bots.length === 0" class="empty-hint">
+        还没有机器人，点击 "Create Bot" 开始
+      </div>
+
+      <div v-else class="bot-list">
+        <BotCard
           v-for="bot in simulationStore.bots"
           :key="bot.id"
-          class="bot-card"
-        >
-          <p class="bot-name">Strategy ID: {{ bot.strategy_id }}</p>
-          <p class="bot-meta">Initial Capital: {{ bot.initial_capital }}</p>
-          <p class="bot-meta">Status: {{ bot.status }}</p>
-        </article>
+          :bot="bot"
+          @view-positions="openPositions"
+        />
       </div>
+
+      <BotPositionsModal
+        v-if="selectedBotId"
+        :bot-id="selectedBotId"
+        @close="selectedBotId = null"
+      />
     </div>
   </section>
 </template>
 
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
+import BotCard from '../components/simulation/BotCard.vue'
+import BotPositionsModal from '../components/simulation/BotPositionsModal.vue'
 import CreateBotModal from '../components/simulation/CreateBotModal.vue'
 import SimulationDisclaimerModal from '../components/simulation/SimulationDisclaimerModal.vue'
 import { useSimulationStore } from '../stores/useSimulationStore'
@@ -51,6 +62,7 @@ const userStore = useUserStore()
 const simulationStore = useSimulationStore()
 
 const showCreateForm = ref(false)
+const selectedBotId = ref<string | null>(null)
 
 const showDisclaimer = computed(() => (
   Boolean(userStore.profile.id) && !userStore.profile.sim_disclaimer_accepted
@@ -58,14 +70,20 @@ const showDisclaimer = computed(() => (
 
 onMounted(async () => {
   await userStore.loadProfile()
+  await simulationStore.fetchBots()
 })
 
 async function handleDisclaimerAccepted() {
   await userStore.refreshProfile()
 }
 
-function handleCreated() {
+async function handleCreated() {
   showCreateForm.value = false
+  await simulationStore.fetchBots()
+}
+
+function openPositions(botId: string) {
+  selectedBotId.value = botId
 }
 </script>
 
@@ -101,26 +119,15 @@ function handleCreated() {
   cursor: pointer;
 }
 
+.loading-hint,
+.empty-hint {
+  padding: 24px;
+  text-align: center;
+  color: var(--color-text-muted);
+}
+
 .bot-list {
   display: grid;
   gap: 12px;
-}
-
-.bot-card {
-  padding: 18px;
-  border: 1px solid rgba(148, 163, 184, 0.25);
-  border-radius: 16px;
-  background: rgba(255, 255, 255, 0.85);
-}
-
-.bot-name {
-  margin: 0 0 8px;
-  font-weight: 600;
-  color: var(--color-text-primary);
-}
-
-.bot-meta {
-  margin: 0;
-  color: var(--color-text-secondary);
 }
 </style>

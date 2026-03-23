@@ -5,7 +5,7 @@ from flask_jwt_extended import get_jwt_identity, jwt_required
 from flask_smorest import Blueprint
 
 from ..extensions import db
-from ..models import SimulationBot, Strategy, User
+from ..models import SimulationBot, SimulationPosition, Strategy, User
 from ..utils.response import error_response, ok
 from ..utils.time import format_beijing_iso
 
@@ -92,3 +92,54 @@ def create_bot():
         'status': bot.status,
         'created_at': format_beijing_iso(bot.created_at),
     }), 201
+
+
+@bp.get('/bots')
+@jwt_required()
+def list_bots():
+    user_id = get_jwt_identity()
+    bots = (
+        SimulationBot.query
+        .filter_by(user_id=user_id)
+        .order_by(SimulationBot.created_at.desc())
+        .all()
+    )
+
+    result = []
+    for bot in bots:
+        strategy = db.session.get(Strategy, bot.strategy_id)
+        strategy_name = (strategy.title or strategy.name) if strategy else '(策略已删除)'
+        result.append({
+            'id': bot.id,
+            'strategy_id': bot.strategy_id,
+            'strategy_name': strategy_name,
+            'initial_capital': f'{bot.initial_capital:.2f}',
+            'status': bot.status,
+            'created_at': format_beijing_iso(bot.created_at),
+        })
+
+    return ok(result)
+
+
+@bp.get('/bots/<string:bot_id>/positions')
+@jwt_required()
+def get_bot_positions(bot_id: str):
+    user_id = get_jwt_identity()
+
+    bot = SimulationBot.query.filter_by(id=bot_id, user_id=user_id).first()
+    if bot is None:
+        return error_response('BOT_NOT_FOUND', '机器人不存在或无权访问', 404)
+
+    positions = SimulationPosition.query.filter_by(bot_id=bot_id).all()
+
+    result = [
+        {
+            'symbol': p.symbol,
+            'quantity': f'{p.quantity:.4f}',
+            'avg_cost': f'{p.avg_cost:.4f}',
+            'updated_at': format_beijing_iso(p.updated_at),
+        }
+        for p in positions
+    ]
+
+    return ok(result)
