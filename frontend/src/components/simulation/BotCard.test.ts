@@ -43,7 +43,16 @@ describe('BotCard', () => {
   it('emits view-positions with bot.id when button clicked', async () => {
     const bot = makeBot()
     const wrapper = mount(BotCard, { props: { bot } })
-    await wrapper.find('button').trigger('click')
+    await wrapper.findAll('button')[0].trigger('click')
     expect(wrapper.emitted('view-positions')).toEqual([['bot-1']])
+  })
+
+  it('emits view-detail with bot.id when detail button clicked', async () => {
+    const bot = makeBot()
+    const wrapper = mount(BotCard, { props: { bot } })
+
+    await wrapper.findAll('button')[1].trigger('click')
+
+    expect(wrapper.emitted('view-detail')).toEqual([['bot-1']])
   })
 })

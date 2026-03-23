@@ -28,7 +28,7 @@
       <div v-if="simulationStore.isLoading" class="loading-hint">加载中...</div>
 
       <div v-else-if="simulationStore.bots.length === 0" class="empty-hint">
-        还没有机器人，点击 "Create Bot" 开始
+        还没有机器人，点击 "Create Bot" 开始创建
       </div>
 
       <div v-else class="bot-list">
@@ -37,6 +37,7 @@
           :key="bot.id"
           :bot="bot"
           @view-positions="openPositions"
+          @view-detail="openDetail"
         />
       </div>
 
@@ -45,6 +46,12 @@
         :bot-id="selectedBotId"
         @close="selectedBotId = null"
       />
+
+      <BotDetailModal
+        v-if="selectedDetailBot"
+        :bot="selectedDetailBot"
+        @close="selectedDetailBot = null"
+      />
     </div>
   </section>
 </template>
@@ -52,17 +59,20 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import BotCard from '../components/simulation/BotCard.vue'
+import BotDetailModal from '../components/simulation/BotDetailModal.vue'
 import BotPositionsModal from '../components/simulation/BotPositionsModal.vue'
 import CreateBotModal from '../components/simulation/CreateBotModal.vue'
 import SimulationDisclaimerModal from '../components/simulation/SimulationDisclaimerModal.vue'
 import { useSimulationStore } from '../stores/useSimulationStore'
 import { useUserStore } from '../stores/user'
+import type { SimulationBot } from '../types/Simulation'
 
 const userStore = useUserStore()
 const simulationStore = useSimulationStore()
 
 const showCreateForm = ref(false)
 const selectedBotId = ref<string | null>(null)
+const selectedDetailBot = ref<SimulationBot | null>(null)
 
 const showDisclaimer = computed(() => (
   Boolean(userStore.profile.id) && !userStore.profile.sim_disclaimer_accepted
@@ -84,6 +94,10 @@ async function handleCreated() {
 
 function openPositions(botId: string) {
   selectedBotId.value = botId
+}
+
+function openDetail(botId: string) {
+  selectedDetailBot.value = simulationStore.bots.find((bot) => bot.id === botId) ?? null
 }
 </script>
 

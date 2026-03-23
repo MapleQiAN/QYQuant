@@ -13,6 +13,14 @@ interface PaginationParams {
   per_page?: number
 }
 
+export interface UserQuotaResponse {
+  plan_level: string
+  used_count: number
+  plan_limit: number | 'unlimited'
+  remaining: number | 'unlimited'
+  reset_at: string | null
+}
+
 export function fetchProfile(): Promise<UserProfileResponse> {
   return client.request({
     method: 'get',
@@ -48,5 +56,12 @@ export function getUserPosts(userId: string, params?: PaginationParams): Promise
     method: 'get',
     url: `/v1/users/${userId}/posts`,
     params
+  })
+}
+
+export function fetchMyQuota(): Promise<UserQuotaResponse> {
+  return client.request({
+    method: 'get',
+    url: '/v1/users/me/quota'
   })
 }

@@ -600,3 +600,75 @@ def test_deleted_user_phone_can_register_a_new_account(client, app):
     assert relogin.status_code == 200
     assert relogin.json["data"]["user_id"] != first_user_id
     assert relogin.json["data"]["nickname"] == "SecondOwner"
+
+
+def test_get_my_quota_returns_quota_data(client):
+    token, _ = _login_user(client, phone="13900139100", nickname="QuotaUser")
+
+    response = client.get(
+        "/api/v1/users/me/quota",
+        headers=_auth_headers(token),
+    )
+
+    assert response.status_code == 200
+    data = response.json["data"]
+    assert data["plan_level"] == "free"
+    assert isinstance(data["used_count"], int)
+    assert data["plan_limit"] == 10
+    assert isinstance(data["remaining"], int)
+    assert data["remaining"] == data["plan_limit"] - data["used_count"]
+    assert data["reset_at"] is None
+
+
+def test_get_my_quota_requires_auth(client):
+    response = client.get("/api/v1/users/me/quota")
+
+    assert response.status_code == 401
+    assert response.json["error"]["code"] == "UNAUTHORIZED"
+
+
+def test_get_my_quota_auto_creates_quota_record(client, app):
+    from app.models import UserQuota
+
+    token, user_id = _login_user(client, phone="13900139101", nickname="NewQuotaUser")
+
+    with app.app_context():
+        quota = db.session.get(UserQuota, user_id)
+        if quota is not None:
+            db.session.delete(quota)
+            db.session.commit()
+
+    response = client.get(
+        "/api/v1/users/me/quota",
+        headers=_auth_headers(token),
+    )
+
+    assert response.status_code == 200
+
+    with app.app_context():
+        quota = db.session.get(UserQuota, user_id)
+        assert quota is not None
+        assert quota.plan_level == "free"
+        assert quota.used_count == 0
+
+
+def test_get_my_quota_reflects_plan_level_change(client, app):
+    from app.models import User
+
+    token, user_id = _login_user(client, phone="13900139102", nickname="PlanChanger")
+
+    with app.app_context():
+        user = db.session.get(User, user_id)
+        user.plan_level = "pro"
+        db.session.commit()
+
+    response = client.get(
+        "/api/v1/users/me/quota",
+        headers=_auth_headers(token),
+    )
+
+    assert response.status_code == 200
+    data = response.json["data"]
+    assert data["plan_level"] == "pro"
+    assert data["plan_limit"] == 500
+    assert data["remaining"] == 500 - data["used_count"]

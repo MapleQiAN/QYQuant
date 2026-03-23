@@ -3,6 +3,17 @@
     <div class="container">
       <h1 class="view-title">{{ $t('pages.backtestsTitle') }}</h1>
       <p class="view-subtitle">{{ $t('pages.backtestsSubtitle') }}</p>
+      <div v-if="quota" class="quota-badge">
+        <span class="quota-badge__info">
+          剩余回测次数：
+          <strong>{{ quota.remaining === 'unlimited' ? '无限' : quota.remaining }}</strong>
+          / {{ quota.plan_limit === 'unlimited' ? '无限' : quota.plan_limit }}
+        </span>
+        <span v-if="quota.reset_at" class="quota-badge__reset">
+          重置时间：{{ quota.reset_at.slice(0, 10) }}
+        </span>
+      </div>
+      <p v-else-if="quotaError" class="message error quota-error">{{ quotaError }}</p>
 
       <div class="layout-grid">
         <div class="card panel">
@@ -105,8 +116,22 @@
           </div>
 
           <div class="actions">
-            <button class="btn btn-primary" type="button" :disabled="runState.running || runtimeLoading" @click="handleRun">
+            <button
+              v-if="!isQuotaExhausted"
+              class="btn btn-primary"
+              type="button"
+              :disabled="runState.running || runtimeLoading"
+              @click="handleRun"
+            >
               {{ runState.running ? 'Running...' : 'Run Backtest' }}
+            </button>
+            <button
+              v-else
+              class="btn btn-primary btn--upgrade"
+              type="button"
+              disabled
+            >
+              升级套餐解锁更多次数
             </button>
           </div>
 
@@ -138,15 +163,18 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, reactive, ref, watch } from 'vue'
+import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { fetchRecent, fetchRuntimeDescriptor } from '../api/strategies'
 import { fetchBacktestStatus, submitBacktest } from '../api/backtests'
+import { fetchMyQuota, type UserQuotaResponse } from '../api/users'
 import type { SubmitBacktestPayload } from '../types/Backtest'
 import type { Strategy, StrategyParameter, StrategyRuntimeDescriptor } from '../types/Strategy'
 
 const strategies = ref<Strategy[]>([])
 const strategiesError = ref('')
+const quota = ref<UserQuotaResponse | null>(null)
+const quotaError = ref('')
 const runtimeDescriptor = ref<StrategyRuntimeDescriptor | null>(null)
 const runtimeLoading = ref(false)
 const runtimeError = ref('')
@@ -234,6 +262,15 @@ async function loadStrategies() {
   }
 }
 
+async function loadQuota() {
+  quotaError.value = ''
+  try {
+    quota.value = await fetchMyQuota()
+  } catch (error: any) {
+    quotaError.value = error?.message || '额度信息加载失败'
+  }
+}
+
 async function loadRuntime(strategyId: string) {
   runtimeDescriptor.value = null
   runtimeError.value = ''
@@ -308,6 +345,13 @@ function openReport(jobId: string) {
   void router.push({ name: 'backtest-report', params: { jobId } })
 }
 
+const isQuotaExhausted = computed(() => {
+  if (!quota.value) {
+    return false
+  }
+  return quota.value.remaining !== 'unlimited' && quota.value.remaining <= 0
+})
+
 async function handleRun() {
   runState.error = ''
   runState.status = ''
@@ -355,6 +399,7 @@ watch(
 
 onMounted(() => {
   void loadStrategies()
+  void loadQuota()
 })
 </script>
 
@@ -372,6 +417,31 @@ onMounted(() => {
 .view-subtitle {
   margin: 0;
   color: var(--color-text-muted);
+}
+
+.quota-badge {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 8px 12px;
+  margin-top: var(--spacing-md);
+  background: var(--color-surface-alt);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-sm);
+}
+
+.quota-badge__info {
+  color: var(--color-text-primary);
+}
+
+.quota-badge__reset {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-xs);
+}
+
+.quota-error {
+  margin-top: var(--spacing-sm);
 }
 
 .layout-grid {
@@ -447,6 +517,14 @@ onMounted(() => {
 
 .actions {
   margin-top: var(--spacing-md);
+}
+
+.btn--upgrade {
+  border-color: var(--color-border);
+  background: var(--color-surface-alt);
+  color: var(--color-text-muted);
+  cursor: not-allowed;
+  opacity: 0.85;
 }
 
 .message {

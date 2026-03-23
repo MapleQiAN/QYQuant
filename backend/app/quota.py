@@ -31,6 +31,8 @@ def ensure_user_quota(user_id, plan_level="free"):
         db.session.flush()
     elif not quota.plan_level:
         quota.plan_level = plan_level
+    elif plan_level and quota.plan_level != plan_level:
+        quota.plan_level = plan_level
     return quota
 
 

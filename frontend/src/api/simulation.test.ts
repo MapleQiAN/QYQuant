@@ -59,4 +59,22 @@ describe('simulation api', () => {
       url: '/v1/simulation/bots/bot-42/positions',
     })
   })
+
+  it('calls get records endpoint with bot id', async () => {
+    await simulation.getSimRecords('bot-42')
+
+    expect(requestMock).toHaveBeenCalledWith({
+      method: 'get',
+      url: '/v1/simulation/bots/bot-42/records',
+    })
+  })
+
+  it('calls get trades endpoint with bot id', async () => {
+    await simulation.getSimTrades('bot-42')
+
+    expect(requestMock).toHaveBeenCalledWith({
+      method: 'get',
+      url: '/v1/simulation/bots/bot-42/trades',
+    })
+  })
 })

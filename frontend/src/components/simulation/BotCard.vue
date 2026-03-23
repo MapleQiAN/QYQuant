@@ -5,8 +5,8 @@
       <span class="bot-card__badge">{{ statusLabel }}</span>
     </div>
     <div class="bot-card__body">
-      <p class="bot-card__meta">初始资金：¥ {{ formattedCapital }}</p>
-      <p class="bot-card__meta">创建时间：{{ formattedDate }}</p>
+      <p class="bot-card__meta">初始资金: {{ formattedCapital }}</p>
+      <p class="bot-card__meta">创建时间: {{ formattedDate }}</p>
     </div>
     <div class="bot-card__actions">
       <button
@@ -15,6 +15,13 @@
         @click="emit('view-positions', bot.id)"
       >
         查看持仓
+      </button>
+      <button
+        class="bot-card__action-btn bot-card__action-btn--primary"
+        type="button"
+        @click="emit('view-detail', bot.id)"
+      >
+        查看详情
       </button>
     </div>
   </article>
@@ -25,7 +32,10 @@ import { computed } from 'vue'
 import type { SimulationBot } from '../../types/Simulation'
 
 const props = defineProps<{ bot: SimulationBot }>()
-const emit = defineEmits<{ (e: 'view-positions', id: string): void }>()
+const emit = defineEmits<{
+  (e: 'view-positions', id: string): void
+  (e: 'view-detail', id: string): void
+}>()
 
 const STATUS_LABELS: Record<string, string> = {
   active: '运行中',
@@ -112,5 +122,15 @@ const formattedDate = computed(() => props.bot.created_at.slice(0, 10))
 
 .bot-card__action-btn:hover {
   background: rgba(0, 0, 0, 0.04);
+}
+
+.bot-card__action-btn--primary {
+  border-color: #111827;
+  background: #111827;
+  color: #fff;
+}
+
+.bot-card__action-btn--primary:hover {
+  background: #1f2937;
 }
 </style>

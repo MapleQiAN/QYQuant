@@ -1,3 +1,5 @@
+import math
+
 from flask import current_app, request
 from flask_jwt_extended import get_jwt_identity, jwt_required
 from flask_smorest import Blueprint
@@ -5,6 +7,7 @@ from marshmallow import ValidationError
 
 from ..extensions import db
 from ..models import Post, Strategy, User
+from ..quota import ensure_user_quota, get_plan_limit, serialize_plan_limit
 from ..schemas import UserPrivateSchema, UserPublicSchema, UserUpdateSchema
 from ..utils.audit import log_audit
 from ..utils.auth import blacklist_refresh_tokens, clear_refresh_cookie, consume_verification_code, revoke_all_user_tokens
@@ -189,6 +192,31 @@ def get_user_posts(user_id):
         "total": pagination.total,
         "page": pagination.page,
         "per_page": pagination.per_page,
+    })
+
+
+@bp.get('/me/quota')
+@jwt_required()
+def get_my_quota():
+    user, error = _get_user_or_404(get_jwt_identity())
+    if error:
+        return error
+
+    quota = ensure_user_quota(user.id, plan_level=user.plan_level)
+    db.session.commit()
+
+    plan_limit_raw = get_plan_limit(quota.plan_level)
+    if math.isinf(plan_limit_raw):
+        remaining = "unlimited"
+    else:
+        remaining = max(0, int(plan_limit_raw) - quota.used_count)
+
+    return ok({
+        "plan_level": quota.plan_level,
+        "used_count": quota.used_count,
+        "plan_limit": serialize_plan_limit(quota.plan_level),
+        "remaining": remaining,
+        "reset_at": format_beijing_iso(quota.reset_at),
     })
 
 
