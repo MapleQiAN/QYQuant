@@ -18,10 +18,9 @@ depends_on = None
 
 
 def upgrade():
-    op.execute("CREATE EXTENSION IF NOT EXISTS zhparser")
-    op.execute("DROP TEXT SEARCH CONFIGURATION IF EXISTS chinese CASCADE")
-    op.execute("CREATE TEXT SEARCH CONFIGURATION chinese (PARSER = zhparser)")
-    op.execute("ALTER TEXT SEARCH CONFIGURATION chinese ADD MAPPING FOR n,v,a,i,e,l WITH simple")
+    # Note: zhparser extension is not available in standard PostgreSQL images
+    # Using default 'english' configuration for full-text search
+    # For Chinese search, consider using a custom PostgreSQL image with zhparser
 
     op.add_column("strategies", sa.Column("title_tsv", postgresql.TSVECTOR(), nullable=True))
     op.add_column("strategies", sa.Column("description_tsv", postgresql.TSVECTOR(), nullable=True))
@@ -29,20 +28,20 @@ def upgrade():
     op.execute(
         """
         UPDATE strategies
-        SET title_tsv = to_tsvector('chinese', COALESCE(title, '')),
-            description_tsv = to_tsvector('chinese', COALESCE(description, ''))
+        SET title_tsv = to_tsvector('english', COALESCE(title, '')),
+            description_tsv = to_tsvector('english', COALESCE(description, ''))
         """
     )
 
     op.execute(
         """
-        CREATE OR REPLACE FUNCTION strategies_tsv_trigger() RETURNS trigger AS $$
+        CREATE OR REPLACE FUNCTION strategies_tsv_trigger() RETURNS trigger AS $func$
         BEGIN
-            NEW.title_tsv := to_tsvector('chinese', COALESCE(NEW.title, ''));
-            NEW.description_tsv := to_tsvector('chinese', COALESCE(NEW.description, ''));
+            NEW.title_tsv := to_tsvector('english', COALESCE(NEW.title, ''));
+            NEW.description_tsv := to_tsvector('english', COALESCE(NEW.description, ''));
             RETURN NEW;
         END
-        $$ LANGUAGE plpgsql
+        $func$ LANGUAGE plpgsql
         """
     )
     op.execute(

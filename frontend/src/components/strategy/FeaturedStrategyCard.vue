@@ -27,7 +27,14 @@
         />
         <span class="author-name">{{ strategy.author.nickname || 'Unknown author' }}</span>
       </div>
-      <button type="button" class="btn btn-primary" data-test="featured-cta">Try backtest</button>
+      <button
+        type="button"
+        class="btn btn-primary"
+        data-test="featured-cta"
+        @click="emit('open', strategy.id)"
+      >
+        Try backtest
+      </button>
     </footer>
   </article>
 </template>
@@ -36,6 +43,10 @@
 import { computed } from 'vue'
 import type { MarketplaceStrategy } from '../../types/Strategy'
 import VerifiedBadge from './VerifiedBadge.vue'
+
+const emit = defineEmits<{
+  (event: 'open', strategyId: string): void
+}>()
 
 const props = defineProps<{
   strategy: MarketplaceStrategy
