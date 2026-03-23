@@ -2,6 +2,7 @@ from flask import Flask
 
 from . import models  # noqa: F401
 from .blueprints.auth import bp as auth_bp
+from .blueprints.admin import bp as admin_bp
 from .blueprints.backtests import bp as backtests_bp
 from .blueprints.bots import bp as bots_bp
 from .blueprints.community import bp as community_bp
@@ -52,6 +53,7 @@ def create_app(env=None):
     register_error_handlers(app)
     app.register_blueprint(health_bp)
     app.register_blueprint(auth_bp)
+    app.register_blueprint(admin_bp)
     app.register_blueprint(users_bp)
     if strategies_bp is not None:
         app.register_blueprint(strategies_bp)
