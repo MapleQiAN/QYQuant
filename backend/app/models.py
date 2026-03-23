@@ -271,6 +271,7 @@ class SimulationBot(db.Model):
     initial_capital = db.Column(db.Numeric(18, 2), nullable=False)
     status = db.Column(db.String(20), nullable=False, default='active', server_default='active')
     created_at = db.Column(db.DateTime(timezone=True), nullable=False, default=now_utc, server_default=db.func.now())
+    deleted_at = db.Column(db.DateTime(timezone=True), nullable=True)
 
 
 class SimulationRecord(db.Model):
@@ -361,7 +362,7 @@ class PostInteraction(db.Model):
 
     id = db.Column(db.String, primary_key=True, default=gen_id)
     user_id = db.Column(db.String, db.ForeignKey('users.id'), nullable=False)
-    post_id = db.Column(db.String, db.ForeignKey('posts.id'), nullable=False)
+    post_id = db.Column(db.String, db.ForeignKey('posts.id', ondelete='CASCADE'), nullable=False)
     type = db.Column(db.String(20), nullable=False)
     created_at = db.Column(db.DateTime(timezone=True), nullable=False, default=now_utc)
 

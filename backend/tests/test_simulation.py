@@ -575,3 +575,267 @@ def test_users_me_includes_sim_disclaimer_accepted_flag(client, app):
 
     assert response.status_code == 200
     assert response.json["data"]["sim_disclaimer_accepted"] is True
+
+
+# ── Story 7.5: PATCH /bots/:id ────────────────────────────────────────────
+
+
+def test_patch_bot_pauses_active_bot(client, app):
+    token, user_id = _login_user(client, phone="13800138300", nickname="Pauser")
+
+    with app.app_context():
+        _create_strategy("patch-strategy", user_id)
+        db.session.commit()
+
+    bot_id = _create_bot(app, user_id, "patch-strategy")
+
+    response = client.patch(
+        f"/api/v1/simulation/bots/{bot_id}",
+        headers=_auth_headers(token),
+        json={"status": "paused"},
+    )
+
+    assert response.status_code == 200
+    data = response.json["data"]
+    assert data["id"] == bot_id
+    assert data["status"] == "paused"
+
+    with app.app_context():
+        bot = db.session.get(SimulationBot, bot_id)
+        assert bot.status == "paused"
+
+
+def test_patch_bot_resumes_paused_bot(client, app):
+    token, user_id = _login_user(client, phone="13800138301", nickname="Resumer")
+
+    with app.app_context():
+        _create_strategy("resume-strategy", user_id)
+        db.session.commit()
+
+    bot_id = _create_bot(app, user_id, "resume-strategy")
+
+    with app.app_context():
+        bot = db.session.get(SimulationBot, bot_id)
+        bot.status = "paused"
+        db.session.commit()
+
+    response = client.patch(
+        f"/api/v1/simulation/bots/{bot_id}",
+        headers=_auth_headers(token),
+        json={"status": "active"},
+    )
+
+    assert response.status_code == 200
+    assert response.json["data"]["status"] == "active"
+
+
+def test_patch_bot_returns_422_for_invalid_status(client, app):
+    token, user_id = _login_user(client, phone="13800138302", nickname="InvalidStatus")
+
+    with app.app_context():
+        _create_strategy("invalid-strategy", user_id)
+        db.session.commit()
+
+    bot_id = _create_bot(app, user_id, "invalid-strategy")
+
+    response = client.patch(
+        f"/api/v1/simulation/bots/{bot_id}",
+        headers=_auth_headers(token),
+        json={"status": "stopped"},
+    )
+
+    assert response.status_code == 422
+    assert response.json["error"]["code"] == "VALIDATION_ERROR"
+
+
+def test_patch_bot_returns_404_for_other_user_bot(client, app):
+    token_a, user_a = _login_user(client, phone="13800138303", nickname="OwnerA")
+    token_b, _ = _login_user(client, phone="13800138304", nickname="OwnerB")
+
+    with app.app_context():
+        _create_strategy("owned-by-a", user_a)
+        db.session.commit()
+
+    bot_id = _create_bot(app, user_a, "owned-by-a")
+
+    response = client.patch(
+        f"/api/v1/simulation/bots/{bot_id}",
+        headers=_auth_headers(token_b),
+        json={"status": "paused"},
+    )
+
+    assert response.status_code == 404
+    assert response.json["error"]["code"] == "BOT_NOT_FOUND"
+
+
+def test_patch_bot_requires_auth(client, app):
+    token, user_id = _login_user(client, phone="13800138305", nickname="NeedAuth")
+
+    with app.app_context():
+        _create_strategy("auth-strategy", user_id)
+        db.session.commit()
+
+    bot_id = _create_bot(app, user_id, "auth-strategy")
+
+    response = client.patch(
+        f"/api/v1/simulation/bots/{bot_id}",
+        json={"status": "paused"},
+    )
+
+    assert response.status_code == 401
+
+
+# ── Story 7.5: DELETE /bots/:id ───────────────────────────────────────────
+
+
+def test_delete_bot_soft_deletes_and_hides_from_list(client, app):
+    token, user_id = _login_user(client, phone="13800138306", nickname="Deleter")
+
+    with app.app_context():
+        _create_strategy("delete-strategy", user_id)
+        db.session.commit()
+
+    bot_id = _create_bot(app, user_id, "delete-strategy")
+
+    response = client.delete(
+        f"/api/v1/simulation/bots/{bot_id}",
+        headers=_auth_headers(token),
+    )
+
+    assert response.status_code == 200
+    assert response.json["data"] == {"deleted": True}
+
+    with app.app_context():
+        bot = db.session.get(SimulationBot, bot_id)
+        assert bot.deleted_at is not None
+
+    list_resp = client.get("/api/v1/simulation/bots", headers=_auth_headers(token))
+    assert response.status_code == 200
+    bot_ids = [b["id"] for b in list_resp.json["data"]]
+    assert bot_id not in bot_ids
+
+
+def test_delete_bot_preserves_simulation_records(client, app):
+    token, user_id = _login_user(client, phone="13800138307", nickname="RecordKeeper")
+
+    with app.app_context():
+        _create_strategy("record-keep-strategy", user_id)
+        db.session.commit()
+
+    bot_id = _create_bot(app, user_id, "record-keep-strategy")
+    _create_record(app, bot_id)
+
+    client.delete(
+        f"/api/v1/simulation/bots/{bot_id}",
+        headers=_auth_headers(token),
+    )
+
+    with app.app_context():
+        records = SimulationRecord.query.filter_by(bot_id=bot_id).all()
+        assert len(records) == 1
+
+
+def test_delete_bot_releases_slot_for_new_bot(client, app):
+    token, user_id = _login_user(client, phone="13800138308", nickname="SlotUser")
+
+    with app.app_context():
+        user = db.session.get(User, user_id)
+        user.plan_level = "free"
+        _create_strategy("slot-strategy-1", user_id)
+        _create_strategy("slot-strategy-2", user_id)
+        db.session.commit()
+
+    bot_id = _create_bot(app, user_id, "slot-strategy-1")
+
+    blocked = client.post(
+        "/api/v1/simulation/bots",
+        headers=_auth_headers(token),
+        json={"strategy_id": "slot-strategy-2", "initial_capital": 100000},
+    )
+    assert blocked.status_code == 403
+
+    client.delete(
+        f"/api/v1/simulation/bots/{bot_id}",
+        headers=_auth_headers(token),
+    )
+
+    allowed = client.post(
+        "/api/v1/simulation/bots",
+        headers=_auth_headers(token),
+        json={"strategy_id": "slot-strategy-2", "initial_capital": 100000},
+    )
+    assert allowed.status_code == 201
+
+
+def test_delete_bot_returns_404_for_already_deleted(client, app):
+    token, user_id = _login_user(client, phone="13800138309", nickname="DoubleDeleter")
+
+    with app.app_context():
+        _create_strategy("dd-strategy", user_id)
+        db.session.commit()
+
+    bot_id = _create_bot(app, user_id, "dd-strategy")
+
+    client.delete(f"/api/v1/simulation/bots/{bot_id}", headers=_auth_headers(token))
+
+    response = client.delete(
+        f"/api/v1/simulation/bots/{bot_id}",
+        headers=_auth_headers(token),
+    )
+
+    assert response.status_code == 404
+    assert response.json["error"]["code"] == "BOT_NOT_FOUND"
+
+
+def test_delete_bot_returns_404_for_other_user(client, app):
+    token_a, user_a = _login_user(client, phone="13800138310", nickname="BotOwnerA")
+    token_b, _ = _login_user(client, phone="13800138311", nickname="BotOwnerB")
+
+    with app.app_context():
+        _create_strategy("del-by-a", user_a)
+        db.session.commit()
+
+    bot_id = _create_bot(app, user_a, "del-by-a")
+
+    response = client.delete(
+        f"/api/v1/simulation/bots/{bot_id}",
+        headers=_auth_headers(token_b),
+    )
+
+    assert response.status_code == 404
+    assert response.json["error"]["code"] == "BOT_NOT_FOUND"
+
+
+def test_delete_bot_requires_auth(client, app):
+    token, user_id = _login_user(client, phone="13800138312", nickname="NeedAuthDel")
+
+    with app.app_context():
+        _create_strategy("needauth-del-strategy", user_id)
+        db.session.commit()
+
+    bot_id = _create_bot(app, user_id, "needauth-del-strategy")
+
+    response = client.delete(f"/api/v1/simulation/bots/{bot_id}")
+
+    assert response.status_code == 401
+
+
+def test_patch_deleted_bot_returns_404(client, app):
+    token, user_id = _login_user(client, phone="13800138313", nickname="PatchDeleted")
+
+    with app.app_context():
+        _create_strategy("pd-strategy", user_id)
+        db.session.commit()
+
+    bot_id = _create_bot(app, user_id, "pd-strategy")
+
+    client.delete(f"/api/v1/simulation/bots/{bot_id}", headers=_auth_headers(token))
+
+    response = client.patch(
+        f"/api/v1/simulation/bots/{bot_id}",
+        headers=_auth_headers(token),
+        json={"status": "paused"},
+    )
+
+    assert response.status_code == 404
+    assert response.json["error"]["code"] == "BOT_NOT_FOUND"

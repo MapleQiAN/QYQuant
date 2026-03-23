@@ -53,6 +53,21 @@ export function getSimTrades(botId: string): Promise<SimulationTrade[]> {
   })
 }
 
+export function patchSimBot(botId: string, payload: { status: 'active' | 'paused' }): Promise<{ id: string; status: string }> {
+  return client.request({
+    method: 'patch',
+    url: `/v1/simulation/bots/${botId}`,
+    data: payload,
+  })
+}
+
+export function deleteSimBot(botId: string): Promise<{ deleted: boolean }> {
+  return client.request({
+    method: 'delete',
+    url: `/v1/simulation/bots/${botId}`,
+  })
+}
+
 export function createBotStream(
   botId: string,
   accessToken: string,

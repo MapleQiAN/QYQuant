@@ -1,6 +1,6 @@
 import json
 import time
-from datetime import datetime
+from datetime import datetime, timezone
 from decimal import Decimal, InvalidOperation
 
 from flask import Response, request, stream_with_context
@@ -10,7 +10,7 @@ from flask_smorest import Blueprint
 from ..extensions import db
 from ..models import SimulationBot, SimulationPosition, SimulationRecord, SimulationTrade, Strategy, User
 from ..utils.response import error_response, ok
-from ..utils.time import format_beijing_iso
+from ..utils.time import format_beijing_iso, now_utc
 
 bp = Blueprint('simulation', __name__, url_prefix='/api/v1/simulation')
 
@@ -26,7 +26,11 @@ def _get_user_or_404(user_id):
 
 
 def _get_bot_for_user(bot_id: str, user_id: str):
-    return SimulationBot.query.filter_by(id=bot_id, user_id=user_id).first()
+    return SimulationBot.query.filter(
+        SimulationBot.id == bot_id,
+        SimulationBot.user_id == user_id,
+        SimulationBot.deleted_at.is_(None),
+    ).first()
 
 
 def _serialize_record(record: SimulationRecord):
@@ -165,8 +169,8 @@ def create_bot():
     except (InvalidOperation, TypeError, ValueError):
         return error_response('VALIDATION_ERROR', 'initial_capital must be numeric', 422)
 
-    if capital <= 0:
-        return error_response('VALIDATION_ERROR', 'initial_capital must be greater than zero', 422)
+    if capital < 1000:
+        return error_response('VALIDATION_ERROR', 'initial_capital must be at least 1000', 422)
 
     slot_limit = SLOT_LIMITS.get(user.plan_level, SLOT_LIMITS['free'])
     active_count = (
@@ -174,6 +178,7 @@ def create_bot():
         .filter(
             SimulationBot.user_id == user_id,
             SimulationBot.status.in_(ACTIVE_STATUSES),
+            SimulationBot.deleted_at.is_(None),
         )
         .count()
     )
@@ -208,14 +213,23 @@ def list_bots():
     user_id = get_jwt_identity()
     bots = (
         SimulationBot.query
-        .filter_by(user_id=user_id)
+        .filter(
+            SimulationBot.user_id == user_id,
+            SimulationBot.deleted_at.is_(None),
+        )
         .order_by(SimulationBot.created_at.desc())
         .all()
     )
 
+    strategy_ids = list({bot.strategy_id for bot in bots})
+    strategies_map = {}
+    if strategy_ids:
+        strategies = Strategy.query.filter(Strategy.id.in_(strategy_ids)).all()
+        strategies_map = {s.id: s for s in strategies}
+
     result = []
     for bot in bots:
-        strategy = db.session.get(Strategy, bot.strategy_id)
+        strategy = strategies_map.get(bot.strategy_id)
         strategy_name = (strategy.title or strategy.name) if strategy else '(策略已删除)'
         result.append({
             'id': bot.id,
@@ -277,6 +291,8 @@ def get_bot_trades(bot_id: str):
 
 @bp.get('/bots/<string:bot_id>/stream')
 def stream_bot(bot_id: str):
+    # WARNING: 每个 SSE 连接会永久占用一个 WSGI worker 线程。
+    # 生产环境必须使用 gevent/eventlet worker，否则并发 SSE 连接数受限于 worker 数量。
     user_id, error = _resolve_stream_user_id()
     if error:
         return error
@@ -297,7 +313,7 @@ def stream_bot(bot_id: str):
                 last_version = current_version
                 last_heartbeat_at = time.monotonic()
             elif time.monotonic() - last_heartbeat_at >= 30:
-                yield f': heartbeat {datetime.utcnow().isoformat()}\n\n'
+                yield f': heartbeat {datetime.now(timezone.utc).isoformat()}\n\n'
                 last_heartbeat_at = time.monotonic()
 
             time.sleep(5)
@@ -311,3 +327,46 @@ def stream_bot(bot_id: str):
             'X-Accel-Buffering': 'no',
         },
     )
+
+
+ALLOWED_PATCH_STATUSES = {'active', 'paused'}
+
+
+@bp.patch('/bots/<string:bot_id>')
+@jwt_required()
+def update_bot_status(bot_id: str):
+    user_id = get_jwt_identity()
+    bot = _get_bot_for_user(bot_id, user_id)
+    if bot is None:
+        return error_response('BOT_NOT_FOUND', '机器人不存在或无权访问', 404)
+
+    payload = request.get_json() or {}
+    new_status = payload.get('status')
+    if new_status not in ALLOWED_PATCH_STATUSES:
+        return error_response(
+            'VALIDATION_ERROR',
+            f'status 必须为 active 或 paused，收到: {new_status}',
+            422,
+        )
+
+    bot.status = new_status
+    db.session.commit()
+
+    return ok({
+        'id': bot.id,
+        'status': bot.status,
+    })
+
+
+@bp.delete('/bots/<string:bot_id>')
+@jwt_required()
+def delete_bot(bot_id: str):
+    user_id = get_jwt_identity()
+    bot = _get_bot_for_user(bot_id, user_id)
+    if bot is None:
+        return error_response('BOT_NOT_FOUND', '机器人不存在或无权访问', 404)
+
+    bot.deleted_at = now_utc()
+    db.session.commit()
+
+    return ok({'deleted': True})

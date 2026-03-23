@@ -35,6 +35,8 @@ def _execute_single_bot(bot):
         for position in existing_positions
     }
 
+    trade_date = date.today()
+
     outcome = execute_backtest_strategy(
         symbol=(loaded.get('manifest') or {}).get('symbol', '000001.XSHG'),
         bars=[],
@@ -44,12 +46,10 @@ def _execute_single_bot(bot):
             'current_equity': float(current_equity),
             'current_cash': float(current_cash),
             'positions': positions_payload,
-            'trade_date': str(date.today()),
+            'trade_date': str(trade_date),
         },
         timeout_seconds=120,
     )
-
-    trade_date = date.today()
     new_equity = Decimal(str(outcome.get('equity', current_equity)))
     new_cash = Decimal(str(outcome.get('cash', current_cash)))
     previous_equity = current_equity
@@ -110,7 +110,10 @@ def _execute_single_bot(bot):
 
 
 def _run_daily_simulation():
-    active_bots = SimulationBot.query.filter_by(status='active').all()
+    active_bots = SimulationBot.query.filter(
+        SimulationBot.status == 'active',
+        SimulationBot.deleted_at.is_(None),
+    ).all()
     logger.info("[simulation] starting daily run for %s active bots", len(active_bots))
 
     processed = 0

@@ -56,6 +56,7 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { createBotStream, getSimRecords, getSimTrades } from '../../api/simulation'
+import { useUserStore } from '../../stores/user'
 import type { SimBotStreamPayload, SimulationBot, SimulationRecord, SimulationTrade } from '../../types/Simulation'
 import SimulationChart from './SimulationChart.vue'
 
@@ -96,11 +97,8 @@ onMounted(async () => {
     isLoading.value = false
   }
 
-  if (typeof window === 'undefined') {
-    return
-  }
-
-  const token = window.localStorage.getItem('qyquant-token')
+  const userStore = useUserStore()
+  const token = userStore.token
   if (!token) {
     return
   }

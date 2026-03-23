@@ -23,6 +23,29 @@
       >
         查看详情
       </button>
+      <button
+        v-if="bot.status === 'active'"
+        class="bot-card__action-btn"
+        type="button"
+        @click="emit('pause', bot.id)"
+      >
+        暂停
+      </button>
+      <button
+        v-if="bot.status === 'paused'"
+        class="bot-card__action-btn bot-card__action-btn--primary"
+        type="button"
+        @click="emit('resume', bot.id)"
+      >
+        恢复
+      </button>
+      <button
+        class="bot-card__action-btn bot-card__action-btn--danger"
+        type="button"
+        @click="emit('delete', bot.id)"
+      >
+        删除
+      </button>
     </div>
   </article>
 </template>
@@ -35,6 +58,9 @@ const props = defineProps<{ bot: SimulationBot }>()
 const emit = defineEmits<{
   (e: 'view-positions', id: string): void
   (e: 'view-detail', id: string): void
+  (e: 'pause', id: string): void
+  (e: 'resume', id: string): void
+  (e: 'delete', id: string): void
 }>()
 
 const STATUS_LABELS: Record<string, string> = {
@@ -132,5 +158,14 @@ const formattedDate = computed(() => props.bot.created_at.slice(0, 10))
 
 .bot-card__action-btn--primary:hover {
   background: #1f2937;
+}
+
+.bot-card__action-btn--danger {
+  color: #dc2626;
+  border-color: rgba(220, 38, 38, 0.4);
+}
+
+.bot-card__action-btn--danger:hover {
+  background: rgba(220, 38, 38, 0.06);
 }
 </style>

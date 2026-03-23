@@ -15,7 +15,7 @@
           type="button"
           @click="showCreateForm = true"
         >
-          Create Bot
+          创建机器人
         </button>
       </div>
 
@@ -28,7 +28,7 @@
       <div v-if="simulationStore.isLoading" class="loading-hint">加载中...</div>
 
       <div v-else-if="simulationStore.bots.length === 0" class="empty-hint">
-        还没有机器人，点击 "Create Bot" 开始创建
+        还没有机器人，点击 "创建机器人" 开始创建
       </div>
 
       <div v-else class="bot-list">
@@ -38,6 +38,9 @@
           :bot="bot"
           @view-positions="openPositions"
           @view-detail="openDetail"
+          @pause="handlePause"
+          @resume="handleResume"
+          @delete="handleDelete"
         />
       </div>
 
@@ -98,6 +101,31 @@ function openPositions(botId: string) {
 
 function openDetail(botId: string) {
   selectedDetailBot.value = simulationStore.bots.find((bot) => bot.id === botId) ?? null
+}
+
+async function handlePause(botId: string) {
+  try {
+    await simulationStore.pauseBot(botId)
+  } catch {
+    // toast 提示失败
+  }
+}
+
+async function handleResume(botId: string) {
+  try {
+    await simulationStore.resumeBot(botId)
+  } catch {
+    // toast 提示失败
+  }
+}
+
+async function handleDelete(botId: string) {
+  if (!confirm('确认删除该机器人？历史数据将保留，但槽位将释放。')) return
+  try {
+    await simulationStore.deleteBot(botId)
+  } catch {
+    // toast 提示失败
+  }
 }
 </script>
 

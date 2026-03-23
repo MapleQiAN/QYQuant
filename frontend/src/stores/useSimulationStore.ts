@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { acceptSimDisclaimer, createSimBot, getSimBots, getSimPositions } from '../api/simulation'
+import { acceptSimDisclaimer, createSimBot, deleteSimBot, getSimBots, getSimPositions, patchSimBot } from '../api/simulation'
 import type { CreateBotPayload, SimulationBot, SimulationPosition } from '../types/Simulation'
 
 export const useSimulationStore = defineStore('simulation', {
@@ -45,6 +45,20 @@ export const useSimulationStore = defineStore('simulation', {
       } finally {
         this.isLoading = false
       }
+    },
+    async pauseBot(botId: string): Promise<void> {
+      await patchSimBot(botId, { status: 'paused' })
+      const bot = this.bots.find(b => b.id === botId)
+      if (bot) bot.status = 'paused'
+    },
+    async resumeBot(botId: string): Promise<void> {
+      await patchSimBot(botId, { status: 'active' })
+      const bot = this.bots.find(b => b.id === botId)
+      if (bot) bot.status = 'active'
+    },
+    async deleteBot(botId: string): Promise<void> {
+      await deleteSimBot(botId)
+      this.bots = this.bots.filter(b => b.id !== botId)
     },
   },
 })

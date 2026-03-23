@@ -77,4 +77,23 @@ describe('simulation api', () => {
       url: '/v1/simulation/bots/bot-42/trades',
     })
   })
+
+  it('calls patch bot endpoint with status payload', async () => {
+    await simulation.patchSimBot('bot-1', { status: 'paused' })
+
+    expect(requestMock).toHaveBeenCalledWith({
+      method: 'patch',
+      url: '/v1/simulation/bots/bot-1',
+      data: { status: 'paused' },
+    })
+  })
+
+  it('calls delete bot endpoint', async () => {
+    await simulation.deleteSimBot('bot-1')
+
+    expect(requestMock).toHaveBeenCalledWith({
+      method: 'delete',
+      url: '/v1/simulation/bots/bot-1',
+    })
+  })
 })

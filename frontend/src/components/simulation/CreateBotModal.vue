@@ -2,15 +2,15 @@
   <div class="modal-overlay" @click.self="$emit('close')">
     <div class="modal-card">
       <div class="header-row">
-        <h2 class="modal-title">Create Simulation Bot</h2>
-        <button class="ghost-button" type="button" @click="$emit('close')">Close</button>
+        <h2 class="modal-title">创建模拟机器人</h2>
+        <button class="ghost-button" type="button" @click="$emit('close')">关闭</button>
       </div>
 
       <div class="form-grid">
         <label class="field">
-          <span>Strategy</span>
+          <span>策略</span>
           <select v-model="strategyId" class="field-control">
-            <option disabled value="">Select a strategy</option>
+            <option disabled value="">请选择策略</option>
             <option
               v-for="strategy in strategiesStore.library"
               :key="strategy.id"
@@ -22,7 +22,7 @@
         </label>
 
         <label class="field">
-          <span>Initial Capital</span>
+          <span>初始资金</span>
           <input
             v-model.number="initialCapital"
             class="field-control"
@@ -35,7 +35,7 @@
 
       <p v-if="errorMessage" class="error-text">{{ errorMessage }}</p>
       <p v-if="showUpgradeHint" class="hint-text">
-        Your current plan has reached its active simulation bot limit.
+        当前套餐已达模拟机器人上限，请升级套餐。
       </p>
 
       <div class="footer-row">
@@ -45,7 +45,7 @@
           type="button"
           @click="submit"
         >
-          {{ isSubmitting ? 'Creating...' : 'Create Bot' }}
+          {{ isSubmitting ? '创建中...' : '创建机器人' }}
         </button>
       </div>
     </div>
@@ -92,7 +92,7 @@ async function submit() {
     })
     emit('created')
   } catch (error: any) {
-    errorMessage.value = error?.message || 'Failed to create simulation bot'
+    errorMessage.value = error?.message || '创建模拟机器人失败'
   } finally {
     isSubmitting.value = false
   }
