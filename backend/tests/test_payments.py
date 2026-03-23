@@ -261,6 +261,82 @@ def test_webhook_sends_notification(client, app):
         assert '200' in notif.content
 
 
+def test_webhook_expert_notification_shows_unlimited(client, app):
+    """expert 套餐通知文本应显示"无限次"而非 unlimited"""
+    token, user_id = _login_user(client, phone='13800138216', nickname='ExpertNotifUser')
+    order_id = _create_pending_order(client, token, plan_level='expert', provider='wechat')
+
+    client.post('/api/v1/payments/webhook/wechat', json={'order_id': order_id})
+
+    with app.app_context():
+        from app.models import Notification
+        notif = Notification.query.filter_by(
+            user_id=user_id, type='subscription_activated'
+        ).first()
+        assert notif is not None
+        assert '无限次' in notif.content
+        assert 'unlimited' not in notif.content
+
+
+def test_wechat_webhook_rejects_non_sandbox(client, app):
+    """非沙箱模式下微信 Webhook 拒绝所有请求"""
+    app.config['PAYMENT_SANDBOX'] = False
+    token, user_id = _login_user(client, phone='13800138217', nickname='NonSandboxWx')
+    app.config['PAYMENT_SANDBOX'] = True
+    order_id = _create_pending_order(client, token, plan_level='lite', provider='wechat')
+
+    app.config['PAYMENT_SANDBOX'] = False
+    resp = client.post('/api/v1/payments/webhook/wechat', json={'order_id': order_id})
+    app.config['PAYMENT_SANDBOX'] = True
+
+    assert resp.status_code == 400
+
+    with app.app_context():
+        from app.models import PaymentOrder
+        from app.extensions import db
+        order = db.session.get(PaymentOrder, order_id)
+        assert order.status == 'pending'
+
+
+def test_alipay_webhook_rejects_non_sandbox(client, app):
+    """非沙箱模式下支付宝 Webhook 拒绝所有请求"""
+    app.config['PAYMENT_SANDBOX'] = False
+    token, user_id = _login_user(client, phone='13800138218', nickname='NonSandboxAli')
+    app.config['PAYMENT_SANDBOX'] = True
+    order_id = _create_pending_order(client, token, plan_level='lite', provider='alipay')
+
+    app.config['PAYMENT_SANDBOX'] = False
+    resp = client.post('/api/v1/payments/webhook/alipay', json={'order_id': order_id})
+    app.config['PAYMENT_SANDBOX'] = True
+
+    assert resp.status_code == 400
+    assert resp.data == b'fail'
+
+    with app.app_context():
+        from app.models import PaymentOrder
+        from app.extensions import db
+        order = db.session.get(PaymentOrder, order_id)
+        assert order.status == 'pending'
+
+
+def test_alipay_webhook_captures_provider_order_id(client, app):
+    """支付宝 JSON 模式下 trade_no 应被正确记录为 provider_order_id"""
+    token, user_id = _login_user(client, phone='13800138219', nickname='AliTradeNoUser')
+    order_id = _create_pending_order(client, token, plan_level='pro', provider='alipay')
+
+    resp = client.post(
+        '/api/v1/payments/webhook/alipay',
+        json={'order_id': order_id, 'trade_no': 'ali_tx_002'},
+    )
+    assert resp.status_code == 200
+
+    with app.app_context():
+        from app.models import PaymentOrder
+        from app.extensions import db
+        order = db.session.get(PaymentOrder, order_id)
+        assert order.provider_order_id == 'ali_tx_002'
+
+
 def test_webhook_writes_audit_log(client, app):
     """回调激活后写入审计日志"""
     token, user_id = _login_user(client, phone='13800138215', nickname='AuditTestUser')

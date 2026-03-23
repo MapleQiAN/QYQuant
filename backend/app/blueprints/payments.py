@@ -170,6 +170,9 @@ def wechat_webhook():
     if order.status == 'paid':
         return ok({'message': 'ok'})
 
+    if order.status != 'pending':
+        return error_response('INVALID_CALLBACK', '无效回调参数', 400)
+
     _activate_subscription(order, provider_order_id=provider_order_id)
     db.session.commit()
 
@@ -183,7 +186,10 @@ def alipay_webhook():
             request.form.get('out_trade_no')
             or (request.get_json(silent=True) or {}).get('order_id')
         )
-        provider_order_id = request.form.get('trade_no')
+        provider_order_id = (
+            request.form.get('trade_no')
+            or (request.get_json(silent=True) or {}).get('trade_no')
+        )
     else:
         return 'fail', 400
 
@@ -196,6 +202,9 @@ def alipay_webhook():
 
     if order.status == 'paid':
         return 'success', 200
+
+    if order.status != 'pending':
+        return 'fail', 400
 
     _activate_subscription(order, provider_order_id=provider_order_id)
     db.session.commit()
