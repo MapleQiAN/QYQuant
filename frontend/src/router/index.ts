@@ -1,4 +1,7 @@
 import { createRouter, createWebHistory } from 'vue-router'
+import { toast } from '../lib/toast'
+import { pinia } from '../stores/pinia'
+import { useUserStore } from '../stores/user'
 import DashboardView from '../views/DashboardView.vue'
 import BacktestsView from '../views/BacktestsView.vue'
 import BacktestResultView from '../views/BacktestResultView.vue'
@@ -13,6 +16,7 @@ import MarketplaceView from '../views/Marketplace.vue'
 import MarketplaceStrategyDetailView from '../views/MarketplaceStrategyDetailView.vue'
 import PricingView from '../views/PricingView.vue'
 import UserProfileView from '../views/UserProfileView.vue'
+import AdminDashboardView from '../views/admin/AdminDashboard.vue'
 
 const router = createRouter({
   history: createWebHistory(),
@@ -26,6 +30,7 @@ const router = createRouter({
     { path: '/marketplace/strategies/:strategyId', name: 'marketplace-strategy-detail', component: MarketplaceStrategyDetailView },
     { path: '/backtests', name: 'backtests', component: BacktestsView },
     { path: '/pricing', name: 'pricing', component: PricingView },
+    { path: '/admin', name: 'admin-dashboard', component: AdminDashboardView, meta: { requiresAdmin: true } },
     { path: '/backtests/:jobId/report', name: 'backtest-report', component: BacktestResultView },
     { path: '/bots', name: 'bots', component: BotsView },
     { path: '/forum', name: 'forum', component: ForumView },
@@ -33,6 +38,24 @@ const router = createRouter({
     { path: '/users/:id', name: 'user-profile', component: UserProfileView },
     { path: '/settings', name: 'settings', component: SettingsView }
   ]
+})
+
+router.beforeEach(async (to) => {
+  if (!to.meta.requiresAdmin) {
+    return true
+  }
+
+  const userStore = useUserStore(pinia)
+  if (userStore.token && !userStore.profileLoaded && !userStore.profileLoading) {
+    await userStore.loadProfile()
+  }
+
+  if (userStore.profile.role === 'admin') {
+    return true
+  }
+
+  toast.error('无权限')
+  return { path: '/' }
 })
 
 export default router

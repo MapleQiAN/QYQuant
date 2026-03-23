@@ -1,5 +1,8 @@
 // @vitest-environment jsdom
-import { describe, it, expect, vi } from 'vitest'
+import { beforeEach, describe, it, expect, vi } from 'vitest'
+import { setActivePinia } from 'pinia'
+import { toast } from '../lib/toast'
+import { pinia } from '../stores/pinia'
 
 vi.mock('../views/DashboardView.vue', () => ({ default: { template: '<div />' } }))
 vi.mock('../views/BacktestsView.vue', () => ({ default: { template: '<div />' } }))
@@ -14,10 +17,22 @@ vi.mock('../views/StrategyDetailView.vue', () => ({ default: { template: '<div /
 vi.mock('../views/Marketplace.vue', () => ({ default: { template: '<div />' } }))
 vi.mock('../views/MarketplaceStrategyDetailView.vue', () => ({ default: { template: '<div />' } }))
 vi.mock('../views/PricingView.vue', () => ({ default: { template: '<div />' } }))
+vi.mock('../views/UserProfileView.vue', () => ({ default: { template: '<div />' } }))
+vi.mock('../views/admin/AdminDashboard.vue', () => ({ default: { template: '<div />' } }))
 
 import router from './index'
+import { useUserStore } from '../stores'
 
 describe('router', () => {
+  beforeEach(async () => {
+    ;(pinia as any)._s.clear()
+    setActivePinia(pinia)
+    localStorage.clear()
+    vi.spyOn(toast, 'error').mockImplementation(() => undefined)
+    await router.push('/')
+    await router.isReady()
+  })
+
   it('contains dashboard route', () => {
     const hasDashboard = router.getRoutes().some((route) => route.path === '/')
     expect(hasDashboard).toBe(true)
@@ -63,5 +78,35 @@ describe('router', () => {
   it('contains pricing route', () => {
     const hasPricing = router.getRoutes().some((route) => route.path === '/pricing')
     expect(hasPricing).toBe(true)
+  })
+
+  it('contains admin route', () => {
+    const adminRoute = router.getRoutes().find((route) => route.path === '/admin')
+
+    expect(adminRoute).toBeTruthy()
+    expect(adminRoute?.meta.requiresAdmin).toBe(true)
+  })
+
+  it('redirects non-admin users away from admin route', async () => {
+    const userStore = useUserStore()
+    userStore.profile.role = 'user'
+    userStore.profileLoaded = true
+    localStorage.setItem('qyquant-token', 'test-token')
+
+    await router.push('/admin')
+
+    expect(router.currentRoute.value.path).toBe('/')
+    expect(toast.error).toHaveBeenCalledWith('无权限')
+  })
+
+  it('allows admin users to visit admin route', async () => {
+    const userStore = useUserStore()
+    userStore.profile.role = 'admin'
+    userStore.profileLoaded = true
+    localStorage.setItem('qyquant-token', 'test-token')
+
+    await router.push('/admin')
+
+    expect(router.currentRoute.value.path).toBe('/admin')
   })
 })
