@@ -117,14 +117,14 @@ development_status:
   7-2-celery-beat定时执行模拟策略: ready-for-dev
   7-3-查看机器人运行状态与持仓: review
   7-4-查看模拟收益曲线与买卖信号-sse实时推送: ready-for-dev
-  7-5-停止与删除模拟机器人: backlog
+  7-5-停止与删除模拟机器人: ready-for-dev
   epic-7-retrospective: optional
 
   # ─────────────────────────────────────────────────────────────
   # Epic 8: 订阅套餐与支付
   # ─────────────────────────────────────────────────────────────
-  epic-8: backlog
-  8-1-查看套餐信息与剩余额度: backlog
+  epic-8: in-progress
+  8-1-查看套餐信息与剩余额度: ready-for-dev
   8-2-选择套餐并发起支付: backlog
   8-3-支付回调处理与套餐激活: backlog
   8-4-celery-beat月度额度重置: backlog
