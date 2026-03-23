@@ -9,6 +9,7 @@ from .blueprints.files import bp as files_bp
 from .blueprints.forum import bp as forum_bp
 from .blueprints.health import bp as health_bp
 from .blueprints.marketplace import bp as marketplace_bp
+from .blueprints.payments import bp as payments_bp
 from .blueprints.presets import bp as presets_bp
 from .blueprints.simulation import bp as simulation_bp
 from .blueprints.users import bp as users_bp
@@ -60,6 +61,7 @@ def create_app(env=None):
     app.register_blueprint(community_bp)
     app.register_blueprint(forum_bp)
     app.register_blueprint(files_bp)
+    app.register_blueprint(payments_bp)
 
     return app
 

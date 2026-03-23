@@ -13,6 +13,7 @@ vi.mock('../views/StrategyLibraryView.vue', () => ({ default: { template: '<div 
 vi.mock('../views/StrategyDetailView.vue', () => ({ default: { template: '<div />' } }))
 vi.mock('../views/Marketplace.vue', () => ({ default: { template: '<div />' } }))
 vi.mock('../views/MarketplaceStrategyDetailView.vue', () => ({ default: { template: '<div />' } }))
+vi.mock('../views/PricingView.vue', () => ({ default: { template: '<div />' } }))
 
 import router from './index'
 
@@ -57,5 +58,10 @@ describe('router', () => {
   it('contains forum post detail route', () => {
     const hasForumPostDetail = router.getRoutes().some((route) => route.path === '/forum/posts/:postId')
     expect(hasForumPostDetail).toBe(true)
+  })
+
+  it('contains pricing route', () => {
+    const hasPricing = router.getRoutes().some((route) => route.path === '/pricing')
+    expect(hasPricing).toBe(true)
   })
 })

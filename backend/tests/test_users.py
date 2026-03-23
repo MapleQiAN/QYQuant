@@ -672,3 +672,28 @@ def test_get_my_quota_reflects_plan_level_change(client, app):
     assert data["plan_level"] == "pro"
     assert data["plan_limit"] == 500
     assert data["remaining"] == 500 - data["used_count"]
+
+
+def test_get_my_quota_normalizes_legacy_plan_levels(client, app):
+    from app.models import User, UserQuota
+
+    token, user_id = _login_user(client, phone="13900139103", nickname="LegacyPlanUser")
+
+    with app.app_context():
+        user = db.session.get(User, user_id)
+        user.plan_level = "basic"
+        quota = db.session.get(UserQuota, user_id)
+        quota.plan_level = "basic"
+        quota.used_count = 12
+        db.session.commit()
+
+    response = client.get(
+        "/api/v1/users/me/quota",
+        headers=_auth_headers(token),
+    )
+
+    assert response.status_code == 200
+    data = response.json["data"]
+    assert data["plan_level"] == "lite"
+    assert data["plan_limit"] == 200
+    assert data["remaining"] == 188

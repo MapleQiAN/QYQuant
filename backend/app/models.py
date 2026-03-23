@@ -438,3 +438,32 @@ class Follow(db.Model):
     follower_id = db.Column(db.String, db.ForeignKey('users.id'))
     following_id = db.Column(db.String, db.ForeignKey('users.id'))
     created_at = db.Column(db.BigInteger, default=now_ms)
+
+
+class PaymentOrder(db.Model):
+    __tablename__ = 'payment_orders'
+
+    id = db.Column(db.String, primary_key=True, default=gen_id)
+    user_id = db.Column(db.String, db.ForeignKey('users.id'), nullable=False)
+    plan_level = db.Column(db.String(32), nullable=False)
+    amount = db.Column(db.Numeric(10, 2), nullable=False)
+    provider = db.Column(db.String(20), nullable=False)
+    provider_order_id = db.Column(db.String(256), nullable=True)
+    status = db.Column(db.String(20), nullable=False, default='pending')
+    pay_url = db.Column(db.Text, nullable=True)
+    created_at = db.Column(db.DateTime(timezone=True), nullable=False, default=now_utc)
+    updated_at = db.Column(db.DateTime(timezone=True), nullable=False, default=now_utc, onupdate=now_utc)
+
+
+class Subscription(db.Model):
+    __tablename__ = 'subscriptions'
+
+    id = db.Column(db.String, primary_key=True, default=gen_id)
+    user_id = db.Column(db.String, db.ForeignKey('users.id'), nullable=False)
+    plan_level = db.Column(db.String(32), nullable=False)
+    starts_at = db.Column(db.DateTime(timezone=True), nullable=False)
+    ends_at = db.Column(db.DateTime(timezone=True), nullable=False)
+    status = db.Column(db.String(20), nullable=False, default='active')
+    payment_provider = db.Column(db.String(20), nullable=False)
+    payment_order_id = db.Column(db.String, db.ForeignKey('payment_orders.id'), nullable=True)
+    created_at = db.Column(db.DateTime(timezone=True), nullable=False, default=now_utc)

@@ -43,6 +43,7 @@ class BaseConfig:
         self.AUTH_SMS_MAX_FAILURES = int(os.getenv('AUTH_SMS_MAX_FAILURES', '5'))
         self.AUTH_SMS_LOCK_SECONDS = int(os.getenv('AUTH_SMS_LOCK_SECONDS', '1800'))
         self.AUTH_FIXED_SMS_CODE = os.getenv('AUTH_FIXED_SMS_CODE')
+        self.PAYMENT_SANDBOX = os.getenv('PAYMENT_SANDBOX', 'true').lower() == 'true'
         self.CELERY_BROKER_URL = os.getenv('CELERY_BROKER_URL')
         self.CELERY_RESULT_BACKEND = os.getenv('CELERY_RESULT_BACKEND')
         self.CELERYD_CONCURRENCY = int(os.getenv('CELERYD_CONCURRENCY', '10'))

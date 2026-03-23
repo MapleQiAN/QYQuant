@@ -66,7 +66,10 @@ function createTestRouter() {
 
 async function mountTopNav(
   path = '/',
-  setupStore?: (userStore: ReturnType<typeof import('../stores/user')['useUserStore']>) => void
+  setupStore?: (
+    userStore: ReturnType<typeof import('../stores/user')['useUserStore']>,
+    notificationStore: ReturnType<typeof import('../stores/useNotificationStore')['useNotificationStore']>
+  ) => void
 ) {
   const pinia = createPinia()
   setActivePinia(pinia)
@@ -74,9 +77,10 @@ async function mountTopNav(
   const i18n = createTestI18n()
   const { default: TopNav } = await import('./TopNav.vue')
   const { useUserStore } = await import('../stores/user')
+  const { useNotificationStore } = await import('../stores/useNotificationStore')
 
   if (setupStore) {
-    setupStore(useUserStore())
+    setupStore(useUserStore(), useNotificationStore())
   }
 
   await router.push(path)
@@ -116,10 +120,12 @@ describe('TopNav', () => {
   })
 
   it('shows notifications and profile summary from the user store', async () => {
-    const { wrapper } = await mountTopNav('/', (userStore) => {
-      userStore.profile.notifications = 3
+    const { wrapper } = await mountTopNav('/', (userStore, notificationStore) => {
       userStore.profile.avatar = 'Q'
       userStore.profile.level = 'PRO'
+      notificationStore.unreadCount = 3
+      vi.spyOn(notificationStore, 'startPolling').mockImplementation(() => undefined)
+      vi.spyOn(notificationStore, 'stopPolling').mockImplementation(() => undefined)
     })
 
     expect(wrapper.find('.notification-badge').text()).toBe('3')
@@ -134,5 +140,20 @@ describe('TopNav', () => {
     })
 
     expect(wrapper.find('[data-onboarding-target="strategy-library-entry"]').classes()).toContain('onboarding-highlight')
+  })
+
+  it('starts and stops notification polling with component lifecycle', async () => {
+    const { useNotificationStore } = await import('../stores/useNotificationStore')
+    const notificationStore = useNotificationStore()
+    const startPollingSpy = vi.spyOn(notificationStore, 'startPolling').mockImplementation(() => undefined)
+    const stopPollingSpy = vi.spyOn(notificationStore, 'stopPolling').mockImplementation(() => undefined)
+
+    const { wrapper } = await mountTopNav()
+
+    expect(startPollingSpy).toHaveBeenCalledTimes(1)
+
+    wrapper.unmount()
+
+    expect(stopPollingSpy).toHaveBeenCalledTimes(1)
   })
 })

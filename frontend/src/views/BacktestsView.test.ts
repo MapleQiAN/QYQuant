@@ -106,6 +106,10 @@ describe('BacktestsView', () => {
 
     expect(actionButton.text()).toBe('升级套餐解锁更多次数')
     expect(actionButton.classes()).toContain('btn--upgrade')
-    expect(actionButton.attributes('disabled')).toBeDefined()
+    expect(actionButton.attributes('disabled')).toBeUndefined()
+
+    await actionButton.trigger('click')
+
+    expect(pushMock).toHaveBeenCalledWith('/pricing')
   })
 })

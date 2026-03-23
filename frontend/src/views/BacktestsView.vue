@@ -129,7 +129,7 @@
               v-else
               class="btn btn-primary btn--upgrade"
               type="button"
-              disabled
+              @click="goToPricing"
             >
               升级套餐解锁更多次数
             </button>
@@ -343,6 +343,10 @@ async function waitJobSuccess(jobId: string): Promise<string> {
 
 function openReport(jobId: string) {
   void router.push({ name: 'backtest-report', params: { jobId } })
+}
+
+function goToPricing() {
+  void router.push('/pricing')
 }
 
 const isQuotaExhausted = computed(() => {

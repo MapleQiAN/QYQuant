@@ -6,14 +6,24 @@ from .models import UserQuota
 
 PLAN_LIMITS = {
     "free": 10,
-    "basic": 100,
+    "lite": 200,
     "pro": 500,
-    "enterprise": math.inf,
+    "expert": math.inf,
+}
+
+PLAN_LEVEL_ALIASES = {
+    "basic": "lite",
+    "enterprise": "expert",
 }
 
 
+def normalize_plan_level(plan_level):
+    return PLAN_LEVEL_ALIASES.get(plan_level or "free", plan_level or "free")
+
+
 def get_plan_limit(plan_level):
-    return PLAN_LIMITS.get(plan_level or "free", PLAN_LIMITS["free"])
+    normalized_plan_level = normalize_plan_level(plan_level)
+    return PLAN_LIMITS.get(normalized_plan_level, PLAN_LIMITS["free"])
 
 
 def serialize_plan_limit(plan_level):
@@ -24,15 +34,20 @@ def serialize_plan_limit(plan_level):
 
 
 def ensure_user_quota(user_id, plan_level="free"):
+    normalized_plan_level = normalize_plan_level(plan_level)
     quota = db.session.get(UserQuota, user_id)
     if quota is None:
-        quota = UserQuota(user_id=user_id, plan_level=plan_level, used_count=0)
+        quota = UserQuota(user_id=user_id, plan_level=normalized_plan_level, used_count=0)
         db.session.add(quota)
         db.session.flush()
-    elif not quota.plan_level:
-        quota.plan_level = plan_level
-    elif plan_level and quota.plan_level != plan_level:
-        quota.plan_level = plan_level
+        return quota
+
+    current_plan_level = normalize_plan_level(quota.plan_level)
+    if quota.plan_level != current_plan_level:
+        quota.plan_level = current_plan_level
+
+    if plan_level and quota.plan_level != normalized_plan_level:
+        quota.plan_level = normalized_plan_level
     return quota
 
 

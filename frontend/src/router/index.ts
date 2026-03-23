@@ -11,6 +11,7 @@ import StrategyLibraryView from '../views/StrategyLibraryView.vue'
 import StrategyDetailView from '../views/StrategyDetailView.vue'
 import MarketplaceView from '../views/Marketplace.vue'
 import MarketplaceStrategyDetailView from '../views/MarketplaceStrategyDetailView.vue'
+import PricingView from '../views/PricingView.vue'
 import UserProfileView from '../views/UserProfileView.vue'
 
 const router = createRouter({
@@ -24,6 +25,7 @@ const router = createRouter({
     { path: '/marketplace', name: 'marketplace', component: MarketplaceView },
     { path: '/marketplace/strategies/:strategyId', name: 'marketplace-strategy-detail', component: MarketplaceStrategyDetailView },
     { path: '/backtests', name: 'backtests', component: BacktestsView },
+    { path: '/pricing', name: 'pricing', component: PricingView },
     { path: '/backtests/:jobId/report', name: 'backtest-report', component: BacktestResultView },
     { path: '/bots', name: 'bots', component: BotsView },
     { path: '/forum', name: 'forum', component: ForumView },
