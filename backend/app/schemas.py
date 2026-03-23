@@ -20,6 +20,7 @@ class UserPrivateSchema(Schema):
     plan_level = fields.Str(required=True)
     is_banned = fields.Bool(required=True)
     onboarding_completed = fields.Bool(required=True)
+    sim_disclaimer_accepted = fields.Bool(required=True)
     created_at = fields.Function(lambda obj: format_beijing_iso(_value(obj, "created_at")))
     updated_at = fields.Function(lambda obj: format_beijing_iso(_value(obj, "updated_at")))
 

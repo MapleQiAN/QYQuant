@@ -114,8 +114,8 @@ development_status:
   # ─────────────────────────────────────────────────────────────
   epic-7: in-progress
   7-1-创建模拟托管机器人与免责提示: ready-for-dev
-  7-2-celery-beat定时执行模拟策略: backlog
-  7-3-查看机器人运行状态与持仓: backlog
+  7-2-celery-beat定时执行模拟策略: ready-for-dev
+  7-3-查看机器人运行状态与持仓: in-progress
   7-4-查看模拟收益曲线与买卖信号-sse实时推送: backlog
   7-5-停止与删除模拟机器人: backlog
   epic-7-retrospective: optional

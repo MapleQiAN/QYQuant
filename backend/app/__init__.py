@@ -10,6 +10,7 @@ from .blueprints.forum import bp as forum_bp
 from .blueprints.health import bp as health_bp
 from .blueprints.marketplace import bp as marketplace_bp
 from .blueprints.presets import bp as presets_bp
+from .blueprints.simulation import bp as simulation_bp
 from .blueprints.users import bp as users_bp
 from .config import get_config
 from .errors import register_error_handlers
@@ -54,6 +55,7 @@ def create_app(env=None):
     app.register_blueprint(marketplace_bp)
     app.register_blueprint(presets_bp)
     app.register_blueprint(backtests_bp)
+    app.register_blueprint(simulation_bp)
     app.register_blueprint(bots_bp)
     app.register_blueprint(community_bp)
     app.register_blueprint(forum_bp)

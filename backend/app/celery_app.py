@@ -2,6 +2,7 @@ import os
 from urllib.parse import urlparse, urlunparse
 
 from celery import Celery
+from celery.schedules import crontab
 
 
 def _is_eager():
@@ -38,6 +39,7 @@ celery_app.conf.update(
     task_serializer='json',
     result_serializer='json',
     accept_content=['json'],
+    imports=('app.tasks.backtests', 'app.tasks.simulation_tasks'),
     worker_concurrency=int(os.getenv('CELERYD_CONCURRENCY', '10')),
     task_acks_late=True,
     task_reject_on_worker_lost=True,
@@ -46,5 +48,15 @@ celery_app.conf.update(
     task_default_queue='default',
     task_routes={
         'app.tasks.backtests.*': {'queue': 'backtest'},
+        'app.tasks.simulation_tasks.*': {'queue': 'simulation'},
     },
+    timezone='UTC',
 )
+
+celery_app.conf.beat_schedule = {
+    'run-daily-simulation': {
+        'task': 'app.tasks.simulation_tasks.run_daily_simulation',
+        'schedule': crontab(hour=8, minute=0),
+        'options': {'queue': 'simulation'},
+    },
+}

@@ -18,6 +18,7 @@ const defaultUser: User = {
   plan_level: 'free',
   is_banned: false,
   onboarding_completed: true,
+  sim_disclaimer_accepted: false,
   phone: '',
   created_at: undefined,
   updated_at: undefined,
@@ -52,11 +53,29 @@ export const useUserStore = defineStore('user', {
         plan_level: profile.plan_level,
         is_banned: profile.is_banned,
         onboarding_completed: profile.onboarding_completed,
+        sim_disclaimer_accepted: profile.sim_disclaimer_accepted,
         phone: profile.phone,
         created_at: profile.created_at,
         updated_at: profile.updated_at,
       }
       this.profileLoaded = true
+    },
+    async refreshProfile() {
+      if (typeof window === 'undefined') {
+        return
+      }
+      const token = window.localStorage.getItem('qyquant-token')
+      if (!token) {
+        return
+      }
+
+      this.profileLoading = true
+      try {
+        const profile = await fetchProfile()
+        this.applyRemoteProfile(profile)
+      } finally {
+        this.profileLoading = false
+      }
     },
     async loadProfile() {
       if (this.profileLoading || this.profileLoaded) {
@@ -73,8 +92,7 @@ export const useUserStore = defineStore('user', {
 
       this.profileLoading = true
       try {
-        const profile = await fetchProfile()
-        this.applyRemoteProfile(profile)
+        await this.refreshProfile()
       } finally {
         this.profileLoading = false
       }

@@ -11,6 +11,7 @@ export interface User {
   plan_level?: string
   is_banned?: boolean
   onboarding_completed: boolean
+  sim_disclaimer_accepted: boolean
   phone?: string
   created_at?: string
   updated_at?: string
@@ -26,6 +27,7 @@ export interface UserProfileResponse {
   plan_level?: string
   is_banned?: boolean
   onboarding_completed: boolean
+  sim_disclaimer_accepted: boolean
   created_at?: string
   updated_at?: string
 }

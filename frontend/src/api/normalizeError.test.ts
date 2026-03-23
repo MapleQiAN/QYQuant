@@ -12,4 +12,25 @@ describe('normalizeError', () => {
       message: 'boom'
     })
   })
+
+  it('reads nested backend error payloads', () => {
+    const err = {
+      response: {
+        status: 403,
+        data: {
+          error: {
+            code: 'SIMULATION_SLOT_LIMIT_REACHED',
+            message: 'Current plan supports at most 1 active simulation bots',
+          },
+        },
+      },
+      message: 'Request failed',
+    }
+
+    expect(normalizeError(err)).toEqual({
+      status: 403,
+      code: 'SIMULATION_SLOT_LIMIT_REACHED',
+      message: 'Current plan supports at most 1 active simulation bots',
+    })
+  })
 })

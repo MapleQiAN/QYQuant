@@ -35,6 +35,7 @@ class User(db.Model):
     plan_level = db.Column(db.String(32), nullable=False, default='free')
     is_banned = db.Column(db.Boolean, nullable=False, default=False)
     onboarding_completed = db.Column(db.Boolean, nullable=False, default=False)
+    sim_disclaimer_accepted = db.Column(db.Boolean, nullable=False, default=False)
     deleted_at = db.Column(db.DateTime(timezone=True), nullable=True)
     created_at = db.Column(db.DateTime(timezone=True), nullable=False, default=now_utc)
     updated_at = db.Column(db.DateTime(timezone=True), nullable=False, default=now_utc, onupdate=now_utc)
@@ -259,6 +260,50 @@ class BotInstance(db.Model):
     user_id = db.Column(db.String, db.ForeignKey('users.id'))
     created_at = db.Column(db.BigInteger, default=now_ms)
     updated_at = db.Column(db.BigInteger, default=now_ms)
+
+
+class SimulationBot(db.Model):
+    __tablename__ = 'simulation_bots'
+    __table_args__ = (
+        db.Index('idx_simulation_bots_user_id', 'user_id'),
+        db.Index('idx_simulation_bots_status', 'status'),
+    )
+
+    id = db.Column(db.String, primary_key=True, default=gen_id)
+    user_id = db.Column(db.String, db.ForeignKey('users.id'), nullable=False)
+    strategy_id = db.Column(db.String, db.ForeignKey('strategies.id'), nullable=False)
+    initial_capital = db.Column(db.Numeric(18, 2), nullable=False)
+    status = db.Column(db.String(20), nullable=False, default='active', server_default='active')
+    created_at = db.Column(db.DateTime(timezone=True), nullable=False, default=now_utc, server_default=db.func.now())
+
+
+class SimulationRecord(db.Model):
+    __tablename__ = 'simulation_records'
+    __table_args__ = (
+        db.Index('idx_simulation_records_bot_id', 'bot_id'),
+        db.Index('idx_simulation_records_trade_date', 'bot_id', 'trade_date'),
+    )
+
+    id = db.Column(db.String, primary_key=True, default=gen_id)
+    bot_id = db.Column(db.String, db.ForeignKey('simulation_bots.id', ondelete='CASCADE'), nullable=False)
+    trade_date = db.Column(db.Date, nullable=False)
+    equity = db.Column(db.Numeric(18, 2), nullable=False)
+    cash = db.Column(db.Numeric(18, 2), nullable=False)
+    daily_return = db.Column(db.Numeric(10, 6), nullable=False)
+    created_at = db.Column(db.DateTime(timezone=True), nullable=False, default=now_utc, server_default=db.func.now())
+
+
+class SimulationPosition(db.Model):
+    __tablename__ = 'simulation_positions'
+    __table_args__ = (
+        db.PrimaryKeyConstraint('bot_id', 'symbol'),
+    )
+
+    bot_id = db.Column(db.String, db.ForeignKey('simulation_bots.id', ondelete='CASCADE'), nullable=False)
+    symbol = db.Column(db.String(20), nullable=False)
+    quantity = db.Column(db.Numeric(18, 4), nullable=False)
+    avg_cost = db.Column(db.Numeric(18, 4), nullable=False)
+    updated_at = db.Column(db.DateTime(timezone=True), nullable=False, default=now_utc, onupdate=now_utc, server_default=db.func.now())
 
 
 class Order(db.Model):
