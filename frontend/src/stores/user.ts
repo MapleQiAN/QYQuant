@@ -38,6 +38,12 @@ export const useUserStore = defineStore('user', {
     helpPanelOpen: false,
     onboardingHighlightTarget: null as string | null,
   }),
+  getters: {
+    token(): string | null {
+      if (typeof window === 'undefined') return null
+      return window.localStorage.getItem('qyquant-token')
+    },
+  },
   actions: {
     applyRemoteProfile(profile: UserProfileResponse) {
       this.profile = {

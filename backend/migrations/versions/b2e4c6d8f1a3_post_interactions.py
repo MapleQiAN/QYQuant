@@ -25,7 +25,7 @@ def upgrade():
         sa.Column("type", sa.String(length=20), nullable=False),
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
         sa.ForeignKeyConstraint(["user_id"], ["users.id"]),
-        sa.ForeignKeyConstraint(["post_id"], ["posts.id"]),
+        sa.ForeignKeyConstraint(["post_id"], ["posts.id"], ondelete="CASCADE"),
         sa.PrimaryKeyConstraint("id"),
         sa.UniqueConstraint("user_id", "post_id", "type", name="uq_post_interactions_user_post_type"),
     )

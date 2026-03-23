@@ -17,14 +17,21 @@ const canSubmit = computed(() => {
   return Boolean(userStore.profile.id) && trimmed.length > 0 && trimmed.length <= 2000 && !communityStore.submittingPost
 })
 
+const submitError = ref('')
+
 async function submitPost() {
   if (!canSubmit.value) {
     return
   }
+  submitError.value = ''
 
-  await communityStore.createPost(content.value.trim(), strategyId.value || undefined)
-  content.value = ''
-  strategyId.value = ''
+  try {
+    await communityStore.createPost(content.value.trim(), strategyId.value || undefined)
+    content.value = ''
+    strategyId.value = ''
+  } catch (error: unknown) {
+    submitError.value = error instanceof Error ? error.message : '发布失败，请稍后重试'
+  }
 }
 
 onMounted(() => {
@@ -44,11 +51,12 @@ onMounted(() => {
       <span class="count" :class="{ danger: characterCount > 2000 }">{{ characterCount }}/2000</span>
     </header>
 
+    <p v-if="submitError" class="error">{{ submitError }}</p>
+
     <textarea
       v-model="content"
       class="composer-input"
       placeholder="写点什么，告诉社区你最近在研究什么策略……"
-      maxlength="2000"
       rows="5"
     />
 
@@ -105,6 +113,12 @@ onMounted(() => {
 
 .count.danger {
   color: #c53030;
+}
+
+.error {
+  margin: 0;
+  color: #c53030;
+  font-size: 14px;
 }
 
 .composer-input {

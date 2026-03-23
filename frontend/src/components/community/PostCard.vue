@@ -4,6 +4,22 @@ import { RouterLink } from 'vue-router'
 import type { CommunityPost } from '../../types/community'
 import { useCommunityStore } from '../../stores/useCommunityStore'
 
+function formatRelativeTime(isoStr: string | null): string {
+  if (!isoStr) return '刚刚'
+  const date = new Date(isoStr)
+  if (isNaN(date.getTime())) return '刚刚'
+  const now = Date.now()
+  const diffMs = now - date.getTime()
+  const diffMin = Math.floor(diffMs / 60000)
+  if (diffMin < 1) return '刚刚'
+  if (diffMin < 60) return `${diffMin} 分钟前`
+  const diffHr = Math.floor(diffMin / 60)
+  if (diffHr < 24) return `${diffHr} 小时前`
+  const diffDay = Math.floor(diffHr / 24)
+  if (diffDay < 30) return `${diffDay} 天前`
+  return date.toLocaleDateString('zh-CN', { year: 'numeric', month: 'long', day: 'numeric' })
+}
+
 const props = defineProps<{
   post: CommunityPost
   detailMode?: boolean
@@ -29,7 +45,7 @@ async function toggleCollect() {
         <div class="avatar">{{ post.author.nickname?.slice(0, 1) || 'Q' }}</div>
         <div>
           <div class="nickname">{{ post.author.nickname || '匿名用户' }}</div>
-          <div class="meta">{{ post.created_at || '刚刚' }}</div>
+          <div class="meta">{{ formatRelativeTime(post.created_at) }}</div>
         </div>
       </div>
       <RouterLink v-if="!detailMode" class="detail-link" :to="detailHref">查看详情</RouterLink>

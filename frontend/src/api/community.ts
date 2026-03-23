@@ -47,6 +47,14 @@ export function collectPost(postId: string): Promise<ToggleCollectResult> {
   })
 }
 
+export function getMyCollections(params?: { page?: number; per_page?: number }): Promise<PaginatedCommunityPosts> {
+  return client.request({
+    method: 'get',
+    url: '/v1/users/me/collections',
+    params
+  })
+}
+
 export function getComments(
   postId: string,
   params?: { page?: number; per_page?: number }

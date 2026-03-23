@@ -108,10 +108,13 @@ def create_post():
     user = db.session.get(User, user_id)
     if user is None or user.deleted_at is not None:
         return error_response("UNAUTHORIZED", "user not found", 401)
+    if user.is_banned:
+        return error_response("FORBIDDEN", "account is banned", 403)
 
     payload = request.get_json() or {}
     content = str(payload.get("content") or "").strip()
-    strategy_id = (payload.get("strategy_id") or "").strip() or None
+    raw_strategy_id = payload.get("strategy_id")
+    strategy_id = str(raw_strategy_id).strip() if raw_strategy_id else None
 
     if not content:
         return error_response("CONTENT_REQUIRED", "content is required", 422)
@@ -204,10 +207,23 @@ def get_post_detail(post_id):
     )
 
 
+def _check_active_user(user_id):
+    """Return (user, error_response) — rejects deleted or banned users."""
+    user = db.session.get(User, user_id)
+    if user is None or user.deleted_at is not None:
+        return None, error_response("UNAUTHORIZED", "user not found", 401)
+    if user.is_banned:
+        return None, error_response("FORBIDDEN", "account is banned", 403)
+    return user, None
+
+
 @bp.post("/posts/<post_id>/like")
 @jwt_required()
 def toggle_like(post_id):
     user_id = get_jwt_identity()
+    _user, user_error = _check_active_user(user_id)
+    if user_error:
+        return user_error
     post, error = _get_community_post_or_404(post_id)
     if error:
         return error
@@ -237,6 +253,9 @@ def toggle_like(post_id):
 @jwt_required()
 def toggle_collect(post_id):
     user_id = get_jwt_identity()
+    _user, user_error = _check_active_user(user_id)
+    if user_error:
+        return user_error
     post, error = _get_community_post_or_404(post_id)
     if error:
         return error
@@ -255,6 +274,50 @@ def toggle_collect(post_id):
 
     db.session.commit()
     return ok({"collected": collected})
+
+
+@bp.get("/users/me/collections")
+@jwt_required()
+def get_my_collections():
+    user_id = get_jwt_identity()
+    page = _int_arg("page", default=1, minimum=1)
+    per_page = _int_arg("per_page", default=20, minimum=1, maximum=50)
+
+    base_query = (
+        db.session.query(Post)
+        .join(PostInteraction, PostInteraction.post_id == Post.id)
+        .filter(
+            PostInteraction.user_id == user_id,
+            PostInteraction.type == "collect",
+            Post.content.isnot(None),
+        )
+    )
+    total = base_query.count()
+    posts = (
+        base_query
+        .order_by(PostInteraction.created_at.desc())
+        .offset((page - 1) * per_page)
+        .limit(per_page)
+        .all()
+    )
+
+    author_ids = {p.user_id for p in posts if p.user_id}
+    authors = {u.id: u for u in User.query.filter(User.id.in_(author_ids)).all()} if author_ids else {}
+    strategy_ids = {p.strategy_id for p in posts if p.strategy_id}
+    strategies = {s.id: s for s in Strategy.query.filter(Strategy.id.in_(strategy_ids)).all()} if strategy_ids else {}
+    liked_map, collected_map = _interaction_state_map(user_id, [p.id for p in posts])
+
+    items = [
+        _serialize_post(
+            p,
+            author=authors.get(p.user_id),
+            strategy=strategies.get(p.strategy_id),
+            liked=liked_map.get(p.id, False),
+            collected=collected_map.get(p.id, False),
+        )
+        for p in posts
+    ]
+    return ok({"items": items, "total": total, "page": page, "per_page": per_page})
 
 
 @bp.get("/posts/<post_id>/comments")
@@ -284,6 +347,9 @@ def get_comments(post_id):
 @jwt_required()
 def create_comment(post_id):
     user_id = get_jwt_identity()
+    _user, user_error = _check_active_user(user_id)
+    if user_error:
+        return user_error
     post, error = _get_community_post_or_404(post_id)
     if error:
         return error

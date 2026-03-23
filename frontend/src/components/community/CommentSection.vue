@@ -3,6 +3,22 @@ import { computed, ref, watch } from 'vue'
 import { useCommunityStore } from '../../stores/useCommunityStore'
 import { useUserStore } from '../../stores/user'
 
+function formatRelativeTime(isoStr: string | null): string {
+  if (!isoStr) return '刚刚'
+  const date = new Date(isoStr)
+  if (isNaN(date.getTime())) return '刚刚'
+  const now = Date.now()
+  const diffMs = now - date.getTime()
+  const diffMin = Math.floor(diffMs / 60000)
+  if (diffMin < 1) return '刚刚'
+  if (diffMin < 60) return `${diffMin} 分钟前`
+  const diffHr = Math.floor(diffMin / 60)
+  if (diffHr < 24) return `${diffHr} 小时前`
+  const diffDay = Math.floor(diffHr / 24)
+  if (diffDay < 30) return `${diffDay} 天前`
+  return date.toLocaleDateString('zh-CN', { year: 'numeric', month: 'long', day: 'numeric' })
+}
+
 const props = defineProps<{
   postId: string
 }>()
@@ -15,6 +31,7 @@ const comments = computed(() => communityStore.commentsByPostId[props.postId] ||
 const total = computed(() => communityStore.commentTotalsByPostId[props.postId] || 0)
 const currentPage = computed(() => communityStore.commentPagesByPostId[props.postId] || 1)
 const hasMore = computed(() => comments.value.length < total.value)
+const submitError = ref('')
 const canSubmit = computed(() => {
   const trimmed = content.value.trim()
   return Boolean(userStore.profile.id) && trimmed.length > 0 && trimmed.length <= 500 && !communityStore.submittingComment
@@ -28,9 +45,14 @@ async function submitComment() {
   if (!canSubmit.value) {
     return
   }
+  submitError.value = ''
 
-  await communityStore.createComment(props.postId, content.value.trim())
-  content.value = ''
+  try {
+    await communityStore.createComment(props.postId, content.value.trim())
+    content.value = ''
+  } catch (error: unknown) {
+    submitError.value = error instanceof Error ? error.message : '评论发送失败，请稍后重试'
+  }
 }
 
 watch(
@@ -64,6 +86,7 @@ watch(
           {{ communityStore.submittingComment ? '发送中…' : '发送评论' }}
         </button>
       </div>
+      <p v-if="submitError" class="submit-error">{{ submitError }}</p>
     </div>
 
     <p v-else class="comment-tip">登录后可以参与评论。</p>
@@ -72,7 +95,7 @@ watch(
       <article v-for="comment in comments" :key="comment.id" class="comment-item">
         <header>
           <strong>{{ comment.author.nickname || '匿名用户' }}</strong>
-          <span>{{ comment.created_at || '刚刚' }}</span>
+          <span>{{ formatRelativeTime(comment.created_at) }}</span>
         </header>
         <p>{{ comment.content }}</p>
       </article>
@@ -147,6 +170,12 @@ watch(
 .comment-form button:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+.submit-error {
+  margin: 0;
+  color: #c53030;
+  font-size: 14px;
 }
 
 .comment-list {

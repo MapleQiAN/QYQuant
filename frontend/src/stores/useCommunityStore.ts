@@ -236,7 +236,7 @@ export const useCommunityStore = defineStore('community', {
         user_id: userStore.profile.id,
         created_at: new Date().toISOString(),
         author: {
-          nickname: userStore.profile.nickname || userStore.profile.name,
+          nickname: userStore.profile.nickname || '我',
           avatar_url: userStore.profile.avatar_url || ''
         }
       }

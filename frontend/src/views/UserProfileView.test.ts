@@ -87,7 +87,6 @@ describe('UserProfileView', () => {
   it('loads profile, shows edit link for owner, and switches tabs', async () => {
     const wrapper = mount(UserProfileView, {
       global: {
-        plugins: [createPinia()],
         stubs: {
           RouterLink: {
             props: ['to'],
