@@ -145,7 +145,7 @@ development_status:
   10-1-管理后台基础框架-路由守卫-admin蓝图: ready-for-dev
   10-2-策略审核队列: done
   10-3-用户举报处理与内容下架: ready-for-dev
-  10-4-回测任务队列监控与手动干预: backlog
+  10-4-回测任务队列监控与手动干预: ready-for-dev
   10-5-用户账户管理-封禁与审计日志查看: backlog
   10-6-数据源健康监控与异常告警: backlog
   10-7-注销用户的已发布策略处理: backlog
