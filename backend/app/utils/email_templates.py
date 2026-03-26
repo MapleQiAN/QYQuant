@@ -1,11 +1,13 @@
 def render_strategy_review_email(strategy_name, status, reason=None):
+    from markupsafe import escape
+
     status_map = {
         "approved": "通过",
         "rejected": "拒绝",
     }
     status_label = status_map.get(status, status)
     subject = "[QYQuant] 您的策略审核结果通知"
-    reason_html = f"<p><strong>拒绝原因：</strong>{reason}</p>" if reason else ""
+    reason_html = f"<p><strong>拒绝原因：</strong>{escape(reason)}</p>" if reason else ""
     reason_text = f"\n拒绝原因：{reason}" if reason else ""
     body_html = (
         "<html><body>"
@@ -27,12 +29,14 @@ def render_strategy_review_email(strategy_name, status, reason=None):
 
 
 def render_strategy_takedown_email(strategy_name, reason):
+    from markupsafe import escape
+
     subject = "[QYQuant] 您的策略已被下架"
     body_html = (
         "<html><body>"
         "<p>您好，</p>"
-        f"<p>您的策略《{strategy_name}》已被平台下架。</p>"
-        f"<p><strong>下架原因：</strong>{reason}</p>"
+        f"<p>您的策略《{escape(strategy_name)}》已被平台下架。</p>"
+        f"<p><strong>下架原因：</strong>{escape(reason)}</p>"
         "<p>如您认为该处理有误，请联系平台支持并补充相关说明材料。</p>"
         "</body></html>"
     )

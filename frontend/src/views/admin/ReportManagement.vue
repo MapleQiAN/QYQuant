@@ -44,7 +44,8 @@
             :data-test="`admin-note-${item.id}`"
             class="report-card__note"
             rows="3"
-            placeholder="可选：补充管理员备注"
+            maxlength="500"
+            placeholder="可选：补充管理员备注（最多 500 字）"
           />
 
           <div class="report-card__actions">
@@ -102,6 +103,10 @@ function isResolving(reportId: string): boolean {
 }
 
 async function takedown(reportId: string) {
+  const item = adminStore.reportQueue.find(r => r.id === reportId)
+  const title = item?.strategyTitle || '该策略'
+  if (!window.confirm(`确认下架策略「${title}」？此操作不可撤销。`)) return
+
   try {
     await adminStore.resolveReport(reportId, {
       action: 'takedown',

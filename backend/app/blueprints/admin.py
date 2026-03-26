@@ -147,6 +147,9 @@ def resolve_report(report_id):
     if not admin_note:
         admin_note = None
 
+    if admin_note and len(admin_note) > 500:
+        return error_response("ADMIN_NOTE_TOO_LONG", "Admin note must be 500 characters or fewer", 422)
+
     if action not in REPORT_RESOLUTION_ACTIONS:
         return error_response("REPORT_ACTION_INVALID", "Report action is invalid", 422)
 

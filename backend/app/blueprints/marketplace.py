@@ -322,6 +322,13 @@ def report_marketplace_strategy(strategy_id):
         status="pending",
     )
     db.session.add(report)
+    log_audit(
+        operator_id=reporter_id,
+        action="strategy_report_submitted",
+        target_type="strategy",
+        target_id=strategy_id,
+        details={"report_id": report.id, "reason": reason},
+    )
     db.session.commit()
     return ok({"report_id": report.id}), 201
 
