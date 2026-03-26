@@ -279,7 +279,7 @@ def terminate_backtest_job(job_id):
     strategy = db.session.get(Strategy, job.strategy_id) if job.strategy_id else None
     admin_id = _current_admin_id()
     completed_at = now_utc()
-    running_duration_seconds = _duration_seconds(job.started_at, completed_at)
+    running_duration_seconds = _duration_seconds(job.started_at, completed_at) if job.started_at else None
     strategy_name = _strategy_display_name(strategy)
     reason = admin_note or "管理员手动终止"
 
@@ -359,48 +359,39 @@ def _notification_content_for_status(strategy_name, status, reason):
 
 
 def _average_completed_duration_seconds():
-    completed_jobs = (
-        BacktestJob.query
+    rows = (
+        db.session.query(BacktestJob.started_at, BacktestJob.completed_at)
         .filter(BacktestJob.status == BacktestJobStatus.COMPLETED.value)
         .filter(BacktestJob.started_at.isnot(None), BacktestJob.completed_at.isnot(None))
         .order_by(BacktestJob.completed_at.desc(), BacktestJob.id.desc())
         .limit(100)
         .all()
     )
-    durations = [
-        _duration_seconds(job.started_at, job.completed_at)
-        for job in completed_jobs
-        if job.started_at is not None and job.completed_at is not None
-    ]
-    if not durations:
+    if not rows:
         return 0
-    return int(round(sum(durations) / len(durations)))
+    total = sum(_duration_seconds(s, c) for s, c in rows)
+    return int(round(total / len(rows)))
 
 
 def _failure_rate_last_hour():
+    from sqlalchemy import case, func
+
     cutoff = now_utc() - timedelta(hours=1)
-    terminal_jobs = (
-        BacktestJob.query
-        .filter(
-            BacktestJob.status.in_(
-                [
-                    BacktestJobStatus.COMPLETED.value,
-                    BacktestJobStatus.FAILED.value,
-                    BacktestJobStatus.TIMEOUT.value,
-                ]
-            )
+    failed_statuses = [BacktestJobStatus.FAILED.value, BacktestJobStatus.TIMEOUT.value]
+    terminal_statuses = [BacktestJobStatus.COMPLETED.value] + failed_statuses
+
+    row = (
+        db.session.query(
+            func.count().label("total"),
+            func.sum(case((BacktestJob.status.in_(failed_statuses), 1), else_=0)).label("failed"),
         )
+        .filter(BacktestJob.status.in_(terminal_statuses))
         .filter(BacktestJob.completed_at.isnot(None), BacktestJob.completed_at >= cutoff)
-        .all()
+        .one()
     )
-    if not terminal_jobs:
+    if not row.total:
         return 0
-    failed_jobs = sum(
-        1
-        for job in terminal_jobs
-        if job.status in {BacktestJobStatus.FAILED.value, BacktestJobStatus.TIMEOUT.value}
-    )
-    return round(failed_jobs / len(terminal_jobs), 4)
+    return round(int(row.failed) / int(row.total), 4)
 
 
 def _list_stuck_backtest_jobs():

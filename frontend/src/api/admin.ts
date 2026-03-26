@@ -352,5 +352,8 @@ function normalizeResolveAction(value: unknown): AdminResolveReportResult['actio
 }
 
 function normalizeTerminateStatus(value: unknown): AdminTerminateJobResult['status'] {
-  return value === 'terminated' ? 'terminated' : 'terminated'
+  if (value !== 'terminated') {
+    console.warn(`Unexpected terminate status: ${String(value)}, defaulting to 'terminated'`)
+  }
+  return 'terminated'
 }

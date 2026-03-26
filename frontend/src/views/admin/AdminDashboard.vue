@@ -25,6 +25,14 @@
           <p>关键管理动作会持续写入审计日志，方便排查争议、回溯处理过程。</p>
         </article>
 
+        <article class="admin-card">
+          <h2>策略审核</h2>
+          <p>审核用户提交的策略，确保内容质量和合规性。</p>
+          <RouterLink class="admin-card__link" data-test="admin-strategy-review-link" to="/admin/strategies">
+            进入策略审核
+          </RouterLink>
+        </article>
+
         <article class="admin-card admin-card--accent">
           <h2>任务监控</h2>
           <p>查看回测队列、识别疑似卡死任务，并在必要时执行人工终止。</p>
