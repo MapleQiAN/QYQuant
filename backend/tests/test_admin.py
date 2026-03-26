@@ -1,5 +1,7 @@
+from datetime import timedelta
+
 from app.extensions import db
-from app.models import AuditLog, Notification, Report, Strategy, User
+from app.models import AuditLog, BacktestJob, BacktestJobStatus, Notification, Report, Strategy, User
 from app.utils.time import now_utc
 
 
@@ -126,6 +128,36 @@ def _seed_report(
         db.session.add(report)
         db.session.commit()
     return report_id
+
+
+def _seed_backtest_job(
+    app,
+    *,
+    job_id,
+    status,
+    user_id=None,
+    strategy_id=None,
+    params=None,
+    started_at=None,
+    completed_at=None,
+    created_at=None,
+    error_message=None,
+):
+    with app.app_context():
+        job = BacktestJob(
+            id=job_id,
+            user_id=user_id,
+            strategy_id=strategy_id,
+            status=status,
+            params=params or {"symbol": "BTCUSDT"},
+            started_at=started_at,
+            completed_at=completed_at,
+            created_at=created_at or now_utc(),
+            error_message=error_message,
+        )
+        db.session.add(job)
+        db.session.commit()
+    return job_id
 
 
 def test_admin_health_allows_admin_users(client, app):
@@ -724,3 +756,328 @@ def test_admin_resolve_report_rejects_duplicate_processing(client, app):
 
     assert response.status_code == 409
     assert response.json["error"]["code"] == "REPORT_RESOLUTION_CONFLICT"
+
+
+def test_admin_backtest_queue_stats_returns_metrics_and_stuck_jobs(client, app):
+    admin_token, admin_id = _login_user(client, phone="13800138251", nickname="QueueAdmin")
+    _, owner_id = _login_user(client, phone="13800138252", nickname="JobOwner")
+
+    with app.app_context():
+        admin = db.session.get(User, admin_id)
+        admin.role = "admin"
+        db.session.commit()
+
+    _seed_public_strategy_for_reports(
+        app,
+        strategy_id="queue-strategy",
+        owner_id=owner_id,
+        title="Queue Strategy",
+    )
+
+    now = now_utc()
+    _seed_backtest_job(
+        app,
+        job_id="job-pending",
+        user_id=owner_id,
+        strategy_id="queue-strategy",
+        status=BacktestJobStatus.PENDING.value,
+        created_at=now - timedelta(minutes=5),
+    )
+    _seed_backtest_job(
+        app,
+        job_id="job-running-fresh",
+        user_id=owner_id,
+        strategy_id="queue-strategy",
+        status=BacktestJobStatus.RUNNING.value,
+        started_at=now - timedelta(minutes=4),
+        created_at=now - timedelta(minutes=6),
+    )
+    _seed_backtest_job(
+        app,
+        job_id="job-running-stuck",
+        user_id=owner_id,
+        strategy_id="queue-strategy",
+        status=BacktestJobStatus.RUNNING.value,
+        started_at=now - timedelta(minutes=15),
+        created_at=now - timedelta(minutes=16),
+    )
+    _seed_backtest_job(
+        app,
+        job_id="job-completed-short",
+        user_id=owner_id,
+        strategy_id="queue-strategy",
+        status=BacktestJobStatus.COMPLETED.value,
+        started_at=now - timedelta(minutes=8),
+        completed_at=now - timedelta(minutes=6),
+        created_at=now - timedelta(minutes=9),
+    )
+    _seed_backtest_job(
+        app,
+        job_id="job-completed-long",
+        user_id=owner_id,
+        strategy_id="queue-strategy",
+        status=BacktestJobStatus.COMPLETED.value,
+        started_at=now - timedelta(minutes=12),
+        completed_at=now - timedelta(minutes=7),
+        created_at=now - timedelta(minutes=13),
+    )
+    _seed_backtest_job(
+        app,
+        job_id="job-failed",
+        user_id=owner_id,
+        strategy_id="queue-strategy",
+        status=BacktestJobStatus.FAILED.value,
+        completed_at=now - timedelta(minutes=20),
+        created_at=now - timedelta(minutes=21),
+        error_message="boom",
+    )
+    _seed_backtest_job(
+        app,
+        job_id="job-timeout",
+        user_id=owner_id,
+        strategy_id="queue-strategy",
+        status=BacktestJobStatus.TIMEOUT.value,
+        completed_at=now - timedelta(minutes=25),
+        created_at=now - timedelta(minutes=26),
+        error_message="soft_time_limit_exceeded",
+    )
+    _seed_backtest_job(
+        app,
+        job_id="job-failed-old",
+        user_id=owner_id,
+        strategy_id="queue-strategy",
+        status=BacktestJobStatus.FAILED.value,
+        completed_at=now - timedelta(hours=2),
+        created_at=now - timedelta(hours=2, minutes=5),
+        error_message="old",
+    )
+
+    response = client.get(
+        "/api/v1/admin/backtest/queue-stats",
+        headers=_auth_headers(admin_token),
+    )
+
+    assert response.status_code == 200
+    assert response.json["data"]["stats"] == {
+        "pending": 1,
+        "running": 2,
+        "avg_duration": 210,
+        "failure_rate_1h": 0.5,
+    }
+    assert [item["job_id"] for item in response.json["data"]["stuck_jobs"]] == ["job-running-stuck"]
+    assert response.json["data"]["stuck_jobs"][0]["user_id"] == owner_id
+    assert response.json["data"]["stuck_jobs"][0]["strategy_id"] == "queue-strategy"
+    assert response.json["data"]["stuck_jobs"][0]["strategy_name"] == "Queue Strategy"
+    assert response.json["data"]["stuck_jobs"][0]["running_duration_seconds"] >= 900
+    assert response.json["data"]["stuck_jobs"][0]["started_at"] is not None
+
+
+def test_admin_backtest_queue_stats_returns_zeroes_without_jobs(client, app):
+    admin_token, admin_id = _login_user(client, phone="13800138253", nickname="ZeroAdmin")
+
+    with app.app_context():
+        admin = db.session.get(User, admin_id)
+        admin.role = "admin"
+        db.session.commit()
+
+    response = client.get(
+        "/api/v1/admin/backtest/queue-stats",
+        headers=_auth_headers(admin_token),
+    )
+
+    assert response.status_code == 200
+    assert response.json["data"] == {
+        "stats": {
+            "pending": 0,
+            "running": 0,
+            "avg_duration": 0,
+            "failure_rate_1h": 0,
+        },
+        "stuck_jobs": [],
+    }
+
+
+def test_admin_backtest_queue_stats_rejects_non_admin_users(client):
+    token, _ = _login_user(client, phone="13800138254", nickname="PlainQueueUser")
+
+    response = client.get(
+        "/api/v1/admin/backtest/queue-stats",
+        headers=_auth_headers(token),
+    )
+
+    assert response.status_code == 403
+    assert response.json["error"]["code"] == "FORBIDDEN"
+
+
+def test_admin_terminate_backtest_job_updates_state_and_side_effects(client, app, monkeypatch):
+    admin_token, admin_id = _login_user(client, phone="13800138255", nickname="TerminateAdmin")
+    _, owner_id = _login_user(client, phone="13800138256", nickname="TerminateOwner")
+
+    with app.app_context():
+        admin = db.session.get(User, admin_id)
+        admin.role = "admin"
+        db.session.commit()
+
+    _seed_public_strategy_for_reports(
+        app,
+        strategy_id="terminate-strategy",
+        owner_id=owner_id,
+        title="Terminate Strategy",
+    )
+    started_at = now_utc() - timedelta(minutes=14)
+    _seed_backtest_job(
+        app,
+        job_id="running-job",
+        user_id=owner_id,
+        strategy_id="terminate-strategy",
+        status=BacktestJobStatus.RUNNING.value,
+        started_at=started_at,
+        created_at=started_at - timedelta(minutes=1),
+    )
+
+    revoke_calls = []
+    from app.blueprints import admin as admin_blueprint
+
+    monkeypatch.setattr(
+        admin_blueprint.celery_app.control,
+        "revoke",
+        lambda *args, **kwargs: revoke_calls.append((args, kwargs)),
+    )
+
+    response = client.delete(
+        "/api/v1/admin/backtest/running-job",
+        json={"admin_note": "worker stuck"},
+        headers=_auth_headers(admin_token),
+    )
+
+    assert response.status_code == 200
+    assert response.json["data"] == {"job_id": "running-job", "status": "terminated"}
+    assert revoke_calls == [(("running-job",), {"terminate": True})]
+
+    with app.app_context():
+        job = db.session.get(BacktestJob, "running-job")
+        assert job.status == BacktestJobStatus.FAILED.value
+        assert job.error_message == "管理员手动终止"
+        assert job.completed_at is not None
+
+        notification = Notification.query.filter_by(
+            user_id=owner_id,
+            type="job_terminated",
+        ).first()
+        assert notification is not None
+        assert notification.title == "回测任务已终止"
+        assert "Terminate Strategy" in (notification.content or "")
+        assert "worker stuck" in (notification.content or "")
+
+        audit = AuditLog.query.filter_by(
+            operator_id=admin_id,
+            action="job_terminate",
+            target_id="running-job",
+        ).first()
+        assert audit is not None
+        assert audit.target_type == "backtest_job"
+        assert audit.details["user_id"] == owner_id
+        assert audit.details["strategy_id"] == "terminate-strategy"
+        assert audit.details["admin_note"] == "worker stuck"
+        assert audit.details["running_duration_seconds"] >= 840
+
+
+def test_admin_terminate_pending_backtest_job_succeeds(client, app, monkeypatch):
+    admin_token, admin_id = _login_user(client, phone="13800138257", nickname="PendingTerminateAdmin")
+    _, owner_id = _login_user(client, phone="13800138258", nickname="PendingTerminateOwner")
+
+    with app.app_context():
+        admin = db.session.get(User, admin_id)
+        admin.role = "admin"
+        db.session.commit()
+
+    _seed_backtest_job(
+        app,
+        job_id="pending-job",
+        user_id=owner_id,
+        status=BacktestJobStatus.PENDING.value,
+    )
+
+    revoke_calls = []
+    from app.blueprints import admin as admin_blueprint
+
+    monkeypatch.setattr(
+        admin_blueprint.celery_app.control,
+        "revoke",
+        lambda *args, **kwargs: revoke_calls.append((args, kwargs)),
+    )
+
+    response = client.delete(
+        "/api/v1/admin/backtest/pending-job",
+        headers=_auth_headers(admin_token),
+    )
+
+    assert response.status_code == 200
+    assert revoke_calls == [(("pending-job",), {"terminate": True})]
+
+    with app.app_context():
+        job = db.session.get(BacktestJob, "pending-job")
+        assert job.status == BacktestJobStatus.FAILED.value
+        assert job.completed_at is not None
+
+
+def test_admin_terminate_backtest_job_returns_conflict_for_completed_jobs(client, app):
+    admin_token, admin_id = _login_user(client, phone="13800138259", nickname="CompletedAdmin")
+
+    with app.app_context():
+        admin = db.session.get(User, admin_id)
+        admin.role = "admin"
+        db.session.commit()
+
+    now = now_utc()
+    _seed_backtest_job(
+        app,
+        job_id="completed-job",
+        status=BacktestJobStatus.COMPLETED.value,
+        started_at=now - timedelta(minutes=3),
+        completed_at=now - timedelta(minutes=1),
+    )
+
+    response = client.delete(
+        "/api/v1/admin/backtest/completed-job",
+        headers=_auth_headers(admin_token),
+    )
+
+    assert response.status_code == 409
+    assert response.json["error"]["code"] == "JOB_TERMINATION_CONFLICT"
+
+
+def test_admin_terminate_backtest_job_returns_404_for_missing_job(client, app):
+    admin_token, admin_id = _login_user(client, phone="13800138260", nickname="MissingJobAdmin")
+
+    with app.app_context():
+        admin = db.session.get(User, admin_id)
+        admin.role = "admin"
+        db.session.commit()
+
+    response = client.delete(
+        "/api/v1/admin/backtest/missing-job",
+        headers=_auth_headers(admin_token),
+    )
+
+    assert response.status_code == 404
+    assert response.json["error"]["code"] == "JOB_NOT_FOUND"
+
+
+def test_admin_terminate_backtest_job_rejects_non_admin_users(client, app):
+    token, user_id = _login_user(client, phone="13800138261", nickname="PlainTerminateUser")
+    _seed_backtest_job(
+        app,
+        job_id="forbidden-job",
+        user_id=user_id,
+        status=BacktestJobStatus.RUNNING.value,
+        started_at=now_utc() - timedelta(minutes=11),
+    )
+
+    response = client.delete(
+        "/api/v1/admin/backtest/forbidden-job",
+        headers=_auth_headers(token),
+    )
+
+    assert response.status_code == 403
+    assert response.json["error"]["code"] == "FORBIDDEN"

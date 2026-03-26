@@ -3,21 +3,37 @@ import {
   fetchAdminHealth,
   fetchPendingReports,
   fetchPendingStrategyReviews,
+  fetchQueueStats,
   resolveReport,
   submitStrategyReview,
+  terminateJob,
   type AdminHealthResponse,
+  type AdminQueueStats,
   type AdminReport,
   type AdminResolveReportPayload,
   type AdminResolveReportResult,
   type AdminReviewMutationPayload,
   type AdminReviewMutationResult,
-  type AdminReviewStrategy
+  type AdminReviewStrategy,
+  type AdminStuckJob,
+  type AdminTerminateJobResult
 } from '../api/admin'
+
+const emptyQueueStats = (): AdminQueueStats => ({
+  pending: 0,
+  running: 0,
+  avgDuration: 0,
+  failureRate1h: 0
+})
 
 export const useAdminStore = defineStore('admin', {
   state: () => ({
     overview: null as AdminHealthResponse | null,
     loading: false,
+    queueStats: emptyQueueStats() as AdminQueueStats,
+    stuckJobs: [] as AdminStuckJob[],
+    queueStatsLoading: false,
+    terminatingJobs: {} as Record<string, boolean>,
     reviewQueue: [] as AdminReviewStrategy[],
     reviewQueueLoading: false,
     reviewQueueMeta: {
@@ -42,6 +58,33 @@ export const useAdminStore = defineStore('admin', {
         this.overview = await fetchAdminHealth()
       } finally {
         this.loading = false
+      }
+    },
+    async loadQueueStats() {
+      this.queueStatsLoading = true
+      try {
+        const response = await fetchQueueStats()
+        this.queueStats = response.stats
+        this.stuckJobs = response.stuckJobs
+      } finally {
+        this.queueStatsLoading = false
+      }
+    },
+    async terminateJob(jobId: string, adminNote?: string): Promise<AdminTerminateJobResult> {
+      this.terminatingJobs[jobId] = true
+      try {
+        const result = await terminateJob(jobId, adminNote)
+        const hadJob = this.stuckJobs.some((item) => item.jobId === jobId)
+        this.stuckJobs = this.stuckJobs.filter((item) => item.jobId !== jobId)
+        if (hadJob) {
+          this.queueStats = {
+            ...this.queueStats,
+            running: Math.max(0, this.queueStats.running - 1)
+          }
+        }
+        return result
+      } finally {
+        this.terminatingJobs[jobId] = false
       }
     },
     async loadPendingReviews(page?: number) {

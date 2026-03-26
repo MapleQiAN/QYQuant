@@ -5,7 +5,7 @@
         <div>
           <p class="admin-dashboard__eyebrow">Admin Console</p>
           <h1>管理后台</h1>
-          <p>系统概览、审计能力与后续运营模块都会从这里展开。</p>
+          <p>系统概览、审核流程与任务监控都从这里进入，方便管理员集中处理平台运营事务。</p>
         </div>
         <div class="admin-dashboard__status">
           <span class="admin-dashboard__status-label">系统概览</span>
@@ -17,16 +17,24 @@
       <div class="admin-dashboard__grid">
         <article class="admin-card">
           <h2>访问控制</h2>
-          <p>当前后台入口已启用前后端双重 admin 权限校验。</p>
+          <p>后台路由和接口都启用了管理员校验，避免普通用户误入或越权操作。</p>
         </article>
+
         <article class="admin-card">
-          <h2>审计日志</h2>
-          <p>后续所有管理操作会统一写入审计日志表，便于追溯。</p>
+          <h2>审计留痕</h2>
+          <p>关键管理动作会持续写入审计日志，方便排查争议、回溯处理过程。</p>
         </article>
-        <article class="admin-card">
-          <h2>待扩展模块</h2>
-          <p>策略审核队列已就绪，后续可继续扩展用户管理、回测监控等模块。</p>
-          <RouterLink class="admin-card__link" to="/admin/strategies">进入策略审核</RouterLink>
+
+        <article class="admin-card admin-card--accent">
+          <h2>任务监控</h2>
+          <p>查看回测队列、识别疑似卡死任务，并在必要时执行人工终止。</p>
+          <RouterLink
+            class="admin-card__link"
+            data-test="admin-backtest-monitor-link"
+            to="/admin/backtest-monitor"
+          >
+            进入任务监控
+          </RouterLink>
         </article>
       </div>
     </div>
@@ -114,6 +122,12 @@ onMounted(() => {
   border-radius: 24px;
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(241, 245, 249, 0.96));
   box-shadow: 0 16px 36px rgba(15, 23, 42, 0.08);
+}
+
+.admin-card--accent {
+  background:
+    radial-gradient(circle at top right, rgba(14, 165, 233, 0.14), transparent 42%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.99), rgba(239, 246, 255, 0.96));
 }
 
 .admin-card h2,

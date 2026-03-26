@@ -69,6 +69,7 @@ describe('ReportManagement', () => {
     resolveReportMock.mockReset()
     toastSuccessMock.mockReset()
     toastErrorMock.mockReset()
+    vi.stubGlobal('confirm', vi.fn(() => true))
     storeState.reportQueue = [
       {
         id: 'report-1',

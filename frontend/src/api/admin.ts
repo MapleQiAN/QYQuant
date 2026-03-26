@@ -7,6 +7,32 @@ export interface AdminHealthResponse {
   scope: string
 }
 
+export interface AdminQueueStats {
+  pending: number
+  running: number
+  avgDuration: number
+  failureRate1h: number
+}
+
+export interface AdminStuckJob {
+  jobId: string
+  userId: string
+  strategyId: string
+  strategyName: string
+  startedAt: string | null
+  runningDurationSeconds: number
+}
+
+export interface AdminQueueStatsResult {
+  stats: AdminQueueStats
+  stuckJobs: AdminStuckJob[]
+}
+
+export interface AdminTerminateJobResult {
+  jobId: string
+  status: 'terminated'
+}
+
 export interface AdminReviewStrategy {
   id: string
   title: string
@@ -73,6 +99,30 @@ export interface AdminResolveReportResult {
   action: 'takedown' | 'dismiss'
 }
 
+interface AdminQueueStatsDto {
+  stats?: {
+    pending?: number | string | null
+    running?: number | string | null
+    avg_duration?: number | string | null
+    failure_rate_1h?: number | string | null
+  } | null
+  stuck_jobs?: AdminStuckJobDto[] | null
+}
+
+interface AdminStuckJobDto {
+  job_id?: string | null
+  user_id?: string | null
+  strategy_id?: string | null
+  strategy_name?: string | null
+  started_at?: string | null
+  running_duration_seconds?: number | string | null
+}
+
+interface AdminTerminateJobDto {
+  job_id?: string
+  status?: string | null
+}
+
 interface AdminReviewStrategyDto {
   id: string
   title?: string | null
@@ -116,6 +166,48 @@ export function fetchAdminHealth(): Promise<AdminHealthResponse> {
     method: 'get',
     url: '/v1/admin/health'
   })
+}
+
+export async function fetchQueueStats(): Promise<AdminQueueStatsResult> {
+  const response = await client.request<AdminQueueStatsDto>({
+    method: 'get',
+    url: '/v1/admin/backtest/queue-stats'
+  })
+
+  return {
+    stats: {
+      pending: toNumber(response.stats?.pending, 0),
+      running: toNumber(response.stats?.running, 0),
+      avgDuration: toNumber(response.stats?.avg_duration, 0),
+      failureRate1h: toNumber(response.stats?.failure_rate_1h, 0)
+    },
+    stuckJobs: (response.stuck_jobs ?? []).map((item) => ({
+      jobId: item.job_id ?? '',
+      userId: item.user_id ?? '',
+      strategyId: item.strategy_id ?? '',
+      strategyName: item.strategy_name ?? '',
+      startedAt: item.started_at ?? null,
+      runningDurationSeconds: toNumber(item.running_duration_seconds, 0)
+    }))
+  }
+}
+
+export async function terminateJob(
+  jobId: string,
+  adminNote?: string
+): Promise<AdminTerminateJobResult> {
+  const response = await client.request<AdminTerminateJobDto>({
+    method: 'delete',
+    url: `/v1/admin/backtest/${jobId}`,
+    data: {
+      admin_note: adminNote
+    }
+  })
+
+  return {
+    jobId: response.job_id || '',
+    status: normalizeTerminateStatus(response.status)
+  }
 }
 
 export async function fetchPendingStrategyReviews(params?: {
@@ -257,4 +349,8 @@ function normalizeReportStatus(value: unknown): AdminResolveReportResult['status
 
 function normalizeResolveAction(value: unknown): AdminResolveReportResult['action'] {
   return value === 'dismiss' ? 'dismiss' : 'takedown'
+}
+
+function normalizeTerminateStatus(value: unknown): AdminTerminateJobResult['status'] {
+  return value === 'terminated' ? 'terminated' : 'terminated'
 }

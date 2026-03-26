@@ -1,15 +1,18 @@
+from datetime import timedelta
+
 from flask import request
 from flask_smorest import Blueprint
 from sqlalchemy.orm import aliased
 
+from ..celery_app import celery_app
 from ..extensions import db
-from ..models import Report, Strategy, User
+from ..models import BacktestJob, BacktestJobStatus, Report, Strategy, User
 from ..services.notifications import create_notification
 from ..tasks.notification_tasks import send_email_notification
 from ..utils.auth_helpers import require_admin
 from ..utils.audit import log_audit
 from ..utils.response import error_response, ok
-from ..utils.time import format_beijing_iso, format_beijing_iso_ms, now_ms, now_utc
+from ..utils.time import ensure_aware_utc, format_beijing_iso, format_beijing_iso_ms, now_ms, now_utc
 
 bp = Blueprint("admin", __name__, url_prefix="/api/v1/admin")
 REVIEWABLE_STATUSES = {"approved", "rejected"}
@@ -240,6 +243,78 @@ def resolve_report(report_id):
     return ok({"report_id": report.id, "status": "dismissed", "action": action})
 
 
+@bp.get("/backtest/queue-stats")
+@require_admin
+def get_backtest_queue_stats():
+    return ok(
+        {
+            "stats": {
+                "pending": BacktestJob.query.filter_by(status=BacktestJobStatus.PENDING.value).count(),
+                "running": BacktestJob.query.filter_by(status=BacktestJobStatus.RUNNING.value).count(),
+                "avg_duration": _average_completed_duration_seconds(),
+                "failure_rate_1h": _failure_rate_last_hour(),
+            },
+            "stuck_jobs": _list_stuck_backtest_jobs(),
+        }
+    )
+
+
+@bp.delete("/backtest/<job_id>")
+@require_admin
+def terminate_backtest_job(job_id):
+    payload = request.get_json(silent=True) or {}
+    admin_note = payload.get("admin_note")
+    admin_note = str(admin_note).strip() if admin_note is not None else None
+    if not admin_note:
+        admin_note = None
+    if admin_note and len(admin_note) > 500:
+        return error_response("ADMIN_NOTE_TOO_LONG", "Admin note must be 500 characters or fewer", 422)
+
+    job = db.session.get(BacktestJob, job_id)
+    if job is None:
+        return error_response("JOB_NOT_FOUND", "Backtest job not found", 404)
+    if job.status not in {BacktestJobStatus.PENDING.value, BacktestJobStatus.RUNNING.value}:
+        return error_response("JOB_TERMINATION_CONFLICT", "Backtest job cannot be terminated", 409)
+
+    strategy = db.session.get(Strategy, job.strategy_id) if job.strategy_id else None
+    admin_id = _current_admin_id()
+    completed_at = now_utc()
+    running_duration_seconds = _duration_seconds(job.started_at, completed_at)
+    strategy_name = _strategy_display_name(strategy)
+    reason = admin_note or "管理员手动终止"
+
+    celery_app.control.revoke(job_id, terminate=True)
+
+    job.status = BacktestJobStatus.FAILED.value
+    job.error_message = "管理员手动终止"
+    job.completed_at = completed_at
+
+    if job.user_id:
+        create_notification(
+            user_id=job.user_id,
+            type="job_terminated",
+            title="回测任务已终止",
+            content=f"策略“{strategy_name}”的回测任务已被管理员终止。原因：{reason}",
+        )
+
+    log_audit(
+        operator_id=admin_id,
+        action="job_terminate",
+        target_type="backtest_job",
+        target_id=job.id,
+        details={
+            "job_id": job.id,
+            "user_id": job.user_id,
+            "strategy_id": job.strategy_id,
+            "strategy_name": strategy_name,
+            "running_duration_seconds": running_duration_seconds,
+            "admin_note": admin_note,
+        },
+    )
+    db.session.commit()
+    return ok({"job_id": job.id, "status": "terminated"})
+
+
 def _serialize_admin_strategy(strategy, author):
     return {
         "id": strategy.id,
@@ -281,6 +356,90 @@ def _notification_content_for_status(strategy_name, status, reason):
     if status == "approved":
         return f"您的策略《{strategy_name}》已通过审核，现已在策略广场上架。"
     return f"您的策略《{strategy_name}》未通过审核。原因：{reason}"
+
+
+def _average_completed_duration_seconds():
+    completed_jobs = (
+        BacktestJob.query
+        .filter(BacktestJob.status == BacktestJobStatus.COMPLETED.value)
+        .filter(BacktestJob.started_at.isnot(None), BacktestJob.completed_at.isnot(None))
+        .order_by(BacktestJob.completed_at.desc(), BacktestJob.id.desc())
+        .limit(100)
+        .all()
+    )
+    durations = [
+        _duration_seconds(job.started_at, job.completed_at)
+        for job in completed_jobs
+        if job.started_at is not None and job.completed_at is not None
+    ]
+    if not durations:
+        return 0
+    return int(round(sum(durations) / len(durations)))
+
+
+def _failure_rate_last_hour():
+    cutoff = now_utc() - timedelta(hours=1)
+    terminal_jobs = (
+        BacktestJob.query
+        .filter(
+            BacktestJob.status.in_(
+                [
+                    BacktestJobStatus.COMPLETED.value,
+                    BacktestJobStatus.FAILED.value,
+                    BacktestJobStatus.TIMEOUT.value,
+                ]
+            )
+        )
+        .filter(BacktestJob.completed_at.isnot(None), BacktestJob.completed_at >= cutoff)
+        .all()
+    )
+    if not terminal_jobs:
+        return 0
+    failed_jobs = sum(
+        1
+        for job in terminal_jobs
+        if job.status in {BacktestJobStatus.FAILED.value, BacktestJobStatus.TIMEOUT.value}
+    )
+    return round(failed_jobs / len(terminal_jobs), 4)
+
+
+def _list_stuck_backtest_jobs():
+    cutoff = now_utc() - timedelta(minutes=10)
+    current_time = now_utc()
+    items = (
+        db.session.query(BacktestJob, Strategy)
+        .outerjoin(Strategy, BacktestJob.strategy_id == Strategy.id)
+        .filter(BacktestJob.status == BacktestJobStatus.RUNNING.value)
+        .filter(BacktestJob.started_at.isnot(None), BacktestJob.started_at < cutoff)
+        .order_by(BacktestJob.started_at.asc(), BacktestJob.id.asc())
+        .all()
+    )
+    return [_serialize_stuck_job(job, strategy, current_time) for job, strategy in items]
+
+
+def _serialize_stuck_job(job, strategy, current_time):
+    return {
+        "job_id": job.id,
+        "user_id": job.user_id,
+        "strategy_id": job.strategy_id,
+        "strategy_name": _strategy_display_name(strategy),
+        "started_at": format_beijing_iso(job.started_at),
+        "running_duration_seconds": _duration_seconds(job.started_at, current_time),
+    }
+
+
+def _strategy_display_name(strategy):
+    if strategy is None:
+        return "未命名策略"
+    return strategy.title or strategy.name or "未命名策略"
+
+
+def _duration_seconds(started_at, ended_at):
+    if started_at is None or ended_at is None:
+        return 0
+    started_at = ensure_aware_utc(started_at)
+    ended_at = ensure_aware_utc(ended_at)
+    return max(int((ended_at - started_at).total_seconds()), 0)
 
 
 def _int_arg(name, *, default, minimum=None, maximum=None):
