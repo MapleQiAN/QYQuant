@@ -124,14 +124,14 @@ def _serialize_admin_strategy(strategy, author):
 
 def _notification_title_for_status(status):
     if status == "approved":
-        return "Strategy review approved"
-    return "Strategy review rejected"
+        return "策略审核通过"
+    return "策略审核被拒绝"
 
 
 def _notification_content_for_status(strategy_name, status, reason):
     if status == "approved":
-        return f"Your strategy {strategy_name} has been approved for marketplace listing."
-    return f"Your strategy {strategy_name} was rejected. Reason: {reason}"
+        return f"您的策略「{strategy_name}」已通过审核，现已在策略广场上架。"
+    return f"您的策略「{strategy_name}」未通过审核。原因：{reason}"
 
 
 def _int_arg(name, *, default, minimum=None, maximum=None):

@@ -255,8 +255,9 @@ def test_admin_strategy_review_approve_updates_state_and_writes_side_effects(cli
             type="strategy_review_result",
         ).first()
         assert notification is not None
-        assert notification.title
+        assert notification.title == "策略审核通过"
         assert "Approve Me" in (notification.content or "")
+        assert "策略广场上架" in (notification.content or "")
 
         audit = AuditLog.query.filter_by(
             operator_id=admin_id,
@@ -334,7 +335,9 @@ def test_admin_strategy_review_reject_requires_reason_and_marks_private(client, 
             type="strategy_review_result",
         ).first()
         assert notification is not None
+        assert notification.title == "策略审核被拒绝"
         assert "风险披露不足" in (notification.content or "")
+        assert "未通过审核" in (notification.content or "")
 
         audit = AuditLog.query.filter_by(
             operator_id=admin_id,
@@ -390,3 +393,24 @@ def test_admin_strategy_review_returns_conflict_when_already_processed(client, a
 
     assert response.status_code == 409
     assert response.json["error"]["code"] == "STRATEGY_REVIEW_CONFLICT"
+
+
+def test_admin_strategy_review_rejects_invalid_status(client, app):
+    admin_token, admin_id = _login_user(client, phone="13800138221", nickname="InvalidStatusAdmin")
+    _, owner_id = _login_user(client, phone="13800138222", nickname="InvalidStatusAuthor")
+
+    with app.app_context():
+        admin = db.session.get(User, admin_id)
+        admin.role = "admin"
+        db.session.commit()
+
+    _seed_strategy_for_review(app, strategy_id="pending-invalid", owner_id=owner_id)
+
+    response = client.patch(
+        "/api/v1/admin/strategies/pending-invalid/review",
+        json={"status": "invalid_value"},
+        headers=_auth_headers(admin_token),
+    )
+
+    assert response.status_code == 422
+    assert response.json["error"]["code"] == "REVIEW_STATUS_INVALID"

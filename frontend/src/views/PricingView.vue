@@ -8,9 +8,12 @@
       </header>
 
       <p v-if="loading" class="message">正在加载套餐信息...</p>
-      <p v-else-if="loadError" class="message error">{{ loadError }}</p>
+      <template v-else>
+        <p v-if="!isLoggedIn" class="message login-hint">请先登录以查看当前套餐信息并进行升级。</p>
+        <p v-else-if="loadError" class="message error">{{ loadError }}</p>
+      </template>
 
-      <div class="pricing-grid">
+      <div v-if="!loading && (isLoggedIn ? !loadError : true)" class="pricing-grid">
         <article
           v-for="plan in PLANS"
           :key="plan.level"
@@ -92,8 +95,11 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
+import { useRouter } from 'vue-router'
 import { createPaymentOrder, type CreatePaymentOrderResponse, type PaymentProvider, type PlanLevel } from '../api/payments'
 import { fetchMyQuota } from '../api/users'
+
+const router = useRouter()
 
 const PLANS = [
   { level: 'free', name: '免费', price: 0, quota: 10, description: '适合入门体验和熟悉平台。' },
@@ -106,6 +112,7 @@ const loading = ref(true)
 const loadError = ref('')
 const actionError = ref('')
 const submitting = ref(false)
+const isLoggedIn = ref(false)
 const currentPlanLevel = ref<PlanLevel>('free')
 const pendingOrder = ref<CreatePaymentOrderResponse | null>(null)
 const wechatPayUrl = ref('')
@@ -119,6 +126,13 @@ function planLabel(level: PlanLevel) {
 async function loadQuota() {
   loading.value = true
   loadError.value = ''
+  const token = localStorage.getItem('qyquant-token')
+  if (!token) {
+    isLoggedIn.value = false
+    loading.value = false
+    return
+  }
+  isLoggedIn.value = true
   try {
     const quota = await fetchMyQuota()
     currentPlanLevel.value = quota.plan_level as PlanLevel
@@ -130,6 +144,10 @@ async function loadQuota() {
 }
 
 async function startCheckout(planLevel: PlanLevel, provider: PaymentProvider) {
+  if (!isLoggedIn.value) {
+    actionError.value = '请先登录后再进行支付'
+    return
+  }
   actionError.value = ''
   submitting.value = true
   wechatPayUrl.value = ''
