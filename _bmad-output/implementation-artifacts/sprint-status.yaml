@@ -124,8 +124,8 @@ development_status:
   # Epic 8: 订阅套餐与支付
   # ─────────────────────────────────────────────────────────────
   epic-8: in-progress
-  8-1-查看套餐信息与剩余额度: ready-for-dev
-  8-2-选择套餐并发起支付: ready-for-dev
+  8-1-查看套餐信息与剩余额度: review
+  8-2-选择套餐并发起支付: review
   8-3-支付回调处理与套餐激活: done
   8-4-celery-beat月度额度重置: ready-for-dev
   epic-8-retrospective: optional
@@ -143,8 +143,8 @@ development_status:
   # ─────────────────────────────────────────────────────────────
   epic-10: in-progress
   10-1-管理后台基础框架-路由守卫-admin蓝图: ready-for-dev
-  10-2-策略审核队列: ready-for-dev
-  10-3-用户举报处理与内容下架: backlog
+  10-2-策略审核队列: done
+  10-3-用户举报处理与内容下架: ready-for-dev
   10-4-回测任务队列监控与手动干预: backlog
   10-5-用户账户管理-封禁与审计日志查看: backlog
   10-6-数据源健康监控与异常告警: backlog
