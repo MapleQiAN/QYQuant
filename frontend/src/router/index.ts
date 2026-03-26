@@ -20,6 +20,7 @@ import AdminDashboardView from '../views/admin/AdminDashboard.vue'
 import BacktestMonitorView from '../views/admin/BacktestMonitor.vue'
 import ReportManagementView from '../views/admin/ReportManagement.vue'
 import StrategyReviewView from '../views/admin/StrategyReview.vue'
+import UserManagementView from '../views/admin/UserManagement.vue'
 
 const router = createRouter({
   history: createWebHistory(),
@@ -37,6 +38,7 @@ const router = createRouter({
     { path: '/admin/backtest-monitor', name: 'admin-backtest-monitor', component: BacktestMonitorView, meta: { requiresAdmin: true } },
     { path: '/admin/strategies', name: 'admin-strategy-review', component: StrategyReviewView, meta: { requiresAdmin: true } },
     { path: '/admin/reports', name: 'admin-report-management', component: ReportManagementView, meta: { requiresAdmin: true } },
+    { path: '/admin/user-management', name: 'admin-user-management', component: UserManagementView, meta: { requiresAdmin: true } },
     { path: '/backtests/:jobId/report', name: 'backtest-report', component: BacktestResultView },
     { path: '/bots', name: 'bots', component: BotsView },
     { path: '/forum', name: 'forum', component: ForumView },

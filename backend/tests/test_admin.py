@@ -1,7 +1,7 @@
-from datetime import timedelta
+from datetime import datetime, timedelta, timezone
 
 from app.extensions import db
-from app.models import AuditLog, BacktestJob, BacktestJobStatus, Notification, Report, Strategy, User
+from app.models import AuditLog, BacktestJob, BacktestJobStatus, Notification, RefreshToken, Report, Strategy, User
 from app.utils.time import now_utc
 
 
@@ -1078,6 +1078,328 @@ def test_admin_terminate_backtest_job_rejects_non_admin_users(client, app):
         "/api/v1/admin/backtest/forbidden-job",
         headers=_auth_headers(token),
     )
+
+    assert response.status_code == 403
+    assert response.json["error"]["code"] == "FORBIDDEN"
+
+
+def test_admin_users_list_returns_masked_users_with_pagination(client, app):
+    admin_token, admin_id = _login_user(client, phone="13800138241", nickname="UserAdmin")
+    _, newer_user_id = _login_user(client, phone="13800138242", nickname="Recent User")
+    _, older_user_id = _login_user(client, phone="13800138243", nickname="Older User")
+
+    with app.app_context():
+        admin = db.session.get(User, admin_id)
+        admin.role = "admin"
+
+        newer_user = db.session.get(User, newer_user_id)
+        newer_user.nickname = "Recent User"
+        newer_user.plan_level = "pro"
+        newer_user.created_at = datetime(2026, 3, 26, 4, 30, tzinfo=timezone.utc)
+        newer_user.is_banned = True
+
+        older_user = db.session.get(User, older_user_id)
+        older_user.nickname = "Older User"
+        older_user.plan_level = "starter"
+        older_user.created_at = datetime(2026, 3, 25, 2, 0, tzinfo=timezone.utc)
+        db.session.commit()
+
+    response = client.get(
+        "/api/v1/admin/users?page=1&per_page=2",
+        headers=_auth_headers(admin_token),
+    )
+
+    assert response.status_code == 200
+    assert response.json["meta"] == {"total": 2, "page": 1, "per_page": 2}
+    assert [item["user_id"] for item in response.json["data"]] == [newer_user_id, older_user_id]
+    assert response.json["data"][0] == {
+        "user_id": newer_user_id,
+        "nickname": "Recent User",
+        "phone": "138****8242",
+        "created_at": "2026-03-26T12:30:00+08:00",
+        "plan_level": "pro",
+        "is_banned": True,
+    }
+
+
+def test_admin_users_list_supports_search_by_phone_or_nickname(client, app):
+    admin_token, admin_id = _login_user(client, phone="13800138244", nickname="SearchAdmin")
+    _, alpha_user_id = _login_user(client, phone="13800138245", nickname="Alpha Quant")
+    _, beta_user_id = _login_user(client, phone="13900138246", nickname="Beta Trader")
+
+    with app.app_context():
+        admin = db.session.get(User, admin_id)
+        admin.role = "admin"
+        db.session.get(User, alpha_user_id).nickname = "Alpha Quant"
+        db.session.get(User, beta_user_id).nickname = "Beta Trader"
+        db.session.commit()
+
+    by_nickname = client.get(
+        "/api/v1/admin/users?search=Alpha",
+        headers=_auth_headers(admin_token),
+    )
+    by_phone = client.get(
+        "/api/v1/admin/users?search=1390013",
+        headers=_auth_headers(admin_token),
+    )
+
+    assert by_nickname.status_code == 200
+    assert [item["user_id"] for item in by_nickname.json["data"]] == [alpha_user_id]
+    assert by_phone.status_code == 200
+    assert [item["user_id"] for item in by_phone.json["data"]] == [beta_user_id]
+
+
+def test_admin_users_list_rejects_non_admin_users(client):
+    token, _ = _login_user(client, phone="13800138247", nickname="PlainMember")
+
+    response = client.get("/api/v1/admin/users", headers=_auth_headers(token))
+
+    assert response.status_code == 403
+    assert response.json["error"]["code"] == "FORBIDDEN"
+
+
+def test_admin_user_ban_revokes_all_refresh_tokens_and_writes_side_effects(client, app, monkeypatch):
+    admin_token, admin_id = _login_user(client, phone="13800138248", nickname="BanAdmin")
+    _, target_user_id = _login_user(client, phone="13800138249", nickname="Risk User")
+    second_device = client.application.test_client()
+    _seed_code(second_device.application, "13800138249")
+    second_login = second_device.post(
+        "/api/v1/auth/login",
+        json={"phone": "13800138249", "code": "123456"},
+    )
+    assert second_login.status_code == 200
+
+    with app.app_context():
+        admin = db.session.get(User, admin_id)
+        admin.role = "admin"
+        db.session.commit()
+
+    delay_calls = []
+    from app.blueprints import admin as admin_blueprint
+
+    monkeypatch.setattr(
+        admin_blueprint.send_email_notification,
+        "delay",
+        lambda **kwargs: delay_calls.append(kwargs),
+    )
+
+    response = client.patch(
+        f"/api/v1/admin/users/{target_user_id}",
+        json={"is_banned": True, "ban_reason": "spam"},
+        headers=_auth_headers(admin_token),
+    )
+
+    assert response.status_code == 200
+    assert response.json["data"] == {"user_id": target_user_id, "is_banned": True}
+
+    from app.utils.redis_client import get_auth_store
+
+    with app.app_context():
+        banned_user = db.session.get(User, target_user_id)
+        assert banned_user.is_banned is True
+
+        token_rows = list(
+            RefreshToken.query.filter_by(user_id=target_user_id).order_by(RefreshToken.created_at.asc()).all()
+        )
+        assert len(token_rows) == 2
+        assert all(row.revoked_at is not None for row in token_rows)
+        assert all(get_auth_store().is_token_blacklisted(row.jti) for row in token_rows)
+
+        notification = (
+            Notification.query.filter_by(user_id=target_user_id)
+            .order_by(Notification.created_at.desc())
+            .first()
+        )
+        assert notification is not None
+        assert notification.type == "user_ban_status"
+        assert "封禁" in notification.title
+
+        audit = AuditLog.query.filter_by(
+            operator_id=admin_id,
+            action="user_ban",
+            target_type="user",
+            target_id=target_user_id,
+        ).first()
+        assert audit is not None
+        assert audit.details["ban_reason"] == "spam"
+        assert audit.details["token_revoked_count"] == 2
+
+    assert delay_calls == [
+        {
+            "user_id": target_user_id,
+            "event_type": "user_ban_status",
+            "context_data": {
+                "is_banned": True,
+                "ban_reason": "spam",
+                "target_id": target_user_id,
+            },
+        }
+    ]
+
+
+def test_admin_user_ban_is_idempotent_for_same_state(client, app):
+    admin_token, admin_id = _login_user(client, phone="13800138250", nickname="IdempotentAdmin")
+    _, target_user_id = _login_user(client, phone="13800138251", nickname="Already Banned")
+
+    with app.app_context():
+        admin = db.session.get(User, admin_id)
+        admin.role = "admin"
+        target_user = db.session.get(User, target_user_id)
+        target_user.is_banned = True
+        db.session.commit()
+
+    first = client.patch(
+        f"/api/v1/admin/users/{target_user_id}",
+        json={"is_banned": True, "ban_reason": "repeat"},
+        headers=_auth_headers(admin_token),
+    )
+    second = client.patch(
+        f"/api/v1/admin/users/{target_user_id}",
+        json={"is_banned": True, "ban_reason": "repeat"},
+        headers=_auth_headers(admin_token),
+    )
+
+    assert first.status_code == 200
+    assert second.status_code == 200
+
+    with app.app_context():
+        assert AuditLog.query.filter_by(action="user_ban", target_id=target_user_id).count() == 0
+        assert Notification.query.filter_by(user_id=target_user_id, type="user_ban_status").count() == 0
+
+
+def test_admin_user_unban_updates_state_and_writes_audit(client, app, monkeypatch):
+    admin_token, admin_id = _login_user(client, phone="13800138252", nickname="UnbanAdmin")
+    _, target_user_id = _login_user(client, phone="13800138253", nickname="Recovered User")
+
+    delay_calls = []
+    from app.blueprints import admin as admin_blueprint
+
+    monkeypatch.setattr(
+        admin_blueprint.send_email_notification,
+        "delay",
+        lambda **kwargs: delay_calls.append(kwargs),
+    )
+
+    with app.app_context():
+        admin = db.session.get(User, admin_id)
+        admin.role = "admin"
+        target_user = db.session.get(User, target_user_id)
+        target_user.is_banned = True
+        db.session.commit()
+
+    response = client.patch(
+        f"/api/v1/admin/users/{target_user_id}",
+        json={"is_banned": False},
+        headers=_auth_headers(admin_token),
+    )
+
+    assert response.status_code == 200
+    assert response.json["data"] == {"user_id": target_user_id, "is_banned": False}
+
+    with app.app_context():
+        target_user = db.session.get(User, target_user_id)
+        assert target_user.is_banned is False
+
+        audit = AuditLog.query.filter_by(
+            operator_id=admin_id,
+            action="user_unban",
+            target_type="user",
+            target_id=target_user_id,
+        ).first()
+        assert audit is not None
+
+        notification = (
+            Notification.query.filter_by(user_id=target_user_id)
+            .order_by(Notification.created_at.desc())
+            .first()
+        )
+        assert notification is not None
+        assert notification.type == "user_ban_status"
+        assert "解封" in notification.title
+
+    assert delay_calls == [
+        {
+            "user_id": target_user_id,
+            "event_type": "user_ban_status",
+            "context_data": {
+                "is_banned": False,
+                "ban_reason": None,
+                "target_id": target_user_id,
+            },
+        }
+    ]
+
+
+def test_admin_audit_logs_list_supports_filters_and_pagination(client, app):
+    admin_token, admin_id = _login_user(client, phone="13800138254", nickname="AuditAdmin")
+    _, operator_id = _login_user(client, phone="13800138255", nickname="Operator User")
+
+    with app.app_context():
+        admin = db.session.get(User, admin_id)
+        admin.role = "admin"
+        operator = db.session.get(User, operator_id)
+        operator.nickname = "Operator User"
+        db.session.add(
+            AuditLog(
+                id="audit-log-1",
+                operator_id=operator_id,
+                action="user_ban",
+                target_type="user",
+                target_id="user-100",
+                details={"ban_reason": "spam"},
+                created_at=datetime(2026, 3, 26, 1, 0, tzinfo=timezone.utc),
+            )
+        )
+        db.session.add(
+            AuditLog(
+                id="audit-log-2",
+                operator_id=admin_id,
+                action="report_dismiss",
+                target_type="report",
+                target_id="report-200",
+                details={"admin_note": "not valid"},
+                created_at=datetime(2026, 3, 25, 1, 0, tzinfo=timezone.utc),
+            )
+        )
+        db.session.commit()
+
+    response = client.get(
+        f"/api/v1/admin/audit-logs?operator_id={operator_id}&action=user_ban&target_type=user&target_id=user-100&page=1&per_page=1",
+        headers=_auth_headers(admin_token),
+    )
+
+    assert response.status_code == 200
+    assert response.json["meta"] == {"total": 1, "page": 1, "per_page": 1}
+    assert response.json["data"] == [
+        {
+            "id": "audit-log-1",
+            "operator_id": operator_id,
+            "operator_nickname": "Operator User",
+            "action": "user_ban",
+            "target_type": "user",
+            "target_id": "user-100",
+            "details": {"ban_reason": "spam"},
+            "created_at": "2026-03-26T09:00:00+08:00",
+        }
+    ]
+
+
+def test_admin_audit_logs_rejects_non_admin_users(client, app):
+    token, operator_id = _login_user(client, phone="13800138256", nickname="AuditReader")
+
+    with app.app_context():
+        db.session.add(
+            AuditLog(
+                id="audit-log-forbidden",
+                operator_id=operator_id,
+                action="user_ban",
+                target_type="user",
+                target_id="user-1",
+            )
+        )
+        db.session.commit()
+
+    response = client.get("/api/v1/admin/audit-logs", headers=_auth_headers(token))
 
     assert response.status_code == 403
     assert response.json["error"]["code"] == "FORBIDDEN"

@@ -3,30 +3,39 @@ import { createPinia, setActivePinia } from 'pinia'
 
 const {
   fetchAdminHealthMock,
+  fetchAuditLogsMock,
   fetchQueueStatsMock,
+  fetchUsersMock,
   fetchPendingStrategyReviewsMock,
   submitStrategyReviewMock,
   fetchPendingReportsMock,
   resolveReportMock,
-  terminateJobMock
+  terminateJobMock,
+  updateUserBanStatusMock
 } = vi.hoisted(() => ({
   fetchAdminHealthMock: vi.fn(),
+  fetchAuditLogsMock: vi.fn(),
   fetchQueueStatsMock: vi.fn(),
+  fetchUsersMock: vi.fn(),
   fetchPendingStrategyReviewsMock: vi.fn(),
   submitStrategyReviewMock: vi.fn(),
   fetchPendingReportsMock: vi.fn(),
   resolveReportMock: vi.fn(),
-  terminateJobMock: vi.fn()
+  terminateJobMock: vi.fn(),
+  updateUserBanStatusMock: vi.fn()
 }))
 
 vi.mock('../api/admin', () => ({
   fetchAdminHealth: fetchAdminHealthMock,
+  fetchAuditLogs: fetchAuditLogsMock,
   fetchQueueStats: fetchQueueStatsMock,
+  fetchUsers: fetchUsersMock,
   fetchPendingStrategyReviews: fetchPendingStrategyReviewsMock,
   submitStrategyReview: submitStrategyReviewMock,
   fetchPendingReports: fetchPendingReportsMock,
   resolveReport: resolveReportMock,
-  terminateJob: terminateJobMock
+  terminateJob: terminateJobMock,
+  updateUserBanStatus: updateUserBanStatusMock
 }))
 
 import { useAdminStore } from './useAdminStore'
@@ -35,12 +44,15 @@ describe('admin store', () => {
   beforeEach(() => {
     setActivePinia(createPinia())
     fetchAdminHealthMock.mockReset()
+    fetchAuditLogsMock.mockReset()
     fetchQueueStatsMock.mockReset()
+    fetchUsersMock.mockReset()
     fetchPendingStrategyReviewsMock.mockReset()
     submitStrategyReviewMock.mockReset()
     fetchPendingReportsMock.mockReset()
     resolveReportMock.mockReset()
     terminateJobMock.mockReset()
+    updateUserBanStatusMock.mockReset()
   })
 
   it('loads admin health overview into state', async () => {
@@ -85,6 +97,136 @@ describe('admin store', () => {
     expect(store.reviewQueue).toHaveLength(1)
     expect(store.reviewQueueMeta).toEqual({ total: 1, page: 1, perPage: 20 })
     expect(store.reviewQueueLoading).toBe(false)
+  })
+
+  it('loads admin users into state', async () => {
+    fetchUsersMock.mockResolvedValueOnce({
+      data: [
+        {
+          userId: 'user-1',
+          nickname: 'Alice',
+          phone: '138****8000',
+          createdAt: '2026-03-26T12:00:00+08:00',
+          planLevel: 'pro',
+          isBanned: false
+        }
+      ],
+      meta: {
+        total: 1,
+        page: 2,
+        perPage: 10
+      }
+    })
+
+    const store = useAdminStore()
+    await store.loadUsers({ search: 'Alice', page: 2, perPage: 10 })
+
+    expect(fetchUsersMock).toHaveBeenCalledWith({ search: 'Alice', page: 2, perPage: 10 })
+    expect(store.users).toHaveLength(1)
+    expect(store.usersMeta).toEqual({ total: 1, page: 2, perPage: 10 })
+    expect(store.userListLoading).toBe(false)
+  })
+
+  it('bans a user and updates local state', async () => {
+    fetchUsersMock.mockResolvedValueOnce({
+      data: [
+        {
+          userId: 'user-1',
+          nickname: 'Alice',
+          phone: '138****8000',
+          createdAt: '2026-03-26T12:00:00+08:00',
+          planLevel: 'pro',
+          isBanned: false
+        }
+      ],
+      meta: {
+        total: 1,
+        page: 1,
+        perPage: 20
+      }
+    })
+    updateUserBanStatusMock.mockResolvedValueOnce({
+      userId: 'user-1',
+      isBanned: true
+    })
+
+    const store = useAdminStore()
+    await store.loadUsers()
+    const result = await store.banUser('user-1', 'spam')
+
+    expect(updateUserBanStatusMock).toHaveBeenCalledWith('user-1', {
+      isBanned: true,
+      banReason: 'spam'
+    })
+    expect(result).toEqual({ userId: 'user-1', isBanned: true })
+    expect(store.users[0]?.isBanned).toBe(true)
+    expect(store.banningUsers['user-1']).toBe(false)
+  })
+
+  it('unbans a user and updates local state', async () => {
+    fetchUsersMock.mockResolvedValueOnce({
+      data: [
+        {
+          userId: 'user-1',
+          nickname: 'Alice',
+          phone: '138****8000',
+          createdAt: '2026-03-26T12:00:00+08:00',
+          planLevel: 'pro',
+          isBanned: true
+        }
+      ],
+      meta: {
+        total: 1,
+        page: 1,
+        perPage: 20
+      }
+    })
+    updateUserBanStatusMock.mockResolvedValueOnce({
+      userId: 'user-1',
+      isBanned: false
+    })
+
+    const store = useAdminStore()
+    await store.loadUsers()
+    const result = await store.unbanUser('user-1')
+
+    expect(updateUserBanStatusMock).toHaveBeenCalledWith('user-1', {
+      isBanned: false,
+      banReason: undefined
+    })
+    expect(result).toEqual({ userId: 'user-1', isBanned: false })
+    expect(store.users[0]?.isBanned).toBe(false)
+    expect(store.banningUsers['user-1']).toBe(false)
+  })
+
+  it('loads audit logs into state', async () => {
+    fetchAuditLogsMock.mockResolvedValueOnce({
+      data: [
+        {
+          id: 'audit-1',
+          operatorId: 'admin-1',
+          operatorNickname: 'Root',
+          action: 'user_ban',
+          targetType: 'user',
+          targetId: 'user-1',
+          details: { ban_reason: 'spam' },
+          createdAt: '2026-03-26T12:30:00+08:00'
+        }
+      ],
+      meta: {
+        total: 1,
+        page: 1,
+        perPage: 20
+      }
+    })
+
+    const store = useAdminStore()
+    await store.loadAuditLogs({ action: 'user_ban' })
+
+    expect(fetchAuditLogsMock).toHaveBeenCalledWith({ action: 'user_ban', page: 1, perPage: 20 })
+    expect(store.auditLogs).toHaveLength(1)
+    expect(store.auditLogsMeta).toEqual({ total: 1, page: 1, perPage: 20 })
+    expect(store.auditLogsLoading).toBe(false)
   })
 
   it('loads backtest queue stats into state', async () => {

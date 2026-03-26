@@ -99,6 +99,71 @@ export interface AdminResolveReportResult {
   action: 'takedown' | 'dismiss'
 }
 
+export interface AdminUser {
+  userId: string
+  nickname: string
+  phone: string
+  createdAt: string | null
+  planLevel: string
+  isBanned: boolean
+}
+
+export interface AdminUserListResult {
+  data: AdminUser[]
+  meta: {
+    total: number
+    page: number
+    perPage: number
+  }
+}
+
+export interface AdminUserListParams {
+  search?: string
+  page?: number
+  perPage?: number
+}
+
+export interface AdminUserBanStatusPayload {
+  isBanned: boolean
+  banReason?: string
+}
+
+export interface AdminUserBanStatusResult {
+  userId: string
+  isBanned: boolean
+}
+
+export interface AdminAuditLog {
+  id: string
+  operatorId: string
+  operatorNickname: string
+  action: string
+  targetType: string
+  targetId: string
+  details: Record<string, unknown>
+  createdAt: string | null
+}
+
+export interface AdminAuditLogListResult {
+  data: AdminAuditLog[]
+  meta: {
+    total: number
+    page: number
+    perPage: number
+  }
+}
+
+export interface AdminAuditLogFilters {
+  operatorId?: string
+  action?: string
+  targetType?: string
+  targetId?: string
+  dateFrom?: string
+  dateTo?: string
+  page?: number
+  perPage?: number
+}
+
 interface AdminQueueStatsDto {
   stats?: {
     pending?: number | string | null
@@ -159,6 +224,31 @@ interface AdminResolveReportDto {
   report_id?: string
   status?: string | null
   action?: string | null
+}
+
+interface AdminUserDto {
+  user_id?: string | null
+  nickname?: string | null
+  phone?: string | null
+  created_at?: string | null
+  plan_level?: string | null
+  is_banned?: boolean | null
+}
+
+interface AdminUserBanStatusDto {
+  user_id?: string | null
+  is_banned?: boolean | null
+}
+
+interface AdminAuditLogDto {
+  id?: string | null
+  operator_id?: string | null
+  operator_nickname?: string | null
+  action?: string | null
+  target_type?: string | null
+  target_id?: string | null
+  details?: Record<string, unknown> | null
+  created_at?: string | null
 }
 
 export function fetchAdminHealth(): Promise<AdminHealthResponse> {
@@ -321,6 +411,92 @@ export async function resolveReport(
     reportId: response.report_id || '',
     status: normalizeReportStatus(response.status),
     action: normalizeResolveAction(response.action)
+  }
+}
+
+export async function fetchUsers(params?: AdminUserListParams): Promise<AdminUserListResult> {
+  const page = params?.page ?? 1
+  const perPage = params?.perPage ?? 20
+  const response = await client.requestWithMeta<AdminUserDto[]>({
+    method: 'get',
+    url: '/v1/admin/users',
+    params: {
+      search: params?.search ?? '',
+      page,
+      per_page: perPage
+    }
+  })
+
+  return {
+    data: (response.data ?? []).map((item) => ({
+      userId: item.user_id ?? '',
+      nickname: item.nickname ?? '',
+      phone: item.phone ?? '',
+      createdAt: item.created_at ?? null,
+      planLevel: item.plan_level ?? '',
+      isBanned: Boolean(item.is_banned)
+    })),
+    meta: {
+      total: toNumber(response.meta?.total, 0),
+      page: toNumber(response.meta?.page, page),
+      perPage: toNumber(response.meta?.per_page, perPage)
+    }
+  }
+}
+
+export async function updateUserBanStatus(
+  userId: string,
+  payload: AdminUserBanStatusPayload
+): Promise<AdminUserBanStatusResult> {
+  const response = await client.request<AdminUserBanStatusDto>({
+    method: 'patch',
+    url: `/v1/admin/users/${userId}`,
+    data: {
+      is_banned: payload.isBanned,
+      ban_reason: payload.banReason
+    }
+  })
+
+  return {
+    userId: response.user_id ?? '',
+    isBanned: Boolean(response.is_banned)
+  }
+}
+
+export async function fetchAuditLogs(filters?: AdminAuditLogFilters): Promise<AdminAuditLogListResult> {
+  const page = filters?.page ?? 1
+  const perPage = filters?.perPage ?? 20
+  const response = await client.requestWithMeta<AdminAuditLogDto[]>({
+    method: 'get',
+    url: '/v1/admin/audit-logs',
+    params: {
+      operator_id: filters?.operatorId,
+      action: filters?.action,
+      target_type: filters?.targetType,
+      target_id: filters?.targetId,
+      date_from: filters?.dateFrom,
+      date_to: filters?.dateTo,
+      page,
+      per_page: perPage
+    }
+  })
+
+  return {
+    data: (response.data ?? []).map((item) => ({
+      id: item.id ?? '',
+      operatorId: item.operator_id ?? '',
+      operatorNickname: item.operator_nickname ?? '',
+      action: item.action ?? '',
+      targetType: item.target_type ?? '',
+      targetId: item.target_id ?? '',
+      details: item.details ?? {},
+      createdAt: item.created_at ?? null
+    })),
+    meta: {
+      total: toNumber(response.meta?.total, 0),
+      page: toNumber(response.meta?.page, page),
+      perPage: toNumber(response.meta?.per_page, perPage)
+    }
   }
 }
 

@@ -33,6 +33,18 @@
           </RouterLink>
         </article>
 
+        <article class="admin-card">
+          <h2>用户管理</h2>
+          <p>查看用户账号状态、执行封禁或解封，并集中查看相关审计日志。</p>
+          <RouterLink
+            class="admin-card__link"
+            data-test="admin-user-management-link"
+            to="/admin/user-management"
+          >
+            进入用户管理
+          </RouterLink>
+        </article>
+
         <article class="admin-card admin-card--accent">
           <h2>任务监控</h2>
           <p>查看回测队列、识别疑似卡死任务，并在必要时执行人工终止。</p>

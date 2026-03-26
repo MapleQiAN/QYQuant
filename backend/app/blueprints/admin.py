@@ -1,14 +1,16 @@
-from datetime import timedelta
+from datetime import datetime, timedelta
 
 from flask import request
 from flask_smorest import Blueprint
+from sqlalchemy import or_
 from sqlalchemy.orm import aliased
 
 from ..celery_app import celery_app
 from ..extensions import db
-from ..models import BacktestJob, BacktestJobStatus, Report, Strategy, User
+from ..models import AuditLog, BacktestJob, BacktestJobStatus, Report, Strategy, User
 from ..services.notifications import create_notification
 from ..tasks.notification_tasks import send_email_notification
+from ..utils.auth import blacklist_refresh_tokens, revoke_all_user_tokens
 from ..utils.auth_helpers import require_admin
 from ..utils.audit import log_audit
 from ..utils.response import error_response, ok
@@ -243,6 +245,131 @@ def resolve_report(report_id):
     return ok({"report_id": report.id, "status": "dismissed", "action": action})
 
 
+@bp.get("/users")
+@require_admin
+def list_admin_users():
+    search = (request.args.get("search") or "").strip()
+    page = _int_arg("page", default=1, minimum=1)
+    per_page = _int_arg("per_page", default=20, minimum=1, maximum=100)
+
+    query = User.query.filter(User.deleted_at.is_(None), User.role != "admin")
+    if search:
+        pattern = f"%{search}%"
+        query = query.filter(or_(User.phone.ilike(pattern), User.nickname.ilike(pattern)))
+
+    total = query.count()
+    items = query.order_by(User.created_at.desc(), User.id.desc()).offset((page - 1) * per_page).limit(per_page).all()
+    return ok(
+        [_serialize_admin_user(user) for user in items],
+        meta={"total": total, "page": page, "per_page": per_page},
+    )
+
+
+@bp.patch("/users/<user_id>")
+@require_admin
+def update_admin_user(user_id):
+    payload = request.get_json() or {}
+    is_banned = payload.get("is_banned")
+    ban_reason = payload.get("ban_reason")
+
+    if not isinstance(is_banned, bool):
+        return error_response("INVALID_BAN_STATUS", "Ban status must be a boolean", 422)
+
+    ban_reason = str(ban_reason).strip() if ban_reason is not None else None
+    if not ban_reason:
+        ban_reason = None
+    if ban_reason and len(ban_reason) > 500:
+        return error_response("BAN_REASON_TOO_LONG", "Ban reason must be 500 characters or fewer", 422)
+
+    user = db.session.get(User, user_id)
+    if user is None or user.deleted_at is not None:
+        return error_response("USER_NOT_FOUND", "User not found", 404)
+
+    if user.is_banned == is_banned:
+        return ok({"user_id": user.id, "is_banned": user.is_banned})
+
+    admin_id = _current_admin_id()
+    token_revoked_count = 0
+    if is_banned:
+        active_tokens = revoke_all_user_tokens(user.id)
+        blacklist_refresh_tokens(active_tokens)
+        token_revoked_count = len(active_tokens)
+
+    user.is_banned = is_banned
+    create_notification(
+        user_id=user.id,
+        type="user_ban_status",
+        title=_user_ban_notification_title(is_banned),
+        content=_user_ban_notification_content(user.nickname, is_banned, ban_reason),
+    )
+    log_audit(
+        operator_id=admin_id,
+        action="user_ban" if is_banned else "user_unban",
+        target_type="user",
+        target_id=user.id,
+        details={
+            "is_banned_before": not is_banned,
+            "is_banned_after": is_banned,
+            "ban_reason": ban_reason,
+            "token_revoked_count": token_revoked_count,
+        },
+    )
+    db.session.commit()
+
+    send_email_notification.delay(
+        user_id=user.id,
+        event_type="user_ban_status",
+        context_data={
+            "is_banned": is_banned,
+            "ban_reason": ban_reason,
+            "target_id": user.id,
+        },
+    )
+    return ok({"user_id": user.id, "is_banned": user.is_banned})
+
+
+@bp.get("/audit-logs")
+@require_admin
+def list_admin_audit_logs():
+    operator = aliased(User)
+    page = _int_arg("page", default=1, minimum=1)
+    per_page = _int_arg("per_page", default=20, minimum=1, maximum=100)
+
+    query = db.session.query(AuditLog, operator).outerjoin(operator, AuditLog.operator_id == operator.id)
+
+    operator_id = (request.args.get("operator_id") or "").strip()
+    action = (request.args.get("action") or "").strip()
+    target_type = (request.args.get("target_type") or "").strip()
+    target_id = (request.args.get("target_id") or "").strip()
+    date_from = _datetime_arg("date_from")
+    date_to = _datetime_arg("date_to")
+
+    if operator_id:
+        query = query.filter(AuditLog.operator_id == operator_id)
+    if action:
+        query = query.filter(AuditLog.action == action)
+    if target_type:
+        query = query.filter(AuditLog.target_type == target_type)
+    if target_id:
+        query = query.filter(AuditLog.target_id == target_id)
+    if date_from is not None:
+        query = query.filter(AuditLog.created_at >= date_from)
+    if date_to is not None:
+        query = query.filter(AuditLog.created_at <= date_to)
+
+    total = query.count()
+    items = (
+        query.order_by(AuditLog.created_at.desc(), AuditLog.id.desc())
+        .offset((page - 1) * per_page)
+        .limit(per_page)
+        .all()
+    )
+    return ok(
+        [_serialize_admin_audit_log(audit_log, operator_user) for audit_log, operator_user in items],
+        meta={"total": total, "page": page, "per_page": per_page},
+    )
+
+
 @bp.get("/backtest/queue-stats")
 @require_admin
 def get_backtest_queue_stats():
@@ -331,6 +458,17 @@ def _serialize_admin_strategy(strategy, author):
     }
 
 
+def _serialize_admin_user(user):
+    return {
+        "user_id": user.id,
+        "nickname": user.nickname,
+        "phone": _mask_phone(user.phone),
+        "created_at": format_beijing_iso(user.created_at),
+        "plan_level": user.plan_level,
+        "is_banned": bool(user.is_banned),
+    }
+
+
 def _serialize_admin_report(report, reporter, strategy, author):
     return {
         "id": report.id,
@@ -346,6 +484,27 @@ def _serialize_admin_report(report, reporter, strategy, author):
     }
 
 
+def _serialize_admin_audit_log(audit_log, operator_user):
+    return {
+        "id": audit_log.id,
+        "operator_id": audit_log.operator_id,
+        "operator_nickname": getattr(operator_user, "nickname", None),
+        "action": audit_log.action,
+        "target_type": audit_log.target_type,
+        "target_id": audit_log.target_id,
+        "details": audit_log.details or {},
+        "created_at": format_beijing_iso(audit_log.created_at),
+    }
+
+
+def _mask_phone(phone):
+    if not phone:
+        return ""
+    if len(phone) < 7:
+        return phone
+    return f"{phone[:3]}****{phone[-4:]}"
+
+
 def _notification_title_for_status(status):
     if status == "approved":
         return "策略审核通过"
@@ -356,6 +515,19 @@ def _notification_content_for_status(strategy_name, status, reason):
     if status == "approved":
         return f"您的策略《{strategy_name}》已通过审核，现已在策略广场上架。"
     return f"您的策略《{strategy_name}》未通过审核。原因：{reason}"
+
+
+def _user_ban_notification_title(is_banned):
+    return "账号已被封禁" if is_banned else "账号已解封"
+
+
+def _user_ban_notification_content(nickname, is_banned, ban_reason):
+    display_name = nickname or "您的账号"
+    if is_banned:
+        if ban_reason:
+            return f"{display_name}因违规已被封禁。原因：{ban_reason}"
+        return f"{display_name}因违规已被封禁。"
+    return f"{display_name}已解除封禁，可以重新登录。"
 
 
 def _average_completed_duration_seconds():
@@ -444,6 +616,16 @@ def _int_arg(name, *, default, minimum=None, maximum=None):
     if maximum is not None:
         value = min(value, maximum)
     return value
+
+
+def _datetime_arg(name):
+    raw = (request.args.get(name) or "").strip()
+    if not raw:
+        return None
+    try:
+        return ensure_aware_utc(datetime.fromisoformat(raw.replace("Z", "+00:00")))
+    except ValueError:
+        return None
 
 
 def _current_admin_id():

@@ -14,12 +14,15 @@ vi.mock('./http', () => ({
 
 import {
   fetchAdminHealth,
+  fetchAuditLogs,
   fetchQueueStats,
+  fetchUsers,
   fetchPendingReports,
   fetchPendingStrategyReviews,
   resolveReport,
   terminateJob,
   submitStrategyReview,
+  updateUserBanStatus,
 } from './admin'
 
 describe('admin api', () => {
@@ -75,6 +78,120 @@ describe('admin api', () => {
       method: 'patch',
       url: '/v1/admin/strategies/strategy-1/review',
       data: { status: 'approved' }
+    })
+  })
+
+  it('calls admin users list endpoint', async () => {
+    requestWithMetaMock.mockResolvedValueOnce({
+      data: [
+        {
+          user_id: 'user-1',
+          nickname: 'Alice',
+          phone: '138****8000',
+          created_at: '2026-03-26T12:00:00+08:00',
+          plan_level: 'pro',
+          is_banned: true
+        }
+      ],
+      meta: { total: 1, page: 2, per_page: 10 }
+    })
+
+    const data = await fetchUsers({ search: 'Alice', page: 2, perPage: 10 })
+
+    expect(data).toEqual({
+      data: [
+        {
+          userId: 'user-1',
+          nickname: 'Alice',
+          phone: '138****8000',
+          createdAt: '2026-03-26T12:00:00+08:00',
+          planLevel: 'pro',
+          isBanned: true
+        }
+      ],
+      meta: { total: 1, page: 2, perPage: 10 }
+    })
+    expect(requestWithMetaMock).toHaveBeenCalledWith({
+      method: 'get',
+      url: '/v1/admin/users',
+      params: { search: 'Alice', page: 2, per_page: 10 }
+    })
+  })
+
+  it('calls admin user ban mutation endpoint', async () => {
+    requestMock.mockResolvedValueOnce({
+      user_id: 'user-1',
+      is_banned: false
+    })
+
+    const data = await updateUserBanStatus('user-1', { isBanned: false })
+
+    expect(data).toEqual({
+      userId: 'user-1',
+      isBanned: false
+    })
+    expect(requestMock).toHaveBeenCalledWith({
+      method: 'patch',
+      url: '/v1/admin/users/user-1',
+      data: {
+        is_banned: false,
+        ban_reason: undefined
+      }
+    })
+  })
+
+  it('calls admin audit logs endpoint', async () => {
+    requestWithMetaMock.mockResolvedValueOnce({
+      data: [
+        {
+          id: 'audit-1',
+          operator_id: 'admin-1',
+          operator_nickname: 'Root',
+          action: 'user_ban',
+          target_type: 'user',
+          target_id: 'user-1',
+          details: { ban_reason: 'spam' },
+          created_at: '2026-03-26T12:30:00+08:00'
+        }
+      ],
+      meta: { total: 1, page: 1, per_page: 20 }
+    })
+
+    const data = await fetchAuditLogs({
+      operatorId: 'admin-1',
+      action: 'user_ban',
+      targetType: 'user',
+      targetId: 'user-1'
+    })
+
+    expect(data).toEqual({
+      data: [
+        {
+          id: 'audit-1',
+          operatorId: 'admin-1',
+          operatorNickname: 'Root',
+          action: 'user_ban',
+          targetType: 'user',
+          targetId: 'user-1',
+          details: { ban_reason: 'spam' },
+          createdAt: '2026-03-26T12:30:00+08:00'
+        }
+      ],
+      meta: { total: 1, page: 1, perPage: 20 }
+    })
+    expect(requestWithMetaMock).toHaveBeenCalledWith({
+      method: 'get',
+      url: '/v1/admin/audit-logs',
+      params: {
+        operator_id: 'admin-1',
+        action: 'user_ban',
+        target_type: 'user',
+        target_id: 'user-1',
+        date_from: undefined,
+        date_to: undefined,
+        page: 1,
+        per_page: 20
+      }
     })
   })
 

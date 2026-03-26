@@ -1,12 +1,17 @@
 import { defineStore } from 'pinia'
 import {
   fetchAdminHealth,
+  fetchAuditLogs,
   fetchPendingReports,
   fetchPendingStrategyReviews,
   fetchQueueStats,
+  fetchUsers,
   resolveReport,
   submitStrategyReview,
   terminateJob,
+  updateUserBanStatus,
+  type AdminAuditLog,
+  type AdminAuditLogFilters,
   type AdminHealthResponse,
   type AdminQueueStats,
   type AdminReport,
@@ -16,7 +21,9 @@ import {
   type AdminReviewMutationResult,
   type AdminReviewStrategy,
   type AdminStuckJob,
-  type AdminTerminateJobResult
+  type AdminTerminateJobResult,
+  type AdminUser,
+  type AdminUserBanStatusResult
 } from '../api/admin'
 
 const emptyQueueStats = (): AdminQueueStats => ({
@@ -30,6 +37,21 @@ export const useAdminStore = defineStore('admin', {
   state: () => ({
     overview: null as AdminHealthResponse | null,
     loading: false,
+    users: [] as AdminUser[],
+    usersMeta: {
+      total: 0,
+      page: 1,
+      perPage: 20
+    },
+    userListLoading: false,
+    banningUsers: {} as Record<string, boolean>,
+    auditLogs: [] as AdminAuditLog[],
+    auditLogsMeta: {
+      total: 0,
+      page: 1,
+      perPage: 20
+    },
+    auditLogsLoading: false,
     queueStats: emptyQueueStats() as AdminQueueStats,
     stuckJobs: [] as AdminStuckJob[],
     queueStatsLoading: false,
@@ -58,6 +80,64 @@ export const useAdminStore = defineStore('admin', {
         this.overview = await fetchAdminHealth()
       } finally {
         this.loading = false
+      }
+    },
+    async loadUsers(params?: { search?: string; page?: number; perPage?: number }) {
+      this.userListLoading = true
+      try {
+        const response = await fetchUsers({
+          search: params?.search ?? '',
+          page: params?.page ?? this.usersMeta.page,
+          perPage: params?.perPage ?? this.usersMeta.perPage
+        })
+        this.users = response.data
+        this.usersMeta = response.meta
+      } finally {
+        this.userListLoading = false
+      }
+    },
+    async banUser(userId: string, reason: string): Promise<AdminUserBanStatusResult> {
+      this.banningUsers[userId] = true
+      try {
+        const result = await updateUserBanStatus(userId, {
+          isBanned: true,
+          banReason: reason
+        })
+        this.users = this.users.map((item) =>
+          item.userId === userId ? { ...item, isBanned: result.isBanned } : item
+        )
+        return result
+      } finally {
+        this.banningUsers[userId] = false
+      }
+    },
+    async unbanUser(userId: string): Promise<AdminUserBanStatusResult> {
+      this.banningUsers[userId] = true
+      try {
+        const result = await updateUserBanStatus(userId, {
+          isBanned: false,
+          banReason: undefined
+        })
+        this.users = this.users.map((item) =>
+          item.userId === userId ? { ...item, isBanned: result.isBanned } : item
+        )
+        return result
+      } finally {
+        this.banningUsers[userId] = false
+      }
+    },
+    async loadAuditLogs(filters?: AdminAuditLogFilters) {
+      this.auditLogsLoading = true
+      try {
+        const response = await fetchAuditLogs({
+          ...filters,
+          page: filters?.page ?? this.auditLogsMeta.page,
+          perPage: filters?.perPage ?? this.auditLogsMeta.perPage
+        })
+        this.auditLogs = response.data
+        this.auditLogsMeta = response.meta
+      } finally {
+        this.auditLogsLoading = false
       }
     },
     async loadQueueStats() {

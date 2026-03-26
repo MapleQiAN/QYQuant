@@ -189,6 +189,8 @@ def login():
                 details={"phone": _mask_phone(phone)},
             )
         )
+    elif user.is_banned:
+        return error_response("USER_BANNED", "账号已被封禁", 403)
 
     ensure_user_quota(user.id, plan_level=user.plan_level)
 

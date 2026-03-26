@@ -22,6 +22,7 @@ vi.mock('../views/admin/AdminDashboard.vue', () => ({ default: { template: '<div
 vi.mock('../views/admin/StrategyReview.vue', () => ({ default: { template: '<div />' } }))
 vi.mock('../views/admin/ReportManagement.vue', () => ({ default: { template: '<div />' } }))
 vi.mock('../views/admin/BacktestMonitor.vue', () => ({ default: { template: '<div />' } }))
+vi.mock('../views/admin/UserManagement.vue', () => ({ default: { template: '<div />' } }))
 
 import router from './index'
 import { useUserStore } from '../stores'
@@ -109,6 +110,13 @@ describe('router', () => {
 
     expect(monitorRoute).toBeTruthy()
     expect(monitorRoute?.meta.requiresAdmin).toBe(true)
+  })
+
+  it('contains admin user management route', () => {
+    const userManagementRoute = router.getRoutes().find((route) => route.path === '/admin/user-management')
+
+    expect(userManagementRoute).toBeTruthy()
+    expect(userManagementRoute?.meta.requiresAdmin).toBe(true)
   })
 
   it('redirects non-admin users away from admin route', async () => {
