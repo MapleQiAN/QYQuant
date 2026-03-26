@@ -2,15 +2,15 @@
   <div class="modal-overlay" @click.self="$emit('close')">
     <div class="modal-card">
       <div class="header-row">
-        <h2 class="modal-title">创建模拟机器人</h2>
-        <button class="ghost-button" type="button" @click="$emit('close')">关闭</button>
+        <h2 class="modal-title">Create Simulation Bot</h2>
+        <button class="ghost-button" type="button" @click="$emit('close')">Close</button>
       </div>
 
       <div class="form-grid">
         <label class="field">
-          <span>策略</span>
+          <span>Strategy</span>
           <select v-model="strategyId" class="field-control">
-            <option disabled value="">请选择策略</option>
+            <option disabled value="">Select a strategy</option>
             <option
               v-for="strategy in strategiesStore.library"
               :key="strategy.id"
@@ -22,7 +22,7 @@
         </label>
 
         <label class="field">
-          <span>初始资金</span>
+          <span>Initial Capital</span>
           <input
             v-model.number="initialCapital"
             class="field-control"
@@ -35,7 +35,7 @@
 
       <p v-if="errorMessage" class="error-text">{{ errorMessage }}</p>
       <p v-if="showUpgradeHint" class="hint-text">
-        当前套餐已达模拟机器人上限，请升级套餐。
+        Your current plan has reached the simulation bot limit. Upgrade your plan to create more bots.
       </p>
 
       <div class="footer-row">
@@ -45,7 +45,7 @@
           type="button"
           @click="submit"
         >
-          {{ isSubmitting ? '创建中...' : '创建机器人' }}
+          {{ isSubmitting ? 'Creating...' : 'Create Bot' }}
         </button>
       </div>
     </div>
@@ -53,9 +53,15 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useSimulationStore } from '../../stores/useSimulationStore'
 import { useStrategiesStore } from '../../stores/strategies'
+
+const props = withDefaults(defineProps<{
+  initialStrategyId?: string
+}>(), {
+  initialStrategyId: ''
+})
 
 const emit = defineEmits<{
   (event: 'close'): void
@@ -65,7 +71,7 @@ const emit = defineEmits<{
 const simulationStore = useSimulationStore()
 const strategiesStore = useStrategiesStore()
 
-const strategyId = ref('')
+const strategyId = ref(props.initialStrategyId)
 const initialCapital = ref(100000)
 const isSubmitting = ref(false)
 const errorMessage = ref('')
@@ -76,7 +82,20 @@ onMounted(async () => {
   if (!strategiesStore.library.length) {
     await strategiesStore.loadLibrary({ page: 1, perPage: 100 })
   }
+
+  if (props.initialStrategyId) {
+    strategyId.value = props.initialStrategyId
+  }
 })
+
+watch(
+  () => props.initialStrategyId,
+  (value) => {
+    if (value) {
+      strategyId.value = value
+    }
+  }
+)
 
 async function submit() {
   if (!strategyId.value || initialCapital.value < 1000 || isSubmitting.value) {
@@ -85,6 +104,7 @@ async function submit() {
 
   isSubmitting.value = true
   errorMessage.value = ''
+
   try {
     await simulationStore.createBot({
       strategy_id: strategyId.value,
@@ -92,7 +112,7 @@ async function submit() {
     })
     emit('created')
   } catch (error: any) {
-    errorMessage.value = error?.message || '创建模拟机器人失败'
+    errorMessage.value = error?.message || 'Failed to create simulation bot'
   } finally {
     isSubmitting.value = false
   }

@@ -20,7 +20,11 @@
       "Bash(python -m pytest tests/test_sandbox_service.py tests/test_marketplace.py tests/test_strategies.py -q)",
       "Bash(python -m pytest tests/test_marketplace.py tests/test_strategies.py -q)",
       "Bash(npx vitest:*)",
-      "Bash(npx gitnexus:*)"
+      "Bash(npx gitnexus:*)",
+      "Bash(cd backend:*)",
+      "Bash(docker build:*)",
+      "Bash(docker exec:*)",
+      "Bash(docker compose:*)"
     ]
   }
 }

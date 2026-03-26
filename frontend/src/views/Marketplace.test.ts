@@ -4,12 +4,14 @@ import { mount } from '@vue/test-utils'
 import Marketplace from './Marketplace.vue'
 
 const {
+  pushMock,
   fetchStrategiesMock,
   fetchFeaturedMock,
   setFilterMock,
   clearFiltersMock,
   storeState
 } = vi.hoisted(() => ({
+  pushMock: vi.fn(),
   fetchStrategiesMock: vi.fn(),
   fetchFeaturedMock: vi.fn(),
   setFilterMock: vi.fn(),
@@ -45,6 +47,9 @@ vi.mock('../stores', () => ({
 }))
 
 vi.mock('vue-router', () => ({
+  useRouter: () => ({
+    push: pushMock
+  }),
   RouterLink: {
     template: '<a><slot /></a>'
   }
@@ -52,6 +57,7 @@ vi.mock('vue-router', () => ({
 
 describe('Marketplace view', () => {
   beforeEach(() => {
+    pushMock.mockReset()
     fetchStrategiesMock.mockReset()
     fetchFeaturedMock.mockReset()
     setFilterMock.mockReset()
@@ -191,5 +197,30 @@ describe('Marketplace view', () => {
 
     expect(clearFiltersMock).toHaveBeenCalledTimes(1)
     expect(fetchStrategiesMock).toHaveBeenCalledWith(1)
+  })
+
+  it('opens strategy detail when a card CTA is clicked', async () => {
+    storeState.strategies = [
+      {
+        id: 'strategy-1',
+        title: 'Gold Swing Core',
+        name: 'gold-swing-core',
+        description: 'Swing strategy',
+        category: 'swing',
+        tags: ['gold'],
+        isVerified: false,
+        displayMetrics: {},
+        author: { nickname: 'Alice', avatarUrl: '' }
+      }
+    ]
+
+    const wrapper = mount(Marketplace)
+
+    await wrapper.get('[data-test="strategy-cta"]').trigger('click')
+
+    expect(pushMock).toHaveBeenCalledWith({
+      name: 'marketplace-strategy-detail',
+      params: { strategyId: 'strategy-1' }
+    })
   })
 })

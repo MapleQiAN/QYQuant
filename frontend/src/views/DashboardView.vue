@@ -12,7 +12,7 @@
             <SettingsIcon />
             {{ $t('common.settings') }}
           </RouterLink>
-        <RouterLink class="btn btn-primary" to="/strategies">
+          <RouterLink class="btn btn-primary" to="/strategies">
             <PlusIcon />
             {{ $t('common.newStrategy') }}
           </RouterLink>
@@ -53,6 +53,11 @@
             :bots-error="botsStore.error"
             @retry-strategies="strategiesStore.loadRecent"
             @retry-bots="botsStore.loadRecent"
+            @open-strategy="handleOpenStrategy"
+            @deploy-strategy="handleDeployStrategy"
+            @open-bot="handleOpenBot"
+            @toggle-bot="handleToggleBot"
+            @view-all="handleViewAllRecent"
           />
         </div>
 
@@ -62,11 +67,15 @@
             :loading="forumStore.loading"
             :error="forumStore.error"
             @retry="forumStore.loadHot"
+            @view-all="handleOpenForum"
+            @publish="handleOpenForumComposer"
+            @bookmarks="handleOpenForumBookmarks"
+            @open-post="handleOpenForumPost"
           />
         </div>
 
         <div class="grid-area-upgrade">
-          <UpgradeCard />
+          <UpgradeCard @upgrade="handleOpenPricing" />
         </div>
 
         <div class="grid-area-progress">
@@ -79,7 +88,7 @@
 
 <script setup lang="ts">
 import { computed, h, onMounted, reactive } from 'vue'
-import { RouterLink } from 'vue-router'
+import { RouterLink, useRouter } from 'vue-router'
 import BacktestCard from '../components/BacktestCard.vue'
 import ForumMiniCard from '../components/ForumMiniCard.vue'
 import OnboardingGuide from '../components/onboarding/OnboardingGuide.vue'
@@ -87,7 +96,9 @@ import ProgressCard from '../components/ProgressCard.vue'
 import RecentList from '../components/RecentList.vue'
 import UpgradeCard from '../components/UpgradeCard.vue'
 import { useBacktestsStore, useBotsStore, useForumStore, useStrategiesStore, useUserStore } from '../stores'
+import { useSimulationStore } from '../stores/useSimulationStore'
 
+const router = useRouter()
 const userStore = useUserStore()
 const user = computed(() => userStore.profile)
 const showOnboardingGuide = computed(() =>
@@ -98,6 +109,7 @@ const backtestsStore = useBacktestsStore()
 const botsStore = useBotsStore()
 const strategiesStore = useStrategiesStore()
 const forumStore = useForumStore()
+const simulationStore = useSimulationStore()
 const backtestQuery = reactive({
   symbol: 'XAUUSD',
   interval: '1d',
@@ -132,6 +144,55 @@ onMounted(() => {
 async function handleSkipOnboarding() {
   await userStore.markOnboardingCompleted(true)
   userStore.setOnboardingHighlightTarget(null)
+}
+
+async function handleOpenStrategy(strategyId: string) {
+  await router.push({ name: 'strategy-parameters', params: { strategyId } })
+}
+
+async function handleDeployStrategy(strategyId: string) {
+  await router.push({ name: 'bots', query: { create: '1', strategyId } })
+}
+
+async function handleOpenBot(botId: string) {
+  await router.push({ name: 'bots', query: { botId, modal: 'detail' } })
+}
+
+async function handleToggleBot(botId: string, action: 'pause' | 'resume') {
+  try {
+    if (action === 'pause') {
+      await simulationStore.pauseBot(botId)
+    } else {
+      await simulationStore.resumeBot(botId)
+    }
+    await botsStore.loadRecent()
+  } catch {
+    // Keep the dashboard preview stable if the preview action fails.
+  }
+}
+
+async function handleViewAllRecent(tab: 'strategies' | 'bots') {
+  await router.push(tab === 'bots' ? { name: 'bots' } : { name: 'strategy-library' })
+}
+
+async function handleOpenForum() {
+  await router.push({ name: 'forum' })
+}
+
+async function handleOpenForumComposer() {
+  await router.push({ name: 'forum', query: { compose: '1' } })
+}
+
+async function handleOpenForumBookmarks() {
+  await router.push({ name: 'forum', query: { view: 'collections' } })
+}
+
+async function handleOpenForumPost(postId: string) {
+  await router.push({ name: 'forum-post-detail', params: { postId } })
+}
+
+async function handleOpenPricing() {
+  await router.push({ name: 'pricing' })
 }
 
 const SettingsIcon = () => h('svg', {

@@ -4,6 +4,7 @@ import {
   createComment as apiCreateComment,
   createPost as apiCreatePost,
   getComments,
+  getMyCollections,
   getPostDetail,
   getPosts,
   likePost as apiLikePost
@@ -46,6 +47,7 @@ export const useCommunityStore = defineStore('community', {
     commentsByPostId: {} as Record<string, CommunityComment[]>,
     commentTotalsByPostId: {} as Record<string, number>,
     commentPagesByPostId: {} as Record<string, number>,
+    feedMode: 'all' as 'all' | 'collections',
     loadingFeed: false,
     loadingPostDetail: false,
     submittingPost: false,
@@ -80,6 +82,7 @@ export const useCommunityStore = defineStore('community', {
       this.error = null
       try {
         const response = await getPosts({ page, per_page: this.perPage })
+        this.feedMode = 'all'
         response.items.forEach((post) => this.syncPostFlags(post))
         this.posts = page === 1
           ? response.items
@@ -90,6 +93,27 @@ export const useCommunityStore = defineStore('community', {
         this.hasMorePosts = response.page * response.per_page < response.total
       } catch (error: any) {
         this.error = error?.message || 'Failed to load community posts'
+        throw error
+      } finally {
+        this.loadingFeed = false
+      }
+    },
+    async fetchCollections(page = 1) {
+      this.loadingFeed = true
+      this.error = null
+      try {
+        const response = await getMyCollections({ page, per_page: this.perPage })
+        this.feedMode = 'collections'
+        response.items.forEach((post) => this.syncPostFlags(post))
+        this.posts = page === 1
+          ? response.items
+          : upsertUniquePosts([...this.posts, ...response.items])
+        this.postsTotal = response.total
+        this.currentPage = response.page
+        this.perPage = response.per_page
+        this.hasMorePosts = response.page * response.per_page < response.total
+      } catch (error: any) {
+        this.error = error?.message || 'Failed to load collections'
         throw error
       } finally {
         this.loadingFeed = false

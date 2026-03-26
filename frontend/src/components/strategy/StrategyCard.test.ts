@@ -35,4 +35,33 @@ describe('StrategyCard', () => {
     expect(wrapper.text()).toContain('Alice')
     expect(wrapper.get('[data-test="strategy-cta"]').text()).toContain('Try backtest')
   })
+
+  it('emits open when CTA is clicked', async () => {
+    const wrapper = mount(StrategyCard, {
+      props: {
+        strategy: {
+          id: 'strategy-1',
+          title: 'Gold Swing Core',
+          name: 'gold-swing-core',
+          description: 'Swing strategy for daily sessions.',
+          category: 'swing',
+          tags: ['gold', 'swing'],
+          isVerified: false,
+          displayMetrics: {
+            annualized_return: 14.3,
+            max_drawdown: -9.8,
+            sharpe_ratio: 1.21
+          },
+          author: {
+            nickname: 'Alice',
+            avatarUrl: 'https://example.com/alice.png'
+          }
+        }
+      }
+    })
+
+    await wrapper.get('[data-test="strategy-cta"]').trigger('click')
+
+    expect(wrapper.emitted('open')).toEqual([['strategy-1']])
+  })
 })

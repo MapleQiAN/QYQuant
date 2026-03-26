@@ -32,7 +32,7 @@
             <RefreshIcon />
             {{ $t('backtest.refresh') }}
           </button>
-          <button class="btn btn-primary">
+          <button class="btn btn-primary" type="button" data-test="backtest-export" @click="handleExport">
             <ExportIcon />
             {{ $t('backtest.export') }}
           </button>
@@ -122,6 +122,7 @@
 <script setup lang="ts">
 import { computed, h } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { downloadJson } from '../lib/download'
 import type { BacktestLatestResponse } from '../types/Backtest'
 import type { KlineBar } from '../types/KlineBar'
 import EmptyState from './EmptyState.vue'
@@ -193,6 +194,20 @@ const handleDataSourceChange = (event: Event) => {
 
 const handleTimeframeChange = (value: string) => {
   emit('timeframe-change', value)
+}
+
+const handleExport = () => {
+  if (!props.data) {
+    return
+  }
+
+  downloadJson(`backtest-${props.symbol}-${props.timeframe}-${Date.now()}.json`, {
+    symbol: props.symbol,
+    timeframe: props.timeframe,
+    requestedDataSource: selectedDataSource.value,
+    exportedAt: new Date().toISOString(),
+    ...props.data
+  })
 }
 
 function normalizeDataSource(value?: string | null) {

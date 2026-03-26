@@ -1,24 +1,55 @@
 <script setup lang="ts">
-import { computed, onMounted } from 'vue'
+import { computed, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import PostCard from '../components/community/PostCard.vue'
 import PostComposer from '../components/community/PostComposer.vue'
 import { useCommunityStore } from '../stores/useCommunityStore'
 import { useUserStore } from '../stores/user'
 
+const route = useRoute()
+const router = useRouter()
 const communityStore = useCommunityStore()
 const userStore = useUserStore()
 
-const showComposer = computed(() => Boolean(userStore.profile.id))
+const feedMode = computed<'all' | 'collections'>(() =>
+  route.query.view === 'collections' ? 'collections' : 'all'
+)
+const showComposer = computed(() => Boolean(userStore.profile.id) && feedMode.value === 'all')
+const canViewCollections = computed(() => Boolean(userStore.profile.id))
+
+watch(
+  feedMode,
+  () => {
+    void loadFeed(1)
+  },
+  { immediate: true }
+)
 
 function loadMore() {
   if (communityStore.hasMorePosts) {
-    void communityStore.fetchPosts(communityStore.currentPage + 1)
+    void loadFeed(communityStore.currentPage + 1)
   }
 }
 
-onMounted(() => {
-  void communityStore.fetchPosts(1)
-})
+async function loadFeed(page = 1) {
+  if (feedMode.value === 'collections') {
+    if (!userStore.profile.id) {
+      await router.replace({ name: 'forum' })
+      return
+    }
+    await communityStore.fetchCollections(page)
+    return
+  }
+
+  await communityStore.fetchPosts(page)
+}
+
+function switchFeed(mode: 'all' | 'collections') {
+  void router.push({
+    name: 'forum',
+    query: mode === 'collections' ? { view: 'collections' } : {}
+  })
+}
 </script>
 
 <template>
@@ -29,25 +60,45 @@ onMounted(() => {
           <h1 class="view-title">{{ $t('pages.forumTitle') }}</h1>
           <p class="view-subtitle">{{ $t('pages.forumSubtitle') }}</p>
         </div>
-        <div class="hero-badge">社区主链路</div>
+        <div class="hero-badge">绀惧尯涓婚摼璺?/div>
       </header>
 
+      <div class="feed-switch">
+        <button
+          class="feed-switch__button"
+          :class="{ active: feedMode === 'all' }"
+          type="button"
+          @click="switchFeed('all')"
+        >
+          全部帖子
+        </button>
+        <button
+          v-if="canViewCollections"
+          class="feed-switch__button"
+          :class="{ active: feedMode === 'collections' }"
+          type="button"
+          @click="switchFeed('collections')"
+        >
+          我的收藏
+        </button>
+      </div>
+
       <PostComposer v-if="showComposer" />
-      <p v-else class="login-tip">登录后即可发帖、点赞、收藏和评论。</p>
+      <p v-else-if="feedMode === 'all'" class="login-tip">鐧诲綍鍚庡嵆鍙彂甯栥€佺偣璧炪€佹敹钘忓拰璇勮銆?/p>
 
       <p v-if="communityStore.error && !communityStore.posts.length" class="status error">
         {{ communityStore.error }}
       </p>
       <p v-else-if="communityStore.loadingFeed && !communityStore.posts.length" class="status">
-        帖子加载中…
+        甯栧瓙鍔犺浇涓€?
       </p>
       <div v-else-if="communityStore.posts.length" class="feed">
         <PostCard v-for="post in communityStore.posts" :key="post.id" :post="post" />
       </div>
-      <p v-else class="status">还没有帖子，发一条试试。</p>
+      <p v-else class="status">杩樻病鏈夊笘瀛愶紝鍙戜竴鏉¤瘯璇曘€?/p>
 
       <button v-if="communityStore.posts.length && communityStore.hasMorePosts" class="load-more" @click="loadMore">
-        加载更多
+        鍔犺浇鏇村
       </button>
     </div>
   </section>
@@ -94,6 +145,26 @@ onMounted(() => {
   font-size: 13px;
   letter-spacing: 0.08em;
   text-transform: uppercase;
+}
+
+.feed-switch {
+  display: flex;
+  gap: 12px;
+}
+
+.feed-switch__button {
+  border: 0;
+  border-radius: 999px;
+  padding: 10px 16px;
+  background: rgba(255, 255, 255, 0.94);
+  color: var(--color-text-muted);
+  font: inherit;
+  cursor: pointer;
+}
+
+.feed-switch__button.active {
+  background: #0f172a;
+  color: #fff;
 }
 
 .feed {

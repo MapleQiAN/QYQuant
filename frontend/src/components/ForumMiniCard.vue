@@ -5,7 +5,9 @@
         <UsersIcon class="title-icon" />
         {{ $t('forum.title') }}
       </h3>
-      <a href="#" class="view-all">{{ $t('common.viewAll') }}</a>
+      <button type="button" class="view-all" data-test="forum-view-all" @click="emit('view-all')">
+        {{ $t('common.viewAll') }}
+      </button>
     </div>
 
     <div class="posts-list">
@@ -22,6 +24,8 @@
         v-for="post in posts"
         :key="post.id"
         class="post-item"
+        :data-test="`forum-open-post-${post.id}`"
+        @click="emit('open-post', post.id)"
       >
         <div class="post-avatar">
           <span>{{ post.avatar }}</span>
@@ -51,11 +55,16 @@
     </div>
 
     <div class="quick-actions">
-      <button class="action-btn">
+      <button class="action-btn" type="button" data-test="forum-publish" @click="emit('publish')">
         <PenIcon />
         {{ $t('forum.publish') }}
       </button>
-      <button class="action-btn secondary">
+      <button
+        class="action-btn secondary"
+        type="button"
+        data-test="forum-bookmarks"
+        @click="emit('bookmarks')"
+      >
         <BookmarkIcon />
         {{ $t('forum.bookmarks') }}
       </button>
@@ -70,7 +79,13 @@ import EmptyState from './EmptyState.vue'
 import ErrorState from './ErrorState.vue'
 import SkeletonState from './SkeletonState.vue'
 
-defineEmits<{ (event: 'retry'): void }>()
+const emit = defineEmits<{
+  (event: 'retry'): void
+  (event: 'view-all'): void
+  (event: 'publish'): void
+  (event: 'bookmarks'): void
+  (event: 'open-post', postId: string): void
+}>()
 
 const props = withDefaults(defineProps<{
   posts?: Post[]
@@ -185,6 +200,10 @@ const BookmarkIcon = () => h('svg', {
 .view-all {
   font-size: var(--font-size-sm);
   color: var(--color-primary);
+  padding: 0;
+  background: transparent;
+  border: none;
+  cursor: pointer;
   text-decoration: none;
 }
 

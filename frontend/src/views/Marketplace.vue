@@ -54,6 +54,7 @@
             v-for="strategy in store.featuredStrategies"
             :key="strategy.id"
             :strategy="strategy"
+            @open="openStrategyDetail"
           />
         </div>
       </section>
@@ -90,6 +91,7 @@
             v-for="strategy in store.strategies"
             :key="strategy.id"
             :strategy="strategy"
+            @open="openStrategyDetail"
           />
         </div>
 
@@ -119,10 +121,12 @@
 
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { useRouter } from 'vue-router'
 import FeaturedStrategyCard from '../components/strategy/FeaturedStrategyCard.vue'
 import StrategyCard from '../components/strategy/StrategyCard.vue'
 import { useMarketplaceStore } from '../stores'
 
+const router = useRouter()
 const store = useMarketplaceStore()
 const searchInput = ref(store.filters.q)
 let searchTimer: number | undefined
@@ -229,6 +233,13 @@ function clearAllFilters() {
   searchInput.value = ''
   store.clearFilters()
   void store.fetchStrategies(1)
+}
+
+function openStrategyDetail(strategyId: string) {
+  void router.push({
+    name: 'marketplace-strategy-detail',
+    params: { strategyId }
+  })
 }
 </script>
 

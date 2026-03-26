@@ -34,7 +34,7 @@
         <span class="original-price">{{ $t('upgrade.originalPrice') }}</span>
       </div>
 
-      <button class="upgrade-btn">
+      <button class="upgrade-btn" type="button" data-test="upgrade-cta" @click="emit('upgrade')">
         <SparkleIcon />
         {{ $t('upgrade.cta') }}
       </button>
@@ -49,6 +49,10 @@
 
 <script setup lang="ts">
 import { h } from 'vue'
+
+const emit = defineEmits<{
+  (event: 'upgrade'): void
+}>()
 
 const CrownIcon = () => h('svg', {
   width: 32,

@@ -6,6 +6,8 @@
         <button
           v-for="tab in tabs"
           :key="tab.id"
+          :data-test="`recent-tab-${tab.id}`"
+          type="button"
           :class="['tab-btn', { active: activeTab === tab.id }]"
           @click="activeTab = tab.id"
         >
@@ -71,8 +73,22 @@
               <span v-for="tag in strategy.tags" :key="tag" class="chip">{{ tag }}</span>
             </div>
             <div class="action-row">
-              <button class="btn btn-secondary btn-sm">{{ $t('recent.viewDetails') }}</button>
-              <button class="btn btn-primary btn-sm">{{ $t('recent.deployBot') }}</button>
+              <button
+                class="btn btn-secondary btn-sm"
+                type="button"
+                :data-test="`recent-strategy-detail-${strategy.id}`"
+                @click.stop="emit('open-strategy', strategy.id)"
+              >
+                {{ $t('recent.viewDetails') }}
+              </button>
+              <button
+                class="btn btn-primary btn-sm"
+                type="button"
+                :data-test="`recent-strategy-deploy-${strategy.id}`"
+                @click.stop="emit('deploy-strategy', strategy.id)"
+              >
+                {{ $t('recent.deployBot') }}
+              </button>
             </div>
           </div>
         </div>
@@ -134,11 +150,30 @@
               <span v-for="tag in bot.tags" :key="tag" class="chip">{{ tag }}</span>
             </div>
             <div class="action-row">
-              <button class="btn btn-secondary btn-sm">{{ $t('recent.viewLogs') }}</button>
-              <button v-if="bot.status === 'active'" class="btn btn-warning btn-sm">
+              <button
+                class="btn btn-secondary btn-sm"
+                type="button"
+                :data-test="`recent-bot-detail-${bot.id}`"
+                @click.stop="emit('open-bot', bot.id)"
+              >
+                {{ $t('recent.viewLogs') }}
+              </button>
+              <button
+                v-if="bot.status === 'active'"
+                class="btn btn-warning btn-sm"
+                type="button"
+                :data-test="`recent-bot-toggle-${bot.id}`"
+                @click.stop="emit('toggle-bot', bot.id, 'pause')"
+              >
                 {{ $t('recent.pause') }}
               </button>
-              <button v-else class="btn btn-primary btn-sm">
+              <button
+                v-else
+                class="btn btn-primary btn-sm"
+                type="button"
+                :data-test="`recent-bot-toggle-${bot.id}`"
+                @click.stop="emit('toggle-bot', bot.id, 'resume')"
+              >
                 {{ $t('recent.start') }}
               </button>
             </div>
@@ -148,10 +183,10 @@
     </div>
 
     <div class="list-footer">
-      <a href="#" class="view-all-link">
+      <button type="button" class="view-all-link" data-test="recent-view-all" @click="emit('view-all', activeTab)">
         {{ $t('common.viewAll') }}
         <ArrowRightIcon />
-      </a>
+      </button>
     </div>
   </div>
 </template>
@@ -182,9 +217,14 @@ const props = withDefaults(defineProps<{
   botsError: null
 })
 
-defineEmits<{
+const emit = defineEmits<{
   (event: 'retry-strategies'): void
   (event: 'retry-bots'): void
+  (event: 'open-strategy', strategyId: string): void
+  (event: 'deploy-strategy', strategyId: string): void
+  (event: 'open-bot', botId: string): void
+  (event: 'toggle-bot', botId: string, action: 'pause' | 'resume'): void
+  (event: 'view-all', tab: 'strategies' | 'bots'): void
 }>()
 
 const { t, locale } = useI18n()
@@ -192,7 +232,7 @@ const { t, locale } = useI18n()
 const activeTab = ref<'strategies' | 'bots'>('strategies')
 const expandedId = ref<string | null>(null)
 
-const tabs = computed(() => [
+const tabs = computed<Array<{ id: 'strategies' | 'bots'; label: string }>>(() => [
   { id: 'strategies', label: t('recent.tabs.strategies') },
   { id: 'bots', label: t('recent.tabs.bots') }
 ])
@@ -517,6 +557,10 @@ const ArrowRightIcon = () => h('svg', {
   font-size: var(--font-size-sm);
   font-weight: var(--font-weight-medium);
   color: var(--color-primary);
+  padding: 0;
+  background: transparent;
+  border: none;
+  cursor: pointer;
   text-decoration: none;
 }
 
