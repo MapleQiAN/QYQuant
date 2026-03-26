@@ -6,6 +6,7 @@ import {
   fetchMarketplaceStrategyImportStatus,
   fetchMarketplacePublishStatus,
   importMarketplaceStrategy,
+  reportMarketplaceStrategy,
   publishMarketplaceStrategy
 } from '../api/strategies'
 import type {
@@ -17,6 +18,7 @@ import type {
   MarketplaceStrategyDetail,
   MarketplaceStrategyEquityCurve,
   MarketplaceStrategyImportResult,
+  MarketplaceStrategyReportResult,
   MarketplaceStrategyImportStatus
 } from '../types/Strategy'
 
@@ -46,6 +48,7 @@ export const useMarketplaceStore = defineStore('marketplace', {
     featuredLoading: false,
     curveLoading: false,
     importLoading: false,
+    reportLoading: false,
     importStatusLoading: false,
     featuredError: null as string | null,
     curveError: null as string | null,
@@ -157,6 +160,18 @@ export const useMarketplaceStore = defineStore('marketplace', {
         this.importLoading = false
       }
     },
+    async reportStrategy(strategyId: string, reason: string): Promise<MarketplaceStrategyReportResult> {
+      this.reportLoading = true
+      this.error = null
+      try {
+        return await reportMarketplaceStrategy(strategyId, reason)
+      } catch (error: any) {
+        this.error = error?.message || 'Failed to report marketplace strategy'
+        throw error
+      } finally {
+        this.reportLoading = false
+      }
+    },
     setFilter<Key extends keyof MarketplaceFilters>(key: Key, value: MarketplaceFilters[Key]) {
       this.filters[key] = value
     },
@@ -194,6 +209,7 @@ export const useMarketplaceStore = defineStore('marketplace', {
       this.featuredLoading = false
       this.curveLoading = false
       this.importLoading = false
+      this.reportLoading = false
       this.importStatusLoading = false
       this.featuredError = null
       this.curveError = null

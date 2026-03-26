@@ -9,6 +9,7 @@ import type {
   MarketplaceStrategyDetail,
   MarketplaceStrategyEquityCurve,
   MarketplaceStrategyImportResult,
+  MarketplaceStrategyReportResult,
   MarketplaceStrategyImportStatus,
   Strategy,
   StrategyParameterDefinition,
@@ -76,6 +77,7 @@ interface MarketplaceStrategyDetailDto {
   already_imported?: boolean
   imported_strategy_id?: string | null
   has_equity_curve?: boolean
+  can_report?: boolean
 }
 
 interface MarketplaceParams {
@@ -107,6 +109,10 @@ interface MarketplacePublishDto {
 interface MarketplacePublishStatusDto {
   review_status?: string
   is_public?: boolean
+}
+
+interface MarketplaceStrategyReportDto {
+  report_id?: string
 }
 
 export function fetchMarketplaceStrategies(params: { tag: string }): Promise<Strategy[]>
@@ -202,7 +208,8 @@ function mapMarketplaceStrategyDetail(item: MarketplaceStrategyDetailDto): Marke
     },
     alreadyImported: Boolean(item.already_imported),
     importedStrategyId: item.imported_strategy_id ?? null,
-    hasEquityCurve: Boolean(item.has_equity_curve)
+    hasEquityCurve: Boolean(item.has_equity_curve),
+    canReport: Boolean(item.can_report)
   }
 }
 
@@ -274,6 +281,23 @@ export async function fetchMarketplacePublishStatus(strategyId: string): Promise
   return {
     reviewStatus: normalizeReviewStatus(response.review_status),
     isPublic: Boolean(response.is_public)
+  }
+}
+
+export async function reportMarketplaceStrategy(
+  strategyId: string,
+  reason: string
+): Promise<MarketplaceStrategyReportResult> {
+  const response = await client.request<MarketplaceStrategyReportDto>({
+    method: 'post',
+    url: `/v1/marketplace/strategies/${strategyId}/report`,
+    data: {
+      reason
+    }
+  })
+
+  return {
+    reportId: response.report_id || ''
   }
 }
 

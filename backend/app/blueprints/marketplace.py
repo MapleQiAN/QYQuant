@@ -1,4 +1,5 @@
 import uuid
+from datetime import timedelta
 from pathlib import Path
 
 from flask import request
@@ -9,13 +10,13 @@ from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.exc import IntegrityError
 
 from ..extensions import db
-from ..models import BacktestJob, BacktestJobStatus, File, Strategy, StrategyVersion, User
+from ..models import BacktestJob, BacktestJobStatus, File, Report, Strategy, StrategyVersion, User
 from ..schemas import StrategySchema
 from ..services.notifications import create_notification
 from ..utils.audit import log_audit
 from ..utils.response import error_response, ok
 from ..utils.storage import read_json
-from ..utils.time import format_beijing_iso_ms, now_ms
+from ..utils.time import format_beijing_iso_ms, now_ms, now_utc
 
 bp = Blueprint("marketplace", __name__, url_prefix="/api/v1/marketplace")
 BACKTEST_CONFIGURE_PATH = "/backtest/configure"
@@ -121,6 +122,7 @@ def get_marketplace_strategy_detail(strategy_id):
         "already_imported": imported_strategy is not None,
         "imported_strategy_id": imported_strategy.id if imported_strategy else None,
         "has_equity_curve": _find_latest_completed_job(strategy.id) is not None,
+        "can_report": bool(user_id and strategy.owner_id != user_id),
     }
     return ok(payload)
 
@@ -275,6 +277,53 @@ def get_marketplace_publish_status(strategy_id):
         return error_response("STRATEGY_FORBIDDEN", "Strategy does not belong to current user", 403)
 
     return ok({"review_status": strategy.review_status, "is_public": bool(strategy.is_public)})
+
+
+@bp.post("/strategies/<strategy_id>/report")
+@jwt_required()
+def report_marketplace_strategy(strategy_id):
+    reporter_id = get_jwt_identity()
+    strategy = _get_public_strategy(strategy_id)
+    if strategy is None:
+        return error_response("STRATEGY_NOT_FOUND", "Strategy not found", 404)
+
+    if strategy.owner_id == reporter_id:
+        return error_response("CANNOT_REPORT_OWN_STRATEGY", "Cannot report your own strategy", 400)
+
+    payload = request.get_json() or {}
+    reason = str(payload.get("reason") or "").strip()
+    if not reason:
+        return error_response("REPORT_REASON_REQUIRED", "Report reason is required", 422)
+    if len(reason) < 10 or len(reason) > 500:
+        return error_response("REPORT_REASON_INVALID", "Report reason must be between 10 and 500 characters", 422)
+
+    duplicate_cutoff = now_utc() - timedelta(hours=24)
+    duplicate_report = (
+        Report.query
+        .filter(
+            Report.reporter_id == reporter_id,
+            Report.strategy_id == strategy_id,
+            Report.created_at >= duplicate_cutoff,
+        )
+        .order_by(Report.created_at.desc())
+        .first()
+    )
+    if duplicate_report is not None:
+        return error_response(
+            "REPORT_ALREADY_SUBMITTED",
+            "You have already reported this strategy within 24 hours",
+            409,
+        )
+
+    report = Report(
+        reporter_id=reporter_id,
+        strategy_id=strategy_id,
+        reason=reason,
+        status="pending",
+    )
+    db.session.add(report)
+    db.session.commit()
+    return ok({"report_id": report.id}), 201
 
 
 def _bool_arg(name, *, default=False):

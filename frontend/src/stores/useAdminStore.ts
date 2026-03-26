@@ -1,9 +1,14 @@
 import { defineStore } from 'pinia'
 import {
   fetchAdminHealth,
+  fetchPendingReports,
   fetchPendingStrategyReviews,
+  resolveReport,
   submitStrategyReview,
   type AdminHealthResponse,
+  type AdminReport,
+  type AdminResolveReportPayload,
+  type AdminResolveReportResult,
   type AdminReviewMutationPayload,
   type AdminReviewMutationResult,
   type AdminReviewStrategy
@@ -20,7 +25,15 @@ export const useAdminStore = defineStore('admin', {
       page: 1,
       perPage: 20
     },
-    reviewSubmitting: {} as Record<string, boolean>
+    reviewSubmitting: {} as Record<string, boolean>,
+    reportQueue: [] as AdminReport[],
+    reportQueueLoading: false,
+    reportQueueMeta: {
+      total: 0,
+      page: 1,
+      perPage: 20
+    },
+    reportResolving: {} as Record<string, boolean>
   }),
   actions: {
     async loadOverview() {
@@ -31,11 +44,12 @@ export const useAdminStore = defineStore('admin', {
         this.loading = false
       }
     },
-    async loadPendingReviews(page = this.reviewQueueMeta.page) {
+    async loadPendingReviews(page?: number) {
       this.reviewQueueLoading = true
       try {
+        const currentPage = page ?? this.reviewQueueMeta.page
         const response = await fetchPendingStrategyReviews({
-          page,
+          page: currentPage,
           perPage: this.reviewQueueMeta.perPage
         })
         this.reviewQueue = response.data
@@ -59,6 +73,37 @@ export const useAdminStore = defineStore('admin', {
         return result
       } finally {
         this.reviewSubmitting[strategyId] = false
+      }
+    },
+    async loadPendingReports(page?: number) {
+      this.reportQueueLoading = true
+      try {
+        const currentPage = page ?? this.reportQueueMeta.page
+        const response = await fetchPendingReports({
+          page: currentPage,
+          perPage: this.reportQueueMeta.perPage
+        })
+        this.reportQueue = response.data
+        this.reportQueueMeta = response.meta
+      } finally {
+        this.reportQueueLoading = false
+      }
+    },
+    async resolveReport(
+      reportId: string,
+      payload: AdminResolveReportPayload
+    ): Promise<AdminResolveReportResult> {
+      this.reportResolving[reportId] = true
+      try {
+        const result = await resolveReport(reportId, payload)
+        this.reportQueue = this.reportQueue.filter((item) => item.id !== reportId)
+        this.reportQueueMeta = {
+          ...this.reportQueueMeta,
+          total: Math.max(0, this.reportQueueMeta.total - 1)
+        }
+        return result
+      } finally {
+        this.reportResolving[reportId] = false
       }
     }
   }

@@ -40,6 +40,39 @@ export interface AdminReviewMutationResult {
   reviewStatus: 'pending' | 'approved' | 'rejected'
 }
 
+export interface AdminReport {
+  id: string
+  reporterId: string
+  reporterNickname: string
+  strategyId: string
+  strategyTitle: string
+  strategyAuthorId: string
+  strategyAuthorNickname: string
+  reason: string
+  status: 'pending' | 'reviewed' | 'dismissed'
+  createdAt: string | null
+}
+
+export interface AdminReportQueueResult {
+  data: AdminReport[]
+  meta: {
+    total: number
+    page: number
+    perPage: number
+  }
+}
+
+export interface AdminResolveReportPayload {
+  action: 'takedown' | 'dismiss'
+  adminNote?: string
+}
+
+export interface AdminResolveReportResult {
+  reportId: string
+  status: 'pending' | 'reviewed' | 'dismissed'
+  action: 'takedown' | 'dismiss'
+}
+
 interface AdminReviewStrategyDto {
   id: string
   title?: string | null
@@ -57,6 +90,25 @@ interface AdminReviewStrategyDto {
 interface AdminReviewMutationDto {
   strategy_id?: string
   review_status?: string | null
+}
+
+interface AdminReportDto {
+  id: string
+  reporter_id?: string | null
+  reporter_nickname?: string | null
+  strategy_id?: string | null
+  strategy_title?: string | null
+  strategy_author_id?: string | null
+  strategy_author_nickname?: string | null
+  reason?: string | null
+  status?: string | null
+  created_at?: string | null
+}
+
+interface AdminResolveReportDto {
+  report_id?: string
+  status?: string | null
+  action?: string | null
 }
 
 export function fetchAdminHealth(): Promise<AdminHealthResponse> {
@@ -123,6 +175,63 @@ export async function submitStrategyReview(
   }
 }
 
+export async function fetchPendingReports(params?: {
+  page?: number
+  perPage?: number
+}): Promise<AdminReportQueueResult> {
+  const page = params?.page ?? 1
+  const perPage = params?.perPage ?? 20
+  const response = await client.requestWithMeta<AdminReportDto[]>({
+    method: 'get',
+    url: '/v1/admin/reports',
+    params: {
+      status: 'pending',
+      page,
+      per_page: perPage
+    }
+  })
+
+  return {
+    data: (response.data ?? []).map((item) => ({
+      id: item.id,
+      reporterId: item.reporter_id ?? '',
+      reporterNickname: item.reporter_nickname ?? '',
+      strategyId: item.strategy_id ?? '',
+      strategyTitle: item.strategy_title ?? '',
+      strategyAuthorId: item.strategy_author_id ?? '',
+      strategyAuthorNickname: item.strategy_author_nickname ?? '',
+      reason: item.reason ?? '',
+      status: normalizeReportStatus(item.status),
+      createdAt: item.created_at ?? null
+    })),
+    meta: {
+      total: toNumber(response.meta?.total, 0),
+      page: toNumber(response.meta?.page, page),
+      perPage: toNumber(response.meta?.per_page, perPage)
+    }
+  }
+}
+
+export async function resolveReport(
+  reportId: string,
+  payload: AdminResolveReportPayload
+): Promise<AdminResolveReportResult> {
+  const response = await client.request<AdminResolveReportDto>({
+    method: 'patch',
+    url: `/v1/admin/reports/${reportId}/resolve`,
+    data: {
+      action: payload.action,
+      admin_note: payload.adminNote
+    }
+  })
+
+  return {
+    reportId: response.report_id || '',
+    status: normalizeReportStatus(response.status),
+    action: normalizeResolveAction(response.action)
+  }
+}
+
 function toNumber(value: unknown, fallback: number): number {
   if (typeof value === 'number' && Number.isFinite(value)) {
     return value
@@ -140,4 +249,12 @@ function toNumber(value: unknown, fallback: number): number {
 
 function normalizeReviewStatus(value: unknown): AdminReviewMutationResult['reviewStatus'] {
   return value === 'approved' || value === 'rejected' || value === 'pending' ? value : 'pending'
+}
+
+function normalizeReportStatus(value: unknown): AdminResolveReportResult['status'] {
+  return value === 'reviewed' || value === 'dismissed' || value === 'pending' ? value : 'pending'
+}
+
+function normalizeResolveAction(value: unknown): AdminResolveReportResult['action'] {
+  return value === 'dismiss' ? 'dismiss' : 'takedown'
 }

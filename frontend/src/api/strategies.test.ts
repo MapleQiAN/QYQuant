@@ -240,5 +240,18 @@ describe('strategies api', () => {
       url: '/v1/marketplace/strategies/strategy-id/publish-status'
     })
   })
+
+  it('calls marketplace report endpoint', async () => {
+    const data = await strategies.reportMarketplaceStrategy('strategy-id', 'misleading claim in description')
+
+    expect(data).toEqual({ reportId: '' })
+    expect(requestMock).toHaveBeenCalledWith({
+      method: 'post',
+      url: '/v1/marketplace/strategies/strategy-id/report',
+      data: {
+        reason: 'misleading claim in description'
+      }
+    })
+  })
 })
 

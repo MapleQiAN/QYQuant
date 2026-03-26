@@ -9,7 +9,8 @@ const {
   importMarketplaceStrategyMock,
   fetchMarketplaceStrategyImportStatusMock,
   publishMarketplaceStrategyMock,
-  fetchMarketplacePublishStatusMock
+  fetchMarketplacePublishStatusMock,
+  reportMarketplaceStrategyMock
 } = vi.hoisted(() => ({
   fetchMarketplaceStrategiesMock: vi.fn(),
   fetchMarketplaceStrategyDetailMock: vi.fn(),
@@ -17,7 +18,8 @@ const {
   importMarketplaceStrategyMock: vi.fn(),
   fetchMarketplaceStrategyImportStatusMock: vi.fn(),
   publishMarketplaceStrategyMock: vi.fn(),
-  fetchMarketplacePublishStatusMock: vi.fn()
+  fetchMarketplacePublishStatusMock: vi.fn(),
+  reportMarketplaceStrategyMock: vi.fn()
 }))
 
 vi.mock('../api/strategies', () => ({
@@ -27,7 +29,8 @@ vi.mock('../api/strategies', () => ({
   importMarketplaceStrategy: importMarketplaceStrategyMock,
   fetchMarketplaceStrategyImportStatus: fetchMarketplaceStrategyImportStatusMock,
   publishMarketplaceStrategy: publishMarketplaceStrategyMock,
-  fetchMarketplacePublishStatus: fetchMarketplacePublishStatusMock
+  fetchMarketplacePublishStatus: fetchMarketplacePublishStatusMock,
+  reportMarketplaceStrategy: reportMarketplaceStrategyMock
 }))
 
 describe('useMarketplaceStore', () => {
@@ -40,6 +43,7 @@ describe('useMarketplaceStore', () => {
     fetchMarketplaceStrategyImportStatusMock.mockReset()
     publishMarketplaceStrategyMock.mockReset()
     fetchMarketplacePublishStatusMock.mockReset()
+    reportMarketplaceStrategyMock.mockReset()
   })
 
   it('loads marketplace list and stores meta state', async () => {
@@ -290,5 +294,28 @@ describe('useMarketplaceStore', () => {
     expect(fetchMarketplacePublishStatusMock).toHaveBeenCalledWith('strategy-1')
     expect(publishResult.reviewStatus).toBe('pending')
     expect(status).toEqual({ reviewStatus: 'pending', isPublic: false })
+  })
+
+  it('submits a report for the current marketplace strategy', async () => {
+    fetchMarketplaceStrategyDetailMock.mockResolvedValue({
+      id: 'strategy-1',
+      title: 'Golden Breakout',
+      author: { nickname: 'QuantAlice', avatarUrl: 'https://example.com/avatar.png' },
+      displayMetrics: {},
+      alreadyImported: false,
+      importedStrategyId: null,
+      canReport: true
+    })
+    reportMarketplaceStrategyMock.mockResolvedValue({
+      reportId: 'report-1'
+    })
+
+    const store = useMarketplaceStore()
+    await store.fetchStrategyDetail('strategy-1')
+    const result = await store.reportStrategy('strategy-1', 'misleading claim in description')
+
+    expect(reportMarketplaceStrategyMock).toHaveBeenCalledWith('strategy-1', 'misleading claim in description')
+    expect(result).toEqual({ reportId: 'report-1' })
+    expect(store.reportLoading).toBe(false)
   })
 })

@@ -11,12 +11,14 @@ const {
   fetchMarketplaceStrategyEquityCurveMock,
   fetchMarketplaceStrategyImportStatusMock,
   importMarketplaceStrategyMock,
+  reportMarketplaceStrategyMock,
 } = vi.hoisted(() => ({
   pushMock: vi.fn(),
   fetchMarketplaceStrategyDetailMock: vi.fn(),
   fetchMarketplaceStrategyEquityCurveMock: vi.fn(),
   fetchMarketplaceStrategyImportStatusMock: vi.fn(),
   importMarketplaceStrategyMock: vi.fn(),
+  reportMarketplaceStrategyMock: vi.fn(),
 }))
 
 vi.mock('vue-router', () => ({
@@ -36,6 +38,7 @@ vi.mock('../api/strategies', () => ({
   fetchMarketplaceStrategyEquityCurve: fetchMarketplaceStrategyEquityCurveMock,
   fetchMarketplaceStrategyImportStatus: fetchMarketplaceStrategyImportStatusMock,
   importMarketplaceStrategy: importMarketplaceStrategyMock,
+  reportMarketplaceStrategy: reportMarketplaceStrategyMock,
 }))
 
 vi.mock('../components/backtest/EquityCurveChart.vue', () => ({
@@ -56,6 +59,7 @@ describe('MarketplaceStrategyDetailView', () => {
     fetchMarketplaceStrategyEquityCurveMock.mockReset()
     fetchMarketplaceStrategyImportStatusMock.mockReset()
     importMarketplaceStrategyMock.mockReset()
+    reportMarketplaceStrategyMock.mockReset()
     fetchMarketplaceStrategyEquityCurveMock.mockResolvedValue({
       dates: [1700000000000, 1700086400000],
       values: [100000, 101250.5],
@@ -87,6 +91,7 @@ describe('MarketplaceStrategyDetailView', () => {
       },
       alreadyImported: false,
       importedStrategyId: null,
+      canReport: true,
     })
     importMarketplaceStrategyMock.mockResolvedValue({
       strategyId: 'imported-1',
@@ -133,6 +138,7 @@ describe('MarketplaceStrategyDetailView', () => {
       },
       alreadyImported: true,
       importedStrategyId: 'imported-1',
+      canReport: false,
     })
     fetchMarketplaceStrategyImportStatusMock.mockResolvedValue({
       imported: true,
@@ -153,5 +159,46 @@ describe('MarketplaceStrategyDetailView', () => {
     await flushPromises()
 
     expect(pushMock).toHaveBeenCalledWith('/backtest/configure?strategy_id=imported-1')
+  })
+
+  it('opens report form and submits a strategy report', async () => {
+    fetchMarketplaceStrategyDetailMock.mockResolvedValue({
+      id: 'strategy-1',
+      title: 'Golden Breakout',
+      description: 'Trend-following breakout strategy for gold.',
+      category: 'trend-following',
+      tags: ['gold'],
+      displayMetrics: {
+        totalReturn: 18.6,
+      },
+      isVerified: false,
+      createdAt: '2026-03-18T12:00:00+08:00',
+      author: {
+        nickname: 'QuantAlice',
+        avatarUrl: 'https://example.com/avatar.png',
+      },
+      alreadyImported: false,
+      importedStrategyId: null,
+      canReport: true,
+    })
+    reportMarketplaceStrategyMock.mockResolvedValue({
+      reportId: 'report-1',
+    })
+
+    const wrapper = mount(MarketplaceStrategyDetailView, {
+      global: {
+        plugins: [createPinia()],
+      },
+    })
+    await flushPromises()
+
+    expect(wrapper.find('[data-test="open-report"]').exists()).toBe(true)
+
+    await wrapper.get('[data-test="open-report"]').trigger('click')
+    await wrapper.get('[data-test="report-reason"]').setValue('misleading claim in description')
+    await wrapper.get('[data-test="submit-report"]').trigger('click')
+    await flushPromises()
+
+    expect(reportMarketplaceStrategyMock).toHaveBeenCalledWith('strategy-1', 'misleading claim in description')
   })
 })

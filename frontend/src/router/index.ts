@@ -17,6 +17,7 @@ import MarketplaceStrategyDetailView from '../views/MarketplaceStrategyDetailVie
 import PricingView from '../views/PricingView.vue'
 import UserProfileView from '../views/UserProfileView.vue'
 import AdminDashboardView from '../views/admin/AdminDashboard.vue'
+import ReportManagementView from '../views/admin/ReportManagement.vue'
 import StrategyReviewView from '../views/admin/StrategyReview.vue'
 
 const router = createRouter({
@@ -33,6 +34,7 @@ const router = createRouter({
     { path: '/pricing', name: 'pricing', component: PricingView },
     { path: '/admin', name: 'admin-dashboard', component: AdminDashboardView, meta: { requiresAdmin: true } },
     { path: '/admin/strategies', name: 'admin-strategy-review', component: StrategyReviewView, meta: { requiresAdmin: true } },
+    { path: '/admin/reports', name: 'admin-report-management', component: ReportManagementView, meta: { requiresAdmin: true } },
     { path: '/backtests/:jobId/report', name: 'backtest-report', component: BacktestResultView },
     { path: '/bots', name: 'bots', component: BotsView },
     { path: '/forum', name: 'forum', component: ForumView },

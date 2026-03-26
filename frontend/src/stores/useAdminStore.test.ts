@@ -4,17 +4,23 @@ import { createPinia, setActivePinia } from 'pinia'
 const {
   fetchAdminHealthMock,
   fetchPendingStrategyReviewsMock,
-  submitStrategyReviewMock
+  submitStrategyReviewMock,
+  fetchPendingReportsMock,
+  resolveReportMock
 } = vi.hoisted(() => ({
   fetchAdminHealthMock: vi.fn(),
   fetchPendingStrategyReviewsMock: vi.fn(),
-  submitStrategyReviewMock: vi.fn()
+  submitStrategyReviewMock: vi.fn(),
+  fetchPendingReportsMock: vi.fn(),
+  resolveReportMock: vi.fn()
 }))
 
 vi.mock('../api/admin', () => ({
   fetchAdminHealth: fetchAdminHealthMock,
   fetchPendingStrategyReviews: fetchPendingStrategyReviewsMock,
-  submitStrategyReview: submitStrategyReviewMock
+  submitStrategyReview: submitStrategyReviewMock,
+  fetchPendingReports: fetchPendingReportsMock,
+  resolveReport: resolveReportMock
 }))
 
 import { useAdminStore } from './useAdminStore'
@@ -25,6 +31,8 @@ describe('admin store', () => {
     fetchAdminHealthMock.mockReset()
     fetchPendingStrategyReviewsMock.mockReset()
     submitStrategyReviewMock.mockReset()
+    fetchPendingReportsMock.mockReset()
+    resolveReportMock.mockReset()
   })
 
   it('loads admin health overview into state', async () => {
@@ -108,5 +116,79 @@ describe('admin store', () => {
     expect(store.reviewQueue).toEqual([])
     expect(store.reviewQueueMeta.total).toBe(0)
     expect(store.reviewSubmitting['strategy-1']).toBe(false)
+  })
+
+  it('loads pending reports queue into state', async () => {
+    fetchPendingReportsMock.mockResolvedValueOnce({
+      data: [
+        {
+          id: 'report-1',
+          reporterId: 'user-2',
+          reporterNickname: 'Watcher',
+          strategyId: 'strategy-1',
+          strategyTitle: 'Alpha Strategy',
+          strategyAuthorId: 'user-1',
+          strategyAuthorNickname: 'Author',
+          reason: 'misleading claim',
+          status: 'pending',
+          createdAt: '2026-03-26T12:00:00+08:00'
+        }
+      ],
+      meta: {
+        total: 1,
+        page: 1,
+        perPage: 20
+      }
+    })
+
+    const store = useAdminStore()
+    await store.loadPendingReports()
+
+    expect(fetchPendingReportsMock).toHaveBeenCalledWith({ page: 1, perPage: 20 })
+    expect(store.reportQueue).toHaveLength(1)
+    expect(store.reportQueueMeta).toEqual({ total: 1, page: 1, perPage: 20 })
+    expect(store.reportQueueLoading).toBe(false)
+  })
+
+  it('resolves a report and removes it from the report queue', async () => {
+    fetchPendingReportsMock.mockResolvedValueOnce({
+      data: [
+        {
+          id: 'report-1',
+          reporterId: 'user-2',
+          reporterNickname: 'Watcher',
+          strategyId: 'strategy-1',
+          strategyTitle: 'Alpha Strategy',
+          strategyAuthorId: 'user-1',
+          strategyAuthorNickname: 'Author',
+          reason: 'misleading claim',
+          status: 'pending',
+          createdAt: '2026-03-26T12:00:00+08:00'
+        }
+      ],
+      meta: {
+        total: 1,
+        page: 1,
+        perPage: 20
+      }
+    })
+    resolveReportMock.mockResolvedValueOnce({
+      reportId: 'report-1',
+      status: 'reviewed',
+      action: 'takedown'
+    })
+
+    const store = useAdminStore()
+    await store.loadPendingReports()
+    const result = await store.resolveReport('report-1', { action: 'takedown', adminNote: 'compliance issue' })
+
+    expect(resolveReportMock).toHaveBeenCalledWith('report-1', {
+      action: 'takedown',
+      adminNote: 'compliance issue'
+    })
+    expect(result).toEqual({ reportId: 'report-1', status: 'reviewed', action: 'takedown' })
+    expect(store.reportQueue).toEqual([])
+    expect(store.reportQueueMeta.total).toBe(0)
+    expect(store.reportResolving['report-1']).toBe(false)
   })
 })

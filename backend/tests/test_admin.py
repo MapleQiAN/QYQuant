@@ -1,5 +1,6 @@
 from app.extensions import db
-from app.models import AuditLog, Notification, Strategy, User
+from app.models import AuditLog, Notification, Report, Strategy, User
+from app.utils.time import now_utc
 
 
 def _seed_code(app, phone, code="123456", ttl=300):
@@ -66,6 +67,65 @@ def _seed_strategy_for_review(
         db.session.add(strategy)
         db.session.commit()
     return strategy_id
+
+
+def _seed_public_strategy_for_reports(
+    app,
+    *,
+    strategy_id,
+    owner_id,
+    title="Reported Strategy",
+    created_at=1700000000000,
+):
+    with app.app_context():
+        strategy = Strategy(
+            id=strategy_id,
+            owner_id=owner_id,
+            name=title,
+            title=title,
+            symbol="ETHUSDT",
+            status="running",
+            description="Public strategy under report review.",
+            category="trend-following",
+            tags=["trend", "reported"],
+            display_metrics={
+                "sharpe_ratio": 1.18,
+                "max_drawdown": -7.9,
+                "total_return": 18.4,
+            },
+            review_status="approved",
+            is_public=True,
+            created_at=created_at,
+            updated_at=created_at,
+            last_update=created_at,
+        )
+        db.session.add(strategy)
+        db.session.commit()
+    return strategy_id
+
+
+def _seed_report(
+    app,
+    *,
+    report_id,
+    reporter_id,
+    strategy_id,
+    reason="Misleading claims in description.",
+    status="pending",
+    created_at=None,
+):
+    with app.app_context():
+        report = Report(
+            id=report_id,
+            reporter_id=reporter_id,
+            strategy_id=strategy_id,
+            reason=reason,
+            status=status,
+            created_at=created_at or now_utc(),
+        )
+        db.session.add(report)
+        db.session.commit()
+    return report_id
 
 
 def test_admin_health_allows_admin_users(client, app):
@@ -414,3 +474,253 @@ def test_admin_strategy_review_rejects_invalid_status(client, app):
 
     assert response.status_code == 422
     assert response.json["error"]["code"] == "REVIEW_STATUS_INVALID"
+
+
+def test_admin_report_queue_lists_pending_reports_for_admins(client, app):
+    admin_token, admin_id = _login_user(client, phone="13800138231", nickname="ReportAdmin")
+    _, reporter_id = _login_user(client, phone="13800138232", nickname="Reporter")
+    _, owner_id = _login_user(client, phone="13800138233", nickname="ReportAuthor")
+
+    with app.app_context():
+        admin = db.session.get(User, admin_id)
+        reporter = db.session.get(User, reporter_id)
+        owner = db.session.get(User, owner_id)
+        admin.role = "admin"
+        reporter.nickname = "SignalWatcher"
+        owner.nickname = "AlphaBuilder"
+        db.session.commit()
+
+    _seed_public_strategy_for_reports(
+        app,
+        strategy_id="reported-alpha",
+        owner_id=owner_id,
+        title="Reported Alpha",
+    )
+    _seed_report(
+        app,
+        report_id="report-newer",
+        reporter_id=reporter_id,
+        strategy_id="reported-alpha",
+        reason="The strategy includes unsupported guarantees in the description.",
+        created_at=now_utc(),
+    )
+    _seed_report(
+        app,
+        report_id="report-dismissed",
+        reporter_id=reporter_id,
+        strategy_id="reported-alpha",
+        reason="Already processed report.",
+        status="dismissed",
+        created_at=now_utc(),
+    )
+
+    response = client.get(
+        "/api/v1/admin/reports?status=pending&page=1&per_page=20",
+        headers=_auth_headers(admin_token),
+    )
+
+    assert response.status_code == 200
+    assert response.json["meta"] == {"total": 1, "page": 1, "per_page": 20}
+    assert response.json["data"][0]["id"] == "report-newer"
+    assert response.json["data"][0]["reporter_nickname"] == "SignalWatcher"
+    assert response.json["data"][0]["strategy_title"] == "Reported Alpha"
+    assert response.json["data"][0]["strategy_author_nickname"] == "AlphaBuilder"
+    assert response.json["data"][0]["reason"] == "The strategy includes unsupported guarantees in the description."
+    assert response.json["data"][0]["status"] == "pending"
+
+
+def test_admin_report_queue_rejects_non_admin_users(client, app):
+    token, reporter_id = _login_user(client, phone="13800138234", nickname="Reporter")
+    _, owner_id = _login_user(client, phone="13800138235", nickname="Owner")
+    _seed_public_strategy_for_reports(app, strategy_id="reported-forbidden", owner_id=owner_id)
+    _seed_report(app, report_id="report-forbidden", reporter_id=reporter_id, strategy_id="reported-forbidden")
+
+    response = client.get(
+        "/api/v1/admin/reports?status=pending&page=1&per_page=20",
+        headers=_auth_headers(token),
+    )
+
+    assert response.status_code == 403
+    assert response.json["error"]["code"] == "FORBIDDEN"
+
+
+def test_admin_resolve_report_takedown_updates_strategy_and_side_effects(client, app, monkeypatch):
+    admin_token, admin_id = _login_user(client, phone="13800138236", nickname="TakedownAdmin")
+    _, reporter_id = _login_user(client, phone="13800138237", nickname="Reporter")
+    _, owner_id = _login_user(client, phone="13800138238", nickname="Owner")
+
+    with app.app_context():
+        admin = db.session.get(User, admin_id)
+        owner = db.session.get(User, owner_id)
+        admin.role = "admin"
+        owner.email = "owner@example.com"
+        db.session.commit()
+
+    _seed_public_strategy_for_reports(
+        app,
+        strategy_id="reported-takedown",
+        owner_id=owner_id,
+        title="Take Me Down",
+    )
+    _seed_report(
+        app,
+        report_id="report-primary",
+        reporter_id=reporter_id,
+        strategy_id="reported-takedown",
+        reason="This strategy uses prohibited marketing language.",
+    )
+    _seed_report(
+        app,
+        report_id="report-secondary",
+        reporter_id=reporter_id,
+        strategy_id="reported-takedown",
+        reason="Second pending report should also be closed.",
+    )
+
+    delay_calls = []
+    from app.blueprints import admin as admin_blueprint
+
+    monkeypatch.setattr(
+        admin_blueprint.send_email_notification,
+        "delay",
+        lambda **kwargs: delay_calls.append(kwargs),
+    )
+
+    response = client.patch(
+        "/api/v1/admin/reports/report-primary/resolve",
+        json={"action": "takedown", "admin_note": "Repeated compliance violations"},
+        headers=_auth_headers(admin_token),
+    )
+
+    assert response.status_code == 200
+    assert response.json["data"] == {"report_id": "report-primary", "status": "reviewed", "action": "takedown"}
+
+    with app.app_context():
+        strategy = db.session.get(Strategy, "reported-takedown")
+        primary = db.session.get(Report, "report-primary")
+        secondary = db.session.get(Report, "report-secondary")
+
+        assert strategy.is_public is False
+        assert primary.status == "reviewed"
+        assert primary.reviewed_by == admin_id
+        assert primary.admin_note == "Repeated compliance violations"
+        assert secondary.status == "reviewed"
+        assert secondary.reviewed_by == admin_id
+
+        notification = Notification.query.filter_by(
+            user_id=owner_id,
+            type="strategy_takedown",
+        ).first()
+        assert notification is not None
+        assert "Take Me Down" in (notification.content or "")
+        assert "This strategy uses prohibited marketing language." in (notification.content or "")
+
+        audit = AuditLog.query.filter_by(
+            operator_id=admin_id,
+            action="strategy_takedown",
+            target_id="reported-takedown",
+        ).first()
+        assert audit is not None
+        assert audit.details["report_id"] == "report-primary"
+        assert audit.details["strategy_owner_id"] == owner_id
+        assert audit.details["admin_note"] == "Repeated compliance violations"
+
+    assert delay_calls == [
+        {
+            "user_id": owner_id,
+            "event_type": "strategy_takedown",
+            "context_data": {
+                "strategy_name": "Take Me Down",
+                "reason": "This strategy uses prohibited marketing language.",
+                "target_id": "reported-takedown",
+            },
+        }
+    ]
+
+
+def test_admin_resolve_report_dismiss_marks_report_only(client, app, monkeypatch):
+    admin_token, admin_id = _login_user(client, phone="13800138239", nickname="DismissAdmin")
+    _, reporter_id = _login_user(client, phone="13800138240", nickname="Reporter")
+    _, owner_id = _login_user(client, phone="13800138241", nickname="Owner")
+
+    with app.app_context():
+        admin = db.session.get(User, admin_id)
+        admin.role = "admin"
+        db.session.commit()
+
+    _seed_public_strategy_for_reports(app, strategy_id="reported-dismiss", owner_id=owner_id, title="Dismiss Me")
+    _seed_report(
+        app,
+        report_id="report-dismiss-target",
+        reporter_id=reporter_id,
+        strategy_id="reported-dismiss",
+        reason="This report should be dismissed.",
+    )
+
+    delay_calls = []
+    from app.blueprints import admin as admin_blueprint
+
+    monkeypatch.setattr(
+        admin_blueprint.send_email_notification,
+        "delay",
+        lambda **kwargs: delay_calls.append(kwargs),
+    )
+
+    response = client.patch(
+        "/api/v1/admin/reports/report-dismiss-target/resolve",
+        json={"action": "dismiss", "admin_note": "Insufficient evidence"},
+        headers=_auth_headers(admin_token),
+    )
+
+    assert response.status_code == 200
+    assert response.json["data"] == {"report_id": "report-dismiss-target", "status": "dismissed", "action": "dismiss"}
+
+    with app.app_context():
+        strategy = db.session.get(Strategy, "reported-dismiss")
+        report = db.session.get(Report, "report-dismiss-target")
+
+        assert strategy.is_public is True
+        assert report.status == "dismissed"
+        assert report.reviewed_by == admin_id
+        assert report.admin_note == "Insufficient evidence"
+        assert Notification.query.count() == 0
+
+        audit = AuditLog.query.filter_by(
+            operator_id=admin_id,
+            action="report_dismiss",
+            target_id="report-dismiss-target",
+        ).first()
+        assert audit is not None
+        assert audit.details["strategy_id"] == "reported-dismiss"
+        assert audit.details["admin_note"] == "Insufficient evidence"
+
+    assert delay_calls == []
+
+
+def test_admin_resolve_report_rejects_duplicate_processing(client, app):
+    admin_token, admin_id = _login_user(client, phone="13800138242", nickname="ConflictAdmin")
+    _, reporter_id = _login_user(client, phone="13800138243", nickname="Reporter")
+    _, owner_id = _login_user(client, phone="13800138244", nickname="Owner")
+
+    with app.app_context():
+        admin = db.session.get(User, admin_id)
+        admin.role = "admin"
+        db.session.commit()
+
+    _seed_public_strategy_for_reports(app, strategy_id="reported-conflict", owner_id=owner_id)
+    _seed_report(
+        app,
+        report_id="report-conflict",
+        reporter_id=reporter_id,
+        strategy_id="reported-conflict",
+        status="dismissed",
+    )
+
+    response = client.patch(
+        "/api/v1/admin/reports/report-conflict/resolve",
+        json={"action": "dismiss"},
+        headers=_auth_headers(admin_token),
+    )
+
+    assert response.status_code == 409
+    assert response.json["error"]["code"] == "REPORT_RESOLUTION_CONFLICT"

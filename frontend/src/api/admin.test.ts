@@ -12,7 +12,13 @@ vi.mock('./http', () => ({
   })
 }))
 
-import { fetchAdminHealth, fetchPendingStrategyReviews, submitStrategyReview } from './admin'
+import {
+  fetchAdminHealth,
+  fetchPendingReports,
+  fetchPendingStrategyReviews,
+  resolveReport,
+  submitStrategyReview,
+} from './admin'
 
 describe('admin api', () => {
   beforeEach(() => {
@@ -67,6 +73,46 @@ describe('admin api', () => {
       method: 'patch',
       url: '/v1/admin/strategies/strategy-1/review',
       data: { status: 'approved' }
+    })
+  })
+
+  it('calls pending reports queue endpoint', async () => {
+    requestWithMetaMock.mockResolvedValueOnce({
+      data: [],
+      meta: { total: 0, page: 1, per_page: 20 }
+    })
+
+    const data = await fetchPendingReports({ page: 3, perPage: 5 })
+
+    expect(data).toEqual({
+      data: [],
+      meta: { total: 0, page: 1, perPage: 20 }
+    })
+    expect(requestWithMetaMock).toHaveBeenCalledWith({
+      method: 'get',
+      url: '/v1/admin/reports',
+      params: { status: 'pending', page: 3, per_page: 5 }
+    })
+  })
+
+  it('calls report resolution mutation endpoint', async () => {
+    requestMock.mockResolvedValueOnce({
+      report_id: 'report-1',
+      status: 'reviewed',
+      action: 'takedown'
+    })
+
+    const data = await resolveReport('report-1', { action: 'takedown', adminNote: 'compliance issue' })
+
+    expect(data).toEqual({
+      reportId: 'report-1',
+      status: 'reviewed',
+      action: 'takedown'
+    })
+    expect(requestMock).toHaveBeenCalledWith({
+      method: 'patch',
+      url: '/v1/admin/reports/report-1/resolve',
+      data: { action: 'takedown', admin_note: 'compliance issue' }
     })
   })
 })

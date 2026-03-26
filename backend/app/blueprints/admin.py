@@ -1,17 +1,19 @@
 from flask import request
 from flask_smorest import Blueprint
+from sqlalchemy.orm import aliased
 
 from ..extensions import db
-from ..models import Strategy, User
+from ..models import Report, Strategy, User
 from ..services.notifications import create_notification
 from ..tasks.notification_tasks import send_email_notification
 from ..utils.auth_helpers import require_admin
 from ..utils.audit import log_audit
 from ..utils.response import error_response, ok
-from ..utils.time import format_beijing_iso_ms, now_ms
+from ..utils.time import format_beijing_iso, format_beijing_iso_ms, now_ms, now_utc
 
 bp = Blueprint("admin", __name__, url_prefix="/api/v1/admin")
 REVIEWABLE_STATUSES = {"approved", "rejected"}
+REPORT_RESOLUTION_ACTIONS = {"takedown", "dismiss"}
 
 
 @bp.get("/health")
@@ -64,8 +66,8 @@ def review_strategy(strategy_id):
         return error_response("STRATEGY_REVIEW_CONFLICT", "Strategy review has already been processed", 409)
 
     admin_id = _current_admin_id()
-    previous_status = strategy.review_status
     reviewed_at = now_ms()
+    previous_status = strategy.review_status
     strategy.review_status = status
     strategy.is_public = status == "approved"
     strategy.updated_at = reviewed_at
@@ -106,6 +108,135 @@ def review_strategy(strategy_id):
     return ok({"strategy_id": strategy.id, "review_status": strategy.review_status})
 
 
+@bp.get("/reports")
+@require_admin
+def list_admin_reports():
+    status = (request.args.get("status") or "pending").strip() or "pending"
+    page = _int_arg("page", default=1, minimum=1)
+    per_page = _int_arg("per_page", default=20, minimum=1, maximum=100)
+
+    reporter = aliased(User)
+    author = aliased(User)
+    query = (
+        db.session.query(Report, reporter, Strategy, author)
+        .join(Strategy, Report.strategy_id == Strategy.id)
+        .outerjoin(reporter, Report.reporter_id == reporter.id)
+        .outerjoin(author, Strategy.owner_id == author.id)
+        .filter(Report.status == status)
+        .order_by(Report.created_at.desc(), Report.id.desc())
+    )
+
+    total = query.count()
+    items = query.offset((page - 1) * per_page).limit(per_page).all()
+    return ok(
+        [
+            _serialize_admin_report(report, reporter_user, strategy, author_user)
+            for report, reporter_user, strategy, author_user in items
+        ],
+        meta={"total": total, "page": page, "per_page": per_page},
+    )
+
+
+@bp.patch("/reports/<report_id>/resolve")
+@require_admin
+def resolve_report(report_id):
+    payload = request.get_json() or {}
+    action = str(payload.get("action") or "").strip().lower()
+    admin_note = payload.get("admin_note")
+    admin_note = str(admin_note).strip() if admin_note is not None else None
+    if not admin_note:
+        admin_note = None
+
+    if action not in REPORT_RESOLUTION_ACTIONS:
+        return error_response("REPORT_ACTION_INVALID", "Report action is invalid", 422)
+
+    report = db.session.get(Report, report_id)
+    if report is None:
+        return error_response("REPORT_NOT_FOUND", "Report not found", 404)
+    if report.status != "pending":
+        return error_response("REPORT_RESOLUTION_CONFLICT", "Report has already been processed", 409)
+
+    strategy = db.session.get(Strategy, report.strategy_id)
+    if strategy is None:
+        return error_response("STRATEGY_NOT_FOUND", "Strategy not found", 404)
+
+    admin_id = _current_admin_id()
+    reviewed_at = now_utc()
+
+    if action == "takedown":
+        strategy.is_public = False
+        strategy.updated_at = now_ms()
+        strategy.last_update = strategy.updated_at
+
+        pending_reports = (
+            Report.query
+            .filter(
+                Report.strategy_id == strategy.id,
+                Report.status == "pending",
+            )
+            .all()
+        )
+        for pending_report in pending_reports:
+            pending_report.status = "reviewed"
+            pending_report.reviewed_at = reviewed_at
+            pending_report.reviewed_by = admin_id
+            pending_report.admin_note = admin_note
+
+        strategy_name = strategy.title or strategy.name
+        takedown_reason = report.reason
+        if strategy.owner_id:
+            create_notification(
+                user_id=strategy.owner_id,
+                type="strategy_takedown",
+                title="策略已下架",
+                content=f"策略《{strategy_name}》已因举报被下架。原因：{takedown_reason}",
+            )
+        log_audit(
+            operator_id=admin_id,
+            action="strategy_takedown",
+            target_type="strategy",
+            target_id=strategy.id,
+            details={
+                "report_id": report.id,
+                "strategy_id": strategy.id,
+                "strategy_owner_id": strategy.owner_id,
+                "reason": takedown_reason,
+                "admin_note": admin_note,
+            },
+        )
+        db.session.commit()
+
+        if strategy.owner_id:
+            send_email_notification.delay(
+                user_id=strategy.owner_id,
+                event_type="strategy_takedown",
+                context_data={
+                    "strategy_name": strategy_name,
+                    "reason": takedown_reason,
+                    "target_id": strategy.id,
+                },
+            )
+        return ok({"report_id": report.id, "status": "reviewed", "action": action})
+
+    report.status = "dismissed"
+    report.reviewed_at = reviewed_at
+    report.reviewed_by = admin_id
+    report.admin_note = admin_note
+    log_audit(
+        operator_id=admin_id,
+        action="report_dismiss",
+        target_type="report",
+        target_id=report.id,
+        details={
+            "report_id": report.id,
+            "strategy_id": report.strategy_id,
+            "admin_note": admin_note,
+        },
+    )
+    db.session.commit()
+    return ok({"report_id": report.id, "status": "dismissed", "action": action})
+
+
 def _serialize_admin_strategy(strategy, author):
     return {
         "id": strategy.id,
@@ -122,6 +253,21 @@ def _serialize_admin_strategy(strategy, author):
     }
 
 
+def _serialize_admin_report(report, reporter, strategy, author):
+    return {
+        "id": report.id,
+        "reporter_id": report.reporter_id,
+        "reporter_nickname": getattr(reporter, "nickname", None),
+        "strategy_id": strategy.id,
+        "strategy_title": strategy.title or strategy.name,
+        "strategy_author_id": strategy.owner_id,
+        "strategy_author_nickname": getattr(author, "nickname", None),
+        "reason": report.reason,
+        "status": report.status,
+        "created_at": format_beijing_iso(report.created_at),
+    }
+
+
 def _notification_title_for_status(status):
     if status == "approved":
         return "策略审核通过"
@@ -130,8 +276,8 @@ def _notification_title_for_status(status):
 
 def _notification_content_for_status(strategy_name, status, reason):
     if status == "approved":
-        return f"您的策略「{strategy_name}」已通过审核，现已在策略广场上架。"
-    return f"您的策略「{strategy_name}」未通过审核。原因：{reason}"
+        return f"您的策略《{strategy_name}》已通过审核，现已在策略广场上架。"
+    return f"您的策略《{strategy_name}》未通过审核。原因：{reason}"
 
 
 def _int_arg(name, *, default, minimum=None, maximum=None):
