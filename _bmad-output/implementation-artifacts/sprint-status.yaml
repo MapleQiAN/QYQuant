@@ -50,7 +50,7 @@ development_status:
   1-4-技术指标函数库: done
   1-5-qysp-元数据增强与json-schema验证: done
   1-6-qys-cli命令行工具-6个子命令: done
-  1-7-策略模板库-4种模板: ready-for-dev
+  1-7-策略模板库-4种模板: in-progress
   1-8-示例策略重写与完整文档: ready-for-dev
   epic-1-retrospective: optional
 
@@ -148,5 +148,5 @@ development_status:
   10-4-回测任务队列监控与手动干预: review
   10-5-用户账户管理-封禁与审计日志查看: ready-for-dev
   10-6-数据源健康监控与异常告警: ready-for-dev
-  10-7-注销用户的已发布策略处理: backlog
+  10-7-注销用户的已发布策略处理: review
   epic-10-retrospective: optional

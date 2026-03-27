@@ -145,7 +145,7 @@ def list_strategies():
     sort = request.args.get("sort", "created_at")
     order = request.args.get("order", "desc").lower()
 
-    query = Strategy.query.filter_by(owner_id=user_id)
+    query = Strategy.query.filter_by(owner_id=user_id).filter(Strategy.deleted_at.is_(None))
     sort_column = _sort_column(sort)
     query = query.order_by(sort_column.desc() if order != "asc" else sort_column.asc())
 

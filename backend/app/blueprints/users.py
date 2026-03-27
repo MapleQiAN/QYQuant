@@ -104,6 +104,11 @@ def delete_me():
     user.avatar_url = ""
     user.bio = ""
     user.deleted_at = now_utc()
+    Strategy.query.filter(
+        Strategy.owner_id == user.id,
+        Strategy.is_public.is_(False),
+        Strategy.deleted_at.is_(None),
+    ).update({"deleted_at": now_utc()}, synchronize_session=False)
     log_audit(
         operator_id=user.id,
         action="user_delete",

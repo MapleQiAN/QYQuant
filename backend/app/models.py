@@ -145,6 +145,7 @@ class Strategy(db.Model):
     code_hash = db.Column(db.String(64), nullable=True)
     created_at = db.Column(db.BigInteger, default=now_ms)
     updated_at = db.Column(db.BigInteger, default=now_ms)
+    deleted_at = db.Column(db.DateTime(timezone=True), nullable=True)
 
     def to_card_dict(self, *, author=None):
         author_payload = {
