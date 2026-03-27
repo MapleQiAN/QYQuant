@@ -2,6 +2,7 @@ import { defineStore } from 'pinia'
 import {
   fetchAdminHealth,
   fetchAuditLogs,
+  fetchDataSourceHealth,
   fetchPendingReports,
   fetchPendingStrategyReviews,
   fetchQueueStats,
@@ -12,6 +13,7 @@ import {
   updateUserBanStatus,
   type AdminAuditLog,
   type AdminAuditLogFilters,
+  type AdminDataSourceHealth,
   type AdminHealthResponse,
   type AdminQueueStats,
   type AdminReport,
@@ -33,10 +35,24 @@ const emptyQueueStats = (): AdminQueueStats => ({
   failureRate1h: 0
 })
 
+const emptyDataSourceHealth = (): AdminDataSourceHealth => ({
+  sourceName: 'jqdata',
+  status: 'unknown',
+  statusLabel: '未检测',
+  statusColor: 'gray',
+  lastCheckedAt: null,
+  lastSuccessAt: null,
+  lastFailureAt: null,
+  lastErrorMessage: null,
+  consecutiveFailures: 0
+})
+
 export const useAdminStore = defineStore('admin', {
   state: () => ({
     overview: null as AdminHealthResponse | null,
     loading: false,
+    dataSourceHealth: emptyDataSourceHealth() as AdminDataSourceHealth,
+    dataSourceHealthLoading: false,
     users: [] as AdminUser[],
     usersMeta: {
       total: 0,
@@ -80,6 +96,14 @@ export const useAdminStore = defineStore('admin', {
         this.overview = await fetchAdminHealth()
       } finally {
         this.loading = false
+      }
+    },
+    async loadDataSourceHealth() {
+      this.dataSourceHealthLoading = true
+      try {
+        this.dataSourceHealth = await fetchDataSourceHealth()
+      } finally {
+        this.dataSourceHealthLoading = false
       }
     },
     async loadUsers(params?: { search?: string; page?: number; perPage?: number }) {

@@ -7,6 +7,18 @@ export interface AdminHealthResponse {
   scope: string
 }
 
+export interface AdminDataSourceHealth {
+  sourceName: string
+  status: 'healthy' | 'unhealthy' | 'unknown'
+  statusLabel: string
+  statusColor: 'green' | 'red' | 'gray'
+  lastCheckedAt: string | null
+  lastSuccessAt: string | null
+  lastFailureAt: string | null
+  lastErrorMessage: string | null
+  consecutiveFailures: number
+}
+
 export interface AdminQueueStats {
   pending: number
   running: number
@@ -174,6 +186,18 @@ interface AdminQueueStatsDto {
   stuck_jobs?: AdminStuckJobDto[] | null
 }
 
+interface AdminDataSourceHealthDto {
+  source_name?: string | null
+  status?: string | null
+  status_label?: string | null
+  status_color?: string | null
+  last_checked_at?: string | null
+  last_success_at?: string | null
+  last_failure_at?: string | null
+  last_error_message?: string | null
+  consecutive_failures?: number | string | null
+}
+
 interface AdminStuckJobDto {
   job_id?: string | null
   user_id?: string | null
@@ -256,6 +280,25 @@ export function fetchAdminHealth(): Promise<AdminHealthResponse> {
     method: 'get',
     url: '/v1/admin/health'
   })
+}
+
+export async function fetchDataSourceHealth(): Promise<AdminDataSourceHealth> {
+  const response = await client.request<AdminDataSourceHealthDto>({
+    method: 'get',
+    url: '/v1/admin/data-source-health'
+  })
+
+  return {
+    sourceName: response.source_name ?? 'jqdata',
+    status: normalizeDataSourceStatus(response.status),
+    statusLabel: response.status_label ?? '未检测',
+    statusColor: normalizeDataSourceColor(response.status_color),
+    lastCheckedAt: response.last_checked_at ?? null,
+    lastSuccessAt: response.last_success_at ?? null,
+    lastFailureAt: response.last_failure_at ?? null,
+    lastErrorMessage: response.last_error_message ?? null,
+    consecutiveFailures: toNumber(response.consecutive_failures, 0)
+  }
 }
 
 export async function fetchQueueStats(): Promise<AdminQueueStatsResult> {
@@ -532,4 +575,12 @@ function normalizeTerminateStatus(value: unknown): AdminTerminateJobResult['stat
     console.warn(`Unexpected terminate status: ${String(value)}, defaulting to 'terminated'`)
   }
   return 'terminated'
+}
+
+function normalizeDataSourceStatus(value: unknown): AdminDataSourceHealth['status'] {
+  return value === 'healthy' || value === 'unhealthy' || value === 'unknown' ? value : 'unknown'
+}
+
+function normalizeDataSourceColor(value: unknown): AdminDataSourceHealth['statusColor'] {
+  return value === 'green' || value === 'red' || value === 'gray' ? value : 'gray'
 }

@@ -35,6 +35,7 @@ describe('AdminDashboard', () => {
     expect(wrapper.text()).toContain('管理后台')
     expect(wrapper.text()).toContain('系统概览')
     expect(wrapper.text()).toContain('admin')
+    expect(wrapper.find('[data-test="admin-data-source-health-link"]').exists()).toBe(true)
     expect(wrapper.find('[data-test="admin-backtest-monitor-link"]').exists()).toBe(true)
     expect(wrapper.find('[data-test="admin-user-management-link"]').exists()).toBe(true)
     expect(loadOverviewMock).toHaveBeenCalledTimes(1)

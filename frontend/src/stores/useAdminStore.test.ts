@@ -4,6 +4,7 @@ import { createPinia, setActivePinia } from 'pinia'
 const {
   fetchAdminHealthMock,
   fetchAuditLogsMock,
+  fetchDataSourceHealthMock,
   fetchQueueStatsMock,
   fetchUsersMock,
   fetchPendingStrategyReviewsMock,
@@ -15,6 +16,7 @@ const {
 } = vi.hoisted(() => ({
   fetchAdminHealthMock: vi.fn(),
   fetchAuditLogsMock: vi.fn(),
+  fetchDataSourceHealthMock: vi.fn(),
   fetchQueueStatsMock: vi.fn(),
   fetchUsersMock: vi.fn(),
   fetchPendingStrategyReviewsMock: vi.fn(),
@@ -28,6 +30,7 @@ const {
 vi.mock('../api/admin', () => ({
   fetchAdminHealth: fetchAdminHealthMock,
   fetchAuditLogs: fetchAuditLogsMock,
+  fetchDataSourceHealth: fetchDataSourceHealthMock,
   fetchQueueStats: fetchQueueStatsMock,
   fetchUsers: fetchUsersMock,
   fetchPendingStrategyReviews: fetchPendingStrategyReviewsMock,
@@ -45,6 +48,7 @@ describe('admin store', () => {
     setActivePinia(createPinia())
     fetchAdminHealthMock.mockReset()
     fetchAuditLogsMock.mockReset()
+    fetchDataSourceHealthMock.mockReset()
     fetchQueueStatsMock.mockReset()
     fetchUsersMock.mockReset()
     fetchPendingStrategyReviewsMock.mockReset()
@@ -64,6 +68,37 @@ describe('admin store', () => {
     expect(fetchAdminHealthMock).toHaveBeenCalledTimes(1)
     expect(store.overview).toEqual({ status: 'ok', scope: 'admin' })
     expect(store.loading).toBe(false)
+  })
+
+  it('loads data source health into state', async () => {
+    fetchDataSourceHealthMock.mockResolvedValueOnce({
+      sourceName: 'jqdata',
+      status: 'healthy',
+      statusLabel: '正常',
+      statusColor: 'green',
+      lastCheckedAt: '2026-03-27T09:05:00+08:00',
+      lastSuccessAt: '2026-03-27T09:05:00+08:00',
+      lastFailureAt: null,
+      lastErrorMessage: null,
+      consecutiveFailures: 0
+    })
+
+    const store = useAdminStore()
+    await store.loadDataSourceHealth()
+
+    expect(fetchDataSourceHealthMock).toHaveBeenCalledTimes(1)
+    expect(store.dataSourceHealth).toEqual({
+      sourceName: 'jqdata',
+      status: 'healthy',
+      statusLabel: '正常',
+      statusColor: 'green',
+      lastCheckedAt: '2026-03-27T09:05:00+08:00',
+      lastSuccessAt: '2026-03-27T09:05:00+08:00',
+      lastFailureAt: null,
+      lastErrorMessage: null,
+      consecutiveFailures: 0
+    })
+    expect(store.dataSourceHealthLoading).toBe(false)
   })
 
   it('loads pending strategy review queue into state', async () => {

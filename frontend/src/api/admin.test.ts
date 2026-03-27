@@ -15,6 +15,7 @@ vi.mock('./http', () => ({
 import {
   fetchAdminHealth,
   fetchAuditLogs,
+  fetchDataSourceHealth,
   fetchQueueStats,
   fetchUsers,
   fetchPendingReports,
@@ -40,6 +41,38 @@ describe('admin api', () => {
     expect(requestMock).toHaveBeenCalledWith({
       method: 'get',
       url: '/v1/admin/health'
+    })
+  })
+
+  it('calls data source health endpoint', async () => {
+    requestMock.mockResolvedValueOnce({
+      source_name: 'jqdata',
+      status: 'unhealthy',
+      status_label: '异常',
+      status_color: 'red',
+      last_checked_at: '2026-03-27T09:00:00+08:00',
+      last_success_at: '2026-03-27T08:30:00+08:00',
+      last_failure_at: '2026-03-27T09:00:00+08:00',
+      last_error_message: 'request timed out',
+      consecutive_failures: 2
+    })
+
+    const data = await fetchDataSourceHealth()
+
+    expect(data).toEqual({
+      sourceName: 'jqdata',
+      status: 'unhealthy',
+      statusLabel: '异常',
+      statusColor: 'red',
+      lastCheckedAt: '2026-03-27T09:00:00+08:00',
+      lastSuccessAt: '2026-03-27T08:30:00+08:00',
+      lastFailureAt: '2026-03-27T09:00:00+08:00',
+      lastErrorMessage: 'request timed out',
+      consecutiveFailures: 2
+    })
+    expect(requestMock).toHaveBeenCalledWith({
+      method: 'get',
+      url: '/v1/admin/data-source-health'
     })
   })
 

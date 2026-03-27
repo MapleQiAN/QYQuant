@@ -5,7 +5,7 @@
         <div>
           <p class="admin-dashboard__eyebrow">Admin Console</p>
           <h1>管理后台</h1>
-          <p>系统概览、审核流程与任务监控都从这里进入，方便管理员集中处理平台运营事务。</p>
+          <p>系统概览、审核流程和运维入口集中在这里，便于管理员快速处理平台事务。</p>
         </div>
         <div class="admin-dashboard__status">
           <span class="admin-dashboard__status-label">系统概览</span>
@@ -17,12 +17,12 @@
       <div class="admin-dashboard__grid">
         <article class="admin-card">
           <h2>访问控制</h2>
-          <p>后台路由和接口都启用了管理员校验，避免普通用户误入或越权操作。</p>
+          <p>后台路由和接口统一启用管理员校验，避免普通用户越权访问。</p>
         </article>
 
         <article class="admin-card">
           <h2>审计留痕</h2>
-          <p>关键管理动作会持续写入审计日志，方便排查争议、回溯处理过程。</p>
+          <p>关键管理动作会持续写入审计日志，方便排查争议和追溯处理过程。</p>
         </article>
 
         <article class="admin-card">
@@ -35,13 +35,25 @@
 
         <article class="admin-card">
           <h2>用户管理</h2>
-          <p>查看用户账号状态、执行封禁或解封，并集中查看相关审计日志。</p>
+          <p>查看用户账号状态、执行封禁或解封，并联动审计日志。</p>
           <RouterLink
             class="admin-card__link"
             data-test="admin-user-management-link"
             to="/admin/user-management"
           >
             进入用户管理
+          </RouterLink>
+        </article>
+
+        <article class="admin-card">
+          <h2>数据源监控</h2>
+          <p>查看 JQData 健康状态、最近检查时间、错误信息和连续失败次数。</p>
+          <RouterLink
+            class="admin-card__link"
+            data-test="admin-data-source-health-link"
+            to="/admin/data-source-health"
+          >
+            进入数据源监控
           </RouterLink>
         </article>
 

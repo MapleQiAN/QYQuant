@@ -19,6 +19,7 @@ vi.mock('../views/MarketplaceStrategyDetailView.vue', () => ({ default: { templa
 vi.mock('../views/PricingView.vue', () => ({ default: { template: '<div />' } }))
 vi.mock('../views/UserProfileView.vue', () => ({ default: { template: '<div />' } }))
 vi.mock('../views/admin/AdminDashboard.vue', () => ({ default: { template: '<div />' } }))
+vi.mock('../views/admin/DataSourceHealth.vue', () => ({ default: { template: '<div />' } }))
 vi.mock('../views/admin/StrategyReview.vue', () => ({ default: { template: '<div />' } }))
 vi.mock('../views/admin/ReportManagement.vue', () => ({ default: { template: '<div />' } }))
 vi.mock('../views/admin/BacktestMonitor.vue', () => ({ default: { template: '<div />' } }))
@@ -96,6 +97,13 @@ describe('router', () => {
 
     expect(reviewRoute).toBeTruthy()
     expect(reviewRoute?.meta.requiresAdmin).toBe(true)
+  })
+
+  it('contains admin data source health route', () => {
+    const dataSourceRoute = router.getRoutes().find((route) => route.path === '/admin/data-source-health')
+
+    expect(dataSourceRoute).toBeTruthy()
+    expect(dataSourceRoute?.meta.requiresAdmin).toBe(true)
   })
 
   it('contains admin report management route', () => {
