@@ -260,6 +260,19 @@ class MarketDataCache(db.Model):
     cached_at = db.Column(db.DateTime(timezone=True), nullable=False, default=now_utc, server_default=db.func.now())
 
 
+class DataSourceHealthStatus(db.Model):
+    __tablename__ = 'data_source_health_status'
+
+    source_name = db.Column(db.String(50), primary_key=True)
+    status = db.Column(db.String(20), nullable=False, default='unknown')
+    last_checked_at = db.Column(db.DateTime(timezone=True), nullable=True)
+    last_success_at = db.Column(db.DateTime(timezone=True), nullable=True)
+    last_failure_at = db.Column(db.DateTime(timezone=True), nullable=True)
+    last_error_message = db.Column(db.Text, nullable=True)
+    consecutive_failures = db.Column(db.Integer, nullable=False, default=0)
+    last_notified_status = db.Column(db.String(20), nullable=True)
+
+
 class BotInstance(db.Model):
     __tablename__ = 'bot_instances'
     id = db.Column(db.String, primary_key=True, default=gen_id)

@@ -41,6 +41,7 @@ celery_app.conf.update(
     accept_content=['json'],
     imports=(
         'app.tasks.backtests',
+        'app.tasks.data_source_tasks',
         'app.tasks.notification_tasks',
         'app.tasks.simulation_tasks',
         'app.tasks.quota_tasks',
@@ -68,6 +69,11 @@ celery_app.conf.beat_schedule = {
     'reset-monthly-quotas': {
         'task': 'app.tasks.quota_tasks.reset_monthly_quotas',
         'schedule': crontab(day_of_month='1', hour=0, minute=0),
+        'options': {'queue': 'default'},
+    },
+    'check-jqdata-health': {
+        'task': 'app.tasks.data_source_tasks.check_jqdata_health',
+        'schedule': crontab(minute='*/5'),
         'options': {'queue': 'default'},
     },
 }

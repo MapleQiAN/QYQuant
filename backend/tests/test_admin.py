@@ -1,7 +1,17 @@
 from datetime import datetime, timedelta, timezone
 
 from app.extensions import db
-from app.models import AuditLog, BacktestJob, BacktestJobStatus, Notification, RefreshToken, Report, Strategy, User
+from app.models import (
+    AuditLog,
+    BacktestJob,
+    BacktestJobStatus,
+    DataSourceHealthStatus,
+    Notification,
+    RefreshToken,
+    Report,
+    Strategy,
+    User,
+)
 from app.utils.time import now_utc
 
 
@@ -191,6 +201,84 @@ def test_admin_health_requires_auth(client):
 
     assert response.status_code == 401
     assert response.json["error"]["code"] == "UNAUTHORIZED"
+
+
+def test_admin_data_source_health_returns_unknown_before_first_check(client, app):
+    admin_token, admin_id = _login_user(client, phone="13800138204", nickname="HealthAdmin")
+
+    with app.app_context():
+        admin = db.session.get(User, admin_id)
+        admin.role = "admin"
+        db.session.commit()
+
+    response = client.get(
+        "/api/v1/admin/data-source-health",
+        headers=_auth_headers(admin_token),
+    )
+
+    assert response.status_code == 200
+    assert response.json["data"] == {
+        "source_name": "jqdata",
+        "status": "unknown",
+        "status_label": "未检测",
+        "status_color": "gray",
+        "last_checked_at": None,
+        "last_success_at": None,
+        "last_failure_at": None,
+        "last_error_message": None,
+        "consecutive_failures": 0,
+    }
+
+
+def test_admin_data_source_health_serializes_unhealthy_status_for_admins(client, app):
+    admin_token, admin_id = _login_user(client, phone="13800138205", nickname="HealthReader")
+
+    with app.app_context():
+        admin = db.session.get(User, admin_id)
+        admin.role = "admin"
+        db.session.add(
+            DataSourceHealthStatus(
+                source_name="jqdata",
+                status="unhealthy",
+                last_checked_at=datetime(2026, 3, 27, 1, 0, tzinfo=timezone.utc),
+                last_success_at=datetime(2026, 3, 27, 0, 30, tzinfo=timezone.utc),
+                last_failure_at=datetime(2026, 3, 27, 1, 0, tzinfo=timezone.utc),
+                last_error_message="request timed out",
+                consecutive_failures=2,
+                last_notified_status="unhealthy",
+            )
+        )
+        db.session.commit()
+
+    response = client.get(
+        "/api/v1/admin/data-source-health",
+        headers=_auth_headers(admin_token),
+    )
+
+    assert response.status_code == 200
+    assert response.json["data"] == {
+        "source_name": "jqdata",
+        "status": "unhealthy",
+        "status_label": "异常",
+        "status_color": "red",
+        "last_checked_at": "2026-03-27T09:00:00+08:00",
+        "last_success_at": "2026-03-27T08:30:00+08:00",
+        "last_failure_at": "2026-03-27T09:00:00+08:00",
+        "last_error_message": "request timed out",
+        "consecutive_failures": 2,
+    }
+
+
+def test_admin_data_source_health_rejects_non_admin_users(client):
+    token, _ = _login_user(client, phone="13800138206", nickname="PlainHealthUser")
+
+    response = client.get(
+        "/api/v1/admin/data-source-health",
+        headers=_auth_headers(token),
+    )
+
+    assert response.status_code == 403
+    assert response.json["error"]["code"] == "FORBIDDEN"
 
 
 def test_write_audit_log_persists_record(app):

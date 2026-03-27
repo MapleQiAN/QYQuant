@@ -8,6 +8,7 @@ from sqlalchemy.orm import aliased
 from ..celery_app import celery_app
 from ..extensions import db
 from ..models import AuditLog, BacktestJob, BacktestJobStatus, Report, Strategy, User
+from ..services.data_source_health import DataSourceHealthService
 from ..services.notifications import create_notification
 from ..tasks.notification_tasks import send_email_notification
 from ..utils.auth import blacklist_refresh_tokens, revoke_all_user_tokens
@@ -25,6 +26,12 @@ REPORT_RESOLUTION_ACTIONS = {"takedown", "dismiss"}
 @require_admin
 def admin_health():
     return ok({"status": "ok", "scope": "admin"})
+
+
+@bp.get("/data-source-health")
+@require_admin
+def get_data_source_health():
+    return ok(DataSourceHealthService(session=db.session).get_status_payload())
 
 
 @bp.get("/strategies")
