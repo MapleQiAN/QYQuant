@@ -29,6 +29,7 @@ class User(db.Model):
     id = db.Column(db.String, primary_key=True, default=gen_id)
     phone = db.Column(db.String(20), unique=True, nullable=True)
     email = db.Column(db.String(255), unique=True, nullable=True)
+    password_hash = db.Column(db.String(255), nullable=True)
     nickname = db.Column(db.String(200), nullable=False)
     avatar_url = db.Column(db.String, nullable=False, default='')
     bio = db.Column(db.String(200), nullable=False, default='')

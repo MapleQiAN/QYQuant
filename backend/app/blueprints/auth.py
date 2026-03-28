@@ -7,6 +7,7 @@ from flask import current_app, request
 from flask_jwt_extended import create_access_token, create_refresh_token, decode_token, get_jwt_identity, jwt_required
 from flask_mail import Message
 from flask_smorest import Blueprint
+from werkzeug.security import check_password_hash, generate_password_hash
 
 from ..extensions import db, mail
 from ..models import AuditLog, RefreshToken, User
@@ -117,6 +118,12 @@ def _validate_email(email):
     return None
 
 
+def _validate_password(password):
+    if len(password or "") < 8:
+        return error_response("INVALID_PASSWORD", "Password must be at least 8 characters", 422)
+    return None
+
+
 def _resolve_identifier(payload):
     phone = (payload.get('phone') or '').strip()
     email = (payload.get('email') or '').strip().lower()
@@ -150,6 +157,27 @@ def _get_current_user():
     if user is None or user.deleted_at is not None:
         return None
     return user
+
+
+def _find_active_user_by_email(email):
+    user = User.query.filter_by(email=email).one_or_none()
+    if user is not None and user.deleted_at is not None:
+        return None
+    return user
+
+
+def _issue_auth_response(user):
+    access_token = create_access_token(identity=user.id)
+    refresh_token, token_record, _ = _create_refresh_token_record(user)
+    db.session.commit()
+
+    response = current_app.response_class(
+        response=current_app.json.dumps(_build_login_payload(user, access_token)),
+        status=200,
+        mimetype='application/json',
+    )
+    _set_refresh_cookie(response, refresh_token, seconds_until(token_record.expires_at))
+    return response
 
 
 def _send_email_code(email, code):
@@ -221,10 +249,10 @@ def login():
 
     if identifier_type == 'phone':
         user = User.query.filter_by(phone=identifier).one_or_none()
+        if user is not None and user.deleted_at is not None:
+            user = None
     else:
-        user = User.query.filter_by(email=identifier).one_or_none()
-    if user is not None and user.deleted_at is not None:
-        user = None
+        user = _find_active_user_by_email(identifier)
     if user is None:
         if not nickname:
             return error_response("NICKNAME_REQUIRED", "Nickname is required for first login", 422)
@@ -255,17 +283,78 @@ def login():
     store.delete_verification_code(identifier)
     store.reset_failed_attempts(identifier)
 
-    access_token = create_access_token(identity=user.id)
-    refresh_token, token_record, decoded = _create_refresh_token_record(user)
-    db.session.commit()
+    return _issue_auth_response(user)
 
-    response = current_app.response_class(
-        response=current_app.json.dumps(_build_login_payload(user, access_token)),
-        status=200,
-        mimetype='application/json',
-    )
-    _set_refresh_cookie(response, refresh_token, seconds_until(token_record.expires_at))
-    return response
+
+@bp.post('/register/password')
+def register_with_password():
+    payload = request.get_json() or {}
+    email = (payload.get('email') or '').strip().lower()
+    password = payload.get('password') or ''
+    nickname = (payload.get('nickname') or '').strip()
+
+    email_error = _validate_email(email)
+    if email_error:
+        return email_error
+
+    password_error = _validate_password(password)
+    if password_error:
+        return password_error
+
+    if not nickname:
+        return error_response("NICKNAME_REQUIRED", "Nickname is required for registration", 422)
+
+    user = _find_active_user_by_email(email)
+    if user is None:
+        user = User(
+            email=email,
+            password_hash=generate_password_hash(password),
+            nickname=nickname,
+        )
+        db.session.add(user)
+        db.session.flush()
+        db.session.add(
+            AuditLog(
+                operator_id=user.id,
+                action='register',
+                target_type='user',
+                target_id=user.id,
+                details={"email": _mask_email(email), "method": "password"},
+            )
+        )
+    elif user.password_hash:
+        return error_response("EMAIL_EXISTS", "Email already registered", 409)
+    else:
+        user.password_hash = generate_password_hash(password)
+        if nickname:
+            user.nickname = nickname
+
+    ensure_user_quota(user.id, plan_level=user.plan_level)
+    return _issue_auth_response(user)
+
+
+@bp.post('/login/password')
+def login_with_password():
+    payload = request.get_json() or {}
+    email = (payload.get('email') or '').strip().lower()
+    password = payload.get('password') or ''
+
+    email_error = _validate_email(email)
+    if email_error:
+        return email_error
+
+    password_error = _validate_password(password)
+    if password_error:
+        return password_error
+
+    user = _find_active_user_by_email(email)
+    if user is None or not user.password_hash or not check_password_hash(user.password_hash, password):
+        return error_response("INVALID_CREDENTIALS", "Invalid email or password", 401)
+    if user.is_banned:
+        return error_response("USER_BANNED", "账号已被封禁", 403)
+
+    ensure_user_quota(user.id, plan_level=user.plan_level)
+    return _issue_auth_response(user)
 
 
 @bp.post('/refresh')

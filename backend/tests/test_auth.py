@@ -55,6 +55,101 @@ def test_send_code_supports_email(client, monkeypatch):
     assert sent_messages[0].recipients == ["alice@example.com"]
 
 
+def test_register_with_password_creates_email_user_and_returns_tokens(client, app):
+    from app.models import User
+
+    response = client.post(
+        "/api/v1/auth/register/password",
+        json={
+            "email": "password@example.com",
+            "password": "Secret123!",
+            "nickname": "PasswordUser",
+        },
+    )
+
+    assert response.status_code == 200
+    assert response.json["data"]["nickname"] == "PasswordUser"
+    assert response.json["data"]["email"] == "pa***@example.com"
+    assert isinstance(response.json["access_token"], str)
+    assert "HttpOnly" in _extract_refresh_cookie(response)
+
+    with app.app_context():
+        user = User.query.filter_by(email="password@example.com").one_or_none()
+        assert user is not None
+        assert user.password_hash
+
+
+def test_register_with_password_rejects_duplicate_email(client):
+    first = client.post(
+        "/api/v1/auth/register/password",
+        json={
+            "email": "duplicate@example.com",
+            "password": "Secret123!",
+            "nickname": "FirstUser",
+        },
+    )
+    assert first.status_code == 200
+
+    second = client.post(
+        "/api/v1/auth/register/password",
+        json={
+            "email": "duplicate@example.com",
+            "password": "Secret123!",
+            "nickname": "SecondUser",
+        },
+    )
+
+    assert second.status_code == 409
+    assert second.json["error"]["code"] == "EMAIL_EXISTS"
+
+
+def test_login_with_password_returns_tokens_without_verification_code(client):
+    register = client.post(
+        "/api/v1/auth/register/password",
+        json={
+            "email": "login@example.com",
+            "password": "Secret123!",
+            "nickname": "LoginUser",
+        },
+    )
+    user_id = register.json["data"]["user_id"]
+
+    response = client.post(
+        "/api/v1/auth/login/password",
+        json={
+            "email": "login@example.com",
+            "password": "Secret123!",
+        },
+    )
+
+    assert response.status_code == 200
+    assert response.json["data"]["user_id"] == user_id
+    assert isinstance(response.json["access_token"], str)
+
+
+def test_login_with_password_rejects_invalid_password(client):
+    register = client.post(
+        "/api/v1/auth/register/password",
+        json={
+            "email": "bad-password@example.com",
+            "password": "Secret123!",
+            "nickname": "PasswordUser",
+        },
+    )
+    assert register.status_code == 200
+
+    response = client.post(
+        "/api/v1/auth/login/password",
+        json={
+            "email": "bad-password@example.com",
+            "password": "wrong-password",
+        },
+    )
+
+    assert response.status_code == 401
+    assert response.json["error"]["code"] == "INVALID_CREDENTIALS"
+
+
 def test_first_login_registers_user_and_returns_tokens(client):
     _seed_code(client.application, "13800138000")
 
