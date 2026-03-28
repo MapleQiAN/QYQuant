@@ -51,6 +51,7 @@ services:
       SECRET_KEY: ${SECRET_KEY:-change-this-secret-key-in-production}
       JWT_SECRET: ${JWT_SECRET:-change-this-jwt-secret-in-production}
       FERNET_KEY: ${FERNET_KEY:-change-this-fernet-key-in-production}
+      STRATEGY_ENCRYPT_KEY: ${STRATEGY_ENCRYPT_KEY:-MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=}
       CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:58888}
       BACKTEST_DATA_PROVIDER: ${BACKTEST_DATA_PROVIDER:-auto}
       BACKTEST_INTERVAL: ${BACKTEST_INTERVAL:-1m}
@@ -104,6 +105,7 @@ services:
       SECRET_KEY: ${SECRET_KEY:-change-this-secret-key-in-production}
       JWT_SECRET: ${JWT_SECRET:-change-this-jwt-secret-in-production}
       FERNET_KEY: ${FERNET_KEY:-change-this-fernet-key-in-production}
+      STRATEGY_ENCRYPT_KEY: ${STRATEGY_ENCRYPT_KEY:-MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=}
       BACKTEST_DATA_PROVIDER: ${BACKTEST_DATA_PROVIDER:-auto}
       BACKTEST_INTERVAL: ${BACKTEST_INTERVAL:-1m}
       JOINQUANT_INTERVAL: ${JOINQUANT_INTERVAL:-1d}
@@ -143,6 +145,7 @@ services:
       SECRET_KEY: ${SECRET_KEY:-change-this-secret-key-in-production}
       JWT_SECRET: ${JWT_SECRET:-change-this-jwt-secret-in-production}
       FERNET_KEY: ${FERNET_KEY:-change-this-fernet-key-in-production}
+      STRATEGY_ENCRYPT_KEY: ${STRATEGY_ENCRYPT_KEY:-MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=}
     volumes:
       - backend_storage:/app/backend/storage
     depends_on:
