@@ -1,112 +1,96 @@
 <template>
-  <div class="dashboard-view">
-    <div class="container">
-      <!-- Page Header -->
-      <div class="page-header">
-        <div class="header-text">
-          <h1 class="page-title">{{ $t('dashboard.title', { name: user.name }) }}</h1>
-          <p class="page-subtitle">{{ $t('dashboard.subtitle') }}</p>
-        </div>
-        <div class="header-actions">
-          <RouterLink class="btn btn-secondary" to="/settings">
-            <SettingsIcon />
-            {{ $t('common.settings') }}
-          </RouterLink>
-          <RouterLink class="btn btn-primary" to="/strategies">
-            <PlusIcon />
-            {{ $t('common.newStrategy') }}
-          </RouterLink>
-        </div>
+  <div class="dashboard-terminal">
+    <OnboardingGuide
+      :visible="showOnboardingGuide"
+      @skip="handleSkipOnboarding"
+      @focus-target="userStore.setOnboardingHighlightTarget"
+      @launch-guided-backtest="userStore.startGuidedBacktest()"
+      @complete="handleSkipOnboarding"
+    />
+
+    <!-- KPI Ticker Strip -->
+    <div class="ticker-strip">
+      <div class="ticker-item">
+        <span class="ticker-label">P&L</span>
+        <span class="ticker-value tnum" :class="kpiReturn >= 0 ? 'positive' : 'negative'">
+          {{ kpiReturn >= 0 ? '+' : '' }}{{ kpiReturn.toFixed(2) }}%
+        </span>
+      </div>
+      <div class="ticker-sep">|</div>
+      <div class="ticker-item">
+        <span class="ticker-label">BOTS</span>
+        <span class="ticker-value tnum">{{ activeBotCount }}</span>
+      </div>
+      <div class="ticker-sep">|</div>
+      <div class="ticker-item">
+        <span class="ticker-label">STRAT</span>
+        <span class="ticker-value tnum">{{ strategyCount }}</span>
+      </div>
+      <div class="ticker-sep">|</div>
+      <div class="ticker-item">
+        <span class="ticker-label">TESTS</span>
+        <span class="ticker-value tnum">{{ backtestCount }}</span>
+      </div>
+      <div class="ticker-sep">|</div>
+      <div class="ticker-item">
+        <span class="ticker-label">SYM</span>
+        <span class="ticker-value tnum">{{ backtestQuery.symbol }}</span>
+      </div>
+      <div class="ticker-spacer" />
+      <div class="ticker-actions">
+        <RouterLink class="ticker-btn" to="/strategies">
+          <PlusIcon /> {{ $t('common.newStrategy') }}
+        </RouterLink>
+      </div>
+    </div>
+
+    <!-- Workspace Grid -->
+    <div class="workspace">
+      <!-- Main Panel: Backtest -->
+      <div class="workspace-main">
+        <BacktestCard
+          :data="backtestsStore.latest"
+          :loading="backtestsStore.loading"
+          :error="backtestsStore.error"
+          :symbol="backtestQuery.symbol"
+          :timeframe="backtestQuery.interval"
+          :data-source="backtestQuery.dataSource"
+          @retry="loadBacktest"
+          @refresh="loadBacktest"
+          @timeframe-change="handleTimeframeChange"
+          @data-source-change="handleDataSourceChange"
+        />
       </div>
 
-      <OnboardingGuide
-        :visible="showOnboardingGuide"
-        @skip="handleSkipOnboarding"
-        @focus-target="userStore.setOnboardingHighlightTarget"
-        @launch-guided-backtest="userStore.startGuidedBacktest()"
-        @complete="handleSkipOnboarding"
-      />
+      <!-- Right Sidebar: Stacked Panels -->
+      <div class="workspace-sidebar">
+        <RecentList
+          :title="$t('dashboard.recentTitle')"
+          :strategies="strategiesStore.recent"
+          :strategies-loading="strategiesStore.loading"
+          :strategies-error="strategiesStore.error"
+          :bots="botsStore.recent"
+          :bots-loading="botsStore.loading"
+          :bots-error="botsStore.error"
+          @retry-strategies="strategiesStore.loadRecent"
+          @retry-bots="botsStore.loadRecent"
+          @open-strategy="handleOpenStrategy"
+          @deploy-strategy="handleDeployStrategy"
+          @open-bot="handleOpenBot"
+          @toggle-bot="handleToggleBot"
+          @view-all="handleViewAllRecent"
+        />
 
-      <!-- KPI Bar -->
-      <div class="kpi-bar">
-        <div class="kpi-item">
-          <span class="kpi-label">{{ $t('dashboard.totalReturn') || '总收益' }}</span>
-          <span class="kpi-value tnum" :class="kpiReturn >= 0 ? 'positive' : 'negative'">
-            {{ kpiReturn >= 0 ? '+' : '' }}{{ kpiReturn.toFixed(2) }}%
-          </span>
-        </div>
-        <div class="kpi-divider" />
-        <div class="kpi-item">
-          <span class="kpi-label">{{ $t('dashboard.activeBots') || '运行中Bot' }}</span>
-          <span class="kpi-value tnum">{{ activeBotCount }}</span>
-        </div>
-        <div class="kpi-divider" />
-        <div class="kpi-item">
-          <span class="kpi-label">{{ $t('dashboard.strategies') || '策略数' }}</span>
-          <span class="kpi-value tnum">{{ strategyCount }}</span>
-        </div>
-        <div class="kpi-divider" />
-        <div class="kpi-item">
-          <span class="kpi-label">{{ $t('dashboard.backtests') || '回测数' }}</span>
-          <span class="kpi-value tnum">{{ backtestCount }}</span>
-        </div>
-      </div>
-
-      <div class="dashboard-grid">
-        <div class="grid-area-backtest">
-          <BacktestCard
-            :data="backtestsStore.latest"
-            :loading="backtestsStore.loading"
-            :error="backtestsStore.error"
-            :symbol="backtestQuery.symbol"
-            :timeframe="backtestQuery.interval"
-            :data-source="backtestQuery.dataSource"
-            @retry="loadBacktest"
-            @refresh="loadBacktest"
-            @timeframe-change="handleTimeframeChange"
-            @data-source-change="handleDataSourceChange"
-          />
-        </div>
-
-        <div class="grid-area-recent">
-          <RecentList
-            :title="$t('dashboard.recentTitle')"
-            :strategies="strategiesStore.recent"
-            :strategies-loading="strategiesStore.loading"
-            :strategies-error="strategiesStore.error"
-            :bots="botsStore.recent"
-            :bots-loading="botsStore.loading"
-            :bots-error="botsStore.error"
-            @retry-strategies="strategiesStore.loadRecent"
-            @retry-bots="botsStore.loadRecent"
-            @open-strategy="handleOpenStrategy"
-            @deploy-strategy="handleDeployStrategy"
-            @open-bot="handleOpenBot"
-            @toggle-bot="handleToggleBot"
-            @view-all="handleViewAllRecent"
-          />
-        </div>
-
-        <div class="grid-area-forum">
-          <ForumMiniCard
-            :posts="forumStore.posts"
-            :loading="forumStore.loading"
-            :error="forumStore.error"
-            @retry="forumStore.loadHot"
-            @view-all="handleOpenForum"
-            @publish="handleOpenForumComposer"
-            @bookmarks="handleOpenForumBookmarks"
-            @open-post="handleOpenForumPost"
-          />
-        </div>
-
-        <div class="grid-area-upgrade">
-          <UpgradeCard @upgrade="handleOpenPricing" />
-        </div>
-
-        <div class="grid-area-progress">
-          <ProgressCard />
-        </div>
+        <ForumMiniCard
+          :posts="forumStore.posts"
+          :loading="forumStore.loading"
+          :error="forumStore.error"
+          @retry="forumStore.loadHot"
+          @view-all="handleOpenForum"
+          @publish="handleOpenForumComposer"
+          @bookmarks="handleOpenForumBookmarks"
+          @open-post="handleOpenForumPost"
+        />
       </div>
     </div>
   </div>
@@ -118,9 +102,7 @@ import { RouterLink, useRouter } from 'vue-router'
 import BacktestCard from '../components/BacktestCard.vue'
 import ForumMiniCard from '../components/ForumMiniCard.vue'
 import OnboardingGuide from '../components/onboarding/OnboardingGuide.vue'
-import ProgressCard from '../components/ProgressCard.vue'
 import RecentList from '../components/RecentList.vue'
-import UpgradeCard from '../components/UpgradeCard.vue'
 import { useBacktestsStore, useBotsStore, useForumStore, useStrategiesStore, useUserStore } from '../stores'
 import { useSimulationStore } from '../stores/useSimulationStore'
 
@@ -228,33 +210,9 @@ async function handleOpenForumPost(postId: string) {
   await router.push({ name: 'forum-post-detail', params: { postId } })
 }
 
-async function handleOpenPricing() {
-  await router.push({ name: 'pricing' })
-}
-
-const SettingsIcon = () => h('svg', {
-  width: 14,
-  height: 14,
-  viewBox: '0 0 24 24',
-  fill: 'none',
-  stroke: 'currentColor',
-  'stroke-width': 2,
-  'stroke-linecap': 'round',
-  'stroke-linejoin': 'round'
-}, [
-  h('circle', { cx: 12, cy: 12, r: 3 }),
-  h('path', { d: 'M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z' })
-])
-
 const PlusIcon = () => h('svg', {
-  width: 14,
-  height: 14,
-  viewBox: '0 0 24 24',
-  fill: 'none',
-  stroke: 'currentColor',
-  'stroke-width': 2,
-  'stroke-linecap': 'round',
-  'stroke-linejoin': 'round'
+  width: 12, height: 12, viewBox: '0 0 24 24', fill: 'none',
+  stroke: 'currentColor', 'stroke-width': 2, 'stroke-linecap': 'round', 'stroke-linejoin': 'round'
 }, [
   h('path', { d: 'M5 12h14' }),
   h('path', { d: 'M12 5v14' })
@@ -262,177 +220,156 @@ const PlusIcon = () => h('svg', {
 </script>
 
 <style scoped>
-.dashboard-view {
-  width: 100%;
-}
-
-.page-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: var(--spacing-md);
-}
-
-.header-text {
+.dashboard-terminal {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: var(--grid-gap);
+  height: calc(100vh - var(--status-bar-height) - var(--spacing-md) * 2);
 }
 
-.page-title {
-  font-size: var(--font-size-xl);
-  font-weight: var(--font-weight-semibold);
-  color: var(--color-text-primary);
-  margin: 0;
-}
-
-.page-subtitle {
+/* ── Ticker Strip ── */
+.ticker-strip {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+  padding: 0 var(--spacing-md);
+  height: 36px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  font-family: var(--font-mono);
   font-size: var(--font-size-sm);
-  color: var(--color-text-muted);
-  margin: 0;
+  flex-shrink: 0;
+  overflow: hidden;
 }
 
-.header-actions {
+.ticker-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+
+.ticker-label {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-2xs);
+  font-weight: var(--font-weight-medium);
+  letter-spacing: 0.05em;
+}
+
+.ticker-value {
+  color: var(--color-text-primary);
+  font-weight: var(--font-weight-semibold);
+}
+
+.ticker-value.positive {
+  color: var(--color-positive);
+}
+
+.ticker-value.negative {
+  color: var(--color-negative);
+}
+
+.ticker-sep {
+  color: var(--color-border);
+  font-size: var(--font-size-sm);
+  user-select: none;
+}
+
+.ticker-spacer {
+  flex: 1;
+}
+
+.ticker-actions {
   display: flex;
   gap: var(--spacing-sm);
 }
 
-/* KPI Bar */
-.kpi-bar {
-  display: flex;
+.ticker-btn {
+  display: inline-flex;
   align-items: center;
-  gap: var(--spacing-lg);
-  padding: 12px 20px;
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
-  margin-bottom: var(--spacing-md);
+  gap: 4px;
+  padding: 3px 8px;
+  font-size: var(--font-size-2xs);
+  font-family: var(--font-family);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-primary);
+  background: var(--color-primary-bg);
+  border-radius: var(--radius-sm);
+  text-decoration: none;
+  transition: all var(--transition-fast);
+  white-space: nowrap;
 }
 
-.kpi-item {
+.ticker-btn:hover {
+  background: var(--color-primary);
+  color: #fff;
+}
+
+/* ── Workspace Grid ── */
+.workspace {
+  display: grid;
+  grid-template-columns: 1fr 380px;
+  gap: var(--grid-gap);
+  flex: 1;
+  min-height: 0;
+}
+
+.workspace-main {
+  min-height: 0;
   display: flex;
   flex-direction: column;
-  gap: 2px;
 }
 
-.kpi-label {
-  font-size: var(--font-size-xs);
-  color: var(--color-text-muted);
-  font-weight: var(--font-weight-medium);
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
+.workspace-main > * {
+  flex: 1;
+  min-height: 0;
 }
 
-.kpi-value {
-  font-size: var(--font-size-xl);
-  font-weight: var(--font-weight-bold);
-  color: var(--color-text-primary);
-  line-height: 1.2;
-}
-
-.kpi-value.positive {
-  color: var(--color-positive);
-}
-
-.kpi-value.negative {
-  color: var(--color-negative);
-}
-
-.kpi-divider {
-  width: 1px;
-  height: 32px;
-  background: var(--color-border);
-  flex-shrink: 0;
-}
-
-/* Dashboard Grid */
-.dashboard-grid {
-  display: grid;
-  grid-template-columns: repeat(12, 1fr);
-  grid-template-rows: auto auto;
+.workspace-sidebar {
+  display: flex;
+  flex-direction: column;
   gap: var(--grid-gap);
-  grid-template-areas:
-    "backtest backtest backtest backtest backtest backtest backtest backtest recent recent recent recent"
-    "forum forum forum forum upgrade upgrade upgrade upgrade progress progress progress progress";
+  min-height: 0;
+  overflow: hidden;
 }
 
-.grid-area-backtest {
-  grid-area: backtest;
+.workspace-sidebar > * {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
 }
 
-.grid-area-recent {
-  grid-area: recent;
+/* ── Responsive ── */
+@media (max-width: 1200px) {
+  .workspace {
+    grid-template-columns: 1fr 320px;
+  }
 }
 
-.grid-area-forum {
-  grid-area: forum;
-}
-
-.grid-area-upgrade {
-  grid-area: upgrade;
-}
-
-.grid-area-progress {
-  grid-area: progress;
-}
-
-.grid-area-backtest > *,
-.grid-area-recent > *,
-.grid-area-forum > *,
-.grid-area-upgrade > *,
-.grid-area-progress > * {
-  height: 100%;
-}
-
-/* Responsive */
 @media (max-width: 1024px) {
-  .dashboard-grid {
-    grid-template-columns: repeat(12, 1fr);
-    grid-template-areas:
-      "backtest backtest backtest backtest backtest backtest backtest backtest backtest backtest backtest backtest"
-      "recent recent recent recent recent recent recent recent recent recent recent recent"
-      "forum forum forum forum forum forum upgrade upgrade upgrade upgrade upgrade upgrade"
-      "progress progress progress progress progress progress progress progress progress progress progress progress";
+  .dashboard-terminal {
+    height: auto;
   }
 
-  .page-header {
-    flex-direction: column;
-    gap: var(--spacing-md);
-    align-items: flex-start;
+  .workspace {
+    grid-template-columns: 1fr;
   }
 
-  .header-actions {
-    width: 100%;
-  }
-
-  .header-actions .btn {
-    flex: 1;
+  .workspace-sidebar {
+    max-height: none;
   }
 }
 
 @media (max-width: 768px) {
-  .dashboard-grid {
-    grid-template-columns: 1fr;
-    grid-template-areas:
-      "backtest"
-      "recent"
-      "forum"
-      "upgrade"
-      "progress";
+  .ticker-strip {
+    gap: var(--spacing-sm);
+    padding: 0 var(--spacing-sm);
+    font-size: var(--font-size-2xs);
   }
 
-  .kpi-bar {
-    flex-wrap: wrap;
-    gap: var(--spacing-md);
-    padding: 12px 16px;
-  }
-
-  .kpi-divider {
+  .ticker-actions {
     display: none;
-  }
-
-  .kpi-item {
-    min-width: calc(50% - var(--spacing-md));
   }
 }
 </style>

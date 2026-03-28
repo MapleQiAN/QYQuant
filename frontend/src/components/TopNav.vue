@@ -1,69 +1,85 @@
 <template>
-  <nav class="top-nav">
-    <div class="nav-content">
-      <div class="nav-logo">
-        <div class="logo-icon">
-          <img :src="logoUrl" alt="QY Quant Logo" class="logo-image" />
-        </div>
-        <span class="logo-text">QY Quant</span>
-      </div>
+  <nav class="sidebar-nav">
+    <!-- Logo -->
+    <div class="nav-logo">
+      <img :src="logoUrl" alt="QY Quant" class="logo-image" />
+    </div>
 
-      <div class="nav-links">
-        <RouterLink
-          v-for="item in navItems"
-          :key="item.id"
-          :to="item.to"
-          :class="['nav-link', { active: route.path === item.to, 'onboarding-highlight': onboardingHighlightTarget === item.target }]"
-          :data-onboarding-target="item.target"
+    <!-- Main nav links -->
+    <div class="nav-links">
+      <RouterLink
+        v-for="item in navItems"
+        :key="item.id"
+        :to="item.to"
+        :class="['nav-link', { active: isActive(item.to) }]"
+        :data-onboarding-target="item.target"
+        :title="$t(item.label)"
+      >
+        <component :is="getIcon(item.icon)" class="nav-icon" />
+        <span class="nav-tooltip">{{ $t(item.label) }}</span>
+      </RouterLink>
+    </div>
+
+    <!-- Bottom actions -->
+    <div class="nav-bottom">
+      <button
+        class="nav-link"
+        type="button"
+        :title="$t('common.searchPlaceholder')"
+        @click="$emit('open-search')"
+      >
+        <SearchIcon class="nav-icon" />
+        <span class="nav-tooltip">{{ $t('common.searchPlaceholder') }}</span>
+      </button>
+
+      <button
+        class="nav-link"
+        type="button"
+        :title="userStore.theme === 'dark' ? '浅色模式' : '深色模式'"
+        @click="userStore.toggleTheme()"
+      >
+        <MoonIcon v-if="userStore.theme === 'light'" class="nav-icon" />
+        <SunIcon v-else class="nav-icon" />
+      </button>
+
+      <button
+        class="nav-link"
+        type="button"
+        title="帮助"
+        @click="userStore.setHelpPanelOpen(true)"
+      >
+        <HelpIcon class="nav-icon" />
+      </button>
+
+      <div class="notification-shell">
+        <button
+          class="nav-link"
+          type="button"
+          title="通知"
+          @click="toggleNotifications"
         >
-          <component :is="getIcon(item.icon)" class="nav-icon" />
-          <span>{{ $t(item.label) }}</span>
-        </RouterLink>
+          <BellIcon class="nav-icon" />
+          <span v-if="notificationCount > 0" class="notification-badge">
+            {{ notificationCount }}
+          </span>
+        </button>
+        <NotificationPanel v-if="isNotificationPanelOpen" class="notification-dropdown" />
       </div>
 
-      <div class="nav-right">
-        <div class="search-box">
-          <SearchIcon class="search-icon" />
-          <input type="text" :placeholder="$t('common.searchPlaceholder')" class="search-input" />
-        </div>
-
-        <div class="nav-actions">
-          <button class="nav-btn" type="button" :aria-label="userStore.theme === 'dark' ? '切换为浅色模式' : '切换为深色模式'" @click="userStore.toggleTheme()">
-            <MoonIcon v-if="userStore.theme === 'light'" />
-            <SunIcon v-else />
+      <div class="user-shell">
+        <button class="user-avatar" type="button" @click="handleAvatarClick" :title="profile.name || '用户'">
+          <span class="avatar-text">{{ profile.avatar }}</span>
+        </button>
+        <div v-if="isUserMenuOpen" class="user-dropdown">
+          <RouterLink class="dropdown-item" :to="`/users/${profile.id}`" @click="isUserMenuOpen = false">
+            个人主页
+          </RouterLink>
+          <RouterLink class="dropdown-item" to="/settings" @click="isUserMenuOpen = false">
+            设置
+          </RouterLink>
+          <button class="dropdown-item danger" type="button" @click="handleLogout">
+            退出登录
           </button>
-
-          <button class="nav-btn" type="button" aria-label="帮助中心" @click="userStore.setHelpPanelOpen(true)">
-            <HelpIcon />
-          </button>
-
-          <div class="notification-shell">
-            <button class="nav-btn" type="button" aria-label="通知中心" @click="toggleNotifications">
-              <BellIcon />
-              <span v-if="notificationCount > 0" class="notification-badge">
-                {{ notificationCount }}
-              </span>
-            </button>
-            <NotificationPanel v-if="isNotificationPanelOpen" />
-          </div>
-
-          <div class="user-menu-shell">
-            <button class="user-avatar" type="button" @click="handleAvatarClick">
-              <span class="avatar-text">{{ profile.avatar }}</span>
-              <span class="user-level">{{ profile.level }}</span>
-            </button>
-            <div v-if="isUserMenuOpen" class="user-dropdown">
-              <RouterLink class="dropdown-item" :to="`/users/${profile.id}`" @click="isUserMenuOpen = false">
-                个人主页
-              </RouterLink>
-              <RouterLink class="dropdown-item" to="/settings" @click="isUserMenuOpen = false">
-                设置
-              </RouterLink>
-              <button class="dropdown-item danger" type="button" @click="handleLogout">
-                退出登录
-              </button>
-            </div>
-          </div>
         </div>
       </div>
     </div>
@@ -79,22 +95,30 @@ import { useNotificationStore } from '../stores/useNotificationStore'
 import { useUserStore } from '../stores/user'
 import logoUrl from '../logo.png'
 
+defineEmits<{ 'open-search': [] }>()
+
 const route = useRoute()
 
 const navItems = [
   { id: 'dashboard', to: '/', icon: 'chart', label: 'nav.dashboard', target: null },
   { id: 'strategies', to: '/strategies', icon: 'target', label: 'common.newStrategy', target: 'strategy-library-entry' },
-  { id: 'backtests', to: '/backtests', icon: 'chart', label: 'nav.backtests', target: null },
+  { id: 'backtests', to: '/backtests', icon: 'activity', label: 'nav.backtests', target: null },
   { id: 'bots', to: '/bots', icon: 'robot', label: 'nav.bots', target: null },
+  { id: 'marketplace', to: '/marketplace', icon: 'store', label: 'nav.marketplace', target: null },
   { id: 'forum', to: '/forum', icon: 'users', label: 'nav.forum', target: null },
 ]
 
 const userStore = useUserStore()
 const notificationStore = useNotificationStore()
-const { profile, onboardingHighlightTarget } = storeToRefs(userStore)
+const { profile } = storeToRefs(userStore)
 const notificationCount = computed(() => notificationStore.unreadCount)
 const isNotificationPanelOpen = ref(false)
 const isUserMenuOpen = ref(false)
+
+function isActive(to: string) {
+  if (to === '/') return route.path === '/'
+  return route.path.startsWith(to)
+}
 
 function handleAvatarClick() {
   if (!userStore.token) {
@@ -112,7 +136,7 @@ function handleLogout() {
 
 function handleClickOutside(e: MouseEvent) {
   const target = e.target as HTMLElement
-  if (!target.closest('.user-menu-shell')) {
+  if (!target.closest('.user-shell')) {
     isUserMenuOpen.value = false
   }
   if (!target.closest('.notification-shell')) {
@@ -134,15 +158,10 @@ function toggleNotifications() {
   isNotificationPanelOpen.value = !isNotificationPanelOpen.value
 }
 
+/* ── Icons (16x16 stroke:1.5) ── */
 const ChartIcon = () => h('svg', {
-  width: 16,
-  height: 16,
-  viewBox: '0 0 24 24',
-  fill: 'none',
-  stroke: 'currentColor',
-  'stroke-width': 2,
-  'stroke-linecap': 'round',
-  'stroke-linejoin': 'round'
+  width: 18, height: 18, viewBox: '0 0 24 24', fill: 'none',
+  stroke: 'currentColor', 'stroke-width': 1.5, 'stroke-linecap': 'round', 'stroke-linejoin': 'round'
 }, [
   h('path', { d: 'M3 3v18h18' }),
   h('path', { d: 'M18 17V9' }),
@@ -150,15 +169,16 @@ const ChartIcon = () => h('svg', {
   h('path', { d: 'M8 17v-3' })
 ])
 
+const ActivityIcon = () => h('svg', {
+  width: 18, height: 18, viewBox: '0 0 24 24', fill: 'none',
+  stroke: 'currentColor', 'stroke-width': 1.5, 'stroke-linecap': 'round', 'stroke-linejoin': 'round'
+}, [
+  h('polyline', { points: '22 12 18 12 15 21 9 3 6 12 2 12' })
+])
+
 const RobotIcon = () => h('svg', {
-  width: 16,
-  height: 16,
-  viewBox: '0 0 24 24',
-  fill: 'none',
-  stroke: 'currentColor',
-  'stroke-width': 2,
-  'stroke-linecap': 'round',
-  'stroke-linejoin': 'round'
+  width: 18, height: 18, viewBox: '0 0 24 24', fill: 'none',
+  stroke: 'currentColor', 'stroke-width': 1.5, 'stroke-linecap': 'round', 'stroke-linejoin': 'round'
 }, [
   h('rect', { x: 3, y: 11, width: 18, height: 10, rx: 2 }),
   h('circle', { cx: 12, cy: 5, r: 2 }),
@@ -168,14 +188,8 @@ const RobotIcon = () => h('svg', {
 ])
 
 const UsersIcon = () => h('svg', {
-  width: 16,
-  height: 16,
-  viewBox: '0 0 24 24',
-  fill: 'none',
-  stroke: 'currentColor',
-  'stroke-width': 2,
-  'stroke-linecap': 'round',
-  'stroke-linejoin': 'round'
+  width: 18, height: 18, viewBox: '0 0 24 24', fill: 'none',
+  stroke: 'currentColor', 'stroke-width': 1.5, 'stroke-linecap': 'round', 'stroke-linejoin': 'round'
 }, [
   h('path', { d: 'M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2' }),
   h('circle', { cx: 9, cy: 7, r: 4 }),
@@ -183,15 +197,26 @@ const UsersIcon = () => h('svg', {
   h('path', { d: 'M16 3.13a4 4 0 0 1 0 7.75' })
 ])
 
+const TargetIcon = () => h('svg', {
+  width: 18, height: 18, viewBox: '0 0 24 24', fill: 'none',
+  stroke: 'currentColor', 'stroke-width': 1.5, 'stroke-linecap': 'round', 'stroke-linejoin': 'round'
+}, [
+  h('circle', { cx: 12, cy: 12, r: 10 }),
+  h('circle', { cx: 12, cy: 12, r: 6 }),
+  h('circle', { cx: 12, cy: 12, r: 2 }),
+])
+
+const StoreIcon = () => h('svg', {
+  width: 18, height: 18, viewBox: '0 0 24 24', fill: 'none',
+  stroke: 'currentColor', 'stroke-width': 1.5, 'stroke-linecap': 'round', 'stroke-linejoin': 'round'
+}, [
+  h('path', { d: 'M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z' }),
+  h('polyline', { points: '9 22 9 12 15 12 15 22' })
+])
+
 const HelpIcon = () => h('svg', {
-  width: 16,
-  height: 16,
-  viewBox: '0 0 24 24',
-  fill: 'none',
-  stroke: 'currentColor',
-  'stroke-width': 2,
-  'stroke-linecap': 'round',
-  'stroke-linejoin': 'round'
+  width: 18, height: 18, viewBox: '0 0 24 24', fill: 'none',
+  stroke: 'currentColor', 'stroke-width': 1.5, 'stroke-linecap': 'round', 'stroke-linejoin': 'round'
 }, [
   h('circle', { cx: 12, cy: 12, r: 10 }),
   h('path', { d: 'M9.09 9a3 3 0 1 1 5.82 1c0 2-3 2-3 4' }),
@@ -199,57 +224,24 @@ const HelpIcon = () => h('svg', {
 ])
 
 const SearchIcon = () => h('svg', {
-  width: 14,
-  height: 14,
-  viewBox: '0 0 24 24',
-  fill: 'none',
-  stroke: 'currentColor',
-  'stroke-width': 2,
-  'stroke-linecap': 'round',
-  'stroke-linejoin': 'round'
+  width: 18, height: 18, viewBox: '0 0 24 24', fill: 'none',
+  stroke: 'currentColor', 'stroke-width': 1.5, 'stroke-linecap': 'round', 'stroke-linejoin': 'round'
 }, [
   h('circle', { cx: 11, cy: 11, r: 8 }),
   h('path', { d: 'm21 21-4.3-4.3' })
 ])
 
 const BellIcon = () => h('svg', {
-  width: 16,
-  height: 16,
-  viewBox: '0 0 24 24',
-  fill: 'none',
-  stroke: 'currentColor',
-  'stroke-width': 2,
-  'stroke-linecap': 'round',
-  'stroke-linejoin': 'round'
+  width: 18, height: 18, viewBox: '0 0 24 24', fill: 'none',
+  stroke: 'currentColor', 'stroke-width': 1.5, 'stroke-linecap': 'round', 'stroke-linejoin': 'round'
 }, [
   h('path', { d: 'M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9' }),
   h('path', { d: 'M10.3 21a1.94 1.94 0 0 0 3.4 0' })
 ])
 
-const TargetIcon = () => h('svg', {
-  width: 16,
-  height: 16,
-  viewBox: '0 0 24 24',
-  fill: 'none',
-  stroke: 'currentColor',
-  'stroke-width': 2,
-  'stroke-linecap': 'round',
-  'stroke-linejoin': 'round'
-}, [
-  h('circle', { cx: 12, cy: 12, r: 10 }),
-  h('circle', { cx: 12, cy: 12, r: 6 }),
-  h('circle', { cx: 12, cy: 12, r: 2 }),
-])
-
 const SunIcon = () => h('svg', {
-  width: 16,
-  height: 16,
-  viewBox: '0 0 24 24',
-  fill: 'none',
-  stroke: 'currentColor',
-  'stroke-width': 2,
-  'stroke-linecap': 'round',
-  'stroke-linejoin': 'round'
+  width: 18, height: 18, viewBox: '0 0 24 24', fill: 'none',
+  stroke: 'currentColor', 'stroke-width': 1.5, 'stroke-linecap': 'round', 'stroke-linejoin': 'round'
 }, [
   h('circle', { cx: 12, cy: 12, r: 5 }),
   h('line', { x1: 12, y1: 1, x2: 12, y2: 3 }),
@@ -263,23 +255,19 @@ const SunIcon = () => h('svg', {
 ])
 
 const MoonIcon = () => h('svg', {
-  width: 16,
-  height: 16,
-  viewBox: '0 0 24 24',
-  fill: 'none',
-  stroke: 'currentColor',
-  'stroke-width': 2,
-  'stroke-linecap': 'round',
-  'stroke-linejoin': 'round'
+  width: 18, height: 18, viewBox: '0 0 24 24', fill: 'none',
+  stroke: 'currentColor', 'stroke-width': 1.5, 'stroke-linecap': 'round', 'stroke-linejoin': 'round'
 }, [
   h('path', { d: 'M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z' }),
 ])
 
 const iconMap: Record<string, any> = {
   chart: ChartIcon,
+  activity: ActivityIcon,
   target: TargetIcon,
   robot: RobotIcon,
-  users: UsersIcon
+  users: UsersIcon,
+  store: StoreIcon,
 }
 
 function getIcon(iconName: string) {
@@ -288,183 +276,128 @@ function getIcon(iconName: string) {
 </script>
 
 <style scoped>
-.top-nav {
-  position: sticky;
+.sidebar-nav {
+  position: fixed;
+  left: 0;
   top: 0;
-  z-index: 100;
-  height: var(--nav-height);
+  bottom: 0;
+  width: var(--sidebar-width);
   background: var(--color-nav-bg);
-  border-bottom: 1px solid var(--color-nav-border);
-}
-
-.nav-content {
-  max-width: var(--container-max-width);
-  margin: 0 auto;
-  padding: 0 var(--spacing-lg);
-  height: 100%;
+  border-right: 1px solid var(--color-nav-border);
   display: flex;
-  align-items: center;
-  gap: 24px;
-}
-
-.nav-logo {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-shrink: 0;
-}
-
-.logo-icon {
-  width: 28px;
-  height: 28px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: var(--radius-sm);
+  flex-direction: column;
+  z-index: 100;
   overflow: hidden;
 }
 
+/* Logo */
+.nav-logo {
+  width: var(--sidebar-width);
+  height: var(--sidebar-width);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  border-bottom: 1px solid var(--color-border);
+}
+
 .logo-image {
-  width: 100%;
-  height: 100%;
+  width: 24px;
+  height: 24px;
   object-fit: contain;
 }
 
-.logo-text {
-  font-size: 15px;
-  font-weight: var(--font-weight-bold);
-  color: var(--color-text-primary);
-  letter-spacing: -0.01em;
-}
-
+/* Nav links */
 .nav-links {
+  flex: 1;
   display: flex;
-  align-items: center;
+  flex-direction: column;
+  padding: var(--spacing-xs) 0;
   gap: 2px;
-  height: 100%;
+  overflow-y: auto;
 }
 
 .nav-link {
   position: relative;
+  width: var(--sidebar-width);
+  height: 40px;
   display: flex;
   align-items: center;
-  gap: 6px;
-  height: 100%;
-  padding: 0 12px;
-  font-size: var(--font-size-sm);
-  font-weight: var(--font-weight-medium);
+  justify-content: center;
   color: var(--color-text-muted);
   text-decoration: none;
-  transition: color var(--transition-fast);
+  background: none;
+  border: none;
+  cursor: pointer;
+  transition: color var(--transition-fast), background var(--transition-fast);
+  flex-shrink: 0;
 }
 
 .nav-link:hover {
   color: var(--color-text-primary);
+  background: var(--color-surface-hover);
 }
 
 .nav-link.active {
   color: var(--color-primary-light);
 }
 
-.nav-link.active::after {
+.nav-link.active::before {
   content: '';
   position: absolute;
-  bottom: 0;
-  left: 12px;
-  right: 12px;
-  height: 2px;
+  left: 0;
+  top: 8px;
+  bottom: 8px;
+  width: 2px;
   background: var(--color-primary);
-  border-radius: 1px 1px 0 0;
+  border-radius: 0 1px 1px 0;
 }
 
 .nav-icon {
-  opacity: 0.7;
   flex-shrink: 0;
 }
 
-.nav-link:hover .nav-icon,
-.nav-link.active .nav-icon {
+/* Tooltip on hover */
+.nav-tooltip {
+  position: absolute;
+  left: calc(var(--sidebar-width) + 8px);
+  padding: 4px 8px;
+  background: var(--color-surface-elevated);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-sm);
+  font-family: var(--font-family);
+  color: var(--color-text-primary);
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--transition-fast);
+  z-index: 200;
+}
+
+.nav-link:hover .nav-tooltip {
   opacity: 1;
 }
 
-.nav-right {
+/* Bottom section */
+.nav-bottom {
   display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-left: auto;
+  flex-direction: column;
+  padding: var(--spacing-xs) 0;
+  gap: 2px;
+  border-top: 1px solid var(--color-border);
   flex-shrink: 0;
 }
 
-.search-box {
-  position: relative;
-  display: flex;
-  align-items: center;
-}
-
-.search-icon {
-  position: absolute;
-  left: 10px;
-  color: var(--color-text-muted);
-  pointer-events: none;
-}
-
-.search-input {
-  width: 200px;
-  height: 32px;
-  padding: 0 12px 0 32px;
-  font-size: var(--font-size-xs);
-  font-family: var(--font-family);
-  color: var(--color-text-primary);
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  outline: none;
-  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
-}
-
-.search-input:focus {
-  border-color: var(--color-primary);
-  box-shadow: 0 0 0 2px var(--color-primary-bg);
-}
-
-.search-input::placeholder {
-  color: var(--color-text-muted);
-}
-
-.nav-actions {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-
-.nav-btn {
-  position: relative;
-  width: 32px;
-  height: 32px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: transparent;
-  border: none;
-  border-radius: var(--radius-md);
-  color: var(--color-text-muted);
-  cursor: pointer;
-  transition: color var(--transition-fast), background-color var(--transition-fast);
-}
-
-.nav-btn:hover {
-  background: var(--color-surface-hover);
-  color: var(--color-text-primary);
-}
-
+/* Notification */
 .notification-shell {
   position: relative;
 }
 
 .notification-badge {
   position: absolute;
-  top: 2px;
-  right: 2px;
+  top: 6px;
+  right: 8px;
   min-width: 14px;
   height: 14px;
   padding: 0 3px;
@@ -479,16 +412,27 @@ function getIcon(iconName: string) {
   line-height: 1;
 }
 
-.user-menu-shell {
+.notification-dropdown {
+  position: fixed;
+  left: calc(var(--sidebar-width) + 4px);
+  bottom: 60px;
+  z-index: 200;
+}
+
+/* User avatar */
+.user-shell {
   position: relative;
+  display: flex;
+  justify-content: center;
+  padding: var(--spacing-xs) 0;
 }
 
 .user-avatar {
+  width: 32px;
+  height: 32px;
   display: flex;
   align-items: center;
-  gap: 6px;
-  height: 32px;
-  padding: 2px 8px 2px 2px;
+  justify-content: center;
   background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
@@ -501,30 +445,16 @@ function getIcon(iconName: string) {
 }
 
 .avatar-text {
-  width: 26px;
-  height: 26px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
   font-size: 11px;
   font-weight: var(--font-weight-semibold);
-  background: var(--color-primary);
-  color: #fff;
-  border-radius: var(--radius-sm);
-}
-
-.user-level {
-  font-size: 10px;
-  font-weight: var(--font-weight-semibold);
-  color: var(--color-accent);
-  letter-spacing: 0.03em;
+  color: var(--color-primary);
 }
 
 .user-dropdown {
-  position: absolute;
-  top: calc(100% + 6px);
-  right: 0;
-  min-width: 150px;
+  position: fixed;
+  left: calc(var(--sidebar-width) + 4px);
+  bottom: 8px;
+  min-width: 140px;
   padding: 4px;
   background: var(--color-surface-elevated);
   border: 1px solid var(--color-border);
@@ -536,7 +466,7 @@ function getIcon(iconName: string) {
 .dropdown-item {
   display: block;
   width: 100%;
-  padding: 8px 12px;
+  padding: 6px 10px;
   font-size: var(--font-size-sm);
   font-weight: var(--font-weight-medium);
   color: var(--color-text-primary);
@@ -561,50 +491,55 @@ function getIcon(iconName: string) {
   background: var(--color-danger-bg);
 }
 
-@media (max-width: 1024px) {
-  .nav-content {
-    gap: 16px;
-  }
-
-  .nav-link {
-    padding: 0 8px;
-  }
-
-  .search-input {
-    width: 160px;
-  }
-}
-
+/* ── Mobile: collapse to bottom bar ── */
 @media (max-width: 768px) {
-  .top-nav {
-    height: auto;
-  }
-
-  .nav-content {
-    flex-wrap: wrap;
-    padding: 8px var(--spacing-md);
-    gap: 8px;
-  }
-
-  .nav-links {
-    order: 3;
+  .sidebar-nav {
+    position: fixed;
+    left: 0;
+    right: 0;
+    top: auto;
+    bottom: 0;
     width: 100%;
-    overflow-x: auto;
-    scrollbar-width: none;
-    height: auto;
-    padding-bottom: 4px;
+    height: var(--sidebar-width);
+    flex-direction: row;
+    border-right: none;
+    border-top: 1px solid var(--color-nav-border);
   }
 
-  .nav-links::-webkit-scrollbar {
+  .nav-logo {
     display: none;
   }
 
-  .nav-link.active::after {
-    bottom: 0;
+  .nav-links {
+    flex-direction: row;
+    flex: 1;
+    justify-content: space-around;
+    padding: 0;
+    gap: 0;
   }
 
-  .search-input {
-    width: 140px;
+  .nav-link {
+    width: auto;
+    flex: 1;
+    height: var(--sidebar-width);
+  }
+
+  .nav-link.active::before {
+    left: 25%;
+    right: 25%;
+    top: 0;
+    bottom: auto;
+    width: auto;
+    height: 2px;
+    border-radius: 0 0 1px 1px;
+  }
+
+  .nav-tooltip {
+    display: none;
+  }
+
+  .nav-bottom {
+    display: none;
   }
 }
 </style>
