@@ -60,7 +60,7 @@ function switchFeed(mode: 'all' | 'collections') {
           <h1 class="view-title">{{ $t('pages.forumTitle') }}</h1>
           <p class="view-subtitle">{{ $t('pages.forumSubtitle') }}</p>
         </div>
-        <div class="hero-badge">绀惧尯涓婚摼璺?/div>
+        <div class="hero-badge">广场</div>
       </header>
 
       <div class="feed-switch">
@@ -84,21 +84,21 @@ function switchFeed(mode: 'all' | 'collections') {
       </div>
 
       <PostComposer v-if="showComposer" />
-      <p v-else-if="feedMode === 'all'" class="login-tip">鐧诲綍鍚庡嵆鍙彂甯栥€佺偣璧炪€佹敹钘忓拰璇勮銆?/p>
+      <p v-else-if="feedMode === 'all'" class="login-tip">登录后即可发帖、点赞、收藏和评论。</p>
 
       <p v-if="communityStore.error && !communityStore.posts.length" class="status error">
         {{ communityStore.error }}
       </p>
       <p v-else-if="communityStore.loadingFeed && !communityStore.posts.length" class="status">
-        甯栧瓙鍔犺浇涓€?
+        帖子加载中...
       </p>
       <div v-else-if="communityStore.posts.length" class="feed">
         <PostCard v-for="post in communityStore.posts" :key="post.id" :post="post" />
       </div>
-      <p v-else class="status">杩樻病鏈夊笘瀛愶紝鍙戜竴鏉¤瘯璇曘€?/p>
+      <p v-else class="status">还没有帖子,发一条试试。</p>
 
       <button v-if="communityStore.posts.length && communityStore.hasMorePosts" class="load-more" @click="loadMore">
-        鍔犺浇鏇村
+        加载更多
       </button>
     </div>
   </section>

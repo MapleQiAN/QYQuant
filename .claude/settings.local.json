@@ -24,7 +24,8 @@
       "Bash(cd backend:*)",
       "Bash(docker build:*)",
       "Bash(docker exec:*)",
-      "Bash(docker compose:*)"
+      "Bash(docker compose:*)",
+      "Bash(find:*)"
     ]
   }
 }
