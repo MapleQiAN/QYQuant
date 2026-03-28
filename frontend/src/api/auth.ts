@@ -32,6 +32,12 @@ export type LoginRequest = AuthIdentifier & {
   nickname?: string
 }
 
+export interface PasswordAuthRequest {
+  email: string
+  password: string
+  nickname?: string
+}
+
 function normalizeIdentifier(identifier: string | AuthIdentifier): AuthIdentifier {
   if (typeof identifier === 'string') {
     return { phone: identifier }
@@ -55,5 +61,15 @@ export async function login(
       : identifierOrPayload
 
   const res = await instance.post('/v1/auth/login', payload)
+  return { data: res.data.data, access_token: res.data.access_token }
+}
+
+export async function registerWithPassword(payload: PasswordAuthRequest): Promise<{ data: LoginResponse; access_token: string }> {
+  const res = await instance.post('/v1/auth/register/password', payload)
+  return { data: res.data.data, access_token: res.data.access_token }
+}
+
+export async function loginWithPassword(payload: Omit<PasswordAuthRequest, 'nickname'>): Promise<{ data: LoginResponse; access_token: string }> {
+  const res = await instance.post('/v1/auth/login/password', payload)
   return { data: res.data.data, access_token: res.data.access_token }
 }
