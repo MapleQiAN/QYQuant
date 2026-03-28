@@ -19,7 +19,11 @@ vi.mock('../views/MarketplaceStrategyDetailView.vue', () => ({ default: { templa
 vi.mock('../views/PricingView.vue', () => ({ default: { template: '<div />' } }))
 vi.mock('../views/UserProfileView.vue', () => ({ default: { template: '<div />' } }))
 vi.mock('../views/admin/AdminDashboard.vue', () => ({ default: { template: '<div />' } }))
+vi.mock('../views/admin/DataSourceHealth.vue', () => ({ default: { template: '<div />' } }))
 vi.mock('../views/admin/StrategyReview.vue', () => ({ default: { template: '<div />' } }))
+vi.mock('../views/admin/ReportManagement.vue', () => ({ default: { template: '<div />' } }))
+vi.mock('../views/admin/BacktestMonitor.vue', () => ({ default: { template: '<div />' } }))
+vi.mock('../views/admin/UserManagement.vue', () => ({ default: { template: '<div />' } }))
 
 import router from './index'
 import { useUserStore } from '../stores'
@@ -93,6 +97,34 @@ describe('router', () => {
 
     expect(reviewRoute).toBeTruthy()
     expect(reviewRoute?.meta.requiresAdmin).toBe(true)
+  })
+
+  it('contains admin data source health route', () => {
+    const dataSourceRoute = router.getRoutes().find((route) => route.path === '/admin/data-source-health')
+
+    expect(dataSourceRoute).toBeTruthy()
+    expect(dataSourceRoute?.meta.requiresAdmin).toBe(true)
+  })
+
+  it('contains admin report management route', () => {
+    const reportRoute = router.getRoutes().find((route) => route.path === '/admin/reports')
+
+    expect(reportRoute).toBeTruthy()
+    expect(reportRoute?.meta.requiresAdmin).toBe(true)
+  })
+
+  it('contains admin backtest monitor route', () => {
+    const monitorRoute = router.getRoutes().find((route) => route.path === '/admin/backtest-monitor')
+
+    expect(monitorRoute).toBeTruthy()
+    expect(monitorRoute?.meta.requiresAdmin).toBe(true)
+  })
+
+  it('contains admin user management route', () => {
+    const userManagementRoute = router.getRoutes().find((route) => route.path === '/admin/user-management')
+
+    expect(userManagementRoute).toBeTruthy()
+    expect(userManagementRoute?.meta.requiresAdmin).toBe(true)
   })
 
   it('redirects non-admin users away from admin route', async () => {

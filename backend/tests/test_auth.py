@@ -107,6 +107,43 @@ def test_registered_user_login_reuses_same_user(client):
     assert second_login.json["data"]["user_id"] == first_user_id
 
 
+def test_login_rejects_banned_user(client, app):
+    from app.extensions import db
+    from app.models import User
+
+    _seed_code(client.application, "13800138123")
+    first_login = client.post(
+        "/api/v1/auth/login",
+        json={
+            "phone": "13800138123",
+            "code": "123456",
+            "nickname": "BannedUser",
+        },
+    )
+    assert first_login.status_code == 200
+    user_id = first_login.json["data"]["user_id"]
+
+    with app.app_context():
+        user = db.session.get(User, user_id)
+        user.is_banned = True
+        db.session.commit()
+
+    _seed_code(client.application, "13800138123")
+    response = client.post(
+        "/api/v1/auth/login",
+        json={
+            "phone": "13800138123",
+            "code": "123456",
+        },
+    )
+
+    assert response.status_code == 403
+    assert response.json["error"] == {
+        "code": "USER_BANNED",
+        "message": "账号已被封禁",
+    }
+
+
 def test_refresh_rotates_refresh_token_and_returns_new_access_token(client):
     _seed_code(client.application, "13800138000")
     login = client.post(

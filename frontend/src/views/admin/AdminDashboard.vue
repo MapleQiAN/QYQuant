@@ -5,7 +5,7 @@
         <div>
           <p class="admin-dashboard__eyebrow">Admin Console</p>
           <h1>管理后台</h1>
-          <p>系统概览、审计能力与后续运营模块都会从这里展开。</p>
+          <p>系统概览、审核流程和运维入口集中在这里，便于管理员快速处理平台事务。</p>
         </div>
         <div class="admin-dashboard__status">
           <span class="admin-dashboard__status-label">系统概览</span>
@@ -17,16 +17,56 @@
       <div class="admin-dashboard__grid">
         <article class="admin-card">
           <h2>访问控制</h2>
-          <p>当前后台入口已启用前后端双重 admin 权限校验。</p>
+          <p>后台路由和接口统一启用管理员校验，避免普通用户越权访问。</p>
         </article>
+
         <article class="admin-card">
-          <h2>审计日志</h2>
-          <p>后续所有管理操作会统一写入审计日志表，便于追溯。</p>
+          <h2>审计留痕</h2>
+          <p>关键管理动作会持续写入审计日志，方便排查争议和追溯处理过程。</p>
         </article>
+
         <article class="admin-card">
-          <h2>待扩展模块</h2>
-          <p>策略审核队列已就绪，后续可继续扩展用户管理、回测监控等模块。</p>
-          <RouterLink class="admin-card__link" to="/admin/strategies">进入策略审核</RouterLink>
+          <h2>策略审核</h2>
+          <p>审核用户提交的策略，确保内容质量和合规性。</p>
+          <RouterLink class="admin-card__link" data-test="admin-strategy-review-link" to="/admin/strategies">
+            进入策略审核
+          </RouterLink>
+        </article>
+
+        <article class="admin-card">
+          <h2>用户管理</h2>
+          <p>查看用户账号状态、执行封禁或解封，并联动审计日志。</p>
+          <RouterLink
+            class="admin-card__link"
+            data-test="admin-user-management-link"
+            to="/admin/user-management"
+          >
+            进入用户管理
+          </RouterLink>
+        </article>
+
+        <article class="admin-card">
+          <h2>数据源监控</h2>
+          <p>查看 JQData 健康状态、最近检查时间、错误信息和连续失败次数。</p>
+          <RouterLink
+            class="admin-card__link"
+            data-test="admin-data-source-health-link"
+            to="/admin/data-source-health"
+          >
+            进入数据源监控
+          </RouterLink>
+        </article>
+
+        <article class="admin-card admin-card--accent">
+          <h2>任务监控</h2>
+          <p>查看回测队列、识别疑似卡死任务，并在必要时执行人工终止。</p>
+          <RouterLink
+            class="admin-card__link"
+            data-test="admin-backtest-monitor-link"
+            to="/admin/backtest-monitor"
+          >
+            进入任务监控
+          </RouterLink>
         </article>
       </div>
     </div>
@@ -114,6 +154,12 @@ onMounted(() => {
   border-radius: 24px;
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(241, 245, 249, 0.96));
   box-shadow: 0 16px 36px rgba(15, 23, 42, 0.08);
+}
+
+.admin-card--accent {
+  background:
+    radial-gradient(circle at top right, rgba(14, 165, 233, 0.14), transparent 42%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.99), rgba(239, 246, 255, 0.96));
 }
 
 .admin-card h2,

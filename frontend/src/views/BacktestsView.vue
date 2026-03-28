@@ -524,11 +524,12 @@ onMounted(() => {
 }
 
 .btn--upgrade {
-  border-color: var(--color-border);
+  border-color: var(--color-accent);
   background: var(--color-surface-alt);
-  color: var(--color-text-muted);
-  cursor: not-allowed;
-  opacity: 0.85;
+  color: var(--color-accent, #0b6bcb);
+  cursor: pointer;
+  opacity: 1;
+  font-weight: var(--font-weight-semibold);
 }
 
 .message {

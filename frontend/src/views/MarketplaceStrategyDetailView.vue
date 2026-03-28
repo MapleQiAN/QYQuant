@@ -12,6 +12,16 @@
         </div>
 
         <div class="cta-block">
+          <button
+            v-if="canReport"
+            class="btn btn-secondary detail-cta report-cta"
+            data-test="open-report"
+            type="button"
+            :disabled="busy"
+            @click="openReportDialog"
+          >
+            举报
+          </button>
           <div v-if="strategy?.alreadyImported" class="import-state" data-test="imported-state">
             Already in strategy library
           </div>
@@ -105,16 +115,42 @@
             <span v-for="tag in strategy.tags" :key="tag" class="pill">{{ tag }}</span>
           </div>
         </div>
+
+        <div v-if="reportDialogOpen" class="report-dialog">
+          <div class="report-dialog__panel">
+            <h3>举报策略</h3>
+            <p>请填写举报原因，我们会尽快审核处理。</p>
+            <textarea
+              v-model="reportReason"
+              data-test="report-reason"
+              rows="4"
+              placeholder="请描述违规内容或误导信息"
+            />
+            <div class="report-dialog__actions">
+              <button type="button" class="btn btn-link" @click="closeReportDialog">取消</button>
+              <button
+                type="button"
+                class="btn btn-primary"
+                data-test="submit-report"
+                :disabled="busy"
+                @click="submitReport"
+              >
+                提交举报
+              </button>
+            </div>
+          </div>
+        </div>
       </template>
     </div>
   </section>
 </template>
 
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import EquityCurveChart from '../components/backtest/EquityCurveChart.vue'
 import VerifiedBadge from '../components/strategy/VerifiedBadge.vue'
+import { toast } from '../lib/toast'
 import { useMarketplaceStore } from '../stores'
 import { useUserStore } from '../stores/user'
 
@@ -149,8 +185,13 @@ onBeforeUnmount(() => {
 
 const strategy = computed(() => marketplaceStore.currentStrategy)
 const loading = computed(() => marketplaceStore.loading || marketplaceStore.curveLoading)
-const busy = computed(() => loading.value || marketplaceStore.importLoading || marketplaceStore.importStatusLoading)
+const busy = computed(() =>
+  loading.value || marketplaceStore.importLoading || marketplaceStore.importStatusLoading || marketplaceStore.reportLoading
+)
 const error = computed(() => marketplaceStore.error)
+const reportReason = ref('')
+const reportDialogOpen = ref(false)
+const canReport = computed(() => Boolean(strategy.value?.canReport))
 
 const ctaLabel = computed(() => {
   if (marketplaceStore.importLoading) {
@@ -220,6 +261,32 @@ async function goToBacktestConfiguration() {
   await router.push(buildBacktestConfigurePath(strategy.value.importedStrategyId))
 }
 
+function openReportDialog() {
+  reportDialogOpen.value = true
+}
+
+function closeReportDialog() {
+  reportDialogOpen.value = false
+  reportReason.value = ''
+}
+
+async function submitReport() {
+  if (!strategy.value) return
+  const reason = reportReason.value.trim()
+  if (reason.length < 10 || reason.length > 500) {
+    toast.error('举报原因需为 10 到 500 个字符')
+    return
+  }
+
+  try {
+    await marketplaceStore.reportStrategy(strategy.value.id, reason)
+    toast.success('举报已提交，我们将尽快处理')
+    closeReportDialog()
+  } catch (error) {
+    toast.error(getErrorMessage(error))
+  }
+}
+
 function humanizeMetricKey(key: string) {
   return key
     .replace(/([a-z0-9])([A-Z])/g, '$1 $2')
@@ -242,6 +309,13 @@ function formatMetricValue(key: string, value: string | number | boolean | null)
 
 function buildBacktestConfigurePath(importedStrategyId: string) {
   return `/backtest/configure?strategy_id=${encodeURIComponent(importedStrategyId)}`
+}
+
+function getErrorMessage(error: unknown): string {
+  if (error instanceof Error && error.message) {
+    return error.message
+  }
+  return '提交失败，请稍后重试'
 }
 </script>
 
@@ -299,6 +373,11 @@ function buildBacktestConfigurePath(importedStrategyId: string) {
 .detail-cta {
   background: #1A1A1A;
   min-width: 220px;
+}
+
+.report-cta {
+  background: rgba(239, 68, 68, 0.08);
+  color: #b91c1c;
 }
 
 .imported-cta {
@@ -472,6 +551,51 @@ function buildBacktestConfigurePath(importedStrategyId: string) {
   background: #fff;
   color: var(--color-text-secondary);
   font-size: var(--font-size-xs);
+}
+
+.report-dialog {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--spacing-lg);
+  background: rgba(15, 23, 42, 0.4);
+}
+
+.report-dialog__panel {
+  width: min(520px, 100%);
+  padding: var(--spacing-lg);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  box-shadow: 0 24px 56px rgba(15, 23, 42, 0.24);
+}
+
+.report-dialog__panel h3,
+.report-dialog__panel p {
+  margin: 0;
+}
+
+.report-dialog__panel p {
+  margin-top: var(--spacing-xs);
+  color: var(--color-text-secondary);
+}
+
+.report-dialog__panel textarea {
+  width: 100%;
+  margin-top: var(--spacing-md);
+  padding: 14px 16px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  resize: vertical;
+  font: inherit;
+}
+
+.report-dialog__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--spacing-sm);
+  margin-top: var(--spacing-md);
 }
 
 @media (max-width: 1100px) {

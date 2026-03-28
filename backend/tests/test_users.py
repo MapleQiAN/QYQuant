@@ -674,6 +674,120 @@ def test_get_my_quota_reflects_plan_level_change(client, app):
     assert data["remaining"] == 500 - data["used_count"]
 
 
+def test_account_deletion_soft_deletes_private_strategies(client, app):
+    phone = "13900139200"
+    token, user_id = _login_user(client, phone=phone, nickname="StrategyOwner")
+    private_id = _create_strategy(
+        app,
+        owner_id=user_id,
+        strategy_id="strategy-private-del",
+        name="Private Strategy",
+        created_at=1700000000000,
+        is_public=False,
+    )
+    public_id = _create_strategy(
+        app,
+        owner_id=user_id,
+        strategy_id="strategy-public-del",
+        name="Public Strategy",
+        created_at=1700000001000,
+        is_public=True,
+    )
+
+    _seed_code(app, phone)
+    response = client.delete(
+        "/api/v1/users/me",
+        headers=_auth_headers(token),
+        json={"code": "123456"},
+    )
+    assert response.status_code == 200
+
+    with app.app_context():
+        private_strategy = db.session.get(Strategy, private_id)
+        assert private_strategy.deleted_at is not None
+
+        public_strategy = db.session.get(Strategy, public_id)
+        assert public_strategy.deleted_at is None
+
+
+def test_account_deletion_preserves_imported_copies(client, app):
+    phone_a = "13900139210"
+    phone_b = "13900139211"
+    token_a, user_a_id = _login_user(client, phone=phone_a, nickname="PublisherA")
+    _, user_b_id = _login_user(client, phone=phone_b, nickname="ImporterB")
+
+    source_id = _create_strategy(
+        app,
+        owner_id=user_a_id,
+        strategy_id="strategy-source-pub",
+        name="Public Source Strategy",
+        created_at=1700000000000,
+        is_public=True,
+    )
+    imported_id = _create_strategy(
+        app,
+        owner_id=user_b_id,
+        strategy_id="strategy-imported-copy",
+        name="Imported Copy",
+        created_at=1700000001000,
+        is_public=False,
+    )
+    with app.app_context():
+        imported = db.session.get(Strategy, imported_id)
+        imported.source_strategy_id = source_id
+        db.session.commit()
+
+    _seed_code(app, phone_a)
+    response = client.delete(
+        "/api/v1/users/me",
+        headers=_auth_headers(token_a),
+        json={"code": "123456"},
+    )
+    assert response.status_code == 200
+
+    with app.app_context():
+        imported = db.session.get(Strategy, imported_id)
+        assert imported.deleted_at is None
+        assert imported.owner_id == user_b_id
+
+
+def test_list_strategies_excludes_soft_deleted(client, app):
+    phone = "13900139220"
+    token, user_id = _login_user(client, phone=phone, nickname="SoftDelOwner")
+    _create_strategy(
+        app,
+        owner_id=user_id,
+        strategy_id="strategy-soft-del",
+        name="Soft Deleted Strategy",
+        created_at=1700000000000,
+        is_public=False,
+    )
+    _create_strategy(
+        app,
+        owner_id=user_id,
+        strategy_id="strategy-active",
+        name="Active Strategy",
+        created_at=1700000001000,
+        is_public=False,
+    )
+
+    with app.app_context():
+        soft_deleted = db.session.get(Strategy, "strategy-soft-del")
+        soft_deleted.deleted_at = datetime(2026, 3, 15, 10, 0, 0, tzinfo=timezone.utc)
+        db.session.commit()
+
+    response = client.get(
+        "/api/v1/strategies/",
+        headers=_auth_headers(token),
+    )
+
+    assert response.status_code == 200
+    data = response.json["data"]
+    ids = [item["id"] for item in data["items"]]
+    assert "strategy-soft-del" not in ids
+    assert "strategy-active" in ids
+
+
 def test_get_my_quota_normalizes_legacy_plan_levels(client, app):
     from app.models import User, UserQuota
 

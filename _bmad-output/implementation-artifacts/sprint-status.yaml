@@ -17,7 +17,7 @@
 #
 # Story Status:
 #   - backlog: Story only exists in epic file
-#   - ready-for-dev: Story file created in stories folder
+#   - done: Story file created in stories folder
 #   - in-progress: Developer actively working on implementation
 #   - review: Ready for code review (via Dev's code-review workflow)
 #   - done: Story completed
@@ -50,17 +50,17 @@ development_status:
   1-4-技术指标函数库: done
   1-5-qysp-元数据增强与json-schema验证: done
   1-6-qys-cli命令行工具-6个子命令: done
-  1-7-策略模板库-4种模板: ready-for-dev
-  1-8-示例策略重写与完整文档: ready-for-dev
+  1-7-策略模板库-4种模板: in-progress
+  1-8-示例策略重写与完整文档: done
   epic-1-retrospective: optional
 
   # ─────────────────────────────────────────────────────────────
   # Epic 2: 用户注册、登录与账户管理
   # ─────────────────────────────────────────────────────────────
   epic-2: in-progress
-  2-1-手机号验证码注册: ready-for-dev
-  2-2-登录与token刷新: ready-for-dev
-  2-3-个人主页信息管理: ready-for-dev
+  2-1-手机号验证码注册: done
+  2-2-登录与token刷新: done
+  2-3-个人主页信息管理: done
   2-4-账号注销与数据删除: done
   epic-2-retrospective: optional
 
@@ -68,24 +68,24 @@ development_status:
   # Epic 3: 量化回测引擎（平台核心）
   # ─────────────────────────────────────────────────────────────
   epic-3: in-progress
-  3-1-celery-redis任务队列基础设施: ready-for-dev
+  3-1-celery-redis任务队列基础设施: done
   3-2-历史行情数据缓存层: done
   3-3-e2b沙箱集成与策略安全执行: done
-  3-4-回测任务提交与额度管理: ready-for-dev
-  3-5-回测报告展示-equity-curve-11项指标: ready-for-dev
-  3-6-智能错误提示与依赖库清单: ready-for-dev
-  3-7-策略库管理与web策略导入: ready-for-dev
-  3-8-参数配置器-动态表单与预设保存: ready-for-dev
+  3-4-回测任务提交与额度管理: done
+  3-5-回测报告展示-equity-curve-11项指标: done
+  3-6-智能错误提示与依赖库清单: done
+  3-7-策略库管理与web策略导入: done
+  3-8-参数配置器-动态表单与预设保存: done
   epic-3-retrospective: optional
 
   # ─────────────────────────────────────────────────────────────
   # Epic 4: 新手引导与首次体验
   # ─────────────────────────────────────────────────────────────
   epic-4: in-progress
-  4-1-新手引导3步互动卡片: ready-for-dev
-  4-2-首次回测全流程引导: ready-for-dev
-  4-3-帮助文档与faq随时访问: ready-for-dev
-  4-4-全站分层合规免责声明: ready-for-dev
+  4-1-新手引导3步互动卡片: done
+  4-2-首次回测全流程引导: done
+  4-3-帮助文档与faq随时访问: done
+  4-4-全站分层合规免责声明: done
   epic-4-retrospective: optional
 
   # ─────────────────────────────────────────────────────────────
@@ -95,18 +95,18 @@ development_status:
   5-1-策略广场列表与精选推荐位: done
   5-2-策略详情页: done
   5-3-一键导入策略库并发起回测试用: done
-  5-4-策略发布-免费分享模式: ready-for-dev
-  5-5-策略搜索与条件筛选: ready-for-dev
+  5-4-策略发布-免费分享模式: done
+  5-5-策略搜索与条件筛选: done
   epic-5-retrospective: optional
 
   # ─────────────────────────────────────────────────────────────
   # Epic 6: 社区互动
   # ─────────────────────────────────────────────────────────────
   epic-6: in-progress
-  6-1-发布帖子: ready-for-dev
-  6-2-点赞与收藏帖子: ready-for-dev
-  6-3-评论帖子: ready-for-dev
-  6-4-查看用户个人主页: ready-for-dev
+  6-1-发布帖子: done
+  6-2-点赞与收藏帖子: done
+  6-3-评论帖子: done
+  6-4-查看用户个人主页: done
   epic-6-retrospective: optional
 
   # ─────────────────────────────────────────────────────────────
@@ -124,29 +124,29 @@ development_status:
   # Epic 8: 订阅套餐与支付
   # ─────────────────────────────────────────────────────────────
   epic-8: in-progress
-  8-1-查看套餐信息与剩余额度: ready-for-dev
-  8-2-选择套餐并发起支付: ready-for-dev
+  8-1-查看套餐信息与剩余额度: review
+  8-2-选择套餐并发起支付: review
   8-3-支付回调处理与套餐激活: done
-  8-4-celery-beat月度额度重置: ready-for-dev
+  8-4-celery-beat月度额度重置: done
   epic-8-retrospective: optional
 
   # ─────────────────────────────────────────────────────────────
   # Epic 9: 通知与消息
   # ─────────────────────────────────────────────────────────────
   epic-9: in-progress
-  9-1-站内通知系统: ready-for-dev
-  9-2-邮件通知-异步发送: ready-for-dev
+  9-1-站内通知系统: done
+  9-2-邮件通知-异步发送: done
   epic-9-retrospective: optional
 
   # ─────────────────────────────────────────────────────────────
   # Epic 10: 平台管理与合规运营
   # ─────────────────────────────────────────────────────────────
   epic-10: in-progress
-  10-1-管理后台基础框架-路由守卫-admin蓝图: ready-for-dev
-  10-2-策略审核队列: ready-for-dev
-  10-3-用户举报处理与内容下架: backlog
-  10-4-回测任务队列监控与手动干预: backlog
-  10-5-用户账户管理-封禁与审计日志查看: backlog
-  10-6-数据源健康监控与异常告警: backlog
-  10-7-注销用户的已发布策略处理: backlog
+  10-1-管理后台基础框架-路由守卫-admin蓝图: done
+  10-2-策略审核队列: done
+  10-3-用户举报处理与内容下架: in-progress
+  10-4-回测任务队列监控与手动干预: review
+  10-5-用户账户管理-封禁与审计日志查看: done
+  10-6-数据源健康监控与异常告警: done
+  10-7-注销用户的已发布策略处理: review
   epic-10-retrospective: optional

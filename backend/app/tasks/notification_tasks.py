@@ -10,7 +10,12 @@ from flask_mail import Message
 from ..celery_app import celery_app
 from ..extensions import db, mail
 from ..models import User
-from ..utils.email_templates import render_strategy_review_email
+from ..utils.email_templates import (
+    render_data_source_alert_email,
+    render_data_source_recovered_email,
+    render_strategy_review_email,
+    render_strategy_takedown_email,
+)
 
 logger = get_task_logger(__name__) if logging.getLogger().handlers else logging.getLogger(__name__)
 
@@ -100,6 +105,22 @@ def _render_email(event_type, context_data):
             strategy_name=context_data['strategy_name'],
             status=context_data['status'],
             reason=context_data.get('reason'),
+        )
+    if event_type == 'strategy_takedown':
+        return render_strategy_takedown_email(
+            strategy_name=context_data['strategy_name'],
+            reason=context_data['reason'],
+        )
+    if event_type == 'data_source_alert':
+        return render_data_source_alert_email(
+            source_name=context_data['source_name'],
+            checked_at=context_data['checked_at'],
+            error_message=context_data.get('error_message'),
+        )
+    if event_type == 'data_source_recovered':
+        return render_data_source_recovered_email(
+            source_name=context_data['source_name'],
+            checked_at=context_data['checked_at'],
         )
     raise ValueError(f"Unsupported email notification event type: {event_type}")
 

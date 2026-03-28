@@ -80,6 +80,24 @@ class Notification(db.Model):
     created_at = db.Column(db.DateTime(timezone=True), nullable=False, default=now_utc)
 
 
+class Report(db.Model):
+    __tablename__ = 'reports'
+    __table_args__ = (
+        db.Index('ix_reports_reporter_strategy', 'reporter_id', 'strategy_id'),
+        db.Index('ix_reports_status', 'status'),
+    )
+
+    id = db.Column(db.String, primary_key=True, default=gen_id)
+    reporter_id = db.Column(db.String, db.ForeignKey('users.id'), nullable=False)
+    strategy_id = db.Column(db.String, db.ForeignKey('strategies.id'), nullable=False)
+    reason = db.Column(db.Text, nullable=False)
+    status = db.Column(db.String(20), nullable=False, default='pending')
+    admin_note = db.Column(db.Text, nullable=True)
+    created_at = db.Column(db.DateTime(timezone=True), nullable=False, default=now_utc)
+    reviewed_at = db.Column(db.DateTime(timezone=True), nullable=True)
+    reviewed_by = db.Column(db.String, db.ForeignKey('users.id'), nullable=True)
+
+
 class Strategy(db.Model):
     __tablename__ = 'strategies'
     __table_args__ = (
@@ -127,6 +145,7 @@ class Strategy(db.Model):
     code_hash = db.Column(db.String(64), nullable=True)
     created_at = db.Column(db.BigInteger, default=now_ms)
     updated_at = db.Column(db.BigInteger, default=now_ms)
+    deleted_at = db.Column(db.DateTime(timezone=True), nullable=True)
 
     def to_card_dict(self, *, author=None):
         author_payload = {
@@ -240,6 +259,19 @@ class MarketDataCache(db.Model):
     volume = db.Column(db.BigInteger, nullable=False)
     source = db.Column(db.String(20), nullable=False, default='joinquant', server_default='joinquant')
     cached_at = db.Column(db.DateTime(timezone=True), nullable=False, default=now_utc, server_default=db.func.now())
+
+
+class DataSourceHealthStatus(db.Model):
+    __tablename__ = 'data_source_health_status'
+
+    source_name = db.Column(db.String(50), primary_key=True)
+    status = db.Column(db.String(20), nullable=False, default='unknown')
+    last_checked_at = db.Column(db.DateTime(timezone=True), nullable=True)
+    last_success_at = db.Column(db.DateTime(timezone=True), nullable=True)
+    last_failure_at = db.Column(db.DateTime(timezone=True), nullable=True)
+    last_error_message = db.Column(db.Text, nullable=True)
+    consecutive_failures = db.Column(db.Integer, nullable=False, default=0)
+    last_notified_status = db.Column(db.String(20), nullable=True)
 
 
 class BotInstance(db.Model):

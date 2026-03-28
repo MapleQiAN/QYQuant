@@ -134,6 +134,7 @@ export interface MarketplaceStrategyDetail {
   alreadyImported: boolean
   importedStrategyId?: string | null
   hasEquityCurve?: boolean
+  canReport?: boolean
 }
 
 export interface MarketplaceStrategyEquityCurve {
@@ -149,6 +150,10 @@ export interface MarketplaceStrategyImportStatus {
 export interface MarketplaceStrategyImportResult {
   strategyId: string
   redirectTo: string
+}
+
+export interface MarketplaceStrategyReportResult {
+  reportId: string
 }
 
 export interface MarketplacePublishStatus {

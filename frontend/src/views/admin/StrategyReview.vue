@@ -27,7 +27,7 @@
         >
           <div class="review-card__header">
             <div>
-              <p class="review-card__meta">{{ item.authorNickname || '匿名作者' }} · {{ item.createdAt || '-' }}</p>
+              <p class="review-card__meta">{{ item.authorNickname || '匿名作者' }} · {{ formatDate(item.createdAt) }}</p>
               <h2>{{ item.title }}</h2>
             </div>
             <span class="review-card__status">待审核</span>
@@ -88,21 +88,63 @@
           </div>
         </article>
       </div>
+
+      <nav
+        v-if="!adminStore.reviewQueueLoading && adminStore.reviewQueueMeta.total > adminStore.reviewQueueMeta.perPage"
+        class="strategy-review__pagination"
+      >
+        <button
+          :disabled="adminStore.reviewQueueMeta.page <= 1"
+          @click="goToPage(adminStore.reviewQueueMeta.page - 1)"
+        >
+          上一页
+        </button>
+        <span>
+          第 {{ adminStore.reviewQueueMeta.page }} / {{ totalPages }} 页
+          （共 {{ adminStore.reviewQueueMeta.total }} 条）
+        </span>
+        <button
+          :disabled="adminStore.reviewQueueMeta.page >= totalPages"
+          @click="goToPage(adminStore.reviewQueueMeta.page + 1)"
+        >
+          下一页
+        </button>
+      </nav>
     </div>
   </section>
 </template>
 
 <script setup lang="ts">
-import { onMounted, reactive } from 'vue'
+import { computed, onMounted, reactive } from 'vue'
 import { toast } from '../../lib/toast'
 import { useAdminStore } from '../../stores/useAdminStore'
 
 const adminStore = useAdminStore()
 const rejectReasons = reactive<Record<string, string>>({})
 
+const totalPages = computed(() =>
+  Math.max(1, Math.ceil(adminStore.reviewQueueMeta.total / adminStore.reviewQueueMeta.perPage))
+)
+
 onMounted(() => {
   void adminStore.loadPendingReviews()
 })
+
+function formatDate(iso: string | null): string {
+  if (!iso) return '-'
+  try {
+    const d = new Date(iso)
+    if (Number.isNaN(d.getTime())) return iso
+    const pad = (n: number) => String(n).padStart(2, '0')
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`
+  } catch {
+    return iso
+  }
+}
+
+function goToPage(page: number) {
+  void adminStore.loadPendingReviews(page)
+}
 
 function metricValue(metrics: Record<string, unknown>, key: string): string {
   const value = metrics?.[key]
@@ -319,6 +361,34 @@ function getErrorMessage(error: unknown): string {
 .review-card__button--reject {
   background: rgba(239, 68, 68, 0.12);
   color: #b91c1c;
+}
+
+.strategy-review__pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-md);
+  padding: var(--spacing-md) 0;
+}
+
+.strategy-review__pagination button {
+  min-width: 80px;
+  min-height: 38px;
+  border: 1px solid rgba(148, 163, 184, 0.28);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.92);
+  font: inherit;
+  cursor: pointer;
+}
+
+.strategy-review__pagination button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.strategy-review__pagination span {
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
 }
 
 @media (max-width: 960px) {

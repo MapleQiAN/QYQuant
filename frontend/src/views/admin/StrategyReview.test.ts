@@ -34,6 +34,7 @@ const {
       }
     ] as any[],
     reviewQueueLoading: false,
+    reviewQueueMeta: { total: 1, page: 1, perPage: 20 },
     reviewSubmitting: {} as Record<string, boolean>
   }
 }))
@@ -93,6 +94,7 @@ describe('StrategyReview', () => {
       }
     ]
     storeState.reviewQueueLoading = false
+    storeState.reviewQueueMeta = { total: 1, page: 1, perPage: 20 }
     storeState.reviewSubmitting = {}
   })
 
@@ -129,5 +131,15 @@ describe('StrategyReview', () => {
       reason: '风险披露不足'
     })
     expect(toastSuccessMock).toHaveBeenCalledWith('审核已拒绝')
+  })
+
+  it('shows error toast when rejecting without a reason', async () => {
+    const wrapper = mountStrategyReview()
+
+    await wrapper.get('[data-test="reject-strategy-1"]').trigger('click')
+    await flushPromises()
+
+    expect(reviewStrategyMock).not.toHaveBeenCalled()
+    expect(toastErrorMock).toHaveBeenCalledWith('请填写拒绝原因')
   })
 })
