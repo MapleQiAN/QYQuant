@@ -209,7 +209,7 @@ function getErrorMessage(error: unknown): string {
   background:
     radial-gradient(circle at top left, rgba(14, 165, 233, 0.2), transparent 40%),
     linear-gradient(140deg, rgba(15, 23, 42, 0.96), rgba(17, 94, 89, 0.92));
-  color: #f8fafc;
+  color: var(--color-text-inverse);
 }
 
 .strategy-review__hero h1,
@@ -237,8 +237,8 @@ function getErrorMessage(error: unknown): string {
   min-height: 42px;
   padding: 0 18px;
   border-radius: 999px;
-  background: rgba(248, 250, 252, 0.12);
-  color: #f8fafc;
+  background: rgba(255, 255, 255, 0.12);
+  color: var(--color-text-inverse);
   text-decoration: none;
 }
 
@@ -250,8 +250,8 @@ function getErrorMessage(error: unknown): string {
 .strategy-review__empty {
   padding: var(--spacing-xl);
   border-radius: 24px;
-  background: rgba(255, 255, 255, 0.92);
-  border: 1px solid rgba(148, 163, 184, 0.18);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border-light);
   color: var(--color-text-secondary);
   text-align: center;
 }
@@ -262,9 +262,9 @@ function getErrorMessage(error: unknown): string {
   gap: var(--spacing-md);
   padding: var(--spacing-lg);
   border-radius: 24px;
-  border: 1px solid rgba(148, 163, 184, 0.18);
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(248, 250, 252, 0.94));
-  box-shadow: 0 16px 36px rgba(15, 23, 42, 0.08);
+  border: 1px solid var(--color-border-light);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-md);
 }
 
 .review-card__header {
@@ -292,7 +292,7 @@ function getErrorMessage(error: unknown): string {
   padding: 8px 12px;
   border-radius: 999px;
   background: rgba(245, 158, 11, 0.14);
-  color: #b45309;
+  color: var(--color-warning);
   font-size: var(--font-size-sm);
   font-weight: 600;
 }
@@ -310,7 +310,7 @@ function getErrorMessage(error: unknown): string {
 .review-card__grid div {
   padding: 14px;
   border-radius: 18px;
-  background: rgba(241, 245, 249, 0.85);
+  background: var(--color-surface-hover);
 }
 
 .review-card__grid dt {
@@ -326,7 +326,7 @@ function getErrorMessage(error: unknown): string {
 .review-card__reason {
   width: 100%;
   padding: 14px 16px;
-  border: 1px solid rgba(148, 163, 184, 0.28);
+  border: 1px solid var(--color-border);
   border-radius: 18px;
   resize: vertical;
   font: inherit;
@@ -354,13 +354,13 @@ function getErrorMessage(error: unknown): string {
 }
 
 .review-card__button--approve {
-  background: #0f766e;
-  color: #f8fafc;
+  background: var(--color-success);
+  color: var(--color-text-inverse);
 }
 
 .review-card__button--reject {
   background: rgba(239, 68, 68, 0.12);
-  color: #b91c1c;
+  color: var(--color-danger);
 }
 
 .strategy-review__pagination {
@@ -374,9 +374,9 @@ function getErrorMessage(error: unknown): string {
 .strategy-review__pagination button {
   min-width: 80px;
   min-height: 38px;
-  border: 1px solid rgba(148, 163, 184, 0.28);
+  border: 1px solid var(--color-border);
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.92);
+  background: var(--color-surface);
   font: inherit;
   cursor: pointer;
 }

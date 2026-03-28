@@ -173,7 +173,7 @@ function loadMorePosts() {
 
 .skeleton {
   border-radius: 24px;
-  background: linear-gradient(90deg, rgba(226, 232, 240, 0.7), rgba(241, 245, 249, 1), rgba(226, 232, 240, 0.7));
+  background: linear-gradient(90deg, var(--color-border-light), var(--color-surface-hover), var(--color-border-light));
   background-size: 200% 100%;
   animation: shimmer 1.4s linear infinite;
 }
@@ -189,12 +189,12 @@ function loadMorePosts() {
 .feedback {
   padding: 28px;
   border-radius: 24px;
-  background: rgba(255, 255, 255, 0.96);
-  border: 1px solid rgba(15, 23, 42, 0.08);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border-light);
 }
 
 .feedback.error {
-  color: #b91c1c;
+  color: var(--color-danger);
 }
 
 .feedback.not-found h1,
@@ -217,8 +217,8 @@ function loadMorePosts() {
   gap: 8px;
   padding: 6px;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.94);
-  border: 1px solid rgba(15, 23, 42, 0.08);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border-light);
   justify-self: start;
 }
 
@@ -233,8 +233,8 @@ function loadMorePosts() {
 }
 
 .tab.active {
-  background: #0f172a;
-  color: #fff;
+  background: var(--color-text-primary);
+  color: var(--color-text-inverse);
 }
 
 @keyframes shimmer {

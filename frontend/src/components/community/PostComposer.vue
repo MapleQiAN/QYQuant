@@ -83,10 +83,10 @@ onMounted(() => {
   display: grid;
   gap: 16px;
   padding: 20px;
-  border: 1px solid rgba(15, 23, 42, 0.1);
+  border: 1px solid var(--color-border);
   border-radius: 20px;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(247, 250, 252, 0.96));
-  box-shadow: 0 16px 40px rgba(15, 23, 42, 0.08);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-lg);
 }
 
 .composer-header {
@@ -126,9 +126,9 @@ onMounted(() => {
   resize: vertical;
   min-height: 120px;
   padding: 16px;
-  border: 1px solid rgba(15, 23, 42, 0.14);
+  border: 1px solid var(--color-border);
   border-radius: 16px;
-  background: #fff;
+  background: var(--color-surface);
   font: inherit;
   color: var(--color-text-primary);
 }
@@ -151,8 +151,8 @@ onMounted(() => {
   min-width: 220px;
   padding: 10px 12px;
   border-radius: 12px;
-  border: 1px solid rgba(15, 23, 42, 0.14);
-  background: #fff;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
   color: var(--color-text-primary);
 }
 
@@ -163,7 +163,7 @@ onMounted(() => {
   font: inherit;
   font-weight: 600;
   background: linear-gradient(135deg, #0f766e, #0ea5e9);
-  color: #fff;
+  color: var(--color-text-inverse);
   cursor: pointer;
 }
 

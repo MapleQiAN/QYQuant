@@ -12,7 +12,7 @@
         <slot name="label-extra" />
       </div>
       <div class="stat-value">
-        <span :class="['value', { positive: isPositive, negative: isNegative }]">
+        <span :class="['value tnum', { positive: isPositive, negative: isNegative }]">
           {{ prefix }}{{ formattedValue }}{{ suffix }}
         </span>
         <span v-if="change !== undefined" :class="['change', { positive: change >= 0, negative: change < 0 }]">

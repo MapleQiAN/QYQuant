@@ -162,7 +162,7 @@ function getErrorMessage(error: unknown): string {
   background:
     radial-gradient(circle at top left, rgba(248, 113, 113, 0.18), transparent 40%),
     linear-gradient(135deg, rgba(15, 23, 42, 0.96), rgba(127, 29, 29, 0.9));
-  color: #f8fafc;
+  color: var(--color-text-inverse);
 }
 
 .report-management__hero h1,
@@ -185,16 +185,16 @@ function getErrorMessage(error: unknown): string {
   min-height: 42px;
   padding: 0 18px;
   border-radius: 999px;
-  background: rgba(248, 250, 252, 0.12);
-  color: #f8fafc;
+  background: rgba(255, 255, 255, 0.12);
+  color: var(--color-text-inverse);
   text-decoration: none;
 }
 
 .report-management__empty {
   padding: var(--spacing-xl);
   border-radius: 24px;
-  background: rgba(255, 255, 255, 0.92);
-  border: 1px solid rgba(148, 163, 184, 0.18);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border-light);
   color: var(--color-text-secondary);
   text-align: center;
 }
@@ -210,9 +210,9 @@ function getErrorMessage(error: unknown): string {
   gap: var(--spacing-md);
   padding: var(--spacing-lg);
   border-radius: 24px;
-  border: 1px solid rgba(148, 163, 184, 0.18);
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(248, 250, 252, 0.94));
-  box-shadow: 0 16px 36px rgba(15, 23, 42, 0.08);
+  border: 1px solid var(--color-border-light);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-md);
 }
 
 .report-card__header {
@@ -242,7 +242,7 @@ function getErrorMessage(error: unknown): string {
   padding: 8px 12px;
   border-radius: 999px;
   background: rgba(245, 158, 11, 0.14);
-  color: #b45309;
+  color: var(--color-warning);
   font-size: var(--font-size-sm);
   font-weight: 600;
 }
@@ -250,7 +250,7 @@ function getErrorMessage(error: unknown): string {
 .report-card__reason {
   padding: 16px;
   border-radius: 18px;
-  background: rgba(248, 250, 252, 0.92);
+  background: var(--color-surface-hover);
   color: var(--color-text-primary);
   line-height: 1.7;
 }
@@ -258,7 +258,7 @@ function getErrorMessage(error: unknown): string {
 .report-card__note {
   width: 100%;
   padding: 14px 16px;
-  border: 1px solid rgba(148, 163, 184, 0.28);
+  border: 1px solid var(--color-border);
   border-radius: 18px;
   resize: vertical;
   font: inherit;
@@ -287,12 +287,12 @@ function getErrorMessage(error: unknown): string {
 
 .report-card__button--dismiss {
   background: rgba(148, 163, 184, 0.18);
-  color: #334155;
+  color: var(--color-text-secondary);
 }
 
 .report-card__button--takedown {
-  background: #b91c1c;
-  color: #f8fafc;
+  background: var(--color-danger);
+  color: var(--color-text-inverse);
 }
 
 @media (max-width: 960px) {

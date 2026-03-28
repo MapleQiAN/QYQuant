@@ -50,11 +50,11 @@ watch(
   margin: 0;
   padding: 24px;
   border-radius: 16px;
-  background: rgba(255, 255, 255, 0.9);
+  background: var(--color-surface);
   color: var(--color-text-muted);
 }
 
 .status.error {
-  color: #c53030;
+  color: var(--color-danger);
 }
 </style>

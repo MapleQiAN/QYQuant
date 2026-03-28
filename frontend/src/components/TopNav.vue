@@ -5,24 +5,20 @@
         <div class="logo-icon">
           <img :src="logoUrl" alt="QY Quant Logo" class="logo-image" />
         </div>
-        <div>
-          <span class="logo-text">QY Quant</span>
-        </div>
+        <span class="logo-text">QY Quant</span>
       </div>
 
-      <div class="nav-links-shell">
-        <div class="nav-links">
-          <RouterLink
-            v-for="item in navItems"
-            :key="item.id"
-            :to="item.to"
-            :class="['nav-link', { active: route.path === item.to, 'onboarding-highlight': onboardingHighlightTarget === item.target }]"
-            :data-onboarding-target="item.target"
-          >
-            <component :is="getIcon(item.icon)" class="nav-icon" />
-            <span>{{ $t(item.label) }}</span>
-          </RouterLink>
-        </div>
+      <div class="nav-links">
+        <RouterLink
+          v-for="item in navItems"
+          :key="item.id"
+          :to="item.to"
+          :class="['nav-link', { active: route.path === item.to, 'onboarding-highlight': onboardingHighlightTarget === item.target }]"
+          :data-onboarding-target="item.target"
+        >
+          <component :is="getIcon(item.icon)" class="nav-icon" />
+          <span>{{ $t(item.label) }}</span>
+        </RouterLink>
       </div>
 
       <div class="nav-right">
@@ -30,13 +26,19 @@
           <SearchIcon class="search-icon" />
           <input type="text" :placeholder="$t('common.searchPlaceholder')" class="search-input" />
         </div>
+
         <div class="nav-actions">
-          <button class="nav-btn" type="button" aria-label="鎵撳紑甯姪涓績" @click="userStore.setHelpPanelOpen(true)">
+          <button class="nav-btn" type="button" :aria-label="userStore.theme === 'dark' ? '切换为浅色模式' : '切换为深色模式'" @click="userStore.toggleTheme()">
+            <MoonIcon v-if="userStore.theme === 'light'" />
+            <SunIcon v-else />
+          </button>
+
+          <button class="nav-btn" type="button" aria-label="帮助中心" @click="userStore.setHelpPanelOpen(true)">
             <HelpIcon />
           </button>
 
           <div class="notification-shell">
-            <button class="nav-btn notification-btn" type="button" aria-label="鎵撳紑閫氱煡涓績" @click="toggleNotifications">
+            <button class="nav-btn" type="button" aria-label="通知中心" @click="toggleNotifications">
               <BellIcon />
               <span v-if="notificationCount > 0" class="notification-badge">
                 {{ notificationCount }}
@@ -46,10 +48,10 @@
           </div>
 
           <div class="user-menu-shell">
-            <div class="user-avatar" @click="handleAvatarClick">
+            <button class="user-avatar" type="button" @click="handleAvatarClick">
               <span class="avatar-text">{{ profile.avatar }}</span>
               <span class="user-level">{{ profile.level }}</span>
-            </div>
+            </button>
             <div v-if="isUserMenuOpen" class="user-dropdown">
               <RouterLink class="dropdown-item" :to="`/users/${profile.id}`" @click="isUserMenuOpen = false">
                 个人主页
@@ -133,8 +135,8 @@ function toggleNotifications() {
 }
 
 const ChartIcon = () => h('svg', {
-  width: 18,
-  height: 18,
+  width: 16,
+  height: 16,
   viewBox: '0 0 24 24',
   fill: 'none',
   stroke: 'currentColor',
@@ -149,8 +151,8 @@ const ChartIcon = () => h('svg', {
 ])
 
 const RobotIcon = () => h('svg', {
-  width: 18,
-  height: 18,
+  width: 16,
+  height: 16,
   viewBox: '0 0 24 24',
   fill: 'none',
   stroke: 'currentColor',
@@ -166,8 +168,8 @@ const RobotIcon = () => h('svg', {
 ])
 
 const UsersIcon = () => h('svg', {
-  width: 18,
-  height: 18,
+  width: 16,
+  height: 16,
   viewBox: '0 0 24 24',
   fill: 'none',
   stroke: 'currentColor',
@@ -182,8 +184,8 @@ const UsersIcon = () => h('svg', {
 ])
 
 const HelpIcon = () => h('svg', {
-  width: 18,
-  height: 18,
+  width: 16,
+  height: 16,
   viewBox: '0 0 24 24',
   fill: 'none',
   stroke: 'currentColor',
@@ -197,8 +199,8 @@ const HelpIcon = () => h('svg', {
 ])
 
 const SearchIcon = () => h('svg', {
-  width: 16,
-  height: 16,
+  width: 14,
+  height: 14,
   viewBox: '0 0 24 24',
   fill: 'none',
   stroke: 'currentColor',
@@ -211,8 +213,8 @@ const SearchIcon = () => h('svg', {
 ])
 
 const BellIcon = () => h('svg', {
-  width: 20,
-  height: 20,
+  width: 16,
+  height: 16,
   viewBox: '0 0 24 24',
   fill: 'none',
   stroke: 'currentColor',
@@ -225,8 +227,8 @@ const BellIcon = () => h('svg', {
 ])
 
 const TargetIcon = () => h('svg', {
-  width: 18,
-  height: 18,
+  width: 16,
+  height: 16,
   viewBox: '0 0 24 24',
   fill: 'none',
   stroke: 'currentColor',
@@ -237,6 +239,40 @@ const TargetIcon = () => h('svg', {
   h('circle', { cx: 12, cy: 12, r: 10 }),
   h('circle', { cx: 12, cy: 12, r: 6 }),
   h('circle', { cx: 12, cy: 12, r: 2 }),
+])
+
+const SunIcon = () => h('svg', {
+  width: 16,
+  height: 16,
+  viewBox: '0 0 24 24',
+  fill: 'none',
+  stroke: 'currentColor',
+  'stroke-width': 2,
+  'stroke-linecap': 'round',
+  'stroke-linejoin': 'round'
+}, [
+  h('circle', { cx: 12, cy: 12, r: 5 }),
+  h('line', { x1: 12, y1: 1, x2: 12, y2: 3 }),
+  h('line', { x1: 12, y1: 21, x2: 12, y2: 23 }),
+  h('line', { x1: 4.22, y1: 4.22, x2: 5.64, y2: 5.64 }),
+  h('line', { x1: 18.36, y1: 18.36, x2: 19.78, y2: 19.78 }),
+  h('line', { x1: 1, y1: 12, x2: 3, y2: 12 }),
+  h('line', { x1: 21, y1: 12, x2: 23, y2: 12 }),
+  h('line', { x1: 4.22, y1: 19.78, x2: 5.64, y2: 18.36 }),
+  h('line', { x1: 18.36, y1: 5.64, x2: 19.78, y2: 4.22 }),
+])
+
+const MoonIcon = () => h('svg', {
+  width: 16,
+  height: 16,
+  viewBox: '0 0 24 24',
+  fill: 'none',
+  stroke: 'currentColor',
+  'stroke-width': 2,
+  'stroke-linecap': 'round',
+  'stroke-linejoin': 'round'
+}, [
+  h('path', { d: 'M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z' }),
 ])
 
 const iconMap: Record<string, any> = {
@@ -256,41 +292,36 @@ function getIcon(iconName: string) {
   position: sticky;
   top: 0;
   z-index: 100;
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.92), rgba(248, 250, 252, 0.86));
-  backdrop-filter: var(--glass-backdrop);
-  -webkit-backdrop-filter: var(--glass-backdrop);
-  border-bottom: 1px solid rgba(203, 213, 225, 0.8);
-  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.04);
+  height: var(--nav-height);
+  background: var(--color-nav-bg);
+  border-bottom: 1px solid var(--color-nav-border);
 }
 
 .nav-content {
   max-width: var(--container-max-width);
   margin: 0 auto;
-  padding: 12px var(--spacing-lg);
+  padding: 0 var(--spacing-lg);
+  height: 100%;
   display: flex;
   align-items: center;
-  gap: 18px;
+  gap: 24px;
 }
 
 .nav-logo {
   display: flex;
   align-items: center;
-  gap: 10px;
-  min-width: 172px;
+  gap: 8px;
+  flex-shrink: 0;
 }
 
 .logo-icon {
-  width: 38px;
-  height: 38px;
+  width: 28px;
+  height: 28px;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 6px;
-  border-radius: 10px;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(241, 245, 249, 0.92));
-  border: 1px solid rgba(203, 213, 225, 0.9);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
 }
 
 .logo-image {
@@ -300,67 +331,54 @@ function getIcon(iconName: string) {
 }
 
 .logo-text {
-  font-size: 17px;
+  font-size: 15px;
   font-weight: var(--font-weight-bold);
   color: var(--color-text-primary);
-  line-height: 1.1;
-  letter-spacing: 0.01em;
-}
-
-.nav-links-shell {
-  display: flex;
-  align-items: center;
-  flex: 1;
-  min-width: 0;
-  padding: 4px;
-  border-radius: 14px;
-  background: rgba(148, 163, 184, 0.08);
-  border: 1px solid rgba(226, 232, 240, 0.95);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.85);
+  letter-spacing: -0.01em;
 }
 
 .nav-links {
   display: flex;
   align-items: center;
-  gap: 4px;
-  min-width: 0;
+  gap: 2px;
+  height: 100%;
 }
 
 .nav-link {
+  position: relative;
   display: flex;
   align-items: center;
-  gap: 8px;
-  min-height: 38px;
-  padding: 8px 12px;
+  gap: 6px;
+  height: 100%;
+  padding: 0 12px;
   font-size: var(--font-size-sm);
-  font-weight: var(--font-weight-semibold);
-  color: #475569;
-  border: 1px solid transparent;
-  border-radius: 10px;
-  transition:
-    color var(--transition-fast),
-    background-color var(--transition-fast),
-    border-color var(--transition-fast),
-    box-shadow var(--transition-fast);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-muted);
   text-decoration: none;
-  white-space: nowrap;
+  transition: color var(--transition-fast);
 }
 
 .nav-link:hover {
-  background: rgba(255, 255, 255, 0.72);
-  border-color: rgba(226, 232, 240, 0.95);
   color: var(--color-text-primary);
 }
 
 .nav-link.active {
-  background: linear-gradient(180deg, rgba(238, 242, 255, 0.95), rgba(224, 231, 255, 0.86));
-  border-color: rgba(165, 180, 252, 0.55);
-  color: #4338ca;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.75);
+  color: var(--color-primary-light);
+}
+
+.nav-link.active::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 12px;
+  right: 12px;
+  height: 2px;
+  background: var(--color-primary);
+  border-radius: 1px 1px 0 0;
 }
 
 .nav-icon {
-  opacity: 0.72;
+  opacity: 0.7;
   flex-shrink: 0;
 }
 
@@ -372,7 +390,7 @@ function getIcon(iconName: string) {
 .nav-right {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 8px;
   margin-left: auto;
   flex-shrink: 0;
 }
@@ -385,32 +403,28 @@ function getIcon(iconName: string) {
 
 .search-icon {
   position: absolute;
-  left: 12px;
+  left: 10px;
   color: var(--color-text-muted);
   pointer-events: none;
 }
 
 .search-input {
-  width: 240px;
-  height: 40px;
-  padding: 0 14px 0 38px;
-  font-size: var(--font-size-sm);
+  width: 200px;
+  height: 32px;
+  padding: 0 12px 0 32px;
+  font-size: var(--font-size-xs);
+  font-family: var(--font-family);
   color: var(--color-text-primary);
-  background: rgba(248, 250, 252, 0.92);
-  border: 1px solid rgba(203, 213, 225, 0.95);
-  border-radius: 12px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
   outline: none;
-  transition:
-    border-color var(--transition-fast),
-    box-shadow var(--transition-fast),
-    background-color var(--transition-fast);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.82);
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
 }
 
 .search-input:focus {
-  background: rgba(255, 255, 255, 0.98);
-  border-color: rgba(129, 140, 248, 0.72);
-  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 2px var(--color-primary-bg);
 }
 
 .search-input::placeholder {
@@ -420,38 +434,27 @@ function getIcon(iconName: string) {
 .nav-actions {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 4px;
 }
 
 .nav-btn {
   position: relative;
-  width: 40px;
-  height: 40px;
+  width: 32px;
+  height: 32px;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(248, 250, 252, 0.92);
-  border: 1px solid rgba(203, 213, 225, 0.95);
-  border-radius: 11px;
-  color: var(--color-text-secondary);
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-md);
+  color: var(--color-text-muted);
   cursor: pointer;
-  transition:
-    color var(--transition-fast),
-    border-color var(--transition-fast),
-    background-color var(--transition-fast),
-    box-shadow var(--transition-fast);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.82);
+  transition: color var(--transition-fast), background-color var(--transition-fast);
 }
 
 .nav-btn:hover {
-  background: rgba(255, 255, 255, 0.98);
-  border-color: rgba(165, 180, 252, 0.42);
-  color: var(--color-primary-dark);
-}
-
-.nav-btn:focus-visible {
-  outline: none;
-  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.12);
+  background: var(--color-surface-hover);
+  color: var(--color-text-primary);
 }
 
 .notification-shell {
@@ -460,16 +463,15 @@ function getIcon(iconName: string) {
 
 .notification-badge {
   position: absolute;
-  top: -4px;
-  right: -4px;
-  min-width: 17px;
-  height: 17px;
-  padding: 0 4px;
-  font-size: 10px;
-  font-weight: var(--font-weight-semibold);
+  top: 2px;
+  right: 2px;
+  min-width: 14px;
+  height: 14px;
+  padding: 0 3px;
+  font-size: 9px;
+  font-weight: var(--font-weight-bold);
   background: var(--color-danger);
-  color: var(--color-text-inverse);
-  border: 2px solid rgba(255, 255, 255, 0.95);
+  color: #fff;
   border-radius: var(--radius-full);
   display: flex;
   align-items: center;
@@ -484,48 +486,63 @@ function getIcon(iconName: string) {
 .user-avatar {
   display: flex;
   align-items: center;
-  gap: 8px;
-  min-height: 40px;
-  padding: 4px 10px 4px 4px;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(248, 250, 252, 0.92));
-  border: 1px solid rgba(203, 213, 225, 0.95);
-  border-radius: 12px;
+  gap: 6px;
+  height: 32px;
+  padding: 2px 8px 2px 2px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
   cursor: pointer;
-  transition:
-    border-color var(--transition-fast),
-    background-color var(--transition-fast),
-    box-shadow var(--transition-fast);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.85);
+  transition: border-color var(--transition-fast);
 }
 
 .user-avatar:hover {
-  background: rgba(255, 255, 255, 0.98);
-  border-color: rgba(165, 180, 252, 0.4);
+  border-color: var(--color-border-hover);
+}
+
+.avatar-text {
+  width: 26px;
+  height: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: var(--font-weight-semibold);
+  background: var(--color-primary);
+  color: #fff;
+  border-radius: var(--radius-sm);
+}
+
+.user-level {
+  font-size: 10px;
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-accent);
+  letter-spacing: 0.03em;
 }
 
 .user-dropdown {
   position: absolute;
-  top: calc(100% + 8px);
+  top: calc(100% + 6px);
   right: 0;
-  min-width: 160px;
-  padding: 6px;
-  background: rgba(255, 255, 255, 0.98);
-  border: 1px solid rgba(203, 213, 225, 0.95);
-  border-radius: 12px;
-  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.1);
+  min-width: 150px;
+  padding: 4px;
+  background: var(--color-surface-elevated);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
   z-index: 200;
 }
 
 .dropdown-item {
   display: block;
   width: 100%;
-  padding: 10px 14px;
+  padding: 8px 12px;
   font-size: var(--font-size-sm);
-  font-weight: var(--font-weight-semibold);
+  font-weight: var(--font-weight-medium);
   color: var(--color-text-primary);
   background: none;
   border: none;
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   cursor: pointer;
   text-decoration: none;
   text-align: left;
@@ -533,72 +550,24 @@ function getIcon(iconName: string) {
 }
 
 .dropdown-item:hover {
-  background: rgba(148, 163, 184, 0.1);
+  background: var(--color-surface-hover);
 }
 
 .dropdown-item.danger {
-  color: #b91c1c;
+  color: var(--color-danger);
 }
 
 .dropdown-item.danger:hover {
-  background: rgba(185, 28, 28, 0.06);
-}
-
-.avatar-text {
-  width: 30px;
-  height: 30px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 13px;
-  font-weight: var(--font-weight-semibold);
-  background: linear-gradient(135deg, var(--color-primary), var(--color-primary-dark));
-  color: var(--color-text-inverse);
-  border-radius: 9px;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35);
-}
-
-.user-level {
-  font-size: 11px;
-  font-weight: var(--font-weight-semibold);
-  color: #4338ca;
-  background: rgba(238, 242, 255, 0.88);
-  padding: 3px 8px;
-  border-radius: 999px;
-  letter-spacing: 0.03em;
+  background: var(--color-danger-bg);
 }
 
 @media (max-width: 1024px) {
   .nav-content {
-    gap: 14px;
-    padding: 10px var(--spacing-lg);
-  }
-
-  .nav-logo {
-    min-width: 156px;
+    gap: 16px;
   }
 
   .nav-link {
-    padding: 8px 10px;
-  }
-
-  .search-input {
-    width: 180px;
-  }
-}
-
-@media (max-width: 900px) {
-  .nav-content {
-    flex-wrap: wrap;
-  }
-
-  .nav-links-shell {
-    order: 3;
-    flex-basis: 100%;
-  }
-
-  .nav-right {
-    margin-left: auto;
+    padding: 0 8px;
   }
 
   .search-input {
@@ -607,35 +576,35 @@ function getIcon(iconName: string) {
 }
 
 @media (max-width: 768px) {
-  .nav-content {
-    padding: 10px var(--spacing-md);
+  .top-nav {
+    height: auto;
   }
 
-  .nav-logo {
-    min-width: auto;
+  .nav-content {
+    flex-wrap: wrap;
+    padding: 8px var(--spacing-md);
+    gap: 8px;
   }
 
   .nav-links {
+    order: 3;
+    width: 100%;
     overflow-x: auto;
     scrollbar-width: none;
+    height: auto;
+    padding-bottom: 4px;
   }
 
   .nav-links::-webkit-scrollbar {
     display: none;
   }
 
-  .nav-right {
-    width: 100%;
-    justify-content: space-between;
-    margin-left: 0;
-  }
-
-  .search-box {
-    flex: 1;
+  .nav-link.active::after {
+    bottom: 0;
   }
 
   .search-input {
-    width: 100%;
+    width: 140px;
   }
 }
 </style>

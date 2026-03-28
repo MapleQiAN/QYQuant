@@ -104,8 +104,8 @@ onMounted(() => {
   background:
     radial-gradient(circle at top left, rgba(11, 107, 203, 0.18), transparent 45%),
     linear-gradient(135deg, rgba(15, 23, 42, 0.96), rgba(30, 41, 59, 0.92));
-  color: #f8fafc;
-  box-shadow: 0 24px 56px rgba(15, 23, 42, 0.18);
+  color: var(--color-text-inverse);
+  box-shadow: var(--shadow-lg);
 }
 
 .admin-dashboard__hero h1,
@@ -150,16 +150,16 @@ onMounted(() => {
 
 .admin-card {
   padding: var(--spacing-lg);
-  border: 1px solid rgba(148, 163, 184, 0.2);
+  border: 1px solid var(--color-border-light);
   border-radius: 24px;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(241, 245, 249, 0.96));
-  box-shadow: 0 16px 36px rgba(15, 23, 42, 0.08);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-md);
 }
 
 .admin-card--accent {
   background:
     radial-gradient(circle at top right, rgba(14, 165, 233, 0.14), transparent 42%),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.99), rgba(239, 246, 255, 0.96));
+    var(--color-surface);
 }
 
 .admin-card h2,

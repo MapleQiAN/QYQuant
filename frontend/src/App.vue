@@ -106,7 +106,7 @@ onBeforeUnmount(() => {
 
 .main-content {
   flex: 1;
-  padding: var(--spacing-lg) 0;
+  padding: var(--spacing-md) 0;
 }
 
 :deep(.onboarding-highlight) {

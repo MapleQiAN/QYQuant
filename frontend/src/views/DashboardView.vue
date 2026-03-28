@@ -18,6 +18,7 @@
           </RouterLink>
         </div>
       </div>
+
       <OnboardingGuide
         :visible="showOnboardingGuide"
         @skip="handleSkipOnboarding"
@@ -25,6 +26,31 @@
         @launch-guided-backtest="userStore.startGuidedBacktest()"
         @complete="handleSkipOnboarding"
       />
+
+      <!-- KPI Bar -->
+      <div class="kpi-bar">
+        <div class="kpi-item">
+          <span class="kpi-label">{{ $t('dashboard.totalReturn') || '总收益' }}</span>
+          <span class="kpi-value tnum" :class="kpiReturn >= 0 ? 'positive' : 'negative'">
+            {{ kpiReturn >= 0 ? '+' : '' }}{{ kpiReturn.toFixed(2) }}%
+          </span>
+        </div>
+        <div class="kpi-divider" />
+        <div class="kpi-item">
+          <span class="kpi-label">{{ $t('dashboard.activeBots') || '运行中Bot' }}</span>
+          <span class="kpi-value tnum">{{ activeBotCount }}</span>
+        </div>
+        <div class="kpi-divider" />
+        <div class="kpi-item">
+          <span class="kpi-label">{{ $t('dashboard.strategies') || '策略数' }}</span>
+          <span class="kpi-value tnum">{{ strategyCount }}</span>
+        </div>
+        <div class="kpi-divider" />
+        <div class="kpi-item">
+          <span class="kpi-label">{{ $t('dashboard.backtests') || '回测数' }}</span>
+          <span class="kpi-value tnum">{{ backtestCount }}</span>
+        </div>
+      </div>
 
       <div class="dashboard-grid">
         <div class="grid-area-backtest">
@@ -116,6 +142,17 @@ const backtestQuery = reactive({
   dataSource: 'auto'
 })
 
+// KPI computed values
+const kpiReturn = computed(() => {
+  const latest = backtestsStore.latest
+  return latest?.summary?.totalReturn ?? 0
+})
+const activeBotCount = computed(() => {
+  return botsStore.recent?.filter((b: any) => b.status === 'running').length ?? 0
+})
+const strategyCount = computed(() => strategiesStore.recent?.length ?? 0)
+const backtestCount = computed(() => backtestsStore.latest ? 1 : 0)
+
 const loadBacktest = () => {
   backtestsStore.loadLatest({ ...backtestQuery })
 }
@@ -196,8 +233,8 @@ async function handleOpenPricing() {
 }
 
 const SettingsIcon = () => h('svg', {
-  width: 16,
-  height: 16,
+  width: 14,
+  height: 14,
   viewBox: '0 0 24 24',
   fill: 'none',
   stroke: 'currentColor',
@@ -210,8 +247,8 @@ const SettingsIcon = () => h('svg', {
 ])
 
 const PlusIcon = () => h('svg', {
-  width: 16,
-  height: 16,
+  width: 14,
+  height: 14,
   viewBox: '0 0 24 24',
   fill: 'none',
   stroke: 'currentColor',
@@ -231,26 +268,26 @@ const PlusIcon = () => h('svg', {
 
 .page-header {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
-  margin-bottom: var(--spacing-xl);
+  margin-bottom: var(--spacing-md);
 }
 
 .header-text {
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-xs);
+  gap: 2px;
 }
 
 .page-title {
-  font-size: var(--font-size-xxl);
-  font-weight: var(--font-weight-bold);
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-semibold);
   color: var(--color-text-primary);
   margin: 0;
 }
 
 .page-subtitle {
-  font-size: var(--font-size-md);
+  font-size: var(--font-size-sm);
   color: var(--color-text-muted);
   margin: 0;
 }
@@ -260,7 +297,55 @@ const PlusIcon = () => h('svg', {
   gap: var(--spacing-sm);
 }
 
-/* Dashboard Grid - 12 Column System */
+/* KPI Bar */
+.kpi-bar {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-lg);
+  padding: 12px 20px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  margin-bottom: var(--spacing-md);
+}
+
+.kpi-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.kpi-label {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+  font-weight: var(--font-weight-medium);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.kpi-value {
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text-primary);
+  line-height: 1.2;
+}
+
+.kpi-value.positive {
+  color: var(--color-positive);
+}
+
+.kpi-value.negative {
+  color: var(--color-negative);
+}
+
+.kpi-divider {
+  width: 1px;
+  height: 32px;
+  background: var(--color-border);
+  flex-shrink: 0;
+}
+
+/* Dashboard Grid */
 .dashboard-grid {
   display: grid;
   grid-template-columns: repeat(12, 1fr);
@@ -291,7 +376,6 @@ const PlusIcon = () => h('svg', {
   grid-area: progress;
 }
 
-/* Make cards fill their grid areas */
 .grid-area-backtest > *,
 .grid-area-recent > *,
 .grid-area-forum > *,
@@ -300,15 +384,7 @@ const PlusIcon = () => h('svg', {
   height: 100%;
 }
 
-/* Responsive Design */
-@media (max-width: 1280px) {
-  .dashboard-grid {
-    grid-template-areas:
-      "backtest backtest backtest backtest backtest backtest backtest backtest recent recent recent recent"
-      "forum forum forum forum upgrade upgrade upgrade upgrade progress progress progress progress";
-  }
-}
-
+/* Responsive */
 @media (max-width: 1024px) {
   .dashboard-grid {
     grid-template-columns: repeat(12, 1fr);
@@ -322,6 +398,7 @@ const PlusIcon = () => h('svg', {
   .page-header {
     flex-direction: column;
     gap: var(--spacing-md);
+    align-items: flex-start;
   }
 
   .header-actions {
@@ -342,6 +419,20 @@ const PlusIcon = () => h('svg', {
       "forum"
       "upgrade"
       "progress";
+  }
+
+  .kpi-bar {
+    flex-wrap: wrap;
+    gap: var(--spacing-md);
+    padding: 12px 16px;
+  }
+
+  .kpi-divider {
+    display: none;
+  }
+
+  .kpi-item {
+    min-width: calc(50% - var(--spacing-md));
   }
 }
 </style>

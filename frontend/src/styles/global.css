@@ -1,45 +1,192 @@
 /* ============================================
    Global Styles - QY Quant Dashboard
+   Financial Professional Theme System
    ============================================ */
 
-/* CSS Variables from Design Tokens */
-:root {
-  /* Colors */
-  --color-primary: #6366f1;
-  --color-primary-light: #818cf8;
-  --color-primary-dark: #4f46e5;
-  --color-primary-bg: rgba(99, 102, 241, 0.08);
-  
-  --color-secondary: #64748b;
-  --color-secondary-light: #94a3b8;
-  --color-secondary-dark: #475569;
-  
-  --color-success: #10b981;
-  --color-success-bg: rgba(16, 185, 129, 0.1);
-  --color-warning: #f59e0b;
-  --color-warning-bg: rgba(245, 158, 11, 0.1);
-  --color-danger: #ef4444;
-  --color-danger-bg: rgba(239, 68, 68, 0.1);
-  --color-info: #3b82f6;
-  --color-info-bg: rgba(59, 130, 246, 0.1);
+/* ── Dark Theme (Default) ── */
+:root,
+:root[data-theme="dark"] {
+  /* Primary */
+  --color-primary: #2563EB;
+  --color-primary-light: #3B82F6;
+  --color-primary-dark: #1D4ED8;
+  --color-primary-bg: rgba(37, 99, 235, 0.12);
 
-  --color-up: #ef4444;
-  --color-up-bg: rgba(239, 68, 68, 0.1);
-  --color-down: #10b981;
-  --color-down-bg: rgba(16, 185, 129, 0.1);
-  
+  /* Secondary */
+  --color-secondary: #64748B;
+  --color-secondary-light: #8B95A5;
+  --color-secondary-dark: #475569;
+
+  /* Accent */
+  --color-accent: #F59E0B;
+  --color-accent-bg: rgba(245, 158, 11, 0.12);
+
+  /* Status */
+  --color-success: #22C55E;
+  --color-success-bg: rgba(34, 197, 94, 0.12);
+  --color-warning: #F59E0B;
+  --color-warning-bg: rgba(245, 158, 11, 0.12);
+  --color-danger: #EF4444;
+  --color-danger-bg: rgba(239, 68, 68, 0.12);
+  --color-info: #3B82F6;
+  --color-info-bg: rgba(59, 130, 246, 0.12);
+
+  /* Market up/down (CN default: red up, green down) */
+  --color-up: #EF4444;
+  --color-up-bg: rgba(239, 68, 68, 0.12);
+  --color-down: #22C55E;
+  --color-down-bg: rgba(34, 197, 94, 0.12);
+
+  /* Surfaces */
+  --color-background: #0B0E14;
+  --color-surface: #141821;
+  --color-surface-elevated: #1A2030;
+  --color-surface-hover: #1E2636;
   --color-white: #ffffff;
-  --color-background: #f8fafc;
-  --color-surface: #ffffff;
-  --color-border: #e2e8f0;
-  --color-border-light: #f1f5f9;
-  
-  --color-text-primary: #1e293b;
-  --color-text-secondary: #64748b;
-  --color-text-muted: #94a3b8;
-  --color-text-inverse: #ffffff;
-  
-  /* Spacing */
+
+  /* Borders */
+  --color-border: #1E2736;
+  --color-border-light: #172033;
+  --color-border-hover: #2A3548;
+
+  /* Text */
+  --color-text-primary: #E8ECF1;
+  --color-text-secondary: #8B95A5;
+  --color-text-muted: #5A6577;
+  --color-text-inverse: #0B0E14;
+
+  /* Positive / Negative (financial) */
+  --color-positive: #22C55E;
+  --color-positive-bg: rgba(34, 197, 94, 0.12);
+  --color-negative: #EF4444;
+  --color-negative-bg: rgba(239, 68, 68, 0.12);
+
+  /* Chart */
+  --color-chart-grid: #1E2736;
+  --color-chart-line: #2563EB;
+  --color-chart-area: rgba(37, 99, 235, 0.15);
+
+  /* Shadows */
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 2px 8px rgba(0, 0, 0, 0.35);
+  --shadow-lg: 0 4px 16px rgba(0, 0, 0, 0.4);
+
+  /* Glass / Overlay */
+  --glass-background: rgba(20, 24, 33, 0.85);
+  --glass-backdrop: blur(20px);
+  --glass-border: 1px solid rgba(255, 255, 255, 0.06);
+  --color-overlay: rgba(0, 0, 0, 0.6);
+
+  /* Nav */
+  --color-nav-bg: #0D1117;
+  --color-nav-border: #1B2230;
+
+  /* Scrollbar */
+  --color-scrollbar-track: #0B0E14;
+  --color-scrollbar-thumb: #2A3548;
+  --color-scrollbar-thumb-hover: #3A4A60;
+}
+
+/* ── Light Theme ── */
+:root[data-theme="light"] {
+  /* Primary */
+  --color-primary: #1D4ED8;
+  --color-primary-light: #2563EB;
+  --color-primary-dark: #1E40AF;
+  --color-primary-bg: rgba(29, 78, 216, 0.08);
+
+  /* Secondary */
+  --color-secondary: #64748B;
+  --color-secondary-light: #94A3B8;
+  --color-secondary-dark: #475569;
+
+  /* Accent */
+  --color-accent: #D97706;
+  --color-accent-bg: rgba(217, 119, 6, 0.08);
+
+  /* Status */
+  --color-success: #16A34A;
+  --color-success-bg: rgba(22, 163, 74, 0.08);
+  --color-warning: #D97706;
+  --color-warning-bg: rgba(217, 119, 6, 0.08);
+  --color-danger: #DC2626;
+  --color-danger-bg: rgba(220, 38, 38, 0.08);
+  --color-info: #2563EB;
+  --color-info-bg: rgba(37, 99, 235, 0.08);
+
+  /* Market up/down */
+  --color-up: #DC2626;
+  --color-up-bg: rgba(220, 38, 38, 0.08);
+  --color-down: #16A34A;
+  --color-down-bg: rgba(22, 163, 74, 0.08);
+
+  /* Surfaces */
+  --color-background: #F0F2F5;
+  --color-surface: #FFFFFF;
+  --color-surface-elevated: #FFFFFF;
+  --color-surface-hover: #F5F7FA;
+  --color-white: #ffffff;
+
+  /* Borders */
+  --color-border: #D5DAE1;
+  --color-border-light: #E8ECF1;
+  --color-border-hover: #B8C0CC;
+
+  /* Text */
+  --color-text-primary: #111827;
+  --color-text-secondary: #4B5563;
+  --color-text-muted: #9CA3AF;
+  --color-text-inverse: #FFFFFF;
+
+  /* Positive / Negative */
+  --color-positive: #16A34A;
+  --color-positive-bg: rgba(22, 163, 74, 0.08);
+  --color-negative: #DC2626;
+  --color-negative-bg: rgba(220, 38, 38, 0.08);
+
+  /* Chart */
+  --color-chart-grid: #E5E7EB;
+  --color-chart-line: #1D4ED8;
+  --color-chart-area: rgba(29, 78, 216, 0.1);
+
+  /* Shadows */
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.06);
+  --shadow-md: 0 2px 8px rgba(0, 0, 0, 0.08);
+  --shadow-lg: 0 4px 16px rgba(0, 0, 0, 0.1);
+
+  /* Glass / Overlay */
+  --glass-background: rgba(255, 255, 255, 0.85);
+  --glass-backdrop: blur(20px);
+  --glass-border: 1px solid rgba(0, 0, 0, 0.06);
+  --color-overlay: rgba(0, 0, 0, 0.4);
+
+  /* Nav */
+  --color-nav-bg: #FFFFFF;
+  --color-nav-border: #E5E7EB;
+
+  /* Scrollbar */
+  --color-scrollbar-track: #F0F2F5;
+  --color-scrollbar-thumb: #C4CAD4;
+  --color-scrollbar-thumb-hover: #A0A8B4;
+}
+
+/* US market style override */
+:root[data-market-style="us"] {
+  --color-up: #22C55E;
+  --color-up-bg: rgba(34, 197, 94, 0.12);
+  --color-down: #EF4444;
+  --color-down-bg: rgba(239, 68, 68, 0.12);
+}
+:root[data-theme="light"][data-market-style="us"] {
+  --color-up: #16A34A;
+  --color-up-bg: rgba(22, 163, 74, 0.08);
+  --color-down: #DC2626;
+  --color-down-bg: rgba(220, 38, 38, 0.08);
+}
+
+/* ── Shared Tokens (theme-independent) ── */
+:root {
+  /* Spacing - 4/8px base */
   --spacing-xs: 4px;
   --spacing-sm: 8px;
   --spacing-md: 16px;
@@ -47,64 +194,52 @@
   --spacing-xl: 32px;
   --spacing-xxl: 48px;
   --spacing-xxxl: 64px;
-  
-  /* Border Radius */
-  --radius-sm: 8px;
-  --radius-md: 16px;
-  --radius-lg: 24px;
-  --radius-xl: 32px;
+
+  /* Border Radius - financial compact */
+  --radius-xs: 4px;
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
   --radius-full: 9999px;
-  
-  /* Shadows */
-  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.04);
-  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.06);
-  --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.08);
-  --shadow-neumorphism: 8px 8px 16px rgba(0, 0, 0, 0.06), -8px -8px 16px rgba(255, 255, 255, 0.8);
-  --shadow-neumorphism-inset: inset 4px 4px 8px rgba(0, 0, 0, 0.04), inset -4px -4px 8px rgba(255, 255, 255, 0.9);
-  
+
   /* Typography */
   --font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  --font-size-xs: 12px;
-  --font-size-sm: 14px;
-  --font-size-md: 16px;
-  --font-size-lg: 18px;
-  --font-size-xl: 20px;
-  --font-size-xxl: 24px;
-  --font-size-xxxl: 32px;
-  
+  --font-mono: 'JetBrains Mono', 'Fira Code', 'SF Mono', 'Consolas', monospace;
+
+  --font-size-xs: 11px;
+  --font-size-sm: 13px;
+  --font-size-md: 14px;
+  --font-size-lg: 16px;
+  --font-size-xl: 18px;
+  --font-size-xxl: 22px;
+  --font-size-xxxl: 28px;
+  --font-size-display: 36px;
+
   --font-weight-normal: 400;
   --font-weight-medium: 500;
   --font-weight-semibold: 600;
   --font-weight-bold: 700;
-  
+
   --line-height-tight: 1.25;
   --line-height-normal: 1.5;
   --line-height-relaxed: 1.75;
-  
+
   /* Transitions */
   --transition-fast: 150ms ease;
-  --transition-normal: 250ms ease;
-  --transition-slow: 350ms ease;
-  
-  /* Glass */
-  --glass-background: rgba(255, 255, 255, 0.7);
-  --glass-backdrop: blur(20px);
-  --glass-border: 1px solid rgba(255, 255, 255, 0.3);
-  
+  --transition-normal: 200ms ease;
+  --transition-slow: 300ms ease;
+
   /* Grid */
   --grid-columns: 12;
-  --grid-gap: 24px;
+  --grid-gap: 16px;
   --container-max-width: 1440px;
+
+  /* Nav */
+  --nav-height: 48px;
 }
 
-:root[data-market-style="us"] {
-  --color-up: #10b981;
-  --color-up-bg: rgba(16, 185, 129, 0.1);
-  --color-down: #ef4444;
-  --color-down-bg: rgba(239, 68, 68, 0.1);
-}
-
-/* Reset */
+/* ── Reset ── */
 *,
 *::before,
 *::after {
@@ -114,7 +249,7 @@
 }
 
 html {
-  font-size: 16px;
+  font-size: 14px;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
@@ -126,9 +261,10 @@ body {
   color: var(--color-text-primary);
   background-color: var(--color-background);
   min-height: 100vh;
+  transition: background-color var(--transition-normal), color var(--transition-normal);
 }
 
-/* Typography */
+/* ── Typography ── */
 h1, h2, h3, h4, h5, h6 {
   font-weight: var(--font-weight-semibold);
   line-height: var(--line-height-tight);
@@ -153,17 +289,23 @@ a {
 }
 
 a:hover {
-  color: var(--color-primary-dark);
+  color: var(--color-primary-light);
 }
 
-/* Utility Classes */
+/* ── Tabular Numbers (for financial data) ── */
+.tnum {
+  font-feature-settings: "tnum" 1;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── Utility ── */
 .container {
   max-width: var(--container-max-width);
   margin: 0 auto;
   padding: 0 var(--spacing-lg);
 }
 
-/* Grid System */
+/* ── Grid System ── */
 .grid {
   display: grid;
   gap: var(--grid-gap);
@@ -173,24 +315,17 @@ a:hover {
   grid-template-columns: repeat(12, 1fr);
 }
 
-/* Card Base */
+/* ── Card ── */
 .card {
   background: var(--color-surface);
   border-radius: var(--radius-lg);
-  border: 1px solid var(--color-border-light);
-  box-shadow: var(--shadow-md);
-  transition: box-shadow var(--transition-normal), transform var(--transition-normal);
+  border: 1px solid var(--color-border);
+  transition: border-color var(--transition-normal), box-shadow var(--transition-normal);
 }
 
 .card:hover {
-  box-shadow: var(--shadow-lg);
-}
-
-.card-neumorphism {
-  background: var(--color-surface);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-neumorphism);
-  border: none;
+  border-color: var(--color-border-hover);
+  box-shadow: var(--shadow-md);
 }
 
 .card-glass {
@@ -201,14 +336,14 @@ a:hover {
   border-radius: var(--radius-lg);
 }
 
-/* Badge */
+/* ── Badge ── */
 .badge {
   display: inline-flex;
   align-items: center;
-  padding: var(--spacing-xs) var(--spacing-sm);
+  padding: 2px 8px;
   font-size: var(--font-size-xs);
   font-weight: var(--font-weight-medium);
-  border-radius: var(--radius-full);
+  border-radius: var(--radius-sm);
   white-space: nowrap;
 }
 
@@ -237,77 +372,139 @@ a:hover {
   color: var(--color-primary);
 }
 
-/* Chip */
+/* ── Chip ── */
 .chip {
   display: inline-flex;
   align-items: center;
   gap: var(--spacing-xs);
-  padding: var(--spacing-xs) var(--spacing-md);
+  padding: var(--spacing-xs) var(--spacing-sm);
   font-size: var(--font-size-xs);
   font-weight: var(--font-weight-medium);
-  background: var(--color-background);
+  background: var(--color-surface);
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-full);
+  border-radius: var(--radius-sm);
   color: var(--color-text-secondary);
+  cursor: pointer;
   transition: all var(--transition-fast);
 }
 
 .chip:hover {
   background: var(--color-primary-bg);
-  border-color: var(--color-primary-light);
+  border-color: var(--color-primary);
   color: var(--color-primary);
 }
 
-/* Button */
+/* ── Button ── */
 .btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: var(--spacing-sm);
-  padding: var(--spacing-sm) var(--spacing-md);
+  padding: 6px 14px;
   font-size: var(--font-size-sm);
   font-weight: var(--font-weight-medium);
   border-radius: var(--radius-md);
   border: none;
   cursor: pointer;
   transition: all var(--transition-fast);
+  white-space: nowrap;
+}
+
+.btn:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
 }
 
 .btn-primary {
   background: var(--color-primary);
-  color: var(--color-text-inverse);
+  color: #fff;
 }
 
 .btn-primary:hover {
-  background: var(--color-primary-dark);
+  background: var(--color-primary-light);
+}
+
+.btn-accent {
+  background: var(--color-accent);
+  color: #111;
+  font-weight: var(--font-weight-semibold);
+}
+
+.btn-accent:hover {
+  filter: brightness(1.1);
 }
 
 .btn-secondary {
-  background: var(--color-background);
+  background: transparent;
   color: var(--color-text-secondary);
   border: 1px solid var(--color-border);
 }
 
 .btn-secondary:hover {
-  background: var(--color-border-light);
+  background: var(--color-surface-hover);
+  border-color: var(--color-border-hover);
+  color: var(--color-text-primary);
 }
 
-/* Scrollbar */
+.btn-danger {
+  background: var(--color-danger);
+  color: #fff;
+}
+
+.btn-danger:hover {
+  filter: brightness(1.1);
+}
+
+.btn-ghost {
+  background: transparent;
+  color: var(--color-text-secondary);
+  border: none;
+}
+
+.btn-ghost:hover {
+  background: var(--color-surface-hover);
+  color: var(--color-text-primary);
+}
+
+/* ── Scrollbar ── */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 4px;
+  height: 4px;
 }
 
 ::-webkit-scrollbar-track {
-  background: var(--color-background);
-  border-radius: var(--radius-full);
+  background: var(--color-scrollbar-track);
 }
 
 ::-webkit-scrollbar-thumb {
-  background: var(--color-border);
+  background: var(--color-scrollbar-thumb);
   border-radius: var(--radius-full);
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--color-secondary-light);
+  background: var(--color-scrollbar-thumb-hover);
+}
+
+/* ── Focus ── */
+:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+/* ── Selection ── */
+::selection {
+  background: var(--color-primary-bg);
+  color: var(--color-primary);
+}
+
+/* ── Reduced Motion ── */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

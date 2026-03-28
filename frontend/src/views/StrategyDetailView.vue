@@ -302,7 +302,7 @@ async function waitForGuidedReport(jobId: string) {
 .guided-banner {
   margin-bottom: var(--spacing-lg);
   padding: var(--spacing-md);
-  border-left: 4px solid #f5e642;
+  border-left: 4px solid var(--color-accent);
 }
 
 .layout-grid {
@@ -368,7 +368,7 @@ async function waitForGuidedReport(jobId: string) {
 }
 
 .message.success {
-  color: #15803d;
+  color: var(--color-success);
 }
 
 @media (max-width: 960px) {

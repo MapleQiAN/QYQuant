@@ -3,6 +3,7 @@ import type { User } from '../types/User'
 import type { UserProfileResponse } from '../types/User'
 import { resolveInitialLocale, setLocale, type Locale } from '../i18n'
 import { applyMarketStyle, resolveInitialMarketStyle, type MarketStyle } from '../styles/marketStyle'
+import { applyTheme, resolveInitialTheme, type Theme } from '../styles/theme'
 import { fetchProfile, updateOnboardingCompleted } from '../api/users'
 
 const defaultUser: User = {
@@ -29,6 +30,7 @@ export const useUserStore = defineStore('user', {
     profile: defaultUser,
     locale: resolveInitialLocale(),
     marketStyle: resolveInitialMarketStyle(),
+    theme: resolveInitialTheme(),
     profileLoading: false,
     profileLoaded: false,
     guidedBacktestActive: false,
@@ -150,6 +152,13 @@ export const useUserStore = defineStore('user', {
     setMarketStyle(next: MarketStyle) {
       this.marketStyle = next
       applyMarketStyle(next)
+    },
+    setTheme(next: Theme) {
+      this.theme = next
+      applyTheme(next)
+    },
+    toggleTheme() {
+      this.setTheme(this.theme === 'dark' ? 'light' : 'dark')
     }
   }
 })

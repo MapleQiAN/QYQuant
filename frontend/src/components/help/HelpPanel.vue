@@ -106,8 +106,8 @@ watch(() => props.open, (next) => {
   width: min(400px, 100vw);
   height: 100%;
   padding: 24px 20px;
-  background: #fff;
-  box-shadow: -16px 0 40px rgba(15, 23, 42, 0.12);
+  background: var(--color-surface-elevated);
+  box-shadow: var(--shadow-lg);
   display: flex;
   flex-direction: column;
   gap: 18px;
@@ -136,7 +136,7 @@ watch(() => props.open, (next) => {
   border: none;
   border-radius: 12px;
   background: transparent;
-  color: #94a3b8;
+  color: var(--color-text-muted);
   font-size: 28px;
   cursor: pointer;
 }
@@ -152,7 +152,7 @@ watch(() => props.open, (next) => {
   border: 1px solid var(--color-border);
   border-radius: 999px;
   padding: 10px 14px;
-  background: #f8fafc;
+  background: var(--color-surface);
 }
 
 .help-categories {
@@ -165,7 +165,7 @@ watch(() => props.open, (next) => {
   border: 1px solid var(--color-border);
   border-radius: 999px;
   padding: 8px 12px;
-  background: #fff;
+  background: var(--color-surface);
   color: var(--color-text-secondary);
   cursor: pointer;
 }
@@ -173,7 +173,7 @@ watch(() => props.open, (next) => {
 .help-chip.active {
   background: var(--color-primary);
   border-color: var(--color-primary);
-  color: #fff;
+  color: var(--color-text-inverse);
 }
 
 .help-list {

@@ -48,27 +48,28 @@ function handleOpen(notificationId: string) {
 <style scoped>
 .notification-panel {
   position: absolute;
-  top: calc(100% + 10px);
+  top: calc(100% + 8px);
   right: 0;
-  width: 360px;
-  max-width: min(360px, calc(100vw - 24px));
-  padding: 14px;
-  border-radius: 16px;
-  border: 1px solid rgba(203, 213, 225, 0.95);
-  background: rgba(255, 255, 255, 0.98);
-  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.12);
+  width: 340px;
+  max-width: min(340px, calc(100vw - 24px));
+  padding: 12px;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--color-border);
+  background: var(--color-surface-elevated);
+  box-shadow: var(--shadow-lg);
+  z-index: 200;
 }
 
 .notification-panel__header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 10px;
+  margin-bottom: 8px;
 }
 
 .notification-panel__header h3 {
   margin: 0;
-  font-size: 15px;
+  font-size: var(--font-size-sm);
   color: var(--color-text-primary);
 }
 
@@ -77,7 +78,7 @@ function handleOpen(notificationId: string) {
 .notification-panel__content,
 .notification-panel__state {
   color: var(--color-text-muted);
-  font-size: 12px;
+  font-size: var(--font-size-xs);
 }
 
 .notification-panel__list {
@@ -85,26 +86,26 @@ function handleOpen(notificationId: string) {
   margin: 0;
   padding: 0;
   display: grid;
-  gap: 8px;
+  gap: 4px;
 }
 
 .notification-panel__item {
-  border-radius: 12px;
-  background: rgba(248, 250, 252, 0.95);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-hover);
 }
 
 .notification-panel__item--unread {
-  background: rgba(238, 242, 255, 0.72);
+  background: var(--color-primary-bg);
 }
 
 .notification-panel__button {
   width: 100%;
-  padding: 12px;
+  padding: 10px;
   border: 0;
   background: transparent;
   text-align: left;
   display: grid;
-  gap: 6px;
+  gap: 4px;
   cursor: pointer;
 }
 
@@ -116,17 +117,17 @@ function handleOpen(notificationId: string) {
 }
 
 .notification-panel__title {
-  font-size: 13px;
+  font-size: var(--font-size-sm);
   font-weight: var(--font-weight-semibold);
   color: var(--color-text-primary);
 }
 
 .notification-panel__dot {
-  width: 8px;
-  height: 8px;
+  width: 6px;
+  height: 6px;
   flex-shrink: 0;
-  border-radius: 999px;
-  background: #ef4444;
+  border-radius: var(--radius-full);
+  background: var(--color-danger);
 }
 
 @media (max-width: 768px) {

@@ -172,7 +172,7 @@ onBeforeUnmount(() => {
 .equity-chart {
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
-  background: linear-gradient(180deg, rgba(15, 118, 110, 0.05), rgba(255, 255, 255, 0.92));
+  background: linear-gradient(180deg, rgba(15, 118, 110, 0.05), var(--color-surface));
   padding: var(--spacing-md);
 }
 

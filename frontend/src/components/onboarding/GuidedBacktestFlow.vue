@@ -132,9 +132,9 @@ onMounted(async () => {
   width: min(380px, calc(100vw - 32px));
   padding: 20px;
   border-radius: 18px;
-  background: rgba(255, 255, 255, 0.96);
-  box-shadow: 0 24px 48px rgba(15, 23, 42, 0.18);
-  border: 1px solid rgba(148, 163, 184, 0.18);
+  background: var(--color-surface-elevated);
+  box-shadow: var(--shadow-lg);
+  border: 1px solid var(--color-border);
   backdrop-filter: blur(16px);
 }
 
@@ -175,7 +175,7 @@ onMounted(async () => {
 .guided-pill {
   border-radius: 999px;
   padding: 4px 10px;
-  background: #f1f5f9;
+  background: var(--color-background);
   color: #64748b;
   font-size: 12px;
 }
@@ -195,7 +195,7 @@ onMounted(async () => {
   margin-top: 14px;
   padding: 12px 14px;
   border-radius: 14px;
-  background: #f8fafc;
+  background: var(--color-background);
   display: flex;
   justify-content: space-between;
   gap: 12px;
@@ -214,10 +214,10 @@ onMounted(async () => {
   margin-top: 18px;
   width: 100%;
   border: none;
-  border-radius: 12px;
+  border-radius: var(--radius-lg);
   padding: 12px 16px;
   background: #1a1a1a;
-  color: #fff;
+  color: var(--color-text-inverse);
   cursor: pointer;
 }
 </style>

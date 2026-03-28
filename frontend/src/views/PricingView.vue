@@ -203,7 +203,7 @@ onMounted(() => {
 
 .pricing-eyebrow {
   margin: 0 0 var(--spacing-xs);
-  color: #0b6bcb;
+  color: var(--color-primary);
   font-weight: var(--font-weight-semibold);
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -232,15 +232,13 @@ onMounted(() => {
   padding: var(--spacing-lg);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(248, 250, 252, 0.94)),
-    linear-gradient(135deg, rgba(11, 107, 203, 0.08), rgba(255, 255, 255, 0));
-  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.08);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-md);
 }
 
 .pricing-card--current {
-  border-color: #0b6bcb;
-  box-shadow: 0 18px 44px rgba(11, 107, 203, 0.18);
+  border-color: var(--color-primary);
+  box-shadow: var(--shadow-lg);
 }
 
 .pricing-card__header {
@@ -270,8 +268,8 @@ onMounted(() => {
   align-self: flex-start;
   padding: 4px 10px;
   border-radius: 999px;
-  background: rgba(11, 107, 203, 0.12);
-  color: #0b6bcb;
+  background: var(--color-primary-bg);
+  color: var(--color-primary);
   font-size: var(--font-size-xs);
   font-weight: var(--font-weight-semibold);
 }
@@ -317,7 +315,7 @@ onMounted(() => {
   align-items: center;
   justify-content: center;
   padding: 24px;
-  background: rgba(15, 23, 42, 0.48);
+  background: var(--color-overlay);
 }
 
 .modal {
@@ -325,7 +323,7 @@ onMounted(() => {
   padding: var(--spacing-lg);
   border-radius: var(--radius-lg);
   background: var(--color-surface);
-  box-shadow: 0 24px 64px rgba(15, 23, 42, 0.2);
+  box-shadow: var(--shadow-lg);
 }
 
 .modal__title {
@@ -356,7 +354,7 @@ onMounted(() => {
 
 .payment-link {
   display: inline-flex;
-  color: #0b6bcb;
+  color: var(--color-primary);
   text-decoration: none;
 }
 

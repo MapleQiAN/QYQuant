@@ -371,25 +371,25 @@ function getErrorMessage(error: unknown): string {
 }
 
 .detail-cta {
-  background: #1A1A1A;
+  background: var(--color-text-primary);
   min-width: 220px;
 }
 
 .report-cta {
-  background: rgba(239, 68, 68, 0.08);
-  color: #b91c1c;
+  background: var(--color-danger-bg);
+  color: var(--color-danger);
 }
 
 .imported-cta {
-  background: #d4d4d8;
-  color: #3f3f46;
+  background: var(--color-border-light);
+  color: var(--color-text-secondary);
 }
 
 .import-state {
   padding: 8px 12px;
   border-radius: 999px;
-  background: rgba(15, 118, 110, 0.1);
-  color: #0f766e;
+  background: var(--color-primary-bg);
+  color: var(--color-primary);
   font-size: var(--font-size-sm);
   font-weight: var(--font-weight-semibold);
 }
@@ -397,7 +397,7 @@ function getErrorMessage(error: unknown): string {
 .direct-backtest-link {
   padding: 0;
   min-width: auto;
-  color: #0f172a;
+  color: var(--color-text-primary);
   text-decoration: underline;
 }
 
@@ -445,8 +445,8 @@ function getErrorMessage(error: unknown): string {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  background: rgba(15, 118, 110, 0.1);
-  color: #0f766e;
+  background: var(--color-primary-bg);
+  color: var(--color-primary);
   font-weight: var(--font-weight-semibold);
 }
 
@@ -505,8 +505,8 @@ function getErrorMessage(error: unknown): string {
   padding: var(--spacing-md);
   border-radius: var(--radius-md);
   background:
-    linear-gradient(180deg, rgba(15, 118, 110, 0.08), rgba(255, 255, 255, 0.92));
-  border: 1px solid rgba(15, 118, 110, 0.12);
+    linear-gradient(180deg, var(--color-primary-bg), var(--color-surface));
+  border: 1px solid var(--color-primary-light);
 }
 
 .metric-label {
@@ -548,7 +548,7 @@ function getErrorMessage(error: unknown): string {
   padding: 6px 12px;
   border-radius: 999px;
   border: 1px solid var(--color-border);
-  background: #fff;
+  background: var(--color-surface);
   color: var(--color-text-secondary);
   font-size: var(--font-size-xs);
 }
@@ -560,7 +560,7 @@ function getErrorMessage(error: unknown): string {
   align-items: center;
   justify-content: center;
   padding: var(--spacing-lg);
-  background: rgba(15, 23, 42, 0.4);
+  background: var(--color-overlay);
 }
 
 .report-dialog__panel {
@@ -568,7 +568,7 @@ function getErrorMessage(error: unknown): string {
   padding: var(--spacing-lg);
   border-radius: var(--radius-lg);
   background: var(--color-surface);
-  box-shadow: 0 24px 56px rgba(15, 23, 42, 0.24);
+  box-shadow: var(--shadow-lg);
 }
 
 .report-dialog__panel h3,

@@ -261,7 +261,7 @@ function getErrorMessage(error: unknown): string {
   background:
     radial-gradient(circle at top left, rgba(14, 165, 233, 0.18), transparent 42%),
     linear-gradient(135deg, rgba(15, 23, 42, 0.96), rgba(17, 94, 89, 0.92));
-  color: #f8fafc;
+  color: var(--color-text-inverse);
 }
 
 .backtest-monitor__hero h1,
@@ -312,14 +312,14 @@ function getErrorMessage(error: unknown): string {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  background: rgba(248, 250, 252, 0.12);
-  color: #f8fafc;
+  background: rgba(255, 255, 255, 0.12);
+  color: var(--color-text-inverse);
   text-decoration: none;
 }
 
 .backtest-monitor__refresh {
-  background: #f8fafc;
-  color: #0f172a;
+  background: var(--color-text-inverse);
+  color: var(--color-text-primary);
   cursor: pointer;
 }
 
@@ -340,9 +340,9 @@ function getErrorMessage(error: unknown): string {
 .backtest-monitor__panel,
 .job-card,
 .terminate-dialog {
-  border: 1px solid rgba(148, 163, 184, 0.18);
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(248, 250, 252, 0.96));
-  box-shadow: 0 16px 36px rgba(15, 23, 42, 0.08);
+  border: 1px solid var(--color-border-light);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-md);
 }
 
 .metric-card {
@@ -377,7 +377,7 @@ function getErrorMessage(error: unknown): string {
   margin-top: var(--spacing-md);
   padding: var(--spacing-xl);
   border-radius: 20px;
-  background: rgba(241, 245, 249, 0.8);
+  background: var(--color-surface-hover);
   color: var(--color-text-secondary);
   text-align: center;
 }
@@ -418,7 +418,7 @@ function getErrorMessage(error: unknown): string {
   padding: 8px 12px;
   border-radius: 999px;
   background: rgba(245, 158, 11, 0.14);
-  color: #b45309;
+  color: var(--color-warning);
   font-size: var(--font-size-sm);
   font-weight: 600;
 }
@@ -432,7 +432,7 @@ function getErrorMessage(error: unknown): string {
 .job-card__grid div {
   padding: 14px;
   border-radius: 18px;
-  background: rgba(241, 245, 249, 0.85);
+  background: var(--color-surface-hover);
 }
 
 .job-card__grid dt {
@@ -443,15 +443,15 @@ function getErrorMessage(error: unknown): string {
 
 .job-card__button,
 .terminate-dialog__danger {
-  background: #b91c1c;
-  color: #f8fafc;
+  background: var(--color-danger);
+  color: var(--color-text-inverse);
   cursor: pointer;
 }
 
 .terminate-dialog__ghost,
 .terminate-dialog__close {
   background: rgba(148, 163, 184, 0.14);
-  color: #334155;
+  color: var(--color-text-secondary);
   cursor: pointer;
 }
 
@@ -462,7 +462,7 @@ function getErrorMessage(error: unknown): string {
   align-items: center;
   justify-content: center;
   padding: var(--spacing-lg);
-  background: rgba(15, 23, 42, 0.45);
+  background: var(--color-overlay);
   backdrop-filter: blur(6px);
 }
 
@@ -481,7 +481,7 @@ function getErrorMessage(error: unknown): string {
 .terminate-dialog__textarea {
   width: 100%;
   padding: 14px 16px;
-  border: 1px solid rgba(148, 163, 184, 0.28);
+  border: 1px solid var(--color-border);
   border-radius: 18px;
   resize: vertical;
   font: inherit;

@@ -81,10 +81,10 @@ async function toggleCollect() {
   display: grid;
   gap: 16px;
   padding: 20px;
-  border: 1px solid rgba(15, 23, 42, 0.08);
+  border: 1px solid var(--color-border);
   border-radius: 20px;
-  background: rgba(255, 255, 255, 0.98);
-  box-shadow: 0 14px 36px rgba(15, 23, 42, 0.06);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-md);
 }
 
 .post-header,
@@ -108,7 +108,7 @@ async function toggleCollect() {
   display: grid;
   place-items: center;
   background: linear-gradient(135deg, #0f766e, #0ea5e9);
-  color: white;
+  color: var(--color-text-inverse);
   font-weight: 700;
 }
 
@@ -161,10 +161,10 @@ async function toggleCollect() {
 }
 
 .action {
-  border: 1px solid rgba(15, 23, 42, 0.1);
+  border: 1px solid var(--color-border);
   border-radius: 999px;
   padding: 8px 14px;
-  background: #fff;
+  background: var(--color-surface);
   color: var(--color-text-primary);
   font: inherit;
   cursor: pointer;

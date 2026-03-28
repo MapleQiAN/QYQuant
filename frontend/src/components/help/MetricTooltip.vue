@@ -71,10 +71,10 @@ function toggleTooltip() {
   z-index: 220;
   width: min(280px, 70vw);
   padding: 12px 14px;
-  border: 1px solid #e5e5e5;
-  border-radius: 8px;
-  background: #fff;
-  box-shadow: 0 12px 24px rgba(15, 23, 42, 0.12);
+  border: 1px solid var(--color-border-light);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-elevated);
+  box-shadow: var(--shadow-lg);
   transform: translateX(-50%);
 }
 

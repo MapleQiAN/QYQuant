@@ -8,7 +8,11 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   </head>
-  <body>
+  <body style="background:#0B0E14">
+    <script>
+      // Apply theme before paint to prevent flash
+      (function(){var t=localStorage.getItem('qyquant_theme');if(t==='light'){document.documentElement.dataset.theme='light';document.body.style.background='#F0F2F5'}else{document.documentElement.dataset.theme='dark'}})();
+    </script>
     <div id="app"></div>
     <script type="module" src="/src/main.ts"></script>
   </body>

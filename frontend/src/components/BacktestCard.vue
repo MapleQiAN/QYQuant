@@ -354,10 +354,17 @@ const TargetIcon = () => h('svg', {
   padding: var(--spacing-xs) var(--spacing-sm);
   font-size: var(--font-size-xs);
   font-weight: var(--font-weight-medium);
+  font-family: var(--font-family);
   color: var(--color-text-secondary);
-  background: var(--color-background);
+  background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-sm);
+  outline: none;
+  cursor: pointer;
+}
+
+.data-source-select:focus {
+  border-color: var(--color-primary);
 }
 
 .kpi-grid {
@@ -397,6 +404,8 @@ const TargetIcon = () => h('svg', {
   font-size: var(--font-size-md);
   font-weight: var(--font-weight-semibold);
   color: var(--color-text-primary);
+  font-feature-settings: "tnum" 1;
+  font-variant-numeric: tabular-nums;
 }
 
 @media (max-width: 1024px) {

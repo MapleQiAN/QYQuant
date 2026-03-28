@@ -183,10 +183,10 @@ function handleResendCode() {
   width: 100%;
   max-width: 400px;
   padding: 40px 32px;
-  background: rgba(255, 255, 255, 0.96);
-  border: 1px solid rgba(15, 23, 42, 0.08);
+  background: var(--glass-background);
+  border: 1px solid var(--glass-border);
   border-radius: 24px;
-  box-shadow: 0 8px 32px rgba(15, 23, 42, 0.06);
+  box-shadow: var(--shadow-lg);
 }
 
 .login-header {
@@ -230,9 +230,9 @@ function handleResendCode() {
   padding: 0 14px;
   font-size: 15px;
   color: var(--color-text-primary);
-  background: rgba(248, 250, 252, 0.92);
-  border: 1px solid rgba(203, 213, 225, 0.95);
-  border-radius: 12px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
   outline: none;
   transition:
     border-color var(--transition-fast),
@@ -240,9 +240,9 @@ function handleResendCode() {
 }
 
 .field-input:focus {
-  background: rgba(255, 255, 255, 0.98);
-  border-color: rgba(129, 140, 248, 0.72);
-  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+  background: var(--color-surface-elevated);
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px var(--color-primary-bg);
 }
 
 .field-input::placeholder {
@@ -252,7 +252,7 @@ function handleResendCode() {
 .error-msg {
   margin: 0;
   font-size: 13px;
-  color: #b91c1c;
+  color: var(--color-danger);
 }
 
 .submit-btn {
@@ -263,7 +263,7 @@ function handleResendCode() {
   color: #fff;
   background: linear-gradient(135deg, var(--color-primary), var(--color-primary-dark));
   border: none;
-  border-radius: 12px;
+  border-radius: var(--radius-lg);
   cursor: pointer;
   transition: opacity var(--transition-fast);
 }

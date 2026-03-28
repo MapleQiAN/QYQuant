@@ -580,18 +580,18 @@ function statusClass(status?: MarketplaceReviewStatus) {
 }
 
 .status-pending {
-  background: rgba(245, 230, 66, 0.22);
-  color: #6f6000;
+  background: var(--color-accent-bg);
+  color: var(--color-warning);
 }
 
 .status-approved {
-  background: rgba(34, 197, 94, 0.14);
-  color: #137333;
+  background: var(--color-success-bg);
+  color: var(--color-success);
 }
 
 .status-rejected {
-  background: rgba(239, 68, 68, 0.14);
-  color: #b42318;
+  background: var(--color-danger-bg);
+  color: var(--color-danger);
 }
 
 .pagination {

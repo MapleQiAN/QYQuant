@@ -113,9 +113,9 @@ watch(
   display: grid;
   gap: 16px;
   padding: 20px;
-  border: 1px solid rgba(15, 23, 42, 0.08);
+  border: 1px solid var(--color-border);
   border-radius: 20px;
-  background: rgba(255, 255, 255, 0.98);
+  background: var(--color-surface);
 }
 
 .comment-header,
@@ -142,8 +142,8 @@ watch(
   min-height: 100px;
   padding: 14px;
   border-radius: 16px;
-  border: 1px solid rgba(15, 23, 42, 0.14);
-  background: #fff;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
   font: inherit;
 }
 
@@ -162,7 +162,7 @@ watch(
   border-radius: 999px;
   padding: 10px 16px;
   background: linear-gradient(135deg, #0f766e, #0ea5e9);
-  color: #fff;
+  color: var(--color-text-inverse);
   font: inherit;
   cursor: pointer;
 }
@@ -186,7 +186,7 @@ watch(
 .comment-item {
   padding: 14px 16px;
   border-radius: 16px;
-  background: rgba(248, 250, 252, 0.92);
+  background: var(--color-background);
 }
 
 .comment-item p {

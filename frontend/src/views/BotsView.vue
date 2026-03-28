@@ -261,8 +261,8 @@ function replaceQuery(patch: Record<string, string | undefined>) {
   padding: 0 18px;
   border: none;
   border-radius: 999px;
-  background: #111827;
-  color: #fff;
+  background: var(--color-text-primary);
+  color: var(--color-text-inverse);
   cursor: pointer;
 }
 

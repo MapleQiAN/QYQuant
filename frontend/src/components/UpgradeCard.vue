@@ -103,7 +103,9 @@ const SparkleIcon = () => h('svg', {
   position: relative;
   overflow: hidden;
   height: 100%;
-  background: linear-gradient(135deg, #fefefe 0%, #f8fafc 100%);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
 }
 
 .upgrade-content {
@@ -116,16 +118,15 @@ const SparkleIcon = () => h('svg', {
 }
 
 .upgrade-icon {
-  width: 56px;
-  height: 56px;
+  width: 48px;
+  height: 48px;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, #fbbf24, #f59e0b);
-  color: white;
-  border-radius: var(--radius-lg);
+  background: var(--color-accent-bg);
+  color: var(--color-accent);
+  border-radius: var(--radius-md);
   margin-bottom: var(--spacing-md);
-  box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3);
 }
 
 .upgrade-text {
@@ -197,21 +198,19 @@ const SparkleIcon = () => h('svg', {
   justify-content: center;
   gap: var(--spacing-sm);
   width: 100%;
-  padding: var(--spacing-md);
-  font-size: var(--font-size-md);
+  padding: 10px;
+  font-size: var(--font-size-sm);
   font-weight: var(--font-weight-semibold);
-  background: linear-gradient(135deg, var(--color-primary), var(--color-primary-dark));
-  color: var(--color-text-inverse);
+  background: var(--color-accent);
+  color: #111;
   border: none;
   border-radius: var(--radius-md);
   cursor: pointer;
   transition: all var(--transition-fast);
-  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
 }
 
 .upgrade-btn:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 16px rgba(99, 102, 241, 0.4);
+  filter: brightness(1.1);
 }
 
 .trial-text {
@@ -224,7 +223,7 @@ const SparkleIcon = () => h('svg', {
 .decorative-circle {
   position: absolute;
   border-radius: 50%;
-  opacity: 0.5;
+  opacity: 0.3;
 }
 
 .circle-1 {
@@ -238,7 +237,7 @@ const SparkleIcon = () => h('svg', {
 .circle-2 {
   width: 80px;
   height: 80px;
-  background: linear-gradient(135deg, rgba(251, 191, 36, 0.2), transparent);
+  background: linear-gradient(135deg, var(--color-accent-bg), transparent);
   bottom: 20px;
   left: -20px;
 }

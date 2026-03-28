@@ -397,7 +397,7 @@ function getErrorMessage(error: unknown): string {
   background:
     radial-gradient(circle at top left, rgba(56, 189, 248, 0.16), transparent 42%),
     linear-gradient(135deg, rgba(15, 23, 42, 0.96), rgba(30, 64, 175, 0.92));
-  color: #f8fafc;
+  color: var(--color-text-inverse);
 }
 
 .user-management__hero h1,
@@ -434,8 +434,8 @@ function getErrorMessage(error: unknown): string {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  background: rgba(248, 250, 252, 0.12);
-  color: #f8fafc;
+  background: rgba(255, 255, 255, 0.12);
+  color: var(--color-text-inverse);
   text-decoration: none;
 }
 
@@ -445,22 +445,22 @@ function getErrorMessage(error: unknown): string {
 }
 
 .user-management__tab {
-  background: rgba(226, 232, 240, 0.7);
+  background: var(--color-border-light);
   color: var(--color-text-secondary);
   cursor: pointer;
 }
 
 .user-management__tab--active {
   background: var(--color-primary);
-  color: #fff;
+  color: var(--color-text-inverse);
 }
 
 .user-management__panel {
   padding: var(--spacing-lg);
   border-radius: 24px;
-  border: 1px solid rgba(148, 163, 184, 0.18);
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(248, 250, 252, 0.94));
-  box-shadow: 0 16px 36px rgba(15, 23, 42, 0.08);
+  border: 1px solid var(--color-border-light);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-md);
 }
 
 .user-management__toolbar,
@@ -483,7 +483,7 @@ function getErrorMessage(error: unknown): string {
 .user-dialog__textarea {
   width: 100%;
   padding: 12px 14px;
-  border: 1px solid rgba(148, 163, 184, 0.28);
+  border: 1px solid var(--color-border);
   border-radius: 16px;
   font: inherit;
 }
@@ -492,12 +492,12 @@ function getErrorMessage(error: unknown): string {
 .user-dialog__danger,
 .table-action--danger {
   background: var(--color-primary);
-  color: #fff;
+  color: var(--color-text-inverse);
   cursor: pointer;
 }
 
 .table-action {
-  background: rgba(226, 232, 240, 0.8);
+  background: var(--color-border-light);
   color: var(--color-text-primary);
   cursor: pointer;
 }
@@ -519,7 +519,7 @@ function getErrorMessage(error: unknown): string {
 .audit-table th,
 .audit-table td {
   padding: 14px 12px;
-  border-bottom: 1px solid rgba(226, 232, 240, 0.9);
+  border-bottom: 1px solid var(--color-border-light);
   text-align: left;
   vertical-align: top;
 }
@@ -530,18 +530,18 @@ function getErrorMessage(error: unknown): string {
   padding: 6px 10px;
   border-radius: 999px;
   background: rgba(34, 197, 94, 0.12);
-  color: #15803d;
+  color: var(--color-success);
 }
 
 .status-badge--danger {
   background: rgba(239, 68, 68, 0.12);
-  color: #b91c1c;
+  color: var(--color-danger);
 }
 
 .user-management__empty {
   padding: var(--spacing-xl);
   border-radius: 18px;
-  background: rgba(241, 245, 249, 0.8);
+  background: var(--color-surface-hover);
   color: var(--color-text-secondary);
   text-align: center;
 }
@@ -558,7 +558,7 @@ function getErrorMessage(error: unknown): string {
   align-items: center;
   justify-content: center;
   padding: var(--spacing-lg);
-  background: rgba(15, 23, 42, 0.45);
+  background: var(--color-overlay);
   z-index: 20;
 }
 
@@ -569,9 +569,9 @@ function getErrorMessage(error: unknown): string {
   gap: var(--spacing-md);
   padding: var(--spacing-lg);
   border-radius: 24px;
-  border: 1px solid rgba(148, 163, 184, 0.18);
-  background: #fff;
-  box-shadow: 0 20px 60px rgba(15, 23, 42, 0.18);
+  border: 1px solid var(--color-border-light);
+  background: var(--color-surface-elevated);
+  box-shadow: var(--shadow-lg);
 }
 
 .user-dialog__summary,

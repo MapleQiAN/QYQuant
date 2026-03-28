@@ -97,8 +97,8 @@ onMounted(() => {
   background:
     radial-gradient(circle at top left, rgba(5, 150, 105, 0.16), transparent 42%),
     linear-gradient(135deg, rgba(15, 23, 42, 0.96), rgba(31, 41, 55, 0.94));
-  color: #f8fafc;
-  box-shadow: 0 24px 56px rgba(15, 23, 42, 0.18);
+  color: var(--color-text-inverse);
+  box-shadow: var(--shadow-lg);
 }
 
 .data-source-health__hero h1,
@@ -132,9 +132,9 @@ onMounted(() => {
 .data-source-health__status-card {
   padding: var(--spacing-xl);
   border-radius: 28px;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.99), rgba(248, 250, 252, 0.96));
-  box-shadow: 0 18px 42px rgba(15, 23, 42, 0.08);
-  border: 1px solid rgba(148, 163, 184, 0.18);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-md);
+  border: 1px solid var(--color-border-light);
 }
 
 .data-source-health__status-head {
@@ -172,17 +172,17 @@ onMounted(() => {
 
 .status-pill--green {
   background: rgba(16, 185, 129, 0.14);
-  color: #047857;
+  color: var(--color-success);
 }
 
 .status-pill--red {
   background: rgba(239, 68, 68, 0.14);
-  color: #b91c1c;
+  color: var(--color-danger);
 }
 
 .status-pill--gray {
   background: rgba(148, 163, 184, 0.18);
-  color: #475569;
+  color: var(--color-text-secondary);
 }
 
 .data-source-health__grid {
@@ -196,7 +196,7 @@ onMounted(() => {
   margin: 0;
   padding: var(--spacing-md);
   border-radius: 20px;
-  background: rgba(241, 245, 249, 0.8);
+  background: var(--color-surface-hover);
 }
 
 .metric-card dt {

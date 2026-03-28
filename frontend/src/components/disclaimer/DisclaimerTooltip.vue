@@ -176,10 +176,10 @@ onBeforeUnmount(() => {
   width: min(280px, 70vw);
   min-width: 200px;
   padding: 10px 12px;
-  border: 1px solid #e5e5e5;
+  border: 1px solid var(--color-border-light);
   border-radius: var(--radius-sm);
-  background: #fff;
-  box-shadow: 0 12px 24px rgba(15, 23, 42, 0.12);
+  background: var(--color-surface-elevated);
+  box-shadow: var(--shadow-lg);
   color: var(--color-text-muted);
   font-size: var(--font-size-xs);
   line-height: var(--line-height-normal);

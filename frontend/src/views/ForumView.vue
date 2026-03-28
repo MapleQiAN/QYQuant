@@ -122,9 +122,9 @@ function switchFeed(mode: 'all' | 'collections') {
   padding: 24px;
   border-radius: 24px;
   background:
-    radial-gradient(circle at top left, rgba(14, 165, 233, 0.18), transparent 32%),
-    linear-gradient(135deg, rgba(15, 23, 42, 0.96), rgba(15, 118, 110, 0.92));
-  color: #fff;
+    radial-gradient(circle at top left, var(--color-primary-light), transparent 32%),
+    linear-gradient(135deg, var(--color-primary-dark), var(--color-primary));
+  color: var(--color-text-inverse);
 }
 
 .view-title {
@@ -135,13 +135,13 @@ function switchFeed(mode: 'all' | 'collections') {
 .view-subtitle {
   margin: 0;
   max-width: 640px;
-  color: rgba(255, 255, 255, 0.76);
+  color: var(--color-text-inverse);
 }
 
 .hero-badge {
   padding: 10px 14px;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.12);
+  background: var(--color-surface-hover);
   font-size: 13px;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -156,15 +156,15 @@ function switchFeed(mode: 'all' | 'collections') {
   border: 0;
   border-radius: 999px;
   padding: 10px 16px;
-  background: rgba(255, 255, 255, 0.94);
+  background: var(--color-surface);
   color: var(--color-text-muted);
   font: inherit;
   cursor: pointer;
 }
 
 .feed-switch__button.active {
-  background: #0f172a;
-  color: #fff;
+  background: var(--color-primary-dark);
+  color: var(--color-text-inverse);
 }
 
 .feed {
@@ -177,7 +177,7 @@ function switchFeed(mode: 'all' | 'collections') {
   margin: 0;
   padding: 20px;
   border-radius: 18px;
-  background: rgba(255, 255, 255, 0.94);
+  background: var(--color-surface);
   color: var(--color-text-muted);
 }
 
@@ -190,8 +190,8 @@ function switchFeed(mode: 'all' | 'collections') {
   border: 0;
   border-radius: 999px;
   padding: 10px 18px;
-  background: linear-gradient(135deg, #0f766e, #0ea5e9);
-  color: #fff;
+  background: var(--color-primary);
+  color: var(--color-text-inverse);
   font: inherit;
   cursor: pointer;
 }

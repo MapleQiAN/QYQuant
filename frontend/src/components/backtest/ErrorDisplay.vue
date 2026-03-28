@@ -55,7 +55,7 @@ async function copyExampleCode() {
   padding: var(--spacing-lg);
   border: 1px solid rgba(185, 28, 28, 0.18);
   background:
-    linear-gradient(145deg, rgba(255, 247, 237, 0.98), rgba(255, 255, 255, 0.94)),
+    linear-gradient(145deg, rgba(255, 247, 237, 0.98), var(--color-surface)),
     var(--color-surface);
 }
 
