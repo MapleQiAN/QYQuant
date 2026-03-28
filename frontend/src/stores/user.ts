@@ -21,6 +21,7 @@ const defaultUser: User = {
   onboarding_completed: true,
   sim_disclaimer_accepted: false,
   phone: '',
+  email: '',
   created_at: undefined,
   updated_at: undefined,
 }
@@ -63,6 +64,7 @@ export const useUserStore = defineStore('user', {
         onboarding_completed: profile.onboarding_completed,
         sim_disclaimer_accepted: profile.sim_disclaimer_accepted,
         phone: profile.phone,
+        email: profile.email,
         created_at: profile.created_at,
         updated_at: profile.updated_at,
       }

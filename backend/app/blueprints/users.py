@@ -93,13 +93,14 @@ def delete_me():
 
     payload = request.get_json() or {}
     code = (payload.get("code") or "").strip()
-    code_error = consume_verification_code(user.phone or "", code)
+    code_error = consume_verification_code(user.phone or user.email or "", code)
     if code_error:
         return code_error
 
     masked_phone = mask_phone(user.phone or "")
     revoked_tokens = revoke_all_user_tokens(user.id)
     user.phone = None
+    user.email = None
     user.nickname = "已注销用户"
     user.avatar_url = ""
     user.bio = ""

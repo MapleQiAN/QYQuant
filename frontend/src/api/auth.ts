@@ -17,17 +17,43 @@ export interface SendCodeResponse {
 
 export interface LoginResponse {
   user_id: string
-  phone: string
+  phone?: string
+  email?: string
   nickname: string
   plan_level: string
 }
 
-export async function sendCode(phone: string): Promise<SendCodeResponse> {
-  const res = await instance.post('/v1/auth/send-code', { phone })
+export type AuthIdentifier =
+  | { phone: string; email?: never }
+  | { email: string; phone?: never }
+
+export type LoginRequest = AuthIdentifier & {
+  code: string
+  nickname?: string
+}
+
+function normalizeIdentifier(identifier: string | AuthIdentifier): AuthIdentifier {
+  if (typeof identifier === 'string') {
+    return { phone: identifier }
+  }
+  return identifier
+}
+
+export async function sendCode(identifier: string | AuthIdentifier): Promise<SendCodeResponse> {
+  const res = await instance.post('/v1/auth/send-code', normalizeIdentifier(identifier))
   return res.data.data
 }
 
-export async function login(phone: string, code: string, nickname?: string): Promise<{ data: LoginResponse; access_token: string }> {
-  const res = await instance.post('/v1/auth/login', { phone, code, ...(nickname ? { nickname } : {}) })
+export async function login(
+  identifierOrPayload: string | LoginRequest,
+  code?: string,
+  nickname?: string,
+): Promise<{ data: LoginResponse; access_token: string }> {
+  const payload =
+    typeof identifierOrPayload === 'string'
+      ? { phone: identifierOrPayload, code: code || '', ...(nickname ? { nickname } : {}) }
+      : identifierOrPayload
+
+  const res = await instance.post('/v1/auth/login', payload)
   return { data: res.data.data, access_token: res.data.access_token }
 }

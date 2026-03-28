@@ -5,9 +5,10 @@ from datetime import datetime, timezone
 
 from flask import current_app, request
 from flask_jwt_extended import create_access_token, create_refresh_token, decode_token, get_jwt_identity, jwt_required
+from flask_mail import Message
 from flask_smorest import Blueprint
 
-from ..extensions import db
+from ..extensions import db, mail
 from ..models import AuditLog, RefreshToken, User
 from ..quota import ensure_user_quota
 from ..schemas import UserPrivateSchema
@@ -30,6 +31,7 @@ from ..utils.time import now_utc
 bp = Blueprint('auth', __name__, url_prefix='/api/v1/auth')
 
 PHONE_RE = re.compile(r'^1[3-9]\d{9}$')
+EMAIL_RE = re.compile(r'^[^@\s]+@[^@\s]+\.[^@\s]+$')
 _private_schema = UserPrivateSchema()
 
 
@@ -41,11 +43,20 @@ def _mask_phone(phone):
     return f"{phone[:3]}****{phone[-4:]}"
 
 
+def _mask_email(email):
+    if not email or '@' not in email:
+        return ''
+    local_part, domain = email.split('@', 1)
+    visible = local_part[:2] if len(local_part) > 2 else local_part[:1]
+    return f"{visible}***@{domain}"
+
+
 def _build_login_payload(user, access_token):
     payload = ok(
         {
             "user_id": user.id,
             "phone": _mask_phone(user.phone or ""),
+            "email": _mask_email(user.email or ""),
             "nickname": user.nickname,
             "plan_level": user.plan_level,
         }
@@ -100,6 +111,28 @@ def _validate_phone(phone):
     return None
 
 
+def _validate_email(email):
+    if not EMAIL_RE.match(email or ""):
+        return error_response("INVALID_EMAIL", "Invalid email address", 422)
+    return None
+
+
+def _resolve_identifier(payload):
+    phone = (payload.get('phone') or '').strip()
+    email = (payload.get('email') or '').strip().lower()
+
+    if bool(phone) == bool(email):
+        return None, None, error_response(
+            "INVALID_IDENTIFIER",
+            "Provide exactly one of phone or email",
+            422,
+        )
+
+    if phone:
+        return 'phone', phone, _validate_phone(phone)
+    return 'email', email, _validate_email(email)
+
+
 def _issue_code():
     fixed_code = current_app.config.get("AUTH_FIXED_SMS_CODE")
     if fixed_code:
@@ -119,17 +152,30 @@ def _get_current_user():
     return user
 
 
+def _send_email_code(email, code):
+    mail.send(
+        Message(
+            subject="QY Quant verification code",
+            recipients=[email],
+            body=f"Your verification code is {code}. It expires in 5 minutes.",
+            html=(
+                "<p>Your verification code is "
+                f"<strong>{code}</strong>."
+                "</p><p>It expires in 5 minutes.</p>"
+            ),
+        )
+    )
+
+
 @bp.post('/send-code')
 def send_code():
     payload = request.get_json() or {}
-    phone = (payload.get('phone') or '').strip()
-
-    phone_error = _validate_phone(phone)
-    if phone_error:
-        return phone_error
+    identifier_type, identifier, identifier_error = _resolve_identifier(payload)
+    if identifier_error:
+        return identifier_error
 
     store = get_auth_store()
-    retry_after = store.get_throttle_remaining(phone)
+    retry_after = store.get_throttle_remaining(identifier)
     if retry_after > 0:
         return error_response(
             "RATE_LIMITED",
@@ -139,45 +185,57 @@ def send_code():
         )
 
     code = _issue_code()
-    store.set_verification_code(phone, code, ttl=current_app.config["AUTH_SMS_CODE_TTL"])
-    store.mark_code_sent(phone, ttl=current_app.config["AUTH_SMS_THROTTLE_SECONDS"])
-    get_sms_sender().send_code(phone, code)
+    store.set_verification_code(identifier, code, ttl=current_app.config["AUTH_SMS_CODE_TTL"])
+    store.mark_code_sent(identifier, ttl=current_app.config["AUTH_SMS_THROTTLE_SECONDS"])
+    if identifier_type == 'phone':
+        get_sms_sender().send_code(identifier, code)
+    else:
+        _send_email_code(identifier, code)
     return ok({"message": "验证码已发送"})
 
 
 @bp.post('/login')
 def login():
     payload = request.get_json() or {}
-    phone = (payload.get('phone') or '').strip()
+    identifier_type, identifier, identifier_error = _resolve_identifier(payload)
     code = (payload.get('code') or '').strip()
     nickname = (payload.get('nickname') or '').strip()
 
-    phone_error = _validate_phone(phone)
-    if phone_error:
-        return phone_error
+    if identifier_error:
+        return identifier_error
 
     code_error = validate_code_shape(code)
     if code_error:
         return code_error
 
     store = get_auth_store()
-    if store.get_failed_attempts(phone) >= current_app.config["AUTH_SMS_MAX_FAILURES"]:
+    if store.get_failed_attempts(identifier) >= current_app.config["AUTH_SMS_MAX_FAILURES"]:
         return error_response("TOO_MANY_ATTEMPTS", "Too many verification attempts, please retry later", 429)
 
-    saved_code = store.get_verification_code(phone)
+    saved_code = store.get_verification_code(identifier)
     if saved_code != code:
-        attempts = store.increment_failed_attempts(phone, ttl=current_app.config["AUTH_SMS_LOCK_SECONDS"])
+        attempts = store.increment_failed_attempts(identifier, ttl=current_app.config["AUTH_SMS_LOCK_SECONDS"])
         if attempts >= current_app.config["AUTH_SMS_MAX_FAILURES"]:
             return error_response("TOO_MANY_ATTEMPTS", "Too many verification attempts, please retry later", 429)
         return error_response("INVALID_CODE", "Invalid or expired verification code", 422)
 
-    user = User.query.filter_by(phone=phone).one_or_none()
+    if identifier_type == 'phone':
+        user = User.query.filter_by(phone=identifier).one_or_none()
+    else:
+        user = User.query.filter_by(email=identifier).one_or_none()
     if user is not None and user.deleted_at is not None:
         user = None
     if user is None:
         if not nickname:
             return error_response("NICKNAME_REQUIRED", "Nickname is required for first login", 422)
-        user = User(phone=phone, nickname=nickname)
+        user_kwargs = {"nickname": nickname}
+        if identifier_type == 'phone':
+            user_kwargs["phone"] = identifier
+            audit_details = {"phone": _mask_phone(identifier)}
+        else:
+            user_kwargs["email"] = identifier
+            audit_details = {"email": _mask_email(identifier)}
+        user = User(**user_kwargs)
         db.session.add(user)
         db.session.flush()
         db.session.add(
@@ -186,7 +244,7 @@ def login():
                 action='register',
                 target_type='user',
                 target_id=user.id,
-                details={"phone": _mask_phone(phone)},
+                details=audit_details,
             )
         )
     elif user.is_banned:
@@ -194,8 +252,8 @@ def login():
 
     ensure_user_quota(user.id, plan_level=user.plan_level)
 
-    store.delete_verification_code(phone)
-    store.reset_failed_attempts(phone)
+    store.delete_verification_code(identifier)
+    store.reset_failed_attempts(identifier)
 
     access_token = create_access_token(identity=user.id)
     refresh_token, token_record, decoded = _create_refresh_token_record(user)
