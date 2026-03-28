@@ -45,9 +45,22 @@
             <NotificationPanel v-if="isNotificationPanelOpen" />
           </div>
 
-          <div class="user-avatar">
-            <span class="avatar-text">{{ profile.avatar }}</span>
-            <span class="user-level">{{ profile.level }}</span>
+          <div class="user-menu-shell">
+            <div class="user-avatar" @click="handleAvatarClick">
+              <span class="avatar-text">{{ profile.avatar }}</span>
+              <span class="user-level">{{ profile.level }}</span>
+            </div>
+            <div v-if="isUserMenuOpen" class="user-dropdown">
+              <RouterLink class="dropdown-item" :to="`/users/${profile.id}`" @click="isUserMenuOpen = false">
+                个人主页
+              </RouterLink>
+              <RouterLink class="dropdown-item" to="/settings" @click="isUserMenuOpen = false">
+                设置
+              </RouterLink>
+              <button class="dropdown-item danger" type="button" @click="handleLogout">
+                退出登录
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -79,13 +92,40 @@ const notificationStore = useNotificationStore()
 const { profile, onboardingHighlightTarget } = storeToRefs(userStore)
 const notificationCount = computed(() => notificationStore.unreadCount)
 const isNotificationPanelOpen = ref(false)
+const isUserMenuOpen = ref(false)
+
+function handleAvatarClick() {
+  if (!userStore.token) {
+    window.location.href = '/login'
+    return
+  }
+  isUserMenuOpen.value = !isUserMenuOpen.value
+}
+
+function handleLogout() {
+  isUserMenuOpen.value = false
+  localStorage.removeItem('qyquant-token')
+  window.location.href = '/login'
+}
+
+function handleClickOutside(e: MouseEvent) {
+  const target = e.target as HTMLElement
+  if (!target.closest('.user-menu-shell')) {
+    isUserMenuOpen.value = false
+  }
+  if (!target.closest('.notification-shell')) {
+    isNotificationPanelOpen.value = false
+  }
+}
 
 onMounted(() => {
   notificationStore.startPolling()
+  document.addEventListener('click', handleClickOutside)
 })
 
 onUnmounted(() => {
   notificationStore.stopPolling()
+  document.removeEventListener('click', handleClickOutside)
 })
 
 function toggleNotifications() {
@@ -437,6 +477,10 @@ function getIcon(iconName: string) {
   line-height: 1;
 }
 
+.user-menu-shell {
+  position: relative;
+}
+
 .user-avatar {
   display: flex;
   align-items: center;
@@ -457,6 +501,47 @@ function getIcon(iconName: string) {
 .user-avatar:hover {
   background: rgba(255, 255, 255, 0.98);
   border-color: rgba(165, 180, 252, 0.4);
+}
+
+.user-dropdown {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  min-width: 160px;
+  padding: 6px;
+  background: rgba(255, 255, 255, 0.98);
+  border: 1px solid rgba(203, 213, 225, 0.95);
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.1);
+  z-index: 200;
+}
+
+.dropdown-item {
+  display: block;
+  width: 100%;
+  padding: 10px 14px;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-primary);
+  background: none;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  text-decoration: none;
+  text-align: left;
+  transition: background-color var(--transition-fast);
+}
+
+.dropdown-item:hover {
+  background: rgba(148, 163, 184, 0.1);
+}
+
+.dropdown-item.danger {
+  color: #b91c1c;
+}
+
+.dropdown-item.danger:hover {
+  background: rgba(185, 28, 28, 0.06);
 }
 
 .avatar-text {
