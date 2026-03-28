@@ -1,9 +1,12 @@
 <template>
-  <div class="app">
+  <div class="app" :class="{ 'no-chrome': hideChrome }">
     <TopNav v-if="!hideChrome" />
-    <main class="main-content">
-      <RouterView />
-    </main>
+    <div class="app-body">
+      <main class="main-content">
+        <RouterView />
+      </main>
+      <StatusBar v-if="!hideChrome" />
+    </div>
     <HelpPanel v-if="!hideChrome" :open="userStore.helpPanelOpen" @close="userStore.setHelpPanelOpen(false)" />
     <GuidedBacktestFlow
       v-if="userStore.guidedBacktestActive"
@@ -15,16 +18,6 @@
       @open-report="handleOpenReport"
       @complete="handleGuidedComplete"
     />
-    <footer v-if="!hideChrome" class="app-footer">
-      <div class="container footer-content">
-        <span class="copyright">{{ $t('footer.copyright') }}</span>
-        <div class="footer-links">
-          <a href="#">{{ $t('footer.help') }}</a>
-          <a href="#">{{ $t('footer.api') }}</a>
-          <a href="#">{{ $t('footer.privacy') }}</a>
-        </div>
-      </div>
-    </footer>
   </div>
 </template>
 
@@ -33,6 +26,7 @@ import { computed, onBeforeUnmount, onMounted } from 'vue'
 import { RouterView, useRoute, useRouter } from 'vue-router'
 import HelpPanel from './components/help/HelpPanel.vue'
 import GuidedBacktestFlow from './components/onboarding/GuidedBacktestFlow.vue'
+import StatusBar from './components/StatusBar.vue'
 import TopNav from './components/TopNav.vue'
 import { useUserStore } from './stores'
 
@@ -100,60 +94,43 @@ onBeforeUnmount(() => {
 .app {
   min-height: 100vh;
   display: flex;
-  flex-direction: column;
   background: var(--color-background);
+}
+
+/* Sidebar layout: sidebar on left, content takes remaining space */
+.app-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  margin-left: var(--sidebar-width);
+  min-height: 100vh;
+}
+
+.app.no-chrome .app-body {
+  margin-left: 0;
 }
 
 .main-content {
   flex: 1;
-  padding: var(--spacing-md) 0;
+  padding: var(--spacing-md);
+  overflow-y: auto;
 }
 
 :deep(.onboarding-highlight) {
   position: relative;
-  border-radius: 16px;
+  border-radius: var(--radius-lg);
   z-index: 2;
 }
 
-/* Footer */
-.app-footer {
-  padding: var(--spacing-lg) 0;
-  border-top: 1px solid var(--color-border-light);
-  margin-top: auto;
-}
-
-.footer-content {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.copyright {
-  font-size: var(--font-size-sm);
-  color: var(--color-text-muted);
-}
-
-.footer-links {
-  display: flex;
-  gap: var(--spacing-lg);
-}
-
-.footer-links a {
-  font-size: var(--font-size-sm);
-  color: var(--color-text-secondary);
-  text-decoration: none;
-  transition: color var(--transition-fast);
-}
-
-.footer-links a:hover {
-  color: var(--color-primary);
-}
-
+/* Mobile: bottom nav instead of sidebar */
 @media (max-width: 768px) {
-  .footer-content {
-    flex-direction: column;
-    gap: var(--spacing-md);
-    text-align: center;
+  .app-body {
+    margin-left: 0;
+    padding-bottom: var(--sidebar-width);
+  }
+
+  .main-content {
+    padding: var(--spacing-sm);
   }
 }
 </style>

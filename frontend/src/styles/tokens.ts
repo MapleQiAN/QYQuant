@@ -1,6 +1,6 @@
 // ============================================
-// Design Tokens - QY Quant Dashboard
-// Financial Professional Theme
+// Design Tokens - QY Quant Terminal
+// Professional Financial Terminal Theme
 // ============================================
 
 export const designTokens = {
@@ -9,22 +9,22 @@ export const designTokens = {
       primary: '#2563EB',
       primaryLight: '#3B82F6',
       primaryDark: '#1D4ED8',
-      primaryBg: 'rgba(37, 99, 235, 0.12)',
+      primaryBg: 'rgba(37, 99, 235, 0.10)',
       secondary: '#64748B',
       accent: '#F59E0B',
       success: '#22C55E',
       warning: '#F59E0B',
       danger: '#EF4444',
       info: '#3B82F6',
-      background: '#0B0E14',
-      surface: '#141821',
-      surfaceElevated: '#1A2030',
-      border: '#1E2736',
-      borderLight: '#172033',
-      textPrimary: '#E8ECF1',
+      background: '#080B11',
+      surface: '#0E1219',
+      surfaceElevated: '#141A24',
+      border: '#1A1F2E',
+      borderLight: '#141A24',
+      textPrimary: '#E2E8F0',
       textSecondary: '#8B95A5',
-      textMuted: '#5A6577',
-      navBg: '#0D1117',
+      textMuted: '#4A5568',
+      navBg: '#0A0E15',
     },
     light: {
       primary: '#1D4ED8',
@@ -50,42 +50,44 @@ export const designTokens = {
   },
 
   spacing: {
+    '2xs': '2px',
     xs: '4px',
     sm: '8px',
-    md: '16px',
-    lg: '24px',
-    xl: '32px',
-    xxl: '48px',
-    xxxl: '64px',
+    md: '12px',
+    lg: '16px',
+    xl: '24px',
+    xxl: '32px',
+    xxxl: '48px',
   },
 
   radius: {
-    xs: '4px',
-    sm: '6px',
-    md: '8px',
-    lg: '12px',
-    xl: '16px',
+    xs: '2px',
+    sm: '3px',
+    md: '4px',
+    lg: '6px',
+    xl: '8px',
     full: '9999px',
   },
 
   shadows: {
-    sm: '0 1px 3px rgba(0, 0, 0, 0.3)',
-    md: '0 2px 8px rgba(0, 0, 0, 0.35)',
-    lg: '0 4px 16px rgba(0, 0, 0, 0.4)',
+    sm: '0 1px 2px rgba(0, 0, 0, 0.2)',
+    md: '0 2px 4px rgba(0, 0, 0, 0.25)',
+    lg: '0 4px 8px rgba(0, 0, 0, 0.3)',
   },
 
   typography: {
     fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
     fontMono: "'JetBrains Mono', 'Fira Code', 'SF Mono', 'Consolas', monospace",
     fontSizes: {
+      '2xs': '10px',
       xs: '11px',
-      sm: '13px',
-      md: '14px',
-      lg: '16px',
-      xl: '18px',
-      xxl: '22px',
-      xxxl: '28px',
-      display: '36px',
+      sm: '12px',
+      md: '13px',
+      lg: '14px',
+      xl: '16px',
+      xxl: '20px',
+      xxxl: '24px',
+      display: '32px',
     },
     fontWeights: {
       normal: 400,
@@ -94,26 +96,29 @@ export const designTokens = {
       bold: 700,
     },
     lineHeights: {
-      tight: 1.25,
-      normal: 1.5,
-      relaxed: 1.75,
+      tight: 1.2,
+      normal: 1.4,
+      relaxed: 1.6,
     },
   },
 
   transitions: {
-    fast: '150ms ease',
-    normal: '200ms ease',
-    slow: '300ms ease',
+    fast: '120ms ease',
+    normal: '180ms ease',
+    slow: '250ms ease',
   },
 
   grid: {
     columns: 12,
-    gap: '16px',
-    containerMaxWidth: '1440px',
+    gap: '8px',
+    containerMaxWidth: '1600px',
   },
 
-  nav: {
-    height: '48px',
+  layout: {
+    sidebarWidth: '48px',
+    panelHeaderHeight: '32px',
+    statusBarHeight: '24px',
+    navHeight: '40px',
   },
 } as const
 

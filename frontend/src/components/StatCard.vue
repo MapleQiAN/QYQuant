@@ -1,10 +1,5 @@
 <template>
   <div :class="['stat-card', variant]">
-    <div class="stat-icon" :style="{ background: iconBg }">
-      <slot name="icon">
-        <DefaultIcon />
-      </slot>
-    </div>
     <div class="stat-content">
       <div class="stat-label">
         <span>{{ label }}</span>
@@ -15,17 +10,17 @@
         <span :class="['value tnum', { positive: isPositive, negative: isNegative }]">
           {{ prefix }}{{ formattedValue }}{{ suffix }}
         </span>
-        <span v-if="change !== undefined" :class="['change', { positive: change >= 0, negative: change < 0 }]">
+        <span v-if="change !== undefined" :class="['change tnum', { positive: change >= 0, negative: change < 0 }]">
           {{ change >= 0 ? '+' : '' }}{{ change.toFixed(1) }}%
         </span>
       </div>
-      <div v-if="subtitle" class="stat-subtitle">{{ subtitle }}</div>
+      <div v-if="subtitle" class="stat-subtitle tnum">{{ subtitle }}</div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, h } from 'vue'
+import { computed } from 'vue'
 import DisclaimerTooltip from './disclaimer/DisclaimerTooltip.vue'
 
 interface Props {
@@ -49,19 +44,6 @@ const props = withDefaults(defineProps<Props>(), {
   showSign: false,
   showDisclaimer: false
 })
-
-const DefaultIcon = () => h('svg', {
-  width: 20,
-  height: 20,
-  viewBox: '0 0 24 24',
-  fill: 'none',
-  stroke: 'currentColor',
-  'stroke-width': 2,
-  'stroke-linecap': 'round',
-  'stroke-linejoin': 'round'
-}, [
-  h('path', { d: 'M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6' })
-])
 
 const formattedValue = computed(() => {
   const val = props.value
@@ -87,63 +69,21 @@ const isNegative = computed(() => {
 
 <style scoped>
 .stat-card {
-  display: flex;
-  align-items: flex-start;
-  gap: var(--spacing-md);
-  padding: var(--spacing-md);
+  padding: var(--spacing-sm) var(--spacing-md);
   background: var(--color-surface);
-  border-radius: var(--radius-md);
-  border: 1px solid var(--color-border-light);
-  transition: all var(--transition-fast);
+  border-radius: var(--radius-sm);
+  border-left: 3px solid var(--color-border);
+  transition: border-color var(--transition-fast);
 }
 
-.stat-card:hover {
-  box-shadow: var(--shadow-sm);
-}
-
-.stat-icon {
-  width: 44px;
-  height: 44px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: var(--radius-md);
-  color: var(--color-primary);
-  flex-shrink: 0;
-}
-
-.stat-card.success .stat-icon {
-  background: var(--color-success-bg);
-  color: var(--color-success);
-}
-
-.stat-card.warning .stat-icon {
-  background: var(--color-warning-bg);
-  color: var(--color-warning);
-}
-
-.stat-card.danger .stat-icon {
-  background: var(--color-danger-bg);
-  color: var(--color-danger);
-}
-
-.stat-card.info .stat-icon {
-  background: var(--color-info-bg);
-  color: var(--color-info);
-}
-
-.stat-card.up .stat-icon {
-  background: var(--color-up-bg);
-  color: var(--color-up);
-}
-
-.stat-card.down .stat-icon {
-  background: var(--color-down-bg);
-  color: var(--color-down);
-}
+.stat-card.success { border-left-color: var(--color-success); }
+.stat-card.warning { border-left-color: var(--color-warning); }
+.stat-card.danger { border-left-color: var(--color-danger); }
+.stat-card.info { border-left-color: var(--color-info); }
+.stat-card.up { border-left-color: var(--color-up); }
+.stat-card.down { border-left-color: var(--color-down); }
 
 .stat-content {
-  flex: 1;
   min-width: 0;
 }
 
@@ -151,9 +91,11 @@ const isNegative = computed(() => {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  font-size: var(--font-size-sm);
+  font-size: var(--font-size-2xs);
   color: var(--color-text-muted);
-  margin-bottom: var(--spacing-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-bottom: 2px;
 }
 
 .stat-value {
@@ -166,6 +108,8 @@ const isNegative = computed(() => {
   font-size: var(--font-size-xl);
   font-weight: var(--font-weight-bold);
   color: var(--color-text-primary);
+  font-family: var(--font-mono);
+  line-height: 1.2;
 }
 
 .value.positive {
@@ -177,10 +121,11 @@ const isNegative = computed(() => {
 }
 
 .change {
-  font-size: var(--font-size-sm);
+  font-size: var(--font-size-2xs);
   font-weight: var(--font-weight-medium);
-  padding: 2px 6px;
-  border-radius: var(--radius-sm);
+  padding: 1px 4px;
+  border-radius: var(--radius-xs);
+  font-family: var(--font-mono);
 }
 
 .change.positive {
@@ -194,8 +139,8 @@ const isNegative = computed(() => {
 }
 
 .stat-subtitle {
-  font-size: var(--font-size-xs);
+  font-size: var(--font-size-2xs);
   color: var(--color-text-muted);
-  margin-top: var(--spacing-xs);
+  margin-top: 2px;
 }
 </style>
