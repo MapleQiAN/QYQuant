@@ -1,10 +1,10 @@
 <template>
   <div class="app">
-    <TopNav />
+    <TopNav v-if="!hideChrome" />
     <main class="main-content">
       <RouterView />
     </main>
-    <HelpPanel :open="userStore.helpPanelOpen" @close="userStore.setHelpPanelOpen(false)" />
+    <HelpPanel v-if="!hideChrome" :open="userStore.helpPanelOpen" @close="userStore.setHelpPanelOpen(false)" />
     <GuidedBacktestFlow
       v-if="userStore.guidedBacktestActive"
       :step="userStore.guidedBacktestStep || 1"
@@ -15,7 +15,7 @@
       @open-report="handleOpenReport"
       @complete="handleGuidedComplete"
     />
-    <footer class="app-footer">
+    <footer v-if="!hideChrome" class="app-footer">
       <div class="container footer-content">
         <span class="copyright">{{ $t('footer.copyright') }}</span>
         <div class="footer-links">
@@ -29,15 +29,17 @@
 </template>
 
 <script setup lang="ts">
-import { onBeforeUnmount, onMounted } from 'vue'
-import { RouterView, useRouter } from 'vue-router'
+import { computed, onBeforeUnmount, onMounted } from 'vue'
+import { RouterView, useRoute, useRouter } from 'vue-router'
 import HelpPanel from './components/help/HelpPanel.vue'
 import GuidedBacktestFlow from './components/onboarding/GuidedBacktestFlow.vue'
 import TopNav from './components/TopNav.vue'
 import { useUserStore } from './stores'
 
+const route = useRoute()
 const router = useRouter()
 const userStore = useUserStore()
+const hideChrome = computed(() => route.meta.hideChrome === true)
 
 function handleShortcut(event: KeyboardEvent) {
   const target = event.target as HTMLElement | null
