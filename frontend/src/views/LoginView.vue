@@ -1,119 +1,34 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, ref } from 'vue'
-import { useRouter } from 'vue-router'
-import {
-  login,
-  loginWithPassword,
-  registerWithPassword,
-  sendCode,
-  type AuthIdentifier,
-} from '../api/auth'
+import { ref } from 'vue'
+import { RouterLink, useRouter } from 'vue-router'
+import { loginWithPassword, registerWithPassword } from '../api/auth'
 import { useUserStore } from '../stores/user'
 
-type LoginMode = 'phone' | 'email'
-type PhoneStep = 'identifier' | 'code' | 'nickname'
-type EmailIntent = 'login' | 'register'
-
-const PHONE_RE = /^1[3-9]\d{9}$/
-const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/
+type AuthIntent = 'login' | 'register'
 
 const router = useRouter()
 const userStore = useUserStore()
 
-const mode = ref<LoginMode>('phone')
-const emailIntent = ref<EmailIntent>('login')
-const phone = ref('')
+const intent = ref<AuthIntent>('login')
 const email = ref('')
 const password = ref('')
-const code = ref('')
 const nickname = ref('')
-const phoneStep = ref<PhoneStep>('identifier')
 const loading = ref(false)
 const error = ref('')
-const countdown = ref(0)
 
-let countdownTimer: ReturnType<typeof setInterval> | null = null
-
-const currentPhone = computed(() => phone.value.trim())
-const isEmailRegister = computed(() => emailIntent.value === 'register')
-
-function resetCountdown() {
-  if (countdownTimer) {
-    clearInterval(countdownTimer)
-    countdownTimer = null
-  }
-  countdown.value = 0
-}
-
-function startCountdown(seconds: number) {
-  resetCountdown()
-  countdown.value = seconds
-  countdownTimer = setInterval(() => {
-    countdown.value -= 1
-    if (countdown.value <= 0) {
-      resetCountdown()
-    }
-  }, 1000)
-}
-
-function resetEmailForm() {
-  email.value = ''
-  password.value = ''
-  nickname.value = ''
-  error.value = ''
-}
-
-function resetPhoneForm() {
-  code.value = ''
-  nickname.value = ''
-  error.value = ''
-  phoneStep.value = 'identifier'
-  resetCountdown()
-}
-
-function switchMode(nextMode: LoginMode) {
-  if (mode.value === nextMode) {
+function switchIntent(nextIntent: AuthIntent) {
+  if (intent.value === nextIntent) {
     return
   }
-  mode.value = nextMode
-  error.value = ''
-  if (nextMode === 'phone') {
-    resetPhoneForm()
-  } else {
-    resetEmailForm()
-  }
-}
-
-function setEmailIntent(nextIntent: EmailIntent) {
-  if (emailIntent.value === nextIntent) {
-    return
-  }
-  emailIntent.value = nextIntent
+  intent.value = nextIntent
   nickname.value = ''
   error.value = ''
 }
 
-function buildPhoneIdentifier(): AuthIdentifier | null {
-  const normalizedPhone = phone.value.trim()
-  if (!normalizedPhone) {
-    error.value = '请输入手机号'
-    return null
-  }
-  if (!PHONE_RE.test(normalizedPhone)) {
-    error.value = '请输入正确的手机号'
-    return null
-  }
-  return { phone: normalizedPhone }
-}
-
-function buildEmailPayload(): { email: string; password: string; nickname?: string } | null {
+function validate() {
   const normalizedEmail = email.value.trim().toLowerCase()
   if (!normalizedEmail) {
     error.value = '请输入邮箱'
-    return null
-  }
-  if (!EMAIL_RE.test(normalizedEmail)) {
-    error.value = '请输入正确的邮箱地址'
     return null
   }
   if (!password.value) {
@@ -124,14 +39,14 @@ function buildEmailPayload(): { email: string; password: string; nickname?: stri
     error.value = '密码至少 8 位'
     return null
   }
-  if (isEmailRegister.value && !nickname.value.trim()) {
+  if (intent.value === 'register' && !nickname.value.trim()) {
     error.value = '请输入昵称'
     return null
   }
   return {
     email: normalizedEmail,
     password: password.value,
-    ...(isEmailRegister.value ? { nickname: nickname.value.trim() } : {}),
+    nickname: nickname.value.trim(),
   }
 }
 
@@ -141,72 +56,8 @@ async function finalizeLogin(accessToken: string) {
   await router.replace('/')
 }
 
-async function handleSendCode() {
-  const identifier = buildPhoneIdentifier()
-  if (!identifier) {
-    return
-  }
-
-  loading.value = true
-  error.value = ''
-  try {
-    await sendCode(identifier)
-    phoneStep.value = 'code'
-    startCountdown(60)
-  } catch (e: any) {
-    if (e.code === 'RATE_LIMITED') {
-      const retryAfter = Number(e.message?.match(/\d+/)?.[0] || 60)
-      phoneStep.value = 'code'
-      startCountdown(retryAfter)
-      return
-    }
-    error.value = e.message || '发送验证码失败'
-  } finally {
-    loading.value = false
-  }
-}
-
-async function handlePhoneLogin() {
-  const identifier = buildPhoneIdentifier()
-  if (!identifier) {
-    return
-  }
-  if (!code.value.trim()) {
-    error.value = '请输入验证码'
-    return
-  }
-
-  loading.value = true
-  error.value = ''
-  try {
-    const result = await login({
-      ...identifier,
-      code: code.value.trim(),
-      ...(phoneStep.value === 'nickname' ? { nickname: nickname.value.trim() } : {}),
-    })
-    await finalizeLogin(result.access_token)
-  } catch (e: any) {
-    if (e.code === 'NICKNAME_REQUIRED') {
-      phoneStep.value = 'nickname'
-      error.value = ''
-      return
-    }
-    error.value = e.message || '登录失败'
-  } finally {
-    loading.value = false
-  }
-}
-
-async function handleNicknameSubmit() {
-  if (!nickname.value.trim()) {
-    error.value = '请输入昵称'
-    return
-  }
-  await handlePhoneLogin()
-}
-
-async function handleEmailSubmit() {
-  const payload = buildEmailPayload()
+async function handleSubmit() {
+  const payload = validate()
   if (!payload) {
     return
   }
@@ -214,27 +65,16 @@ async function handleEmailSubmit() {
   loading.value = true
   error.value = ''
   try {
-    const result = isEmailRegister.value
+    const result = intent.value === 'register'
       ? await registerWithPassword(payload)
       : await loginWithPassword({ email: payload.email, password: payload.password })
     await finalizeLogin(result.access_token)
   } catch (e: any) {
-    error.value = e.message || (isEmailRegister.value ? '注册失败' : '登录失败')
+    error.value = e.message || (intent.value === 'register' ? '注册失败' : '登录失败')
   } finally {
     loading.value = false
   }
 }
-
-function handleResendCode() {
-  if (countdown.value > 0) {
-    return
-  }
-  void handleSendCode()
-}
-
-onBeforeUnmount(() => {
-  resetCountdown()
-})
 </script>
 
 <template>
@@ -242,117 +82,31 @@ onBeforeUnmount(() => {
     <div class="login-card">
       <div class="login-header">
         <h1>QY Quant</h1>
-        <p class="subtitle">量化交易平台</p>
+        <p class="subtitle">企业级账户认证</p>
       </div>
 
-      <div class="mode-switch" role="tablist" aria-label="登录方式">
+      <div class="intent-switch">
         <button
-          class="mode-btn"
-          :class="{ active: mode === 'phone' }"
+          class="intent-btn"
+          :class="{ active: intent === 'login' }"
           type="button"
-          data-test="mode-phone"
-          @click="switchMode('phone')"
+          data-test="login-tab"
+          @click="switchIntent('login')"
         >
-          手机号验证码
+          登录
         </button>
         <button
-          class="mode-btn"
-          :class="{ active: mode === 'email' }"
+          class="intent-btn"
+          :class="{ active: intent === 'register' }"
           type="button"
-          data-test="mode-email"
-          @click="switchMode('email')"
+          data-test="register-tab"
+          @click="switchIntent('register')"
         >
-          邮箱密码
+          注册
         </button>
       </div>
 
-      <template v-if="mode === 'phone'">
-        <div v-if="phoneStep === 'identifier'" class="login-form">
-          <label class="field-label">手机号</label>
-          <input
-            v-model="phone"
-            type="tel"
-            class="field-input"
-            placeholder="请输入手机号"
-            maxlength="11"
-            data-test="phone-input"
-            @keyup.enter="handleSendCode"
-          />
-          <p v-if="error" class="error-msg">{{ error }}</p>
-          <button class="submit-btn" :disabled="loading" type="button" data-test="send-code" @click="handleSendCode">
-            {{ loading ? '发送中...' : '获取验证码' }}
-          </button>
-        </div>
-
-        <div v-else-if="phoneStep === 'code'" class="login-form">
-          <label class="field-label">验证码</label>
-          <p class="identifier-hint">验证码已发送至 {{ currentPhone }}</p>
-          <input
-            v-model="code"
-            type="text"
-            class="field-input"
-            placeholder="请输入 6 位验证码"
-            maxlength="6"
-            inputmode="numeric"
-            data-test="code-input"
-            @keyup.enter="handlePhoneLogin"
-          />
-          <p v-if="error" class="error-msg">{{ error }}</p>
-          <button class="submit-btn" :disabled="loading" type="button" data-test="submit-login" @click="handlePhoneLogin">
-            {{ loading ? '登录中...' : '登录 / 注册' }}
-          </button>
-          <button class="resend-btn" type="button" :disabled="countdown > 0" data-test="resend-code" @click="handleResendCode">
-            {{ countdown > 0 ? `${countdown}s 后重新发送` : '重新发送验证码' }}
-          </button>
-        </div>
-
-        <div v-else class="login-form">
-          <label class="field-label">设置昵称</label>
-          <p class="identifier-hint">首次登录，请先设置昵称。</p>
-          <input
-            v-model="nickname"
-            type="text"
-            class="field-input"
-            placeholder="请输入昵称"
-            maxlength="20"
-            data-test="nickname-input"
-            @keyup.enter="handleNicknameSubmit"
-          />
-          <p v-if="error" class="error-msg">{{ error }}</p>
-          <button
-            class="submit-btn"
-            :disabled="loading"
-            type="button"
-            data-test="submit-nickname"
-            @click="handleNicknameSubmit"
-          >
-            {{ loading ? '注册中...' : '完成注册' }}
-          </button>
-        </div>
-      </template>
-
-      <div v-else class="login-form">
-        <div class="intent-switch">
-          <button
-            class="intent-btn"
-            :class="{ active: emailIntent === 'login' }"
-            type="button"
-            data-test="email-login-tab"
-            @click="setEmailIntent('login')"
-          >
-            邮箱登录
-          </button>
-          <button
-            class="intent-btn"
-            :class="{ active: emailIntent === 'register' }"
-            type="button"
-            data-test="email-register-tab"
-            @click="setEmailIntent('register')"
-          >
-            邮箱注册
-          </button>
-        </div>
-
+      <div class="login-form">
         <label class="field-label">邮箱</label>
         <input
           v-model="email"
@@ -361,7 +115,7 @@ onBeforeUnmount(() => {
           placeholder="请输入邮箱"
           autocomplete="email"
           data-test="email-input"
-          @keyup.enter="handleEmailSubmit"
+          @keyup.enter="handleSubmit"
         />
 
         <label class="field-label">密码</label>
@@ -372,10 +126,10 @@ onBeforeUnmount(() => {
           placeholder="请输入密码"
           autocomplete="current-password"
           data-test="password-input"
-          @keyup.enter="handleEmailSubmit"
+          @keyup.enter="handleSubmit"
         />
 
-        <template v-if="isEmailRegister">
+        <template v-if="intent === 'register'">
           <label class="field-label">昵称</label>
           <input
             v-model="nickname"
@@ -383,14 +137,18 @@ onBeforeUnmount(() => {
             class="field-input"
             placeholder="请输入昵称"
             maxlength="20"
-            data-test="email-nickname-input"
-            @keyup.enter="handleEmailSubmit"
+            data-test="nickname-input"
+            @keyup.enter="handleSubmit"
           />
         </template>
 
+        <RouterLink v-if="intent === 'login'" to="/forgot-password" class="forgot-link" data-test="forgot-link">
+          忘记密码？
+        </RouterLink>
+
         <p v-if="error" class="error-msg">{{ error }}</p>
-        <button class="submit-btn" :disabled="loading" type="button" data-test="submit-email" @click="handleEmailSubmit">
-          {{ loading ? (isEmailRegister ? '注册中...' : '登录中...') : (isEmailRegister ? '注册并登录' : '登录') }}
+        <button class="submit-btn" :disabled="loading" type="button" data-test="submit-auth" @click="handleSubmit">
+          {{ loading ? (intent === 'register' ? '注册中...' : '登录中...') : (intent === 'register' ? '注册并登录' : '登录') }}
         </button>
       </div>
     </div>
@@ -435,26 +193,17 @@ onBeforeUnmount(() => {
   color: var(--color-text-muted);
 }
 
-.mode-switch,
 .intent-switch {
   display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 8px;
+  margin-bottom: 20px;
   padding: 6px;
   background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: 16px;
 }
 
-.mode-switch {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  margin-bottom: 20px;
-}
-
-.intent-switch {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-}
-
-.mode-btn,
 .intent-btn {
   height: 40px;
   border: none;
@@ -464,12 +213,8 @@ onBeforeUnmount(() => {
   font-size: 14px;
   font-weight: var(--font-weight-semibold);
   cursor: pointer;
-  transition:
-    background var(--transition-fast),
-    color var(--transition-fast);
 }
 
-.mode-btn.active,
 .intent-btn.active {
   background: linear-gradient(135deg, var(--color-primary), var(--color-primary-dark));
   color: #fff;
@@ -487,12 +232,6 @@ onBeforeUnmount(() => {
   color: var(--color-text-primary);
 }
 
-.identifier-hint {
-  margin: 0;
-  font-size: 13px;
-  color: var(--color-text-muted);
-}
-
 .field-input {
   height: 44px;
   padding: 0 14px;
@@ -502,19 +241,13 @@ onBeforeUnmount(() => {
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
   outline: none;
-  transition:
-    border-color var(--transition-fast),
-    box-shadow var(--transition-fast);
 }
 
-.field-input:focus {
-  background: var(--color-surface-elevated);
-  border-color: var(--color-primary);
-  box-shadow: 0 0 0 3px var(--color-primary-bg);
-}
-
-.field-input::placeholder {
-  color: var(--color-text-muted);
+.forgot-link {
+  font-size: 13px;
+  color: var(--color-primary);
+  text-decoration: none;
+  align-self: flex-end;
 }
 
 .error-msg {
@@ -533,33 +266,10 @@ onBeforeUnmount(() => {
   border: none;
   border-radius: var(--radius-lg);
   cursor: pointer;
-  transition: opacity var(--transition-fast);
-}
-
-.submit-btn:hover:not(:disabled) {
-  opacity: 0.9;
 }
 
 .submit-btn:disabled {
   opacity: 0.6;
-  cursor: not-allowed;
-}
-
-.resend-btn {
-  padding: 8px;
-  font-size: 13px;
-  color: var(--color-text-muted);
-  background: none;
-  border: none;
-  cursor: pointer;
-  transition: color var(--transition-fast);
-}
-
-.resend-btn:hover:not(:disabled) {
-  color: var(--color-primary);
-}
-
-.resend-btn:disabled {
   cursor: not-allowed;
 }
 </style>

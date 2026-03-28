@@ -24,6 +24,8 @@ vi.mock('../views/admin/StrategyReview.vue', () => ({ default: { template: '<div
 vi.mock('../views/admin/ReportManagement.vue', () => ({ default: { template: '<div />' } }))
 vi.mock('../views/admin/BacktestMonitor.vue', () => ({ default: { template: '<div />' } }))
 vi.mock('../views/admin/UserManagement.vue', () => ({ default: { template: '<div />' } }))
+vi.mock('../views/ForgotPasswordView.vue', () => ({ default: { template: '<div />' } }))
+vi.mock('../views/ResetPasswordView.vue', () => ({ default: { template: '<div />' } }))
 
 import router from './index'
 import { useUserStore } from '../stores'
@@ -83,6 +85,16 @@ describe('router', () => {
   it('contains pricing route', () => {
     const hasPricing = router.getRoutes().some((route) => route.path === '/pricing')
     expect(hasPricing).toBe(true)
+  })
+
+  it('contains forgot password route', () => {
+    const hasRoute = router.getRoutes().some((route) => route.path === '/forgot-password')
+    expect(hasRoute).toBe(true)
+  })
+
+  it('contains reset password route', () => {
+    const hasRoute = router.getRoutes().some((route) => route.path === '/reset-password')
+    expect(hasRoute).toBe(true)
   })
 
   it('contains admin route', () => {

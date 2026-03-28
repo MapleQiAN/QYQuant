@@ -19,6 +19,8 @@ import UserProfileView from '../views/UserProfileView.vue'
 import AdminDashboardView from '../views/admin/AdminDashboard.vue'
 import BacktestMonitorView from '../views/admin/BacktestMonitor.vue'
 import LoginView from '../views/LoginView.vue'
+import ForgotPasswordView from '../views/ForgotPasswordView.vue'
+import ResetPasswordView from '../views/ResetPasswordView.vue'
 import DataSourceHealthView from '../views/admin/DataSourceHealth.vue'
 import ReportManagementView from '../views/admin/ReportManagement.vue'
 import StrategyReviewView from '../views/admin/StrategyReview.vue'
@@ -28,6 +30,8 @@ const router = createRouter({
   history: createWebHistory(),
   routes: [
     { path: '/login', name: 'login', component: LoginView, meta: { hideChrome: true } },
+    { path: '/forgot-password', name: 'forgot-password', component: ForgotPasswordView, meta: { hideChrome: true } },
+    { path: '/reset-password', name: 'reset-password', component: ResetPasswordView, meta: { hideChrome: true } },
     { path: '/', name: 'dashboard', component: DashboardView },
     { path: '/strategies', name: 'strategy-library', component: StrategyLibraryView },
     { path: '/strategies/new', name: 'strategy-new', component: NewStrategyView },

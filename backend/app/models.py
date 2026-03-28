@@ -51,6 +51,17 @@ class RefreshToken(db.Model):
     jti = db.Column(db.String(64), nullable=False, unique=True)
     expires_at = db.Column(db.DateTime(timezone=True), nullable=False)
     revoked_at = db.Column(db.DateTime(timezone=True), nullable=True)
+    revoked_reason = db.Column(db.String(32), nullable=True)
+    created_at = db.Column(db.DateTime(timezone=True), nullable=False, default=now_utc)
+
+
+class PasswordResetToken(db.Model):
+    __tablename__ = 'password_reset_tokens'
+    id = db.Column(db.String, primary_key=True, default=gen_id)
+    user_id = db.Column(db.String, db.ForeignKey('users.id'), nullable=False)
+    token_hash = db.Column(db.String(64), nullable=False, unique=True)
+    expires_at = db.Column(db.DateTime(timezone=True), nullable=False)
+    used_at = db.Column(db.DateTime(timezone=True), nullable=True)
     created_at = db.Column(db.DateTime(timezone=True), nullable=False, default=now_utc)
 
 

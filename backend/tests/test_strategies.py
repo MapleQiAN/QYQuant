@@ -498,3 +498,20 @@ def test_import_strategy_returns_422_when_integrity_check_fails(client, tmp_path
 
     assert response.status_code == 422
     assert response.json["error"]["code"] == "INTEGRITY_CHECK_FAILED"
+
+
+def test_import_strategy_returns_503_when_encryption_key_missing(client, monkeypatch, tmp_path):
+    token, _ = _login_user(client, phone="13800138028", nickname="MissingKeyUser")
+    package_path, _, _ = _build_qys_package(tmp_path)
+    monkeypatch.delenv("STRATEGY_ENCRYPT_KEY", raising=False)
+
+    with package_path.open("rb") as handle:
+        response = client.post(
+            "/api/v1/strategies/import",
+            headers=_auth_headers(token),
+            data={"file": (io.BytesIO(handle.read()), package_path.name)},
+            content_type="multipart/form-data",
+        )
+
+    assert response.status_code == 503
+    assert response.json["error"]["code"] == "STRATEGY_ENCRYPTION_UNAVAILABLE"

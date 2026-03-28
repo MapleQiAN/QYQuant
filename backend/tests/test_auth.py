@@ -1,3 +1,6 @@
+from datetime import timedelta
+
+
 def _extract_refresh_cookie(response):
     cookies = response.headers.getlist("Set-Cookie")
     for cookie in cookies:
@@ -12,54 +15,11 @@ def _extract_refresh_cookie_value(cookie_header):
     return cookie_header.split(";", 1)[0].split("=", 1)[1]
 
 
-def _seed_code(app, phone, code="123456", ttl=300):
-    from app.utils.redis_client import get_auth_store
-
-    with app.app_context():
-        get_auth_store().set_verification_code(phone, code, ttl=ttl)
-
-
-def test_send_code_success(client):
-    resp = client.post("/api/v1/auth/send-code", json={"phone": "13800138000"})
-
-    assert resp.status_code == 200
-    assert resp.json["data"]["message"] == "验证码已发送"
-
-
-def test_send_code_rate_limited(client):
-    first = client.post("/api/v1/auth/send-code", json={"phone": "13800138000"})
-    assert first.status_code == 200
-
-    second = client.post("/api/v1/auth/send-code", json={"phone": "13800138000"})
-
-    assert second.status_code == 429
-    assert second.json["error"]["code"] == "RATE_LIMITED"
-    assert second.json["error"]["details"]["retry_after"] > 0
-
-
-def test_send_code_supports_email(client, monkeypatch):
-    from app.extensions import mail
-
-    sent_messages = []
-
-    def _send(message):
-        sent_messages.append(message)
-
-    monkeypatch.setattr(mail, "send", _send)
-
-    resp = client.post("/api/v1/auth/send-code", json={"email": "alice@example.com"})
-
-    assert resp.status_code == 200
-    assert resp.json["data"]["message"] == "验证码已发送"
-    assert len(sent_messages) == 1
-    assert sent_messages[0].recipients == ["alice@example.com"]
-
-
-def test_register_with_password_creates_email_user_and_returns_tokens(client, app):
+def test_register_creates_email_user_and_returns_tokens(client, app):
     from app.models import User
 
     response = client.post(
-        "/api/v1/auth/register/password",
+        "/api/v1/auth/register",
         json={
             "email": "password@example.com",
             "password": "Secret123!",
@@ -79,9 +39,9 @@ def test_register_with_password_creates_email_user_and_returns_tokens(client, ap
         assert user.password_hash
 
 
-def test_register_with_password_rejects_duplicate_email(client):
+def test_register_rejects_duplicate_email(client):
     first = client.post(
-        "/api/v1/auth/register/password",
+        "/api/v1/auth/register",
         json={
             "email": "duplicate@example.com",
             "password": "Secret123!",
@@ -91,7 +51,7 @@ def test_register_with_password_rejects_duplicate_email(client):
     assert first.status_code == 200
 
     second = client.post(
-        "/api/v1/auth/register/password",
+        "/api/v1/auth/register",
         json={
             "email": "duplicate@example.com",
             "password": "Secret123!",
@@ -103,9 +63,9 @@ def test_register_with_password_rejects_duplicate_email(client):
     assert second.json["error"]["code"] == "EMAIL_EXISTS"
 
 
-def test_login_with_password_returns_tokens_without_verification_code(client):
+def test_login_returns_tokens_with_email_and_password(client):
     register = client.post(
-        "/api/v1/auth/register/password",
+        "/api/v1/auth/register",
         json={
             "email": "login@example.com",
             "password": "Secret123!",
@@ -115,7 +75,7 @@ def test_login_with_password_returns_tokens_without_verification_code(client):
     user_id = register.json["data"]["user_id"]
 
     response = client.post(
-        "/api/v1/auth/login/password",
+        "/api/v1/auth/login",
         json={
             "email": "login@example.com",
             "password": "Secret123!",
@@ -127,9 +87,9 @@ def test_login_with_password_returns_tokens_without_verification_code(client):
     assert isinstance(response.json["access_token"], str)
 
 
-def test_login_with_password_rejects_invalid_password(client):
+def test_login_rejects_invalid_password(client):
     register = client.post(
-        "/api/v1/auth/register/password",
+        "/api/v1/auth/register",
         json={
             "email": "bad-password@example.com",
             "password": "Secret123!",
@@ -139,7 +99,7 @@ def test_login_with_password_rejects_invalid_password(client):
     assert register.status_code == 200
 
     response = client.post(
-        "/api/v1/auth/login/password",
+        "/api/v1/auth/login",
         json={
             "email": "bad-password@example.com",
             "password": "wrong-password",
@@ -150,195 +110,181 @@ def test_login_with_password_rejects_invalid_password(client):
     assert response.json["error"]["code"] == "INVALID_CREDENTIALS"
 
 
-def test_first_login_registers_user_and_returns_tokens(client):
-    _seed_code(client.application, "13800138000")
+def test_forgot_password_returns_success_for_existing_email(client, monkeypatch):
+    from app.extensions import mail
 
-    resp = client.post(
-        "/api/v1/auth/login",
+    client.post(
+        "/api/v1/auth/register",
         json={
-            "phone": "13800138000",
-            "code": "123456",
-            "nickname": "量化小白",
+            "email": "forgot@example.com",
+            "password": "Secret123!",
+            "nickname": "ForgotUser",
         },
     )
 
-    assert resp.status_code == 200
-    assert resp.json["data"]["phone"] == "138****8000"
-    assert resp.json["data"]["nickname"] == "量化小白"
-    assert resp.json["data"]["plan_level"] == "free"
-    assert isinstance(resp.json["access_token"], str)
-    assert "HttpOnly" in _extract_refresh_cookie(resp)
+    sent_messages = []
+    monkeypatch.setattr(mail, "send", lambda message: sent_messages.append(message))
 
-
-def test_first_email_login_registers_user_and_returns_tokens(client, app):
-    from app.extensions import db
-    from app.models import User
-
-    with app.app_context():
-        from app.utils.redis_client import get_auth_store
-
-        get_auth_store().set_verification_code("alice@example.com", "123456", ttl=300)
-
-    resp = client.post(
-        "/api/v1/auth/login",
-        json={
-            "email": "alice@example.com",
-            "code": "123456",
-            "nickname": "EmailUser",
-        },
-    )
-
-    assert resp.status_code == 200
-    assert resp.json["data"]["nickname"] == "EmailUser"
-    assert isinstance(resp.json["access_token"], str)
-    assert "HttpOnly" in _extract_refresh_cookie(resp)
-
-    with app.app_context():
-        user = User.query.filter_by(email="alice@example.com").one_or_none()
-        assert user is not None
-        assert user.phone is None
-        assert user.nickname == "EmailUser"
-
-
-def test_first_login_creates_default_user_quota(client, app):
-    from app.extensions import db
-    from app.models import UserQuota
-
-    _seed_code(client.application, "13800138111")
-
-    resp = client.post(
-        "/api/v1/auth/login",
-        json={
-            "phone": "13800138111",
-            "code": "123456",
-            "nickname": "QuotaInit",
-        },
-    )
-
-    assert resp.status_code == 200
-    user_id = resp.json["data"]["user_id"]
-
-    with app.app_context():
-        quota = db.session.get(UserQuota, user_id)
-        assert quota is not None
-        assert quota.plan_level == "free"
-        assert quota.used_count == 0
-
-
-def test_registered_user_login_reuses_same_user(client):
-    _seed_code(client.application, "13800138000")
-    first_login = client.post(
-        "/api/v1/auth/login",
-        json={
-            "phone": "13800138000",
-            "code": "123456",
-            "nickname": "量化小白",
-        },
-    )
-    first_user_id = first_login.json["data"]["user_id"]
-
-    _seed_code(client.application, "13800138000")
-    second_login = client.post(
-        "/api/v1/auth/login",
-        json={
-            "phone": "13800138000",
-            "code": "123456",
-        },
-    )
-
-    assert second_login.status_code == 200
-    assert second_login.json["data"]["user_id"] == first_user_id
-
-
-def test_registered_email_user_login_reuses_same_user(client, app):
-    with app.app_context():
-        from app.utils.redis_client import get_auth_store
-
-        get_auth_store().set_verification_code("alice@example.com", "123456", ttl=300)
-    first_login = client.post(
-        "/api/v1/auth/login",
-        json={
-            "email": "alice@example.com",
-            "code": "123456",
-            "nickname": "EmailUser",
-        },
-    )
-    first_user_id = first_login.json["data"]["user_id"]
-
-    with app.app_context():
-        from app.utils.redis_client import get_auth_store
-
-        get_auth_store().set_verification_code("alice@example.com", "123456", ttl=300)
-    second_login = client.post(
-        "/api/v1/auth/login",
-        json={
-            "email": "alice@example.com",
-            "code": "123456",
-        },
-    )
-
-    assert second_login.status_code == 200
-    assert second_login.json["data"]["user_id"] == first_user_id
-
-
-def test_login_rejects_request_without_phone_or_email(client):
     response = client.post(
+        "/api/v1/auth/forgot-password",
+        json={"email": "forgot@example.com"},
+    )
+
+    assert response.status_code == 200
+    assert response.json["data"]["message"] == "If the account exists, a reset email has been sent."
+    assert len(sent_messages) == 1
+
+
+def test_forgot_password_returns_same_success_for_missing_email(client, monkeypatch):
+    from app.extensions import mail
+
+    sent_messages = []
+    monkeypatch.setattr(mail, "send", lambda message: sent_messages.append(message))
+
+    response = client.post(
+        "/api/v1/auth/forgot-password",
+        json={"email": "missing@example.com"},
+    )
+
+    assert response.status_code == 200
+    assert response.json["data"]["message"] == "If the account exists, a reset email has been sent."
+    assert sent_messages == []
+
+
+def test_reset_password_updates_hash_and_revokes_existing_refresh_tokens(client, app, monkeypatch):
+    from app.extensions import db, mail
+    from app.models import PasswordResetToken, User
+
+    login = client.post(
+        "/api/v1/auth/register",
+        json={
+            "email": "reset@example.com",
+            "password": "Secret123!",
+            "nickname": "ResetUser",
+        },
+    )
+    original_cookie = _extract_refresh_cookie(login)
+    assert original_cookie
+
+    monkeypatch.setattr(mail, "send", lambda message: None)
+    monkeypatch.setattr("app.blueprints.auth._issue_password_reset_token", lambda: "reset-token-123")
+
+    forgot = client.post(
+        "/api/v1/auth/forgot-password",
+        json={"email": "reset@example.com"},
+    )
+    assert forgot.status_code == 200
+
+    response = client.post(
+        "/api/v1/auth/reset-password",
+        json={
+            "token": "reset-token-123",
+            "password": "NewSecret123!",
+        },
+    )
+
+    assert response.status_code == 200
+    assert response.json["data"]["message"] == "Password reset successful"
+
+    with app.app_context():
+        user = User.query.filter_by(email="reset@example.com").one()
+        assert user.password_hash
+        token_record = PasswordResetToken.query.filter_by(user_id=user.id).one()
+        assert token_record.used_at is not None
+
+    old_client = client.application.test_client()
+    old_client.set_cookie("refresh_token", _extract_refresh_cookie_value(original_cookie), path="/api/v1/auth")
+    refresh = old_client.post("/api/v1/auth/refresh")
+    assert refresh.status_code == 401
+    assert refresh.json["error"]["code"] == "TOKEN_REVOKED"
+
+    relogin = client.post(
         "/api/v1/auth/login",
         json={
-            "code": "123456",
-            "nickname": "MissingIdentifier",
+            "email": "reset@example.com",
+            "password": "NewSecret123!",
         },
+    )
+    assert relogin.status_code == 200
+
+
+def test_reset_password_rejects_reused_token(client, monkeypatch):
+    from app.extensions import mail
+
+    client.post(
+        "/api/v1/auth/register",
+        json={
+            "email": "reuse@example.com",
+            "password": "Secret123!",
+            "nickname": "ReuseUser",
+        },
+    )
+
+    monkeypatch.setattr(mail, "send", lambda message: None)
+    monkeypatch.setattr("app.blueprints.auth._issue_password_reset_token", lambda: "reused-token-123")
+
+    client.post(
+        "/api/v1/auth/forgot-password",
+        json={"email": "reuse@example.com"},
+    )
+
+    first = client.post(
+        "/api/v1/auth/reset-password",
+        json={"token": "reused-token-123", "password": "NewSecret123!"},
+    )
+    assert first.status_code == 200
+
+    second = client.post(
+        "/api/v1/auth/reset-password",
+        json={"token": "reused-token-123", "password": "AnotherSecret123!"},
+    )
+
+    assert second.status_code == 422
+    assert second.json["error"]["code"] == "INVALID_TOKEN"
+
+
+def test_reset_password_rejects_expired_token(client, app):
+    from app.extensions import db
+    from app.models import PasswordResetToken, User
+    from app.blueprints.auth import _hash_token
+    from app.utils.time import now_utc
+
+    client.post(
+        "/api/v1/auth/register",
+        json={
+            "email": "expired@example.com",
+            "password": "Secret123!",
+            "nickname": "ExpiredUser",
+        },
+    )
+
+    with app.app_context():
+        user = User.query.filter_by(email="expired@example.com").one()
+        db.session.add(
+            PasswordResetToken(
+                user_id=user.id,
+                token_hash=_hash_token("expired-token-123"),
+                expires_at=now_utc() - timedelta(minutes=1),
+            )
+        )
+        db.session.commit()
+
+    response = client.post(
+        "/api/v1/auth/reset-password",
+        json={"token": "expired-token-123", "password": "NewSecret123!"},
     )
 
     assert response.status_code == 422
-    assert response.json["error"]["code"] == "INVALID_IDENTIFIER"
-
-
-def test_login_rejects_banned_user(client, app):
-    from app.extensions import db
-    from app.models import User
-
-    _seed_code(client.application, "13800138123")
-    first_login = client.post(
-        "/api/v1/auth/login",
-        json={
-            "phone": "13800138123",
-            "code": "123456",
-            "nickname": "BannedUser",
-        },
-    )
-    assert first_login.status_code == 200
-    user_id = first_login.json["data"]["user_id"]
-
-    with app.app_context():
-        user = db.session.get(User, user_id)
-        user.is_banned = True
-        db.session.commit()
-
-    _seed_code(client.application, "13800138123")
-    response = client.post(
-        "/api/v1/auth/login",
-        json={
-            "phone": "13800138123",
-            "code": "123456",
-        },
-    )
-
-    assert response.status_code == 403
-    assert response.json["error"] == {
-        "code": "USER_BANNED",
-        "message": "账号已被封禁",
-    }
+    assert response.json["error"]["code"] == "INVALID_TOKEN"
 
 
 def test_refresh_rotates_refresh_token_and_returns_new_access_token(client):
-    _seed_code(client.application, "13800138000")
     login = client.post(
-        "/api/v1/auth/login",
+        "/api/v1/auth/register",
         json={
-            "phone": "13800138000",
-            "code": "123456",
-            "nickname": "量化小白",
+            "email": "refresh@example.com",
+            "password": "Secret123!",
+            "nickname": "RefreshUser",
         },
     )
     first_cookie = _extract_refresh_cookie(login)
@@ -353,17 +299,47 @@ def test_refresh_rotates_refresh_token_and_returns_new_access_token(client):
     assert second_cookie != first_cookie
 
 
-def test_profile_returns_private_user_payload_with_onboarding_state(client, app):
+def test_refresh_token_reuse_revokes_all_active_sessions(client):
+    device_a_login = client.post(
+        "/api/v1/auth/register",
+        json={"email": "reuse-refresh@example.com", "password": "Secret123!", "nickname": "ReuseRefreshUser"},
+    )
+    original_cookie = _extract_refresh_cookie(device_a_login)
+    assert original_cookie
+
+    rotated = client.post("/api/v1/auth/refresh")
+    assert rotated.status_code == 200
+
+    device_b = client.application.test_client()
+    device_b_login = device_b.post(
+        "/api/v1/auth/login",
+        json={"email": "reuse-refresh@example.com", "password": "Secret123!"},
+    )
+    device_b_cookie = _extract_refresh_cookie(device_b_login)
+    assert device_b_cookie
+
+    attacker = client.application.test_client()
+    attacker.set_cookie("refresh_token", _extract_refresh_cookie_value(original_cookie), path="/api/v1/auth")
+    replay = attacker.post("/api/v1/auth/refresh")
+    assert replay.status_code == 401
+    assert replay.json["error"]["code"] == "TOKEN_REVOKED"
+
+    device_b.set_cookie("refresh_token", _extract_refresh_cookie_value(device_b_cookie), path="/api/v1/auth")
+    compromised_refresh = device_b.post("/api/v1/auth/refresh")
+    assert compromised_refresh.status_code == 401
+    assert compromised_refresh.json["error"]["code"] == "TOKEN_REVOKED"
+
+
+def test_profile_returns_private_user_payload(client, app):
     from app.extensions import db
     from app.models import User
 
-    _seed_code(client.application, "13800138999")
     login = client.post(
-        "/api/v1/auth/login",
+        "/api/v1/auth/register",
         json={
-            "phone": "13800138999",
-            "code": "123456",
-            "nickname": "OnboardingUser",
+            "email": "profile@example.com",
+            "password": "Secret123!",
+            "nickname": "ProfileUser",
         },
     )
     access_token = login.json["access_token"]
@@ -371,8 +347,8 @@ def test_profile_returns_private_user_payload_with_onboarding_state(client, app)
 
     with app.app_context():
         user = db.session.get(User, user_id)
-        user.avatar_url = "https://example.com/onboarding.png"
-        user.bio = "First-time quant user"
+        user.avatar_url = "https://example.com/profile.png"
+        user.bio = "Profile bio"
         user.onboarding_completed = False
         db.session.commit()
 
@@ -384,27 +360,23 @@ def test_profile_returns_private_user_payload_with_onboarding_state(client, app)
     assert response.status_code == 200
     data = response.json["data"]
     assert data["id"] == user_id
-    assert data["nickname"] == "OnboardingUser"
+    assert data["nickname"] == "ProfileUser"
+    assert data["email"] == "pr***@example.com"
     assert data["onboarding_completed"] is False
-    assert data["avatar_url"] == "https://example.com/onboarding.png"
 
 
 def test_logout_revokes_current_device_refresh_token_only(client):
-    phone = "13800138000"
-
-    _seed_code(client.application, phone)
     device_a_login = client.post(
-        "/api/v1/auth/login",
-        json={"phone": phone, "code": "123456", "nickname": "量化小白"},
+        "/api/v1/auth/register",
+        json={"email": "logout@example.com", "password": "Secret123!", "nickname": "LogoutUser"},
     )
     device_a_cookie = _extract_refresh_cookie(device_a_login)
     assert device_a_cookie
 
     device_b = client.application.test_client()
-    _seed_code(device_b.application, phone)
     device_b_login = device_b.post(
         "/api/v1/auth/login",
-        json={"phone": phone, "code": "123456"},
+        json={"email": "logout@example.com", "password": "Secret123!"},
     )
     device_b_cookie = _extract_refresh_cookie(device_b_login)
     assert device_b_cookie
@@ -419,6 +391,7 @@ def test_logout_revokes_current_device_refresh_token_only(client):
     assert revoked_refresh.status_code == 401
     assert revoked_refresh.json["error"]["code"] == "TOKEN_REVOKED"
 
+    device_b.set_cookie("refresh_token", _extract_refresh_cookie_value(device_b_cookie), path="/api/v1/auth")
     surviving_refresh = device_b.post("/api/v1/auth/refresh")
     assert surviving_refresh.status_code == 200
     assert isinstance(surviving_refresh.json["data"]["access_token"], str)

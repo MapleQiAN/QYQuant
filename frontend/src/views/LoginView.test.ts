@@ -6,20 +6,20 @@ import LoginView from './LoginView.vue'
 const {
   replaceMock,
   refreshProfileMock,
-  sendCodeMock,
-  loginMock,
   loginWithPasswordMock,
   registerWithPasswordMock,
 } = vi.hoisted(() => ({
   replaceMock: vi.fn(),
   refreshProfileMock: vi.fn(),
-  sendCodeMock: vi.fn(),
-  loginMock: vi.fn(),
   loginWithPasswordMock: vi.fn(),
   registerWithPasswordMock: vi.fn(),
 }))
 
 vi.mock('vue-router', () => ({
+  RouterLink: {
+    props: ['to'],
+    template: '<a :href="typeof to === \'string\' ? to : to.path"><slot /></a>',
+  },
   useRouter: () => ({
     replace: replaceMock,
   }),
@@ -32,8 +32,6 @@ vi.mock('../stores/user', () => ({
 }))
 
 vi.mock('../api/auth', () => ({
-  sendCode: sendCodeMock,
-  login: loginMock,
   loginWithPassword: loginWithPasswordMock,
   registerWithPassword: registerWithPasswordMock,
 }))
@@ -42,8 +40,6 @@ describe('LoginView', () => {
   beforeEach(() => {
     replaceMock.mockReset()
     refreshProfileMock.mockReset()
-    sendCodeMock.mockReset()
-    loginMock.mockReset()
     loginWithPasswordMock.mockReset()
     registerWithPasswordMock.mockReset()
     localStorage.clear()
@@ -64,10 +60,9 @@ describe('LoginView', () => {
 
     const wrapper = mount(LoginView)
 
-    await wrapper.get('[data-test="mode-email"]').trigger('click')
     await wrapper.get('[data-test="email-input"]').setValue('alice@example.com')
     await wrapper.get('[data-test="password-input"]').setValue('Secret123!')
-    await wrapper.get('[data-test="submit-email"]').trigger('click')
+    await wrapper.get('[data-test="submit-auth"]').trigger('click')
     await flushPromises()
 
     expect(loginWithPasswordMock).toHaveBeenCalledWith({
@@ -79,7 +74,7 @@ describe('LoginView', () => {
     expect(replaceMock).toHaveBeenCalledWith('/')
   })
 
-  it('submits email password registration with nickname', async () => {
+  it('submits email registration with nickname', async () => {
     registerWithPasswordMock.mockResolvedValueOnce({
       access_token: 'token-2',
       data: {
@@ -89,17 +84,14 @@ describe('LoginView', () => {
         plan_level: 'free',
       },
     })
-    refreshProfileMock.mockResolvedValueOnce(undefined)
-    replaceMock.mockResolvedValueOnce(undefined)
 
     const wrapper = mount(LoginView)
 
-    await wrapper.get('[data-test="mode-email"]').trigger('click')
-    await wrapper.get('[data-test="email-register-tab"]').trigger('click')
+    await wrapper.get('[data-test="register-tab"]').trigger('click')
     await wrapper.get('[data-test="email-input"]').setValue('alice@example.com')
     await wrapper.get('[data-test="password-input"]').setValue('Secret123!')
-    await wrapper.get('[data-test="email-nickname-input"]').setValue('Alice')
-    await wrapper.get('[data-test="submit-email"]').trigger('click')
+    await wrapper.get('[data-test="nickname-input"]').setValue('Alice')
+    await wrapper.get('[data-test="submit-auth"]').trigger('click')
     await flushPromises()
 
     expect(registerWithPasswordMock).toHaveBeenCalledWith({
@@ -107,36 +99,11 @@ describe('LoginView', () => {
       password: 'Secret123!',
       nickname: 'Alice',
     })
-    expect(localStorage.getItem('qyquant-token')).toBe('token-2')
   })
 
-  it('still supports phone verification login flow', async () => {
-    sendCodeMock.mockResolvedValueOnce({ message: 'ok' })
-    loginMock.mockResolvedValueOnce({
-      access_token: 'token-3',
-      data: {
-        user_id: 'user-3',
-        phone: '138****8000',
-        nickname: 'PhoneUser',
-        plan_level: 'free',
-      },
-    })
-    refreshProfileMock.mockResolvedValueOnce(undefined)
-    replaceMock.mockResolvedValueOnce(undefined)
-
+  it('shows forgot password link on login tab', () => {
     const wrapper = mount(LoginView)
 
-    await wrapper.get('[data-test="phone-input"]').setValue('13800138000')
-    await wrapper.get('[data-test="send-code"]').trigger('click')
-    await flushPromises()
-    await wrapper.get('[data-test="code-input"]').setValue('123456')
-    await wrapper.get('[data-test="submit-login"]').trigger('click')
-    await flushPromises()
-
-    expect(sendCodeMock).toHaveBeenCalledWith({ phone: '13800138000' })
-    expect(loginMock).toHaveBeenCalledWith({
-      phone: '13800138000',
-      code: '123456',
-    })
+    expect(wrapper.get('[data-test="forgot-link"]').attributes('href')).toBe('/forgot-password')
   })
 })

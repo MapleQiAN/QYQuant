@@ -4,14 +4,14 @@ from flask import current_app, request
 from flask_jwt_extended import get_jwt_identity, jwt_required
 from flask_smorest import Blueprint
 from marshmallow import ValidationError
+from werkzeug.security import check_password_hash
 
 from ..extensions import db
 from ..models import Post, Strategy, User
 from ..quota import ensure_user_quota, get_plan_limit, serialize_plan_limit
 from ..schemas import UserPrivateSchema, UserPublicSchema, UserUpdateSchema
 from ..utils.audit import log_audit
-from ..utils.auth import blacklist_refresh_tokens, clear_refresh_cookie, consume_verification_code, revoke_all_user_tokens
-from ..utils.phone import mask_phone
+from ..utils.auth import blacklist_refresh_tokens, clear_refresh_cookie, revoke_all_user_tokens
 from ..utils.response import error_response, ok
 from ..utils.time import format_beijing_iso, now_utc
 
@@ -20,6 +20,14 @@ bp = Blueprint('users', __name__, url_prefix='/api/v1/users')
 _private_schema = UserPrivateSchema()
 _public_schema = UserPublicSchema()
 _update_schema = UserUpdateSchema()
+
+
+def _mask_email(email):
+    if not email or '@' not in email:
+        return ''
+    local_part, domain = email.split('@', 1)
+    visible = local_part[:2] if len(local_part) > 2 else local_part[:1]
+    return f"{visible}***@{domain}"
 
 
 def _get_user_or_404(user_id):
@@ -92,15 +100,15 @@ def delete_me():
         return error
 
     payload = request.get_json() or {}
-    code = (payload.get("code") or "").strip()
-    code_error = consume_verification_code(user.phone or user.email or "", code)
-    if code_error:
-        return code_error
+    password = payload.get("password") or ""
+    if not user.password_hash or not check_password_hash(user.password_hash, password):
+        return error_response("INVALID_PASSWORD", "Current password is incorrect", 422)
 
-    masked_phone = mask_phone(user.phone or "")
-    revoked_tokens = revoke_all_user_tokens(user.id)
+    masked_email = _mask_email(user.email or "")
+    revoked_tokens = revoke_all_user_tokens(user.id, reason='user_delete')
     user.phone = None
     user.email = None
+    user.password_hash = None
     user.nickname = "已注销用户"
     user.avatar_url = ""
     user.bio = ""
@@ -115,7 +123,7 @@ def delete_me():
         action="user_delete",
         target_type="user",
         target_id=user.id,
-        details={"phone": masked_phone, "status": "deleted"},
+        details={"email": masked_email, "status": "deleted"},
     )
     db.session.commit()
     blacklist_refresh_tokens(revoked_tokens)

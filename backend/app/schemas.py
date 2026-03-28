@@ -10,10 +10,18 @@ def _value(obj, name):
     return getattr(obj, name, None)
 
 
+def _mask_email(value):
+    if not value or '@' not in value:
+        return None
+    local_part, domain = value.split('@', 1)
+    visible = local_part[:2] if len(local_part) > 2 else local_part[:1]
+    return f"{visible}***@{domain}"
+
+
 class UserPrivateSchema(Schema):
     id = fields.Str()
-    phone = fields.Function(lambda obj: mask_phone(_value(obj, "phone")))
-    email = fields.Str(allow_none=True)
+    phone = fields.Function(lambda obj: mask_phone(_value(obj, "phone")) if _value(obj, "phone") else None)
+    email = fields.Function(lambda obj: _mask_email(_value(obj, "email")))
     nickname = fields.Str(required=True)
     avatar_url = fields.Str(required=True)
     bio = fields.Str(required=True)

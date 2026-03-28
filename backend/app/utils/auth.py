@@ -58,19 +58,20 @@ def consume_verification_code(phone, code):
     return None
 
 
-def revoke_token_record(record):
+def revoke_token_record(record, reason=None):
     if record and record.revoked_at is None:
         record.revoked_at = now_utc()
+        record.revoked_reason = reason
 
 
-def revoke_all_user_tokens(user_id):
+def revoke_all_user_tokens(user_id, reason=None):
     active_tokens = (
         RefreshToken.query.filter_by(user_id=user_id)
         .filter(RefreshToken.revoked_at.is_(None))
         .all()
     )
     for token in active_tokens:
-        revoke_token_record(token)
+        revoke_token_record(token, reason=reason)
     return active_tokens
 
 

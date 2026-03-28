@@ -141,7 +141,7 @@ def _upsert_strategy(*, manifest, entrypoint_source, owner_id, storage_key):
         "tags": tags,
         "owner_id": owner_id,
         "storage_key": storage_key,
-        "code_encrypted": encrypt_strategy(payload),
+        "code_encrypted": _encrypt_strategy_payload(payload),
         "code_hash": hash_strategy_source(payload),
         "last_update": now_ms(),
         "updated_at": now_ms(),
@@ -165,6 +165,24 @@ def _upsert_strategy(*, manifest, entrypoint_source, owner_id, storage_key):
         setattr(strategy, key, value)
     db.session.flush()
     return strategy
+
+
+def _encrypt_strategy_payload(payload):
+    try:
+        return encrypt_strategy(payload)
+    except RuntimeError as exc:
+        raise StrategyImportError(
+            "STRATEGY_ENCRYPTION_UNAVAILABLE",
+            "Strategy encryption is not configured",
+            503,
+        ) from exc
+    except ValueError as exc:
+        raise StrategyImportError(
+            "STRATEGY_ENCRYPTION_UNAVAILABLE",
+            "Strategy encryption key is invalid",
+            503,
+            details={"reason": str(exc)},
+        ) from exc
 
 
 def _safe_symbol(manifest):
