@@ -37,6 +37,24 @@ def test_send_code_rate_limited(client):
     assert second.json["error"]["details"]["retry_after"] > 0
 
 
+def test_send_code_supports_email(client, monkeypatch):
+    from app.extensions import mail
+
+    sent_messages = []
+
+    def _send(message):
+        sent_messages.append(message)
+
+    monkeypatch.setattr(mail, "send", _send)
+
+    resp = client.post("/api/v1/auth/send-code", json={"email": "alice@example.com"})
+
+    assert resp.status_code == 200
+    assert resp.json["data"]["message"] == "验证码已发送"
+    assert len(sent_messages) == 1
+    assert sent_messages[0].recipients == ["alice@example.com"]
+
+
 def test_first_login_registers_user_and_returns_tokens(client):
     _seed_code(client.application, "13800138000")
 
@@ -55,6 +73,36 @@ def test_first_login_registers_user_and_returns_tokens(client):
     assert resp.json["data"]["plan_level"] == "free"
     assert isinstance(resp.json["access_token"], str)
     assert "HttpOnly" in _extract_refresh_cookie(resp)
+
+
+def test_first_email_login_registers_user_and_returns_tokens(client, app):
+    from app.extensions import db
+    from app.models import User
+
+    with app.app_context():
+        from app.utils.redis_client import get_auth_store
+
+        get_auth_store().set_verification_code("alice@example.com", "123456", ttl=300)
+
+    resp = client.post(
+        "/api/v1/auth/login",
+        json={
+            "email": "alice@example.com",
+            "code": "123456",
+            "nickname": "EmailUser",
+        },
+    )
+
+    assert resp.status_code == 200
+    assert resp.json["data"]["nickname"] == "EmailUser"
+    assert isinstance(resp.json["access_token"], str)
+    assert "HttpOnly" in _extract_refresh_cookie(resp)
+
+    with app.app_context():
+        user = User.query.filter_by(email="alice@example.com").one_or_none()
+        assert user is not None
+        assert user.phone is None
+        assert user.nickname == "EmailUser"
 
 
 def test_first_login_creates_default_user_quota(client, app):
@@ -105,6 +153,50 @@ def test_registered_user_login_reuses_same_user(client):
 
     assert second_login.status_code == 200
     assert second_login.json["data"]["user_id"] == first_user_id
+
+
+def test_registered_email_user_login_reuses_same_user(client, app):
+    with app.app_context():
+        from app.utils.redis_client import get_auth_store
+
+        get_auth_store().set_verification_code("alice@example.com", "123456", ttl=300)
+    first_login = client.post(
+        "/api/v1/auth/login",
+        json={
+            "email": "alice@example.com",
+            "code": "123456",
+            "nickname": "EmailUser",
+        },
+    )
+    first_user_id = first_login.json["data"]["user_id"]
+
+    with app.app_context():
+        from app.utils.redis_client import get_auth_store
+
+        get_auth_store().set_verification_code("alice@example.com", "123456", ttl=300)
+    second_login = client.post(
+        "/api/v1/auth/login",
+        json={
+            "email": "alice@example.com",
+            "code": "123456",
+        },
+    )
+
+    assert second_login.status_code == 200
+    assert second_login.json["data"]["user_id"] == first_user_id
+
+
+def test_login_rejects_request_without_phone_or_email(client):
+    response = client.post(
+        "/api/v1/auth/login",
+        json={
+            "code": "123456",
+            "nickname": "MissingIdentifier",
+        },
+    )
+
+    assert response.status_code == 422
+    assert response.json["error"]["code"] == "INVALID_IDENTIFIER"
 
 
 def test_login_rejects_banned_user(client, app):

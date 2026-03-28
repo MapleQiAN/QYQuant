@@ -13,6 +13,7 @@ def _value(obj, name):
 class UserPrivateSchema(Schema):
     id = fields.Str()
     phone = fields.Function(lambda obj: mask_phone(_value(obj, "phone")))
+    email = fields.Str(allow_none=True)
     nickname = fields.Str(required=True)
     avatar_url = fields.Str(required=True)
     bio = fields.Str(required=True)

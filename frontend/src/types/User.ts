@@ -13,6 +13,7 @@ export interface User {
   onboarding_completed: boolean
   sim_disclaimer_accepted: boolean
   phone?: string
+  email?: string
   created_at?: string
   updated_at?: string
 }
@@ -20,6 +21,7 @@ export interface User {
 export interface UserProfileResponse {
   id?: string
   phone?: string
+  email?: string
   nickname: string
   avatar_url: string
   bio: string

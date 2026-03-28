@@ -1,59 +1,122 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { computed, onBeforeUnmount, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { sendCode, login } from '../api/auth'
+import { login, sendCode, type AuthIdentifier } from '../api/auth'
 import { useUserStore } from '../stores/user'
+
+type LoginMode = 'phone' | 'email'
+type LoginStep = 'identifier' | 'code' | 'nickname'
+
+const PHONE_RE = /^1[3-9]\d{9}$/
+const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/
 
 const router = useRouter()
 const userStore = useUserStore()
 
+const mode = ref<LoginMode>('phone')
 const phone = ref('')
+const email = ref('')
 const code = ref('')
 const nickname = ref('')
-const step = ref<'phone' | 'code' | 'nickname'>('phone')
+const step = ref<LoginStep>('identifier')
 const loading = ref(false)
 const error = ref('')
 const countdown = ref(0)
 
 let countdownTimer: ReturnType<typeof setInterval> | null = null
 
+const currentIdentifier = computed(() =>
+  mode.value === 'phone' ? phone.value.trim() : email.value.trim().toLowerCase(),
+)
+
+const identifierLabel = computed(() => (mode.value === 'phone' ? '手机号' : '邮箱'))
+
+function resetCountdown() {
+  if (countdownTimer) {
+    clearInterval(countdownTimer)
+    countdownTimer = null
+  }
+  countdown.value = 0
+}
+
 function startCountdown(seconds: number) {
+  resetCountdown()
   countdown.value = seconds
   countdownTimer = setInterval(() => {
-    countdown.value--
-    if (countdown.value <= 0 && countdownTimer) {
-      clearInterval(countdownTimer)
-      countdownTimer = null
+    countdown.value -= 1
+    if (countdown.value <= 0) {
+      resetCountdown()
     }
   }, 1000)
 }
 
+function switchMode(nextMode: LoginMode) {
+  if (mode.value === nextMode) {
+    return
+  }
+  mode.value = nextMode
+  code.value = ''
+  nickname.value = ''
+  error.value = ''
+  step.value = 'identifier'
+  resetCountdown()
+}
+
+function buildIdentifierPayload(): AuthIdentifier | null {
+  if (mode.value === 'phone') {
+    if (!phone.value.trim()) {
+      error.value = '请输入手机号'
+      return null
+    }
+    if (!PHONE_RE.test(phone.value.trim())) {
+      error.value = '请输入正确的手机号'
+      return null
+    }
+    return { phone: phone.value.trim() }
+  }
+
+  const normalizedEmail = email.value.trim().toLowerCase()
+  if (!normalizedEmail) {
+    error.value = '请输入邮箱'
+    return null
+  }
+  if (!EMAIL_RE.test(normalizedEmail)) {
+    error.value = '请输入正确的邮箱地址'
+    return null
+  }
+  return { email: normalizedEmail }
+}
+
 async function handleSendCode() {
-  if (!phone.value.trim()) {
-    error.value = '请输入手机号'
+  const identifier = buildIdentifierPayload()
+  if (!identifier) {
     return
   }
 
   loading.value = true
   error.value = ''
   try {
-    await sendCode(phone.value.trim())
+    await sendCode(identifier)
     step.value = 'code'
     startCountdown(60)
   } catch (e: any) {
     if (e.code === 'RATE_LIMITED') {
-      const retryAfter = e.message?.match(/\d+/)?.[0] || 60
-      startCountdown(Number(retryAfter))
+      const retryAfter = Number(e.message?.match(/\d+/)?.[0] || 60)
       step.value = 'code'
-    } else {
-      error.value = e.message || '发送验证码失败'
+      startCountdown(retryAfter)
+      return
     }
+    error.value = e.message || '发送验证码失败'
   } finally {
     loading.value = false
   }
 }
 
 async function handleLogin() {
+  const identifier = buildIdentifierPayload()
+  if (!identifier) {
+    return
+  }
   if (!code.value.trim()) {
     error.value = '请输入验证码'
     return
@@ -62,21 +125,21 @@ async function handleLogin() {
   loading.value = true
   error.value = ''
   try {
-    const result = await login(
-      phone.value.trim(),
-      code.value.trim(),
-      step.value === 'nickname' ? nickname.value.trim() : undefined,
-    )
+    const result = await login({
+      ...identifier,
+      code: code.value.trim(),
+      ...(step.value === 'nickname' ? { nickname: nickname.value.trim() } : {}),
+    })
     localStorage.setItem('qyquant-token', result.access_token)
     await userStore.refreshProfile()
-    router.replace('/')
+    await router.replace('/')
   } catch (e: any) {
     if (e.code === 'NICKNAME_REQUIRED') {
       step.value = 'nickname'
       error.value = ''
-    } else {
-      error.value = e.message || '登录失败'
+      return
     }
+    error.value = e.message || '登录失败'
   } finally {
     loading.value = false
   }
@@ -91,9 +154,15 @@ async function handleNicknameSubmit() {
 }
 
 function handleResendCode() {
-  if (countdown.value > 0) return
-  handleSendCode()
+  if (countdown.value > 0) {
+    return
+  }
+  void handleSendCode()
 }
+
+onBeforeUnmount(() => {
+  resetCountdown()
+})
 </script>
 
 <template>
@@ -104,64 +173,97 @@ function handleResendCode() {
         <p class="subtitle">量化交易平台</p>
       </div>
 
-      <!-- Step 1: Phone -->
-      <div v-if="step === 'phone'" class="login-form">
-        <label class="field-label">手机号</label>
+      <div class="mode-switch" role="tablist" aria-label="登录方式">
+        <button
+          class="mode-btn"
+          :class="{ active: mode === 'phone' }"
+          type="button"
+          data-test="mode-phone"
+          @click="switchMode('phone')"
+        >
+          手机号
+        </button>
+        <button
+          class="mode-btn"
+          :class="{ active: mode === 'email' }"
+          type="button"
+          data-test="mode-email"
+          @click="switchMode('email')"
+        >
+          邮箱
+        </button>
+      </div>
+
+      <div v-if="step === 'identifier'" class="login-form">
+        <label class="field-label">{{ identifierLabel }}</label>
         <input
+          v-if="mode === 'phone'"
           v-model="phone"
           type="tel"
           class="field-input"
           placeholder="请输入手机号"
           maxlength="11"
+          data-test="phone-input"
+          @keyup.enter="handleSendCode"
+        />
+        <input
+          v-else
+          v-model="email"
+          type="email"
+          class="field-input"
+          placeholder="请输入邮箱"
+          autocomplete="email"
+          data-test="email-input"
           @keyup.enter="handleSendCode"
         />
         <p v-if="error" class="error-msg">{{ error }}</p>
-        <button class="submit-btn" :disabled="loading" type="button" @click="handleSendCode">
+        <button class="submit-btn" :disabled="loading" type="button" data-test="send-code" @click="handleSendCode">
           {{ loading ? '发送中...' : '获取验证码' }}
         </button>
       </div>
 
-      <!-- Step 2: Code -->
       <div v-else-if="step === 'code'" class="login-form">
         <label class="field-label">验证码</label>
-        <p class="phone-hint">已发送至 {{ phone }}</p>
+        <p class="identifier-hint">验证码已发送至 {{ currentIdentifier }}</p>
         <input
           v-model="code"
           type="text"
           class="field-input"
-          placeholder="请输入6位验证码"
+          placeholder="请输入 6 位验证码"
           maxlength="6"
           inputmode="numeric"
+          data-test="code-input"
           @keyup.enter="handleLogin"
         />
         <p v-if="error" class="error-msg">{{ error }}</p>
-        <button class="submit-btn" :disabled="loading" type="button" @click="handleLogin">
-          {{ loading ? '登录中...' : '登录' }}
+        <button class="submit-btn" :disabled="loading" type="button" data-test="submit-login" @click="handleLogin">
+          {{ loading ? '登录中...' : '登录 / 注册' }}
         </button>
-        <button
-          class="resend-btn"
-          type="button"
-          :disabled="countdown > 0"
-          @click="handleResendCode"
-        >
+        <button class="resend-btn" type="button" :disabled="countdown > 0" data-test="resend-code" @click="handleResendCode">
           {{ countdown > 0 ? `${countdown}s 后重新发送` : '重新发送验证码' }}
         </button>
       </div>
 
-      <!-- Step 3: Nickname (new user) -->
       <div v-else class="login-form">
         <label class="field-label">设置昵称</label>
-        <p class="phone-hint">首次登录，请设置您的昵称</p>
+        <p class="identifier-hint">首次使用 {{ identifierLabel }} 登录，请先设置昵称。</p>
         <input
           v-model="nickname"
           type="text"
           class="field-input"
           placeholder="请输入昵称"
           maxlength="20"
+          data-test="nickname-input"
           @keyup.enter="handleNicknameSubmit"
         />
         <p v-if="error" class="error-msg">{{ error }}</p>
-        <button class="submit-btn" :disabled="loading" type="button" @click="handleNicknameSubmit">
+        <button
+          class="submit-btn"
+          :disabled="loading"
+          type="button"
+          data-test="submit-nickname"
+          @click="handleNicknameSubmit"
+        >
           {{ loading ? '注册中...' : '完成注册' }}
         </button>
       </div>
@@ -181,7 +283,7 @@ function handleResendCode() {
 
 .login-card {
   width: 100%;
-  max-width: 400px;
+  max-width: 420px;
   padding: 40px 32px;
   background: var(--glass-background);
   border: 1px solid var(--glass-border);
@@ -191,20 +293,50 @@ function handleResendCode() {
 
 .login-header {
   text-align: center;
-  margin-bottom: 32px;
+  margin-bottom: 24px;
 }
 
 .login-header h1 {
+  margin: 0;
   font-size: 24px;
   font-weight: var(--font-weight-bold);
   color: var(--color-text-primary);
-  margin: 0;
 }
 
 .subtitle {
   margin: 6px 0 0;
   font-size: var(--font-size-sm);
   color: var(--color-text-muted);
+}
+
+.mode-switch {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin-bottom: 20px;
+  padding: 6px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 16px;
+}
+
+.mode-btn {
+  height: 40px;
+  border: none;
+  border-radius: 12px;
+  background: transparent;
+  color: var(--color-text-muted);
+  font-size: 14px;
+  font-weight: var(--font-weight-semibold);
+  cursor: pointer;
+  transition:
+    background var(--transition-fast),
+    color var(--transition-fast);
+}
+
+.mode-btn.active {
+  background: linear-gradient(135deg, var(--color-primary), var(--color-primary-dark));
+  color: #fff;
 }
 
 .login-form {
@@ -219,7 +351,7 @@ function handleResendCode() {
   color: var(--color-text-primary);
 }
 
-.phone-hint {
+.identifier-hint {
   margin: 0;
   font-size: 13px;
   color: var(--color-text-muted);
