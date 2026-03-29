@@ -4,28 +4,32 @@ from app.extensions import db
 from app.models import AuditLog, Post, Strategy, User
 
 
-def _seed_code(app, phone, code="123456", ttl=300):
-    from app.utils.redis_client import get_auth_store
+def _normalize_email(email=None, phone=None):
+    if email:
+        return email
+    if phone:
+        digits = ''.join(ch for ch in phone if ch.isdigit()) or 'user'
+        return f"{digits}@example.com"
+    return "user@example.com"
 
-    with app.app_context():
-        get_auth_store().set_verification_code(phone, code, ttl=ttl)
 
-
-def _login_user(client, phone="13800138000", nickname="Trader"):
-    response = _login_user_response(client, phone=phone, nickname=nickname)
+def _login_user(client, phone="13800138000", email=None, nickname="Trader"):
+    response = _login_user_response(client, phone=phone, email=email, nickname=nickname)
     assert response.status_code == 200
     return response.json["access_token"], response.json["data"]["user_id"]
 
 
-def _login_user_response(client, phone="13800138000", nickname="Trader"):
-    _seed_code(client.application, phone)
+def _login_user_response(client, phone="13800138000", email=None, nickname="Trader"):
+    resolved_email = _normalize_email(email=email, phone=phone)
+    register = client.post(
+        "/api/v1/auth/register",
+        json={"email": resolved_email, "password": "Secret123!", "nickname": nickname},
+    )
+    if register.status_code == 200:
+        return register
     return client.post(
         "/api/v1/auth/login",
-        json={
-            "phone": phone,
-            "code": "123456",
-            "nickname": nickname,
-        },
+        json={"email": resolved_email, "password": "Secret123!"},
     )
 
 
@@ -45,6 +49,10 @@ def _extract_refresh_cookie_value(cookie_header):
     if not cookie_header:
         return ""
     return cookie_header.split(";", 1)[0].split("=", 1)[1]
+
+
+def _delete_payload(password="Secret123!"):
+    return {"password": password}
 
 
 def _create_strategy(
@@ -142,7 +150,8 @@ def test_get_me_returns_private_profile_with_masked_phone_and_beijing_times(clie
     assert response.status_code == 200
     data = response.json["data"]
     assert data["id"] == user_id
-    assert data["phone"] == "138****8000"
+    assert data["phone"] is None
+    assert data["email"] == "13***@example.com"
     assert data["nickname"] == "Alpha"
     assert data["avatar_url"] == "https://example.com/avatar.png"
     assert data["bio"] == "Systematic trader"
@@ -481,27 +490,28 @@ def test_deleted_user_returns_404_for_profile_related_public_endpoints(client, a
 
 
 def test_delete_me_requires_auth(client):
-    response = client.delete("/api/v1/users/me", json={"code": "123456"})
+    response = client.delete("/api/v1/users/me", json=_delete_payload())
 
     assert response.status_code == 401
     assert response.json["error"]["code"] == "UNAUTHORIZED"
 
 
-def test_delete_me_rejects_invalid_code(client):
+def test_delete_me_rejects_invalid_password(client):
     token, _ = _login_user(client, phone="13600136000", nickname="DeleteMe")
 
     response = client.delete(
         "/api/v1/users/me",
         headers=_auth_headers(token),
-        json={"code": "000000"},
+        json=_delete_payload("WrongSecret123!"),
     )
 
     assert response.status_code == 422
-    assert response.json["error"]["code"] == "INVALID_CODE"
+    assert response.json["error"]["code"] == "INVALID_PASSWORD"
 
 
 def test_delete_me_soft_deletes_user_revokes_all_refresh_tokens_and_writes_audit_log(client, app):
     phone = "13500135000"
+    email = _normalize_email(phone=phone)
 
     device_a = client
     device_a_login = _login_user_response(device_a, phone=phone, nickname="DeleteFlow")
@@ -511,18 +521,16 @@ def test_delete_me_soft_deletes_user_revokes_all_refresh_tokens_and_writes_audit
     device_a_cookie = _extract_refresh_cookie(device_a_login)
 
     device_b = app.test_client()
-    _seed_code(device_b.application, phone)
     device_b_login = device_b.post(
         "/api/v1/auth/login",
-        json={"phone": phone, "code": "123456"},
+        json={"email": email, "password": "Secret123!"},
     )
     device_b_cookie = _extract_refresh_cookie(device_b_login)
 
-    _seed_code(app, phone)
     response = device_a.delete(
         "/api/v1/users/me",
         headers=_auth_headers(access_token),
-        json={"code": "123456"},
+        json=_delete_payload(),
     )
 
     assert response.status_code == 200
@@ -534,6 +542,8 @@ def test_delete_me_soft_deletes_user_revokes_all_refresh_tokens_and_writes_audit
         assert user is not None
         assert user.deleted_at is not None
         assert user.phone is None
+        assert user.email is None
+        assert user.password_hash is None
         assert user.nickname == "已注销用户"
         assert user.avatar_url == ""
         assert user.bio == ""
@@ -563,11 +573,10 @@ def test_delete_me_soft_deletes_user_revokes_all_refresh_tokens_and_writes_audit
 
 def test_deleted_user_access_token_returns_401(client, app):
     access_token, _ = _login_user(client, phone="13400134000", nickname="DeletedToken")
-    _seed_code(app, "13400134000")
     delete_response = client.delete(
         "/api/v1/users/me",
         headers=_auth_headers(access_token),
-        json={"code": "123456"},
+        json=_delete_payload(),
     )
     assert delete_response.status_code == 200
 
@@ -577,22 +586,21 @@ def test_deleted_user_access_token_returns_401(client, app):
     assert response.json["error"]["code"] == "UNAUTHORIZED"
 
 
-def test_deleted_user_phone_can_register_a_new_account(client, app):
+def test_deleted_user_email_can_register_a_new_account(client, app):
+    email = _normalize_email(phone="13300133000")
     first_access_token, first_user_id = _login_user(client, phone="13300133000", nickname="FirstOwner")
-    _seed_code(app, "13300133000")
     delete_response = client.delete(
         "/api/v1/users/me",
         headers=_auth_headers(first_access_token),
-        json={"code": "123456"},
+        json=_delete_payload(),
     )
     assert delete_response.status_code == 200
 
-    _seed_code(app, "13300133000")
     relogin = client.post(
-        "/api/v1/auth/login",
+        "/api/v1/auth/register",
         json={
-            "phone": "13300133000",
-            "code": "123456",
+            "email": email,
+            "password": "Secret123!",
             "nickname": "SecondOwner",
         },
     )
@@ -694,11 +702,10 @@ def test_account_deletion_soft_deletes_private_strategies(client, app):
         is_public=True,
     )
 
-    _seed_code(app, phone)
     response = client.delete(
         "/api/v1/users/me",
         headers=_auth_headers(token),
-        json={"code": "123456"},
+        json=_delete_payload(),
     )
     assert response.status_code == 200
 
@@ -737,11 +744,10 @@ def test_account_deletion_preserves_imported_copies(client, app):
         imported.source_strategy_id = source_id
         db.session.commit()
 
-    _seed_code(app, phone_a)
     response = client.delete(
         "/api/v1/users/me",
         headers=_auth_headers(token_a),
-        json={"code": "123456"},
+        json=_delete_payload(),
     )
     assert response.status_code == 200
 

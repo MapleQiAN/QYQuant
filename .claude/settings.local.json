@@ -25,7 +25,9 @@
       "Bash(docker build:*)",
       "Bash(docker exec:*)",
       "Bash(docker compose:*)",
-      "Bash(find:*)"
+      "Bash(find:*)",
+      "Bash(python -m json.tool)",
+      "Bash(python3 -c \"import sys; sys.path.insert\\(0, ''.''\\); from app.blueprints import auth\")"
     ]
   }
 }

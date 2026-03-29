@@ -27,6 +27,7 @@ services:
       SECRET_KEY: dev-secret
       JWT_SECRET: dev-jwt-secret
       FERNET_KEY: fVFLNI0cSfGIaULo353R6ivdsuEVw7xdl5Hknr0bHFU=
+      STRATEGY_ENCRYPT_KEY: MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=
       BACKTEST_DATA_PROVIDER: auto
     depends_on:
       - postgres

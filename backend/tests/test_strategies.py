@@ -4,10 +4,13 @@ import io
 import json
 import uuid
 import zipfile
+from datetime import timedelta
 from pathlib import Path
 
 from app.extensions import db
-from app.models import BacktestJob, File, Strategy, StrategyVersion
+from app.models import BacktestJob, File, Strategy, StrategyImportDraft, StrategyVersion
+from app.utils.time import now_utc
+from qysp.validator import validate_integrity
 
 
 def _seed_runtime_strategy(app, tmp_path, *, owner_id=None, parameters=None):
@@ -151,10 +154,120 @@ def _build_qys_package(
     return package_path, manifest, source_code
 
 
+def _build_source_zip_bytes(*, include_manifest=True, include_requirements=False, source_code=None, parameters=None):
+    source_code = source_code or (
+        "class Strategy:\n"
+        "    def on_bar(self, ctx, bar):\n"
+        "        return None\n"
+    )
+    payload = io.BytesIO()
+    manifest = None
+    with zipfile.ZipFile(payload, "w", compression=zipfile.ZIP_DEFLATED) as archive:
+        if include_manifest:
+            manifest = {
+                "schemaVersion": "1.0",
+                "kind": "QYStrategy",
+                "id": str(uuid.uuid4()),
+                "name": "Zip Imported Strategy",
+                "version": "0.1.0",
+                "description": "Zip source import",
+                "language": "python",
+                "runtime": {"name": "python", "version": "3.11"},
+                "entrypoint": {"path": "src/strategy.py", "callable": "Strategy", "interface": "event_v1"},
+                "parameters": parameters or [{"key": "window", "type": "integer", "default": 20}],
+                "tags": ["zip", "source"],
+                "ui": {"category": "trend-following"},
+            }
+            archive.writestr("strategy.json", json.dumps(manifest))
+        archive.writestr("src/strategy.py", source_code)
+        if include_requirements:
+            archive.writestr("requirements.txt", "pandas==2.2.3\n")
+    payload.seek(0)
+    return payload, manifest
+
+
 def test_recent_strategies(client):
     resp = client.get('/api/strategies/recent')
     assert resp.status_code == 200
     assert isinstance(resp.json['data'], list)
+
+
+def test_strategy_import_draft_persists_analysis_payload(app):
+    with app.app_context():
+        source_file = File(
+            owner_id="draft-owner",
+            filename="draft-source.zip",
+            content_type="application/zip",
+            size=128,
+            path="/tmp/draft-source.zip",
+        )
+        db.session.add(source_file)
+        db.session.flush()
+
+        expires_at = now_utc() + timedelta(hours=1)
+        draft = StrategyImportDraft(
+            owner_id="draft-owner",
+            source_file_id=source_file.id,
+            source_type="source_zip",
+            status="analyzed",
+            analysis_payload={
+                "entrypointCandidates": [{"path": "src/strategy.py", "callable": "Strategy"}],
+                "warnings": ["ignored requirements.txt"],
+            },
+            expires_at=expires_at,
+        )
+        db.session.add(draft)
+        db.session.commit()
+
+        saved = db.session.get(StrategyImportDraft, draft.id)
+        assert saved is not None
+        assert saved.source_file_id == source_file.id
+        assert saved.source_type == "source_zip"
+        assert saved.status == "analyzed"
+        assert saved.analysis_payload["warnings"] == ["ignored requirements.txt"]
+        assert saved.expires_at == expires_at.replace(tzinfo=None)
+
+
+def test_strategy_persists_original_and_built_package_file_links(app):
+    with app.app_context():
+        original_source = File(
+            owner_id="owner-1",
+            filename="source.zip",
+            content_type="application/zip",
+            size=256,
+            path="/tmp/source.zip",
+        )
+        built_package = File(
+            owner_id="owner-1",
+            filename="strategy.qys",
+            content_type="application/zip",
+            size=512,
+            path="/tmp/strategy.qys",
+        )
+        db.session.add_all([original_source, built_package])
+        db.session.flush()
+
+        strategy = Strategy(
+            id="strategy-with-file-links",
+            name="Linked Strategy",
+            symbol="XAUUSD",
+            status="draft",
+            owner_id="owner-1",
+            original_source_file_id=original_source.id,
+            built_package_file_id=built_package.id,
+            returns=0,
+            win_rate=0,
+            max_drawdown=0,
+            tags=["draft"],
+            trades=0,
+        )
+        db.session.add(strategy)
+        db.session.commit()
+
+        saved = db.session.get(Strategy, "strategy-with-file-links")
+        assert saved is not None
+        assert saved.original_source_file_id == original_source.id
+        assert saved.built_package_file_id == built_package.id
 
 
 def test_runtime_descriptor_returns_parameters(client, app, tmp_path):
@@ -168,6 +281,230 @@ def test_runtime_descriptor_returns_parameters(client, app, tmp_path):
     assert data['interface'] == 'event_v1'
     assert len(data['parameters']) == 2
 
+
+def test_analyze_strategy_import_for_python_file_persists_draft(client, app):
+    token, user_id = _login_user(client, phone="13800138031", nickname="AnalyzePyUser")
+    source = (
+        "class Strategy:\n"
+        "    def on_bar(self, ctx, bar):\n"
+        "        return None\n"
+    )
+
+    response = client.post(
+        "/api/v1/strategy-imports/analyze",
+        headers=_auth_headers(token),
+        data={"file": (io.BytesIO(source.encode("utf-8")), "strategy.py")},
+        content_type="multipart/form-data",
+    )
+
+    assert response.status_code == 200
+    data = response.json["data"]
+    assert data["sourceType"] == "python_file"
+    assert data["draftImportId"]
+    assert data["errors"] == []
+    assert data["entrypointCandidates"] == [
+        {
+            "path": "strategy.py",
+            "callable": "Strategy",
+            "interface": "event_v1",
+            "confidence": 0.9,
+        }
+    ]
+
+    with app.app_context():
+        draft = db.session.get(StrategyImportDraft, data["draftImportId"])
+        assert draft is not None
+        assert draft.owner_id == user_id
+        assert draft.source_type == "python_file"
+        assert draft.analysis_payload["entrypointCandidates"][0]["callable"] == "Strategy"
+
+
+def test_analyze_strategy_import_for_source_zip_reads_manifest_and_warnings(client, app):
+    token, user_id = _login_user(client, phone="13800138032", nickname="AnalyzeZipUser")
+    payload, manifest = _build_source_zip_bytes(include_manifest=True, include_requirements=True)
+
+    response = client.post(
+        "/api/v1/strategy-imports/analyze",
+        headers=_auth_headers(token),
+        data={"file": (payload, "strategy-project.zip")},
+        content_type="multipart/form-data",
+    )
+
+    assert response.status_code == 200
+    data = response.json["data"]
+    assert data["sourceType"] == "source_zip"
+    assert data["metadataCandidates"]["name"] == manifest["name"]
+    assert data["metadataCandidates"]["category"] == "trend-following"
+    assert data["parameterCandidates"] == manifest["parameters"]
+    assert data["warnings"] == ["Ignored unsupported dependency manifest: requirements.txt"]
+    assert data["errors"] == []
+
+    with app.app_context():
+        draft = db.session.get(StrategyImportDraft, data["draftImportId"])
+        assert draft is not None
+        assert draft.owner_id == user_id
+        assert draft.analysis_payload["warnings"] == ["Ignored unsupported dependency manifest: requirements.txt"]
+
+
+def test_analyze_strategy_import_for_qys_reads_package_manifest(client):
+    token, _ = _login_user(client, phone="13800138033", nickname="AnalyzeQysUser")
+    payload, manifest = _build_source_zip_bytes(include_manifest=True)
+
+    response = client.post(
+        "/api/v1/strategy-imports/analyze",
+        headers=_auth_headers(token),
+        data={"file": (payload, "ready-package.qys")},
+        content_type="multipart/form-data",
+    )
+
+    assert response.status_code == 200
+    data = response.json["data"]
+    assert data["sourceType"] == "qys_package"
+    assert data["metadataCandidates"]["name"] == manifest["name"]
+    assert data["entrypointCandidates"][0]["path"] == "src/strategy.py"
+    assert data["parameterCandidates"] == manifest["parameters"]
+
+
+def test_analyze_strategy_import_reports_blocking_errors_for_unsupported_layout(client):
+    token, _ = _login_user(client, phone="13800138034", nickname="AnalyzeBlockedUser")
+    payload = io.BytesIO()
+    with zipfile.ZipFile(payload, "w", compression=zipfile.ZIP_DEFLATED) as archive:
+        archive.writestr("README.md", "No strategy code here")
+    payload.seek(0)
+
+    response = client.post(
+        "/api/v1/strategy-imports/analyze",
+        headers=_auth_headers(token),
+        data={"file": (payload, "empty-project.zip")},
+        content_type="multipart/form-data",
+    )
+
+    assert response.status_code == 200
+    data = response.json["data"]
+    assert data["sourceType"] == "source_zip"
+    assert data["entrypointCandidates"] == []
+    assert data["errors"] == ["No supported strategy entrypoint candidates found"]
+
+
+def test_confirm_strategy_import_uses_selected_entrypoint_and_creates_final_package(client, app):
+    token, user_id = _login_user(client, phone="13800138035", nickname="ConfirmPyUser")
+    source = (
+        "class Strategy:\n"
+        "    def on_bar(self, ctx, bar):\n"
+        "        return None\n\n"
+        "def on_bar(ctx, bar):\n"
+        "    return []\n"
+    )
+
+    analyze_response = client.post(
+        "/api/v1/strategy-imports/analyze",
+        headers=_auth_headers(token),
+        data={"file": (io.BytesIO(source.encode("utf-8")), "multi-entry.py")},
+        content_type="multipart/form-data",
+    )
+    assert analyze_response.status_code == 200
+    draft_import_id = analyze_response.json["data"]["draftImportId"]
+
+    response = client.post(
+        "/api/v1/strategy-imports/confirm",
+        headers=_auth_headers(token),
+        json={
+            "draftImportId": draft_import_id,
+            "selectedEntrypoint": {
+                "path": "multi-entry.py",
+                "callable": "on_bar",
+                "interface": "event_v1",
+            },
+            "metadata": {
+                "name": "Confirmed Python Strategy",
+                "description": "Manual confirmation for python upload",
+                "category": "momentum",
+                "tags": ["python", "confirmed"],
+                "symbol": "BTCUSDT",
+            },
+            "parameterDefinitions": [{"key": "window", "type": "integer", "default": 12}],
+        },
+    )
+
+    assert response.status_code == 200
+    data = response.json["data"]
+    assert data["strategy"]["name"] == "Confirmed Python Strategy"
+    assert data["strategy"]["originalSourceFileId"]
+    assert data["strategy"]["builtPackageFileId"] == data["file"]["id"]
+    assert data["next"] == f"/strategies/{data['strategy']['id']}/parameters"
+
+    with app.app_context():
+        strategy = db.session.get(Strategy, data["strategy"]["id"])
+        assert strategy is not None
+        assert strategy.owner_id == user_id
+        assert strategy.original_source_file_id is not None
+        assert strategy.built_package_file_id is not None
+        assert StrategyVersion.query.filter_by(strategy_id=strategy.id).count() == 1
+
+        built_file = db.session.get(File, strategy.built_package_file_id)
+        assert built_file is not None
+        assert validate_integrity(built_file.path) is True
+        with zipfile.ZipFile(built_file.path, "r") as archive:
+            manifest = json.loads(archive.read("strategy.json").decode("utf-8"))
+        assert manifest["entrypoint"]["callable"] == "on_bar"
+        assert manifest["entrypoint"]["path"] == "src/strategy.py"
+
+
+def test_confirm_strategy_import_fills_missing_metadata_from_payload(client, app):
+    token, user_id = _login_user(client, phone="13800138036", nickname="ConfirmZipUser")
+    payload, _ = _build_source_zip_bytes(include_manifest=False)
+
+    analyze_response = client.post(
+        "/api/v1/strategy-imports/analyze",
+        headers=_auth_headers(token),
+        data={"file": (payload, "source-only.zip")},
+        content_type="multipart/form-data",
+    )
+    assert analyze_response.status_code == 200
+    draft_import_id = analyze_response.json["data"]["draftImportId"]
+
+    response = client.post(
+        "/api/v1/strategy-imports/confirm",
+        headers=_auth_headers(token),
+        json={
+            "draftImportId": draft_import_id,
+            "selectedEntrypoint": {
+                "path": "src/strategy.py",
+                "callable": "Strategy",
+                "interface": "event_v1",
+            },
+            "metadata": {
+                "name": "Zip Confirmed Strategy",
+                "description": "Filled in at confirmation time",
+                "category": "trend-following",
+                "tags": ["zip", "confirmed"],
+                "symbol": "XAUUSD",
+                "version": "2.1.0",
+            },
+            "parameterDefinitions": [{"key": "threshold", "type": "number", "default": 1.5}],
+        },
+    )
+
+    assert response.status_code == 200
+    data = response.json["data"]
+    assert data["strategy"]["name"] == "Zip Confirmed Strategy"
+    assert data["strategy"]["description"] == "Filled in at confirmation time"
+    assert data["strategy"]["category"] == "trend-following"
+
+    with app.app_context():
+        strategy = db.session.get(Strategy, data["strategy"]["id"])
+        assert strategy is not None
+        assert strategy.owner_id == user_id
+        assert strategy.original_source_file_id is not None
+        assert strategy.built_package_file_id is not None
+
+        built_file = db.session.get(File, strategy.built_package_file_id)
+        with zipfile.ZipFile(built_file.path, "r") as archive:
+            manifest = json.loads(archive.read("strategy.json").decode("utf-8"))
+        assert manifest["name"] == "Zip Confirmed Strategy"
+        assert manifest["description"] == "Filled in at confirmation time"
+        assert manifest["version"] == "2.1.0"
+        assert manifest["parameters"] == [{"key": "threshold", "type": "number", "default": 1.5}]
 
 def test_get_strategy_parameters_returns_normalized_manifest_parameters(client, app, tmp_path):
     token, user_id = _login_user(client, phone="13800138026", nickname="ParameterOwner")
@@ -469,6 +806,9 @@ def test_import_strategy_creates_owned_strategy_and_returns_metadata(client, app
     assert data["strategy"]["category"] == "trend-following"
     assert data["strategy"]["source"] == "upload"
     assert data["next"] == "/strategies/imported-strategy/parameters"
+    assert data["strategy"]["originalSourceFileId"] == data["file"]["id"]
+    assert data["strategy"]["builtPackageFileId"] != data["file"]["id"]
+    assert data["version"]["fileId"] == data["file"]["id"]
 
     with app.app_context():
         strategy = db.session.get(Strategy, "imported-strategy")
@@ -480,8 +820,73 @@ def test_import_strategy_creates_owned_strategy_and_returns_metadata(client, app
         assert strategy.storage_key
         assert strategy.description == manifest["description"]
         assert strategy.category == "trend-following"
-        assert File.query.filter_by(owner_id=user_id).count() == 1
+        assert strategy.original_source_file_id is not None
+        assert strategy.built_package_file_id is not None
+        assert File.query.filter_by(owner_id=user_id).count() == 2
         assert StrategyVersion.query.filter_by(strategy_id="imported-strategy").count() == 1
+
+
+def test_legacy_import_v1_reuses_draft_pipeline(client, app, tmp_path):
+    token, user_id = _login_user(client, phone="13800138037", nickname="LegacyImporter")
+    package_path, _, _ = _build_qys_package(tmp_path, strategy_id="legacy-v1-strategy")
+
+    with package_path.open("rb") as handle:
+        response = client.post(
+            "/api/v1/strategies/import",
+            headers=_auth_headers(token),
+            data={"file": (io.BytesIO(handle.read()), package_path.name)},
+            content_type="multipart/form-data",
+        )
+
+    assert response.status_code == 200
+    data = response.json["data"]
+
+    with app.app_context():
+        strategy = db.session.get(Strategy, data["strategy"]["id"])
+        assert strategy is not None
+        assert strategy.owner_id == user_id
+        assert strategy.original_source_file_id is not None
+        assert strategy.built_package_file_id is not None
+        assert strategy.original_source_file_id != strategy.built_package_file_id
+
+        draft = StrategyImportDraft.query.filter_by(
+            owner_id=user_id,
+            source_file_id=strategy.original_source_file_id,
+        ).one_or_none()
+        assert draft is not None
+        assert draft.source_type == "qys_package"
+        assert draft.status == "confirmed"
+
+
+def test_legacy_import_compat_endpoint_reuses_draft_pipeline(client, app, tmp_path):
+    token, user_id = _login_user(client, phone="13800138038", nickname="LegacyCompatImporter")
+    package_path, _, _ = _build_qys_package(tmp_path, strategy_id="legacy-compat-strategy")
+
+    with package_path.open("rb") as handle:
+        response = client.post(
+            "/api/strategies/import",
+            headers=_auth_headers(token),
+            data={"file": (io.BytesIO(handle.read()), package_path.name)},
+            content_type="multipart/form-data",
+        )
+
+    assert response.status_code == 200
+    data = response.json["data"]
+
+    with app.app_context():
+        strategy = db.session.get(Strategy, data["strategy"]["id"])
+        assert strategy is not None
+        assert strategy.owner_id == user_id
+        assert strategy.original_source_file_id is not None
+        assert strategy.built_package_file_id is not None
+
+        draft = StrategyImportDraft.query.filter_by(
+            owner_id=user_id,
+            source_file_id=strategy.original_source_file_id,
+        ).one_or_none()
+        assert draft is not None
+        assert draft.source_type == "qys_package"
+        assert draft.status == "confirmed"
 
 
 def test_import_strategy_returns_422_when_integrity_check_fails(client, tmp_path):
@@ -498,3 +903,20 @@ def test_import_strategy_returns_422_when_integrity_check_fails(client, tmp_path
 
     assert response.status_code == 422
     assert response.json["error"]["code"] == "INTEGRITY_CHECK_FAILED"
+
+
+def test_import_strategy_returns_503_when_encryption_key_missing(client, monkeypatch, tmp_path):
+    token, _ = _login_user(client, phone="13800138028", nickname="MissingKeyUser")
+    package_path, _, _ = _build_qys_package(tmp_path)
+    monkeypatch.delenv("STRATEGY_ENCRYPT_KEY", raising=False)
+
+    with package_path.open("rb") as handle:
+        response = client.post(
+            "/api/v1/strategies/import",
+            headers=_auth_headers(token),
+            data={"file": (io.BytesIO(handle.read()), package_path.name)},
+            content_type="multipart/form-data",
+        )
+
+    assert response.status_code == 503
+    assert response.json["error"]["code"] == "STRATEGY_ENCRYPTION_UNAVAILABLE"

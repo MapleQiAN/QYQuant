@@ -298,7 +298,7 @@ def update_admin_user(user_id):
     admin_id = _current_admin_id()
     token_revoked_count = 0
     if is_banned:
-        active_tokens = revoke_all_user_tokens(user.id)
+        active_tokens = revoke_all_user_tokens(user.id, reason='admin_ban')
         blacklist_refresh_tokens(active_tokens)
         token_revoked_count = len(active_tokens)
 

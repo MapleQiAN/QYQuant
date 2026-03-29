@@ -10,10 +10,18 @@ def _value(obj, name):
     return getattr(obj, name, None)
 
 
+def _mask_email(value):
+    if not value or '@' not in value:
+        return None
+    local_part, domain = value.split('@', 1)
+    visible = local_part[:2] if len(local_part) > 2 else local_part[:1]
+    return f"{visible}***@{domain}"
+
+
 class UserPrivateSchema(Schema):
     id = fields.Str()
-    phone = fields.Function(lambda obj: mask_phone(_value(obj, "phone")))
-    email = fields.Str(allow_none=True)
+    phone = fields.Function(lambda obj: mask_phone(_value(obj, "phone")) if _value(obj, "phone") else None)
+    email = fields.Function(lambda obj: _mask_email(_value(obj, "email")))
     nickname = fields.Str(required=True)
     avatar_url = fields.Str(required=True)
     bio = fields.Str(required=True)
@@ -63,6 +71,38 @@ class StrategySchema(Schema):
     lastUpdate = fields.Int(attribute='last_update')
     trades = fields.Int()
     createdAt = fields.Int(attribute='created_at')
+    originalSourceFileId = fields.Str(attribute='original_source_file_id', allow_none=True)
+    builtPackageFileId = fields.Str(attribute='built_package_file_id', allow_none=True)
+
+
+class StrategyImportEntrypointCandidateSchema(Schema):
+    path = fields.Str(required=True)
+    callable = fields.Str(required=True)
+    interface = fields.Str(allow_none=True)
+    confidence = fields.Float(allow_none=True)
+
+
+class StrategyImportDraftSchema(Schema):
+    id = fields.Str()
+    ownerId = fields.Str(attribute='owner_id')
+    sourceFileId = fields.Str(attribute='source_file_id')
+    sourceType = fields.Str(attribute='source_type')
+    status = fields.Str(required=True)
+    analysisPayload = fields.Dict(attribute='analysis_payload')
+    expiresAt = fields.Function(lambda obj: format_beijing_iso(_value(obj, "expires_at")))
+    createdAt = fields.Function(lambda obj: format_beijing_iso(_value(obj, "created_at")))
+    updatedAt = fields.Function(lambda obj: format_beijing_iso(_value(obj, "updated_at")))
+
+
+class StrategyImportAnalysisSchema(Schema):
+    draftImportId = fields.Str(required=True)
+    sourceType = fields.Str(required=True)
+    fileSummary = fields.Dict(allow_none=True)
+    entrypointCandidates = fields.List(fields.Nested(StrategyImportEntrypointCandidateSchema()))
+    metadataCandidates = fields.Dict(allow_none=True)
+    parameterCandidates = fields.List(fields.Dict())
+    warnings = fields.List(fields.Str())
+    errors = fields.List(fields.Str())
 
 
 class StrategyParameterSchema(Schema):

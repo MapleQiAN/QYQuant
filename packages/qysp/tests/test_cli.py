@@ -225,6 +225,21 @@ class TestBuild:
             assert result.exit_code == 0
             assert os.path.isfile("custom.qys")
 
+    def test_build_records_additional_files_in_integrity_manifest(self, tmp_path: object) -> None:
+        runner = CliRunner()
+        with runner.isolated_filesystem(temp_dir=tmp_path):
+            runner.invoke(cli, ["init", "my-strat"])
+            with open("my-strat/README.md", "w", encoding="utf-8") as handle:
+                handle.write("Strategy notes\n")
+
+            result = runner.invoke(cli, ["build", "my-strat"])
+
+            assert result.exit_code == 0
+            with zipfile.ZipFile("my-strat.qys", "r") as archive:
+                manifest = json.loads(archive.read("strategy.json").decode("utf-8"))
+            recorded_paths = {entry["path"] for entry in manifest["integrity"]["files"]}
+            assert "README.md" in recorded_paths
+
     def test_build_missing_strategy_json(self, tmp_path: object) -> None:
         runner = CliRunner()
         with runner.isolated_filesystem(temp_dir=tmp_path):
@@ -324,15 +339,87 @@ class TestBacktest:
 class TestImport:
     """qys import command tests."""
 
-    def test_import_stub_exits_zero(self) -> None:
+    def test_import_qys_calls_analyze_and_confirm(self, tmp_path: object, monkeypatch) -> None:
         runner = CliRunner()
-        result = runner.invoke(cli, ["import", "some-path"])
-        assert result.exit_code == 0
+        calls: list[tuple[str, str, object]] = []
 
-    def test_import_stub_shows_message(self) -> None:
+        def fake_post_multipart(url: str, *, token: str, field_name: str, filename: str, payload: bytes):
+            calls.append(("multipart", url, {"token": token, "field": field_name, "filename": filename, "payload": payload}))
+            return {
+                "draftImportId": "draft-1",
+                "sourceType": "qys_package",
+                "entrypointCandidates": [{"path": "src/strategy.py", "callable": "Strategy", "interface": "event_v1"}],
+                "metadataCandidates": {"name": "CLI Imported Strategy", "category": "trend-following", "tags": ["cli"]},
+                "parameterCandidates": [],
+                "warnings": [],
+                "errors": [],
+            }
+
+        def fake_post_json(url: str, *, token: str, payload: dict):
+            calls.append(("json", url, {"token": token, "payload": payload}))
+            return {
+                "strategy": {"id": "strategy-123", "name": "CLI Imported Strategy"},
+                "next": "/strategies/strategy-123/parameters",
+            }
+
+        monkeypatch.setenv("QYQUANT_API_BASE_URL", "https://qyquant.example")
+        monkeypatch.setenv("QYQUANT_API_TOKEN", "token-123")
+        monkeypatch.setattr("qysp.cli.main._api_post_multipart", fake_post_multipart)
+        monkeypatch.setattr("qysp.cli.main._api_post_json", fake_post_json)
+
+        with runner.isolated_filesystem(temp_dir=tmp_path):
+            with open("demo.qys", "wb") as handle:
+                handle.write(b"PK\x03\x04demo")
+
+            result = runner.invoke(cli, ["import", "demo.qys"])
+
+        assert result.exit_code == 0
+        assert "strategy-123" in result.output
+        assert "/strategies/strategy-123/parameters" in result.output
+        assert calls[0][0] == "multipart"
+        assert calls[0][1] == "https://qyquant.example/api/v1/strategy-imports/analyze"
+        assert calls[0][2]["filename"] == "demo.qys"
+        assert calls[1][0] == "json"
+        assert calls[1][1] == "https://qyquant.example/api/v1/strategy-imports/confirm"
+        assert calls[1][2]["payload"]["draftImportId"] == "draft-1"
+        assert calls[1][2]["payload"]["selectedEntrypoint"]["callable"] == "Strategy"
+
+    def test_import_directory_uploads_source_zip(self, tmp_path: object, monkeypatch) -> None:
         runner = CliRunner()
-        result = runner.invoke(cli, ["import", "some-path"])
-        assert "Epic 5" in result.output
+        uploads: list[dict] = []
+
+        def fake_post_multipart(url: str, *, token: str, field_name: str, filename: str, payload: bytes):
+            uploads.append({"url": url, "token": token, "field": field_name, "filename": filename, "payload": payload})
+            return {
+                "draftImportId": "draft-dir",
+                "sourceType": "source_zip",
+                "entrypointCandidates": [{"path": "src/strategy.py", "callable": "Strategy", "interface": "event_v1"}],
+                "metadataCandidates": {"name": "Dir Imported Strategy"},
+                "parameterCandidates": [],
+                "warnings": [],
+                "errors": [],
+            }
+
+        def fake_post_json(url: str, *, token: str, payload: dict):
+            return {
+                "strategy": {"id": "strategy-dir", "name": "Dir Imported Strategy"},
+                "next": "/strategies/strategy-dir/parameters",
+            }
+
+        monkeypatch.setenv("QYQUANT_API_BASE_URL", "https://qyquant.example")
+        monkeypatch.setenv("QYQUANT_API_TOKEN", "token-123")
+        monkeypatch.setattr("qysp.cli.main._api_post_multipart", fake_post_multipart)
+        monkeypatch.setattr("qysp.cli.main._api_post_json", fake_post_json)
+
+        with runner.isolated_filesystem(temp_dir=tmp_path):
+            runner.invoke(cli, ["init", "dir-strat"])
+
+            result = runner.invoke(cli, ["import", "dir-strat"])
+
+        assert result.exit_code == 0
+        assert uploads[0]["filename"] == "dir-strat.zip"
+        assert uploads[0]["field"] == "file"
+        assert uploads[0]["payload"].startswith(b"PK")
 
 
 class TestTemplates:

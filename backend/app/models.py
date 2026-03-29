@@ -29,6 +29,7 @@ class User(db.Model):
     id = db.Column(db.String, primary_key=True, default=gen_id)
     phone = db.Column(db.String(20), unique=True, nullable=True)
     email = db.Column(db.String(255), unique=True, nullable=True)
+    password_hash = db.Column(db.String(255), nullable=True)
     nickname = db.Column(db.String(200), nullable=False)
     avatar_url = db.Column(db.String, nullable=False, default='')
     bio = db.Column(db.String(200), nullable=False, default='')
@@ -50,6 +51,17 @@ class RefreshToken(db.Model):
     jti = db.Column(db.String(64), nullable=False, unique=True)
     expires_at = db.Column(db.DateTime(timezone=True), nullable=False)
     revoked_at = db.Column(db.DateTime(timezone=True), nullable=True)
+    revoked_reason = db.Column(db.String(32), nullable=True)
+    created_at = db.Column(db.DateTime(timezone=True), nullable=False, default=now_utc)
+
+
+class PasswordResetToken(db.Model):
+    __tablename__ = 'password_reset_tokens'
+    id = db.Column(db.String, primary_key=True, default=gen_id)
+    user_id = db.Column(db.String, db.ForeignKey('users.id'), nullable=False)
+    token_hash = db.Column(db.String(64), nullable=False, unique=True)
+    expires_at = db.Column(db.DateTime(timezone=True), nullable=False)
+    used_at = db.Column(db.DateTime(timezone=True), nullable=True)
     created_at = db.Column(db.DateTime(timezone=True), nullable=False, default=now_utc)
 
 
@@ -141,6 +153,8 @@ class Strategy(db.Model):
     trades = db.Column(db.Integer, default=0)
     owner_id = db.Column(db.String, db.ForeignKey('users.id'))
     storage_key = db.Column(db.String, nullable=True)
+    original_source_file_id = db.Column(db.String, db.ForeignKey('files.id'), nullable=True)
+    built_package_file_id = db.Column(db.String, db.ForeignKey('files.id'), nullable=True)
     code_encrypted = db.Column(db.LargeBinary, nullable=True)
     code_hash = db.Column(db.String(64), nullable=True)
     created_at = db.Column(db.BigInteger, default=now_ms)
@@ -176,6 +190,24 @@ class StrategyVersion(db.Model):
     file_id = db.Column(db.String, db.ForeignKey('files.id'))
     checksum = db.Column(db.String, nullable=True)
     created_at = db.Column(db.BigInteger, default=now_ms)
+
+
+class StrategyImportDraft(db.Model):
+    __tablename__ = 'strategy_import_drafts'
+    __table_args__ = (
+        db.Index('ix_strategy_import_drafts_owner_status', 'owner_id', 'status'),
+        db.Index('ix_strategy_import_drafts_expires_at', 'expires_at'),
+    )
+
+    id = db.Column(db.String, primary_key=True, default=gen_id)
+    owner_id = db.Column(db.String, db.ForeignKey('users.id'), nullable=False)
+    source_file_id = db.Column(db.String, db.ForeignKey('files.id'), nullable=False)
+    source_type = db.Column(db.String(32), nullable=False)
+    status = db.Column(db.String(32), nullable=False, default='analyzed')
+    analysis_payload = db.Column(job_json_type, nullable=False, default=dict)
+    expires_at = db.Column(db.DateTime(timezone=True), nullable=False)
+    created_at = db.Column(db.DateTime(timezone=True), nullable=False, default=now_utc)
+    updated_at = db.Column(db.DateTime(timezone=True), nullable=False, default=now_utc, onupdate=now_utc)
 
 
 class StrategyParameterPreset(db.Model):

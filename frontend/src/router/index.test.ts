@@ -13,6 +13,8 @@ vi.mock('../views/PostDetailView.vue', () => ({ default: { template: '<div />' }
 vi.mock('../views/SettingsView.vue', () => ({ default: { template: '<div />' } }))
 vi.mock('../views/NewStrategyView.vue', () => ({ default: { template: '<div />' } }))
 vi.mock('../views/StrategyLibraryView.vue', () => ({ default: { template: '<div />' } }))
+vi.mock('../views/StrategyImportView.vue', () => ({ default: { template: '<div />' } }))
+vi.mock('../views/StrategyImportConfirmView.vue', () => ({ default: { template: '<div />' } }))
 vi.mock('../views/StrategyDetailView.vue', () => ({ default: { template: '<div />' } }))
 vi.mock('../views/Marketplace.vue', () => ({ default: { template: '<div />' } }))
 vi.mock('../views/MarketplaceStrategyDetailView.vue', () => ({ default: { template: '<div />' } }))
@@ -24,6 +26,8 @@ vi.mock('../views/admin/StrategyReview.vue', () => ({ default: { template: '<div
 vi.mock('../views/admin/ReportManagement.vue', () => ({ default: { template: '<div />' } }))
 vi.mock('../views/admin/BacktestMonitor.vue', () => ({ default: { template: '<div />' } }))
 vi.mock('../views/admin/UserManagement.vue', () => ({ default: { template: '<div />' } }))
+vi.mock('../views/ForgotPasswordView.vue', () => ({ default: { template: '<div />' } }))
+vi.mock('../views/ResetPasswordView.vue', () => ({ default: { template: '<div />' } }))
 
 import router from './index'
 import { useUserStore } from '../stores'
@@ -63,6 +67,24 @@ describe('router', () => {
     expect(hasStrategyDetail).toBe(true)
   })
 
+  it('contains strategy import routes', () => {
+    const hasImport = router.getRoutes().some((route) => route.path === '/strategies/import')
+    const hasImportConfirm = router.getRoutes().some((route) => route.path === '/strategies/import/confirm')
+
+    expect(hasImport).toBe(true)
+    expect(hasImportConfirm).toBe(true)
+  })
+
+  it('contains strategy import routes', () => {
+    const hasStrategyImport = router.getRoutes().some((route) => route.path === '/strategies/import')
+    const hasStrategyImportConfirm = router.getRoutes().some(
+      (route) => route.path === '/strategies/import/confirm'
+    )
+
+    expect(hasStrategyImport).toBe(true)
+    expect(hasStrategyImportConfirm).toBe(true)
+  })
+
   it('contains marketplace route', () => {
     const hasMarketplace = router.getRoutes().some((route) => route.path === '/marketplace')
     expect(hasMarketplace).toBe(true)
@@ -83,6 +105,16 @@ describe('router', () => {
   it('contains pricing route', () => {
     const hasPricing = router.getRoutes().some((route) => route.path === '/pricing')
     expect(hasPricing).toBe(true)
+  })
+
+  it('contains forgot password route', () => {
+    const hasRoute = router.getRoutes().some((route) => route.path === '/forgot-password')
+    expect(hasRoute).toBe(true)
+  })
+
+  it('contains reset password route', () => {
+    const hasRoute = router.getRoutes().some((route) => route.path === '/reset-password')
+    expect(hasRoute).toBe(true)
   })
 
   it('contains admin route', () => {

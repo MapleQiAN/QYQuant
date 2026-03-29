@@ -11,10 +11,6 @@ instance.interceptors.response.use(
   (error) => { throw normalizeError(error) },
 )
 
-export interface SendCodeResponse {
-  message: string
-}
-
 export interface LoginResponse {
   user_id: string
   phone?: string
@@ -32,28 +28,46 @@ export type LoginRequest = AuthIdentifier & {
   nickname?: string
 }
 
-function normalizeIdentifier(identifier: string | AuthIdentifier): AuthIdentifier {
-  if (typeof identifier === 'string') {
-    return { phone: identifier }
-  }
-  return identifier
+export interface PasswordAuthRequest {
+  email: string
+  password: string
+  nickname?: string
 }
 
-export async function sendCode(identifier: string | AuthIdentifier): Promise<SendCodeResponse> {
-  const res = await instance.post('/v1/auth/send-code', normalizeIdentifier(identifier))
-  return res.data.data
+export interface ForgotPasswordResponse {
+  message: string
 }
 
 export async function login(
-  identifierOrPayload: string | LoginRequest,
+  identifierOrPayload: string | PasswordAuthRequest | LoginRequest,
   code?: string,
   nickname?: string,
 ): Promise<{ data: LoginResponse; access_token: string }> {
   const payload =
     typeof identifierOrPayload === 'string'
-      ? { phone: identifierOrPayload, code: code || '', ...(nickname ? { nickname } : {}) }
+      ? { email: identifierOrPayload, password: code || '', ...(nickname ? { nickname } : {}) }
       : identifierOrPayload
 
   const res = await instance.post('/v1/auth/login', payload)
   return { data: res.data.data, access_token: res.data.access_token }
+}
+
+export async function registerWithPassword(payload: PasswordAuthRequest): Promise<{ data: LoginResponse; access_token: string }> {
+  const res = await instance.post('/v1/auth/register', payload)
+  return { data: res.data.data, access_token: res.data.access_token }
+}
+
+export async function loginWithPassword(payload: Omit<PasswordAuthRequest, 'nickname'>): Promise<{ data: LoginResponse; access_token: string }> {
+  const res = await instance.post('/v1/auth/login', payload)
+  return { data: res.data.data, access_token: res.data.access_token }
+}
+
+export async function forgotPassword(email: string): Promise<ForgotPasswordResponse> {
+  const res = await instance.post('/v1/auth/forgot-password', { email })
+  return res.data.data
+}
+
+export async function resetPassword(token: string, password: string): Promise<{ message: string }> {
+  const res = await instance.post('/v1/auth/reset-password', { token, password })
+  return res.data.data
 }

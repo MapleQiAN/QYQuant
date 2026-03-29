@@ -1,168 +1,80 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, ref } from 'vue'
-import { useRouter } from 'vue-router'
-import { login, sendCode, type AuthIdentifier } from '../api/auth'
+import { ref } from 'vue'
+import { RouterLink, useRouter } from 'vue-router'
+import { loginWithPassword, registerWithPassword } from '../api/auth'
 import { useUserStore } from '../stores/user'
 
-type LoginMode = 'phone' | 'email'
-type LoginStep = 'identifier' | 'code' | 'nickname'
-
-const PHONE_RE = /^1[3-9]\d{9}$/
-const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/
+type AuthIntent = 'login' | 'register'
 
 const router = useRouter()
 const userStore = useUserStore()
 
-const mode = ref<LoginMode>('phone')
-const phone = ref('')
+const intent = ref<AuthIntent>('login')
 const email = ref('')
-const code = ref('')
+const password = ref('')
 const nickname = ref('')
-const step = ref<LoginStep>('identifier')
 const loading = ref(false)
 const error = ref('')
-const countdown = ref(0)
 
-let countdownTimer: ReturnType<typeof setInterval> | null = null
-
-const currentIdentifier = computed(() =>
-  mode.value === 'phone' ? phone.value.trim() : email.value.trim().toLowerCase(),
-)
-
-const identifierLabel = computed(() => (mode.value === 'phone' ? '手机号' : '邮箱'))
-
-function resetCountdown() {
-  if (countdownTimer) {
-    clearInterval(countdownTimer)
-    countdownTimer = null
-  }
-  countdown.value = 0
-}
-
-function startCountdown(seconds: number) {
-  resetCountdown()
-  countdown.value = seconds
-  countdownTimer = setInterval(() => {
-    countdown.value -= 1
-    if (countdown.value <= 0) {
-      resetCountdown()
-    }
-  }, 1000)
-}
-
-function switchMode(nextMode: LoginMode) {
-  if (mode.value === nextMode) {
+function switchIntent(nextIntent: AuthIntent) {
+  if (intent.value === nextIntent) {
     return
   }
-  mode.value = nextMode
-  code.value = ''
+  intent.value = nextIntent
   nickname.value = ''
   error.value = ''
-  step.value = 'identifier'
-  resetCountdown()
 }
 
-function buildIdentifierPayload(): AuthIdentifier | null {
-  if (mode.value === 'phone') {
-    if (!phone.value.trim()) {
-      error.value = '请输入手机号'
-      return null
-    }
-    if (!PHONE_RE.test(phone.value.trim())) {
-      error.value = '请输入正确的手机号'
-      return null
-    }
-    return { phone: phone.value.trim() }
-  }
-
+function validate() {
   const normalizedEmail = email.value.trim().toLowerCase()
   if (!normalizedEmail) {
     error.value = '请输入邮箱'
     return null
   }
-  if (!EMAIL_RE.test(normalizedEmail)) {
-    error.value = '请输入正确的邮箱地址'
+  if (!password.value) {
+    error.value = '请输入密码'
     return null
   }
-  return { email: normalizedEmail }
-}
-
-async function handleSendCode() {
-  const identifier = buildIdentifierPayload()
-  if (!identifier) {
-    return
+  if (password.value.length < 8) {
+    error.value = '密码至少 8 位'
+    return null
   }
-
-  loading.value = true
-  error.value = ''
-  try {
-    await sendCode(identifier)
-    step.value = 'code'
-    startCountdown(60)
-  } catch (e: any) {
-    if (e.code === 'RATE_LIMITED') {
-      const retryAfter = Number(e.message?.match(/\d+/)?.[0] || 60)
-      step.value = 'code'
-      startCountdown(retryAfter)
-      return
-    }
-    error.value = e.message || '发送验证码失败'
-  } finally {
-    loading.value = false
-  }
-}
-
-async function handleLogin() {
-  const identifier = buildIdentifierPayload()
-  if (!identifier) {
-    return
-  }
-  if (!code.value.trim()) {
-    error.value = '请输入验证码'
-    return
-  }
-
-  loading.value = true
-  error.value = ''
-  try {
-    const result = await login({
-      ...identifier,
-      code: code.value.trim(),
-      ...(step.value === 'nickname' ? { nickname: nickname.value.trim() } : {}),
-    })
-    localStorage.setItem('qyquant-token', result.access_token)
-    await userStore.refreshProfile()
-    await router.replace('/')
-  } catch (e: any) {
-    if (e.code === 'NICKNAME_REQUIRED') {
-      step.value = 'nickname'
-      error.value = ''
-      return
-    }
-    error.value = e.message || '登录失败'
-  } finally {
-    loading.value = false
-  }
-}
-
-async function handleNicknameSubmit() {
-  if (!nickname.value.trim()) {
+  if (intent.value === 'register' && !nickname.value.trim()) {
     error.value = '请输入昵称'
-    return
+    return null
   }
-  await handleLogin()
+  return {
+    email: normalizedEmail,
+    password: password.value,
+    nickname: nickname.value.trim(),
+  }
 }
 
-function handleResendCode() {
-  if (countdown.value > 0) {
-    return
-  }
-  void handleSendCode()
+async function finalizeLogin(accessToken: string) {
+  localStorage.setItem('qyquant-token', accessToken)
+  await userStore.refreshProfile()
+  await router.replace('/')
 }
 
-onBeforeUnmount(() => {
-  resetCountdown()
-})
+async function handleSubmit() {
+  const payload = validate()
+  if (!payload) {
+    return
+  }
+
+  loading.value = true
+  error.value = ''
+  try {
+    const result = intent.value === 'register'
+      ? await registerWithPassword(payload)
+      : await loginWithPassword({ email: payload.email, password: payload.password })
+    await finalizeLogin(result.access_token)
+  } catch (e: any) {
+    error.value = e.message || (intent.value === 'register' ? '注册失败' : '登录失败')
+  } finally {
+    loading.value = false
+  }
+}
 </script>
 
 <template>
@@ -170,101 +82,73 @@ onBeforeUnmount(() => {
     <div class="login-card">
       <div class="login-header">
         <h1>QY Quant</h1>
-        <p class="subtitle">量化交易平台</p>
+        <p class="subtitle">企业级账户认证</p>
       </div>
 
-      <div class="mode-switch" role="tablist" aria-label="登录方式">
+      <div class="intent-switch">
         <button
-          class="mode-btn"
-          :class="{ active: mode === 'phone' }"
+          class="intent-btn"
+          :class="{ active: intent === 'login' }"
           type="button"
-          data-test="mode-phone"
-          @click="switchMode('phone')"
+          data-test="login-tab"
+          @click="switchIntent('login')"
         >
-          手机号
+          登录
         </button>
         <button
-          class="mode-btn"
-          :class="{ active: mode === 'email' }"
+          class="intent-btn"
+          :class="{ active: intent === 'register' }"
           type="button"
-          data-test="mode-email"
-          @click="switchMode('email')"
+          data-test="register-tab"
+          @click="switchIntent('register')"
         >
-          邮箱
+          注册
         </button>
       </div>
 
-      <div v-if="step === 'identifier'" class="login-form">
-        <label class="field-label">{{ identifierLabel }}</label>
+      <div class="login-form">
+        <label class="field-label">邮箱</label>
         <input
-          v-if="mode === 'phone'"
-          v-model="phone"
-          type="tel"
-          class="field-input"
-          placeholder="请输入手机号"
-          maxlength="11"
-          data-test="phone-input"
-          @keyup.enter="handleSendCode"
-        />
-        <input
-          v-else
           v-model="email"
           type="email"
           class="field-input"
           placeholder="请输入邮箱"
           autocomplete="email"
           data-test="email-input"
-          @keyup.enter="handleSendCode"
+          @keyup.enter="handleSubmit"
         />
-        <p v-if="error" class="error-msg">{{ error }}</p>
-        <button class="submit-btn" :disabled="loading" type="button" data-test="send-code" @click="handleSendCode">
-          {{ loading ? '发送中...' : '获取验证码' }}
-        </button>
-      </div>
 
-      <div v-else-if="step === 'code'" class="login-form">
-        <label class="field-label">验证码</label>
-        <p class="identifier-hint">验证码已发送至 {{ currentIdentifier }}</p>
+        <label class="field-label">密码</label>
         <input
-          v-model="code"
-          type="text"
+          v-model="password"
+          type="password"
           class="field-input"
-          placeholder="请输入 6 位验证码"
-          maxlength="6"
-          inputmode="numeric"
-          data-test="code-input"
-          @keyup.enter="handleLogin"
+          placeholder="请输入密码"
+          autocomplete="current-password"
+          data-test="password-input"
+          @keyup.enter="handleSubmit"
         />
-        <p v-if="error" class="error-msg">{{ error }}</p>
-        <button class="submit-btn" :disabled="loading" type="button" data-test="submit-login" @click="handleLogin">
-          {{ loading ? '登录中...' : '登录 / 注册' }}
-        </button>
-        <button class="resend-btn" type="button" :disabled="countdown > 0" data-test="resend-code" @click="handleResendCode">
-          {{ countdown > 0 ? `${countdown}s 后重新发送` : '重新发送验证码' }}
-        </button>
-      </div>
 
-      <div v-else class="login-form">
-        <label class="field-label">设置昵称</label>
-        <p class="identifier-hint">首次使用 {{ identifierLabel }} 登录，请先设置昵称。</p>
-        <input
-          v-model="nickname"
-          type="text"
-          class="field-input"
-          placeholder="请输入昵称"
-          maxlength="20"
-          data-test="nickname-input"
-          @keyup.enter="handleNicknameSubmit"
-        />
+        <template v-if="intent === 'register'">
+          <label class="field-label">昵称</label>
+          <input
+            v-model="nickname"
+            type="text"
+            class="field-input"
+            placeholder="请输入昵称"
+            maxlength="20"
+            data-test="nickname-input"
+            @keyup.enter="handleSubmit"
+          />
+        </template>
+
+        <RouterLink v-if="intent === 'login'" to="/forgot-password" class="forgot-link" data-test="forgot-link">
+          忘记密码？
+        </RouterLink>
+
         <p v-if="error" class="error-msg">{{ error }}</p>
-        <button
-          class="submit-btn"
-          :disabled="loading"
-          type="button"
-          data-test="submit-nickname"
-          @click="handleNicknameSubmit"
-        >
-          {{ loading ? '注册中...' : '完成注册' }}
+        <button class="submit-btn" :disabled="loading" type="button" data-test="submit-auth" @click="handleSubmit">
+          {{ loading ? (intent === 'register' ? '注册中...' : '登录中...') : (intent === 'register' ? '注册并登录' : '登录') }}
         </button>
       </div>
     </div>
@@ -283,7 +167,7 @@ onBeforeUnmount(() => {
 
 .login-card {
   width: 100%;
-  max-width: 420px;
+  max-width: 440px;
   padding: 40px 32px;
   background: var(--glass-background);
   border: 1px solid var(--glass-border);
@@ -309,7 +193,7 @@ onBeforeUnmount(() => {
   color: var(--color-text-muted);
 }
 
-.mode-switch {
+.intent-switch {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 8px;
@@ -320,7 +204,7 @@ onBeforeUnmount(() => {
   border-radius: 16px;
 }
 
-.mode-btn {
+.intent-btn {
   height: 40px;
   border: none;
   border-radius: 12px;
@@ -329,12 +213,9 @@ onBeforeUnmount(() => {
   font-size: 14px;
   font-weight: var(--font-weight-semibold);
   cursor: pointer;
-  transition:
-    background var(--transition-fast),
-    color var(--transition-fast);
 }
 
-.mode-btn.active {
+.intent-btn.active {
   background: linear-gradient(135deg, var(--color-primary), var(--color-primary-dark));
   color: #fff;
 }
@@ -351,12 +232,6 @@ onBeforeUnmount(() => {
   color: var(--color-text-primary);
 }
 
-.identifier-hint {
-  margin: 0;
-  font-size: 13px;
-  color: var(--color-text-muted);
-}
-
 .field-input {
   height: 44px;
   padding: 0 14px;
@@ -366,19 +241,13 @@ onBeforeUnmount(() => {
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
   outline: none;
-  transition:
-    border-color var(--transition-fast),
-    box-shadow var(--transition-fast);
 }
 
-.field-input:focus {
-  background: var(--color-surface-elevated);
-  border-color: var(--color-primary);
-  box-shadow: 0 0 0 3px var(--color-primary-bg);
-}
-
-.field-input::placeholder {
-  color: var(--color-text-muted);
+.forgot-link {
+  font-size: 13px;
+  color: var(--color-primary);
+  text-decoration: none;
+  align-self: flex-end;
 }
 
 .error-msg {
@@ -397,33 +266,10 @@ onBeforeUnmount(() => {
   border: none;
   border-radius: var(--radius-lg);
   cursor: pointer;
-  transition: opacity var(--transition-fast);
-}
-
-.submit-btn:hover:not(:disabled) {
-  opacity: 0.9;
 }
 
 .submit-btn:disabled {
   opacity: 0.6;
-  cursor: not-allowed;
-}
-
-.resend-btn {
-  padding: 8px;
-  font-size: 13px;
-  color: var(--color-text-muted);
-  background: none;
-  border: none;
-  cursor: pointer;
-  transition: color var(--transition-fast);
-}
-
-.resend-btn:hover:not(:disabled) {
-  color: var(--color-primary);
-}
-
-.resend-btn:disabled {
   cursor: not-allowed;
 }
 </style>

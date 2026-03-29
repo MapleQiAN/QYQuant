@@ -11,6 +11,8 @@ import PostDetailView from '../views/PostDetailView.vue'
 import SettingsView from '../views/SettingsView.vue'
 import NewStrategyView from '../views/NewStrategyView.vue'
 import StrategyLibraryView from '../views/StrategyLibraryView.vue'
+import StrategyImportView from '../views/StrategyImportView.vue'
+import StrategyImportConfirmView from '../views/StrategyImportConfirmView.vue'
 import StrategyDetailView from '../views/StrategyDetailView.vue'
 import MarketplaceView from '../views/Marketplace.vue'
 import MarketplaceStrategyDetailView from '../views/MarketplaceStrategyDetailView.vue'
@@ -19,6 +21,8 @@ import UserProfileView from '../views/UserProfileView.vue'
 import AdminDashboardView from '../views/admin/AdminDashboard.vue'
 import BacktestMonitorView from '../views/admin/BacktestMonitor.vue'
 import LoginView from '../views/LoginView.vue'
+import ForgotPasswordView from '../views/ForgotPasswordView.vue'
+import ResetPasswordView from '../views/ResetPasswordView.vue'
 import DataSourceHealthView from '../views/admin/DataSourceHealth.vue'
 import ReportManagementView from '../views/admin/ReportManagement.vue'
 import StrategyReviewView from '../views/admin/StrategyReview.vue'
@@ -28,9 +32,13 @@ const router = createRouter({
   history: createWebHistory(),
   routes: [
     { path: '/login', name: 'login', component: LoginView, meta: { hideChrome: true } },
+    { path: '/forgot-password', name: 'forgot-password', component: ForgotPasswordView, meta: { hideChrome: true } },
+    { path: '/reset-password', name: 'reset-password', component: ResetPasswordView, meta: { hideChrome: true } },
     { path: '/', name: 'dashboard', component: DashboardView },
     { path: '/strategies', name: 'strategy-library', component: StrategyLibraryView },
     { path: '/strategies/new', name: 'strategy-new', component: NewStrategyView },
+    { path: '/strategies/import', name: 'strategy-import', component: StrategyImportView },
+    { path: '/strategies/import/confirm', name: 'strategy-import-confirm', component: StrategyImportConfirmView },
     { path: '/strategies/:strategyId/parameters', name: 'strategy-parameters', component: StrategyDetailView },
     { path: '/backtest/configure', name: 'backtest-configure', component: StrategyDetailView },
     { path: '/marketplace', name: 'marketplace', component: MarketplaceView },

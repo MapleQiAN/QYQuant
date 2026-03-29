@@ -1,5 +1,8 @@
+# syntax=docker/dockerfile:1.7
+
 # 多阶段构建：前端 Vue 应用
 # 阶段1：构建阶段
+
 FROM node:20-alpine AS builder
 
 # 设置工作目录
@@ -9,7 +12,7 @@ WORKDIR /app
 COPY package*.json ./
 
 # 安装依赖
-RUN npm ci
+RUN --mount=type=cache,target=/root/.npm npm ci
 
 # 复制源代码
 COPY . .

@@ -1,3 +1,5 @@
+# syntax=docker/dockerfile:1.7
+
 FROM python:3.11-slim-bookworm
 
 WORKDIR /app
@@ -10,10 +12,15 @@ RUN apt-get update -o Acquire::Retries=5 -o Acquire::http::Timeout=30 \
     && rm -rf /var/lib/apt/lists/*
 
 COPY backend/requirements.txt ./backend/requirements.txt
-COPY packages/qysp ./packages/qysp
 
-RUN pip install --no-cache-dir -r backend/requirements.txt \
-    && pip install --no-cache-dir ./packages/qysp
+RUN --mount=type=cache,target=/root/.cache/pip \
+    pip install -r backend/requirements.txt
+
+COPY packages/qysp/pyproject.toml ./packages/qysp/pyproject.toml
+COPY packages/qysp/src ./packages/qysp/src
+
+RUN --mount=type=cache,target=/root/.cache/pip \
+    pip install ./packages/qysp
 
 COPY backend ./backend
 

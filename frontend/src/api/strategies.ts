@@ -12,6 +12,8 @@ import type {
   MarketplaceStrategyReportResult,
   MarketplaceStrategyImportStatus,
   Strategy,
+  StrategyImportAnalysis,
+  StrategyImportConfirmPayload,
   StrategyParameterDefinition,
   StrategyPreset,
   StrategyImportResult,
@@ -318,6 +320,25 @@ export function importStrategy(file: File): Promise<StrategyImportResult> {
     url: '/v1/strategies/import',
     data: form,
     headers: { 'Content-Type': 'multipart/form-data' }
+  })
+}
+
+export function analyzeStrategyImport(file: File): Promise<StrategyImportAnalysis> {
+  const form = new FormData()
+  form.append('file', file)
+  return client.request({
+    method: 'post',
+    url: '/v1/strategy-imports/analyze',
+    data: form,
+    headers: { 'Content-Type': 'multipart/form-data' }
+  })
+}
+
+export function confirmStrategyImport(payload: StrategyImportConfirmPayload): Promise<StrategyImportResult> {
+  return client.request({
+    method: 'post',
+    url: '/v1/strategy-imports/confirm',
+    data: payload
   })
 }
 
