@@ -97,33 +97,16 @@ describe('StrategyLibraryView', () => {
     expect(deleteStrategyMock).toHaveBeenCalledWith('strategy-1')
   })
 
-  it('accepts dropped files and redirects after import', async () => {
+  it('opens the import wizard from the library entry point', async () => {
     fetchStrategiesMock.mockResolvedValue({ items: [], page: 1, perPage: 10, total: 0 })
-    importStrategyMock.mockResolvedValue({
-      strategy: {
-        id: 'strategy-2',
-        name: 'Mean Reversion',
-        description: 'Preview',
-        tags: ['mean'],
-        category: 'mean-reversion',
-        source: 'upload'
-      },
-      next: '/strategies/strategy-2/parameters'
-    })
 
     const wrapper = mount(StrategyLibraryView)
     await flushPromises()
 
-    const file = new File(['package'], 'mean-reversion.qys', { type: 'application/octet-stream' })
-    await wrapper.get('[data-test="dropzone"]').trigger('drop', {
-      dataTransfer: { files: [file] }
-    })
-    await wrapper.get('[data-test="import-submit"]').trigger('click')
-    await flushPromises()
+    await wrapper.get('[data-test="open-import-wizard"]').trigger('click')
 
-    expect(importStrategyMock).toHaveBeenCalledWith(file)
-    expect(pushMock).toHaveBeenCalledWith('/strategies/strategy-2/parameters')
-    expect(wrapper.text()).toContain('Mean Reversion')
+    expect(pushMock).toHaveBeenCalledWith('/strategies/import')
+    expect(importStrategyMock).not.toHaveBeenCalled()
   })
 
   it('shows review status and disables publish button for pending strategies', async () => {

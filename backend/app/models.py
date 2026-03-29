@@ -153,6 +153,8 @@ class Strategy(db.Model):
     trades = db.Column(db.Integer, default=0)
     owner_id = db.Column(db.String, db.ForeignKey('users.id'))
     storage_key = db.Column(db.String, nullable=True)
+    original_source_file_id = db.Column(db.String, db.ForeignKey('files.id'), nullable=True)
+    built_package_file_id = db.Column(db.String, db.ForeignKey('files.id'), nullable=True)
     code_encrypted = db.Column(db.LargeBinary, nullable=True)
     code_hash = db.Column(db.String(64), nullable=True)
     created_at = db.Column(db.BigInteger, default=now_ms)
@@ -188,6 +190,24 @@ class StrategyVersion(db.Model):
     file_id = db.Column(db.String, db.ForeignKey('files.id'))
     checksum = db.Column(db.String, nullable=True)
     created_at = db.Column(db.BigInteger, default=now_ms)
+
+
+class StrategyImportDraft(db.Model):
+    __tablename__ = 'strategy_import_drafts'
+    __table_args__ = (
+        db.Index('ix_strategy_import_drafts_owner_status', 'owner_id', 'status'),
+        db.Index('ix_strategy_import_drafts_expires_at', 'expires_at'),
+    )
+
+    id = db.Column(db.String, primary_key=True, default=gen_id)
+    owner_id = db.Column(db.String, db.ForeignKey('users.id'), nullable=False)
+    source_file_id = db.Column(db.String, db.ForeignKey('files.id'), nullable=False)
+    source_type = db.Column(db.String(32), nullable=False)
+    status = db.Column(db.String(32), nullable=False, default='analyzed')
+    analysis_payload = db.Column(job_json_type, nullable=False, default=dict)
+    expires_at = db.Column(db.DateTime(timezone=True), nullable=False)
+    created_at = db.Column(db.DateTime(timezone=True), nullable=False, default=now_utc)
+    updated_at = db.Column(db.DateTime(timezone=True), nullable=False, default=now_utc, onupdate=now_utc)
 
 
 class StrategyParameterPreset(db.Model):

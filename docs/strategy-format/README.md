@@ -257,3 +257,27 @@ def on_bar(ctx: StrategyContext, data: BarData) -> list[Order]:
 - `docs/strategy-format/examples/GoldTrend/`
 
 这两个目录分别展示了“纯突破 + 双止损”和“均线过滤 + 突破跟踪”两种 `event_v1` 写法。
+
+## 9. Source Import Workflow
+
+The platform now accepts three import inputs:
+
+- a single `strategy.py`
+- a source project zip
+- an existing `.qys` package
+
+All three inputs are normalized into a controlled project and then rebuilt into a validated `.qys` package before runtime or backtests use them.
+
+Current controlled-project restrictions:
+
+- no arbitrary dependency installation
+- no custom build hooks
+- only allowed source files and static assets are preserved
+
+CLI support:
+
+- `qys import <path>` accepts a source directory, `.zip`, `.py`, or `.qys`
+- set `QYQUANT_API_BASE_URL` to the platform base URL
+- set `QYQUANT_API_TOKEN` to a valid bearer token
+
+The CLI import command uses the same backend `analyze -> confirm` protocol as the web import wizard.
