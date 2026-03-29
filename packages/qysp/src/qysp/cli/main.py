@@ -2,18 +2,22 @@
 
 from __future__ import annotations
 
-import hashlib
+import io
 import json
+import os
 import re
 import sys
 import uuid
 import zipfile
-from pathlib import Path, PurePosixPath
+from pathlib import Path
 from typing import Callable
+from urllib import error as urllib_error
+from urllib import request as urllib_request
 
 import click
 
 from qysp import __version__
+from qysp.builder import PackageBuildError, build_package
 from qysp.templates import load_template_files
 
 
@@ -119,62 +123,11 @@ def build(source_dir: str, output: str | None) -> None:
     """Package a strategy directory into a .qys file."""
     from qysp.validator import validate as do_validate
 
-    src = Path(source_dir)
-    strategy_json_path = src / "strategy.json"
-    strategy_py_path = src / "src" / "strategy.py"
-
-    if not strategy_json_path.exists():
-        click.echo("ERROR: missing strategy.json", err=True)
+    try:
+        out_path = build_package(source_dir, output)
+    except PackageBuildError as exc:
+        click.echo(f"ERROR: {exc}", err=True)
         sys.exit(1)
-    if not strategy_py_path.exists():
-        click.echo("ERROR: missing src/strategy.py", err=True)
-        sys.exit(1)
-
-    strategy_data = json.loads(strategy_json_path.read_text(encoding="utf-8"))
-    strategy_name = strategy_data.get("name", src.name)
-
-    _EXCLUDE_DIRS = {"__pycache__", ".git", ".svn", ".hg", ".venv", "node_modules"}
-    _EXCLUDE_SUFFIXES = {".pyc", ".pyo"}
-    _EXCLUDE_NAMES = {".DS_Store", "Thumbs.db", ".gitignore"}
-
-    all_files: list[Path] = []
-    for f in sorted(src.rglob("*")):
-        if not f.is_file():
-            continue
-        parts = set(f.relative_to(src).parts)
-        if parts & _EXCLUDE_DIRS:
-            continue
-        if f.suffix in _EXCLUDE_SUFFIXES:
-            continue
-        if f.name in _EXCLUDE_NAMES:
-            continue
-        all_files.append(f)
-
-    integrity_files: list[dict] = []
-    for f in all_files:
-        rel = f.relative_to(src)
-        posix_path = str(PurePosixPath(rel))
-        if posix_path == "strategy.json":
-            continue
-        data = f.read_bytes()
-        sha = hashlib.sha256(data).hexdigest()
-        integrity_files.append(
-            {"path": posix_path, "sha256": sha, "size": len(data)}
-        )
-
-    strategy_data["integrity"] = {"files": integrity_files}
-    updated_json = json.dumps(strategy_data, indent=2, ensure_ascii=False) + "\n"
-
-    out_path = Path(output) if output else Path(f"{strategy_name}.qys")
-
-    with zipfile.ZipFile(out_path, "w", zipfile.ZIP_DEFLATED) as zf:
-        zf.writestr("strategy.json", updated_json)
-        for f in all_files:
-            rel = f.relative_to(src)
-            posix_path = str(PurePosixPath(rel))
-            if posix_path == "strategy.json":
-                continue
-            zf.write(f, posix_path)
 
     result = do_validate(out_path)
     if result["valid"]:
@@ -296,10 +249,148 @@ def backtest(path: str) -> None:
 
 
 @cli.command("import")
-@click.argument("path", type=click.Path())
+@click.argument("path", type=click.Path(exists=True))
 def import_cmd(path: str) -> None:
-    """Import a strategy package to the platform strategy library (stub)."""
-    click.echo("Import command will be integrated in a later version (Epic 5).")
+    """Import a strategy source or package to the platform strategy library."""
+    api_base_url = os.getenv("QYQUANT_API_BASE_URL", "").rstrip("/")
+    api_token = os.getenv("QYQUANT_API_TOKEN", "").strip()
+    if not api_base_url:
+        click.echo("ERROR: QYQUANT_API_BASE_URL is required", err=True)
+        sys.exit(2)
+    if not api_token:
+        click.echo("ERROR: QYQUANT_API_TOKEN is required", err=True)
+        sys.exit(2)
+
+    source_path = Path(path)
+    filename, payload = _prepare_import_upload(source_path)
+    analysis = _api_post_multipart(
+        f"{api_base_url}/api/v1/strategy-imports/analyze",
+        token=api_token,
+        field_name="file",
+        filename=filename,
+        payload=payload,
+    )
+
+    warnings = analysis.get("warnings") or []
+    for warning in warnings:
+        click.echo(f"WARNING: {warning}", err=True)
+
+    errors = analysis.get("errors") or []
+    if errors:
+        for item in errors:
+            click.echo(f"ERROR: {item}", err=True)
+        sys.exit(1)
+
+    candidates = analysis.get("entrypointCandidates") or []
+    if not candidates:
+        click.echo("ERROR: No supported strategy entrypoint candidates found", err=True)
+        sys.exit(1)
+    if len(candidates) > 1:
+        click.echo("ERROR: Multiple entrypoint candidates detected; use the web import confirmation flow", err=True)
+        sys.exit(1)
+
+    result = _api_post_json(
+        f"{api_base_url}/api/v1/strategy-imports/confirm",
+        token=api_token,
+        payload=_build_cli_confirm_payload(analysis, candidates[0]),
+    )
+    strategy = result.get("strategy") or {}
+    click.echo(f"Imported strategy: {strategy.get('id') or ''}".rstrip())
+    if result.get("next"):
+        click.echo(f"Next: {result['next']}")
+
+
+def _prepare_import_upload(path: Path) -> tuple[str, bytes]:
+    if path.is_dir():
+        payload = io.BytesIO()
+        with zipfile.ZipFile(payload, "w", zipfile.ZIP_DEFLATED) as archive:
+            for file_path in sorted(candidate for candidate in path.rglob("*") if candidate.is_file()):
+                archive.write(file_path, file_path.relative_to(path).as_posix())
+        return f"{path.name}.zip", payload.getvalue()
+
+    return path.name, path.read_bytes()
+
+
+def _build_cli_confirm_payload(analysis: dict, entrypoint_candidate: dict) -> dict:
+    metadata = dict(analysis.get("metadataCandidates") or {})
+    if metadata.get("symbol") == "N/A":
+        metadata.pop("symbol")
+    if not metadata.get("name"):
+        metadata["name"] = "Imported Strategy"
+    return {
+        "draftImportId": analysis["draftImportId"],
+        "selectedEntrypoint": {
+            "path": entrypoint_candidate["path"],
+            "callable": entrypoint_candidate["callable"],
+            "interface": entrypoint_candidate.get("interface") or "event_v1",
+        },
+        "metadata": metadata,
+        "parameterDefinitions": analysis.get("parameterCandidates") or [],
+    }
+
+
+def _api_post_multipart(url: str, *, token: str, field_name: str, filename: str, payload: bytes) -> dict:
+    boundary = f"qysp-{uuid.uuid4().hex}"
+    body = (
+        f"--{boundary}\r\n"
+        f'Content-Disposition: form-data; name="{field_name}"; filename="{filename}"\r\n'
+        "Content-Type: application/octet-stream\r\n\r\n"
+    ).encode("utf-8") + payload + f"\r\n--{boundary}--\r\n".encode("utf-8")
+    request = urllib_request.Request(
+        url,
+        data=body,
+        method="POST",
+        headers={
+            "Authorization": f"Bearer {token}",
+            "Content-Type": f"multipart/form-data; boundary={boundary}",
+        },
+    )
+    return _read_api_response(request)
+
+
+def _api_post_json(url: str, *, token: str, payload: dict) -> dict:
+    request = urllib_request.Request(
+        url,
+        data=json.dumps(payload).encode("utf-8"),
+        method="POST",
+        headers={
+            "Authorization": f"Bearer {token}",
+            "Content-Type": "application/json",
+        },
+    )
+    return _read_api_response(request)
+
+
+def _read_api_response(request: urllib_request.Request) -> dict:
+    try:
+        with urllib_request.urlopen(request) as response:
+            payload = json.loads(response.read().decode("utf-8"))
+    except urllib_error.HTTPError as exc:
+        body = exc.read().decode("utf-8", errors="replace")
+        try:
+            payload = json.loads(body)
+        except json.JSONDecodeError:
+            click.echo(f"ERROR: Request failed with status {exc.code}", err=True)
+            sys.exit(1)
+        _raise_api_error(payload)
+        raise AssertionError("unreachable")
+    except urllib_error.URLError as exc:
+        click.echo(f"ERROR: Unable to reach API: {exc.reason}", err=True)
+        sys.exit(1)
+
+    if "error" in payload:
+        _raise_api_error(payload)
+    return payload.get("data") or {}
+
+
+def _raise_api_error(payload: dict) -> None:
+    error_payload = payload.get("error") or {}
+    message = error_payload.get("message") or "Request failed"
+    details = error_payload.get("details")
+    click.echo(f"ERROR: {message}", err=True)
+    if details:
+        click.echo(json.dumps(details, ensure_ascii=False), err=True)
+    sys.exit(1)
 
 
 if __name__ == "__main__":

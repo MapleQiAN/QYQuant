@@ -6,9 +6,14 @@
           <h1 class="page-title">Strategy Library</h1>
           <p class="page-subtitle">Manage imported strategies and bring new .qys packages into your workspace.</p>
         </div>
-        <RouterLink class="btn btn-secondary" to="/">
-          Back to dashboard
-        </RouterLink>
+        <div class="header-actions">
+          <RouterLink class="btn btn-primary" to="/strategies/import">
+            Open import wizard
+          </RouterLink>
+          <RouterLink class="btn btn-secondary" to="/">
+            Back to dashboard
+          </RouterLink>
+        </div>
       </div>
 
       <section v-if="isGuidedMode" :class="['card guided-card', { 'onboarding-highlight': userStore.onboardingHighlightTarget === 'guided-strategy-card' }]" data-onboarding-target="guided-strategy-card">
@@ -46,44 +51,25 @@
         <div class="card import-card">
           <div class="section-header">
             <h2>Import Strategy</h2>
-            <p>Drop a `.qys` package here or pick a file from disk.</p>
+            <p>Use the guided flow to upload `strategy.py`, source project zips, or ready-made `.qys` packages.</p>
           </div>
-
-          <label
-            class="dropzone"
-            :class="{ active: dragActive }"
-            data-test="dropzone"
-            @dragenter.prevent="dragActive = true"
-            @dragover.prevent="dragActive = true"
-            @dragleave.prevent="dragActive = false"
-            @drop.prevent="handleDrop"
-          >
-            <input class="file-input" type="file" accept=".qys,.zip" @change="handleFileChange" />
-            <span class="dropzone-title">{{ selectedFile ? selectedFile.name : 'Drop .qys file here' }}</span>
-            <span class="dropzone-help">{{ selectedFile ? formatBytes(selectedFile.size) : 'Supported size: up to 10 MB' }}</span>
-          </label>
-
+          <div class="import-format-list">
+            <span class="pill">strategy.py</span>
+            <span class="pill">source zip</span>
+            <span class="pill">.qys package</span>
+          </div>
+          <p class="import-note">
+            The wizard analyzes the upload first, then lets you confirm entrypoints and metadata before creating the final strategy version.
+          </p>
           <div class="actions">
             <button
               class="btn btn-primary"
               type="button"
-              data-test="import-submit"
-              :disabled="importing || !selectedFile"
-              @click="handleImport"
+              data-test="open-import-wizard"
+              @click="handleOpenImportWizard"
             >
-              {{ importing ? 'Importing...' : 'Import package' }}
+              Open import wizard
             </button>
-          </div>
-
-          <p v-if="importError" class="message error">{{ importError }}</p>
-
-          <div v-if="preview" class="preview-card">
-            <div class="preview-title">{{ preview.name }}</div>
-            <div class="preview-text">{{ preview.description || 'No description provided.' }}</div>
-            <div class="tag-row">
-              <span class="pill">{{ preview.category || 'other' }}</span>
-              <span v-for="tag in preview.tags" :key="tag" class="pill">{{ tag }}</span>
-            </div>
           </div>
         </div>
 
@@ -173,7 +159,7 @@
 import { computed, onMounted, ref } from 'vue'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
 import StrategyPublishFlow from '../components/strategy/StrategyPublishFlow.vue'
-import { deleteStrategy, fetchMarketplaceStrategies, fetchStrategies, importStrategy } from '../api/strategies'
+import { deleteStrategy, fetchMarketplaceStrategies, fetchStrategies } from '../api/strategies'
 import type { MarketplacePublishPayload, MarketplaceReviewStatus, Strategy } from '../types/Strategy'
 import { useMarketplaceStore, useUserStore } from '../stores'
 
@@ -188,11 +174,6 @@ const loading = ref(false)
 const loadError = ref('')
 const guidedLoading = ref(false)
 const guidedError = ref('')
-const importError = ref('')
-const importing = ref(false)
-const dragActive = ref(false)
-const selectedFile = ref<File | null>(null)
-const preview = ref<Strategy | null>(null)
 const page = ref(1)
 const perPage = ref(10)
 const total = ref(0)
@@ -248,41 +229,8 @@ async function loadGuidedStrategies() {
   }
 }
 
-function handleFileChange(event: Event) {
-  const input = event.target as HTMLInputElement
-  selectedFile.value = input.files?.[0] || null
-  preview.value = null
-  importError.value = ''
-}
-
-function handleDrop(event: DragEvent) {
-  dragActive.value = false
-  selectedFile.value = event.dataTransfer?.files?.[0] || null
-  preview.value = null
-  importError.value = ''
-}
-
-async function handleImport() {
-  if (!selectedFile.value) {
-    importError.value = 'Please choose a .qys package first.'
-    return
-  }
-
-  importError.value = ''
-  importing.value = true
-  try {
-    const result = await importStrategy(selectedFile.value)
-    preview.value = result.strategy
-    selectedFile.value = null
-    await loadPage(1)
-    if (result.next) {
-      await router.push(result.next)
-    }
-  } catch (error: any) {
-    importError.value = error?.message || 'Failed to import strategy package'
-  } finally {
-    importing.value = false
-  }
+async function handleOpenImportWizard() {
+  await router.push('/strategies/import')
 }
 
 async function handleDelete(strategyId: string) {
@@ -357,13 +305,6 @@ async function handleGuidedPreview(strategyId: string) {
   })
 }
 
-function formatBytes(bytes: number) {
-  if (bytes <= 0) return '0 B'
-  const units = ['B', 'KB', 'MB', 'GB']
-  const index = Math.min(Math.floor(Math.log(bytes) / Math.log(1024)), units.length - 1)
-  return `${(bytes / Math.pow(1024, index)).toFixed(1)} ${units[index]}`
-}
-
 function formatCreatedAt(value?: string | number) {
   if (!value) return 'Unknown time'
   const numeric = typeof value === 'string' ? Number(value) : value
@@ -404,6 +345,11 @@ function statusClass(status?: MarketplaceReviewStatus) {
   justify-content: space-between;
   gap: var(--spacing-lg);
   margin-bottom: var(--spacing-xl);
+}
+
+.header-actions {
+  display: flex;
+  gap: var(--spacing-sm);
 }
 
 .page-title {
@@ -452,60 +398,28 @@ function statusClass(status?: MarketplaceReviewStatus) {
   color: var(--color-text-muted);
 }
 
-.dropzone {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: var(--spacing-xs);
-  margin-top: var(--spacing-lg);
-  min-height: 180px;
-  padding: var(--spacing-lg);
-  border: 1px dashed var(--color-border);
-  border-radius: var(--radius-lg);
-  background: linear-gradient(180deg, rgba(18, 58, 84, 0.03), rgba(18, 58, 84, 0.08));
-  cursor: pointer;
-  transition: border-color var(--transition-fast), transform var(--transition-fast);
-}
-
-.dropzone.active {
-  border-color: var(--color-primary);
-  transform: translateY(-1px);
-}
-
-.file-input {
-  display: none;
-}
-
-.dropzone-title {
-  font-weight: var(--font-weight-semibold);
-  color: var(--color-text-primary);
-}
-
-.dropzone-help {
-  font-size: var(--font-size-sm);
-  color: var(--color-text-muted);
-}
-
 .actions {
   margin-top: var(--spacing-md);
 }
 
-.preview-card {
-  margin-top: var(--spacing-md);
-  padding: var(--spacing-md);
-  border-radius: var(--radius-md);
-  background: var(--color-primary-bg);
-  border: 1px solid var(--color-primary-light);
+.import-format-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-xs);
+  margin-top: var(--spacing-lg);
 }
 
-.preview-title,
+.import-note,
+.row-title {
+  margin: var(--spacing-xs) 0 0;
+  color: var(--color-text-secondary);
+}
+
 .row-title {
   font-weight: var(--font-weight-semibold);
   color: var(--color-text-primary);
 }
 
-.preview-text,
 .row-description {
   margin: var(--spacing-xs) 0 0;
   color: var(--color-text-secondary);
@@ -626,7 +540,8 @@ function statusClass(status?: MarketplaceReviewStatus) {
   .strategy-row,
   .pagination,
   .guided-actions,
-  .row-actions {
+  .row-actions,
+  .header-actions {
     display: flex;
     flex-direction: column;
   }

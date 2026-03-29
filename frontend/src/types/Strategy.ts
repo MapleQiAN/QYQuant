@@ -45,6 +45,48 @@ export interface StrategyImportResult {
   next?: string
 }
 
+export type StrategyImportSourceType = 'python_file' | 'source_zip' | 'qys_package'
+
+export interface StrategyImportEntrypointCandidate {
+  path: string
+  callable: string
+  interface?: string | null
+  confidence?: number | null
+}
+
+export interface StrategyImportAnalysis {
+  draftImportId: string
+  sourceType: StrategyImportSourceType
+  fileSummary?: {
+    filename: string
+    size: number
+    entries?: string[]
+  } | null
+  entrypointCandidates: StrategyImportEntrypointCandidate[]
+  metadataCandidates?: Record<string, unknown> | null
+  parameterCandidates: StrategyParameter[]
+  warnings: string[]
+  errors: string[]
+}
+
+export interface StrategyImportConfirmPayload {
+  draftImportId: string
+  selectedEntrypoint: {
+    path: string
+    callable: string
+    interface?: string
+  }
+  metadata: {
+    name: string
+    description?: string
+    category?: string
+    tags?: string[]
+    symbol?: string
+    version?: string
+  }
+  parameterDefinitions?: StrategyParameter[]
+}
+
 export type StrategyParameterValue = string | number | boolean | null
 export type StrategyParameterDefinitionType = 'int' | 'float' | 'string' | 'enum'
 

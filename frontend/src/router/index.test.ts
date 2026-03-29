@@ -13,6 +13,8 @@ vi.mock('../views/PostDetailView.vue', () => ({ default: { template: '<div />' }
 vi.mock('../views/SettingsView.vue', () => ({ default: { template: '<div />' } }))
 vi.mock('../views/NewStrategyView.vue', () => ({ default: { template: '<div />' } }))
 vi.mock('../views/StrategyLibraryView.vue', () => ({ default: { template: '<div />' } }))
+vi.mock('../views/StrategyImportView.vue', () => ({ default: { template: '<div />' } }))
+vi.mock('../views/StrategyImportConfirmView.vue', () => ({ default: { template: '<div />' } }))
 vi.mock('../views/StrategyDetailView.vue', () => ({ default: { template: '<div />' } }))
 vi.mock('../views/Marketplace.vue', () => ({ default: { template: '<div />' } }))
 vi.mock('../views/MarketplaceStrategyDetailView.vue', () => ({ default: { template: '<div />' } }))
@@ -61,6 +63,24 @@ describe('router', () => {
   it('contains strategy parameter route', () => {
     const hasStrategyDetail = router.getRoutes().some((route) => route.path === '/strategies/:strategyId/parameters')
     expect(hasStrategyDetail).toBe(true)
+  })
+
+  it('contains strategy import routes', () => {
+    const hasImport = router.getRoutes().some((route) => route.path === '/strategies/import')
+    const hasImportConfirm = router.getRoutes().some((route) => route.path === '/strategies/import/confirm')
+
+    expect(hasImport).toBe(true)
+    expect(hasImportConfirm).toBe(true)
+  })
+
+  it('contains strategy import routes', () => {
+    const hasStrategyImport = router.getRoutes().some((route) => route.path === '/strategies/import')
+    const hasStrategyImportConfirm = router.getRoutes().some(
+      (route) => route.path === '/strategies/import/confirm'
+    )
+
+    expect(hasStrategyImport).toBe(true)
+    expect(hasStrategyImportConfirm).toBe(true)
   })
 
   it('contains marketplace route', () => {

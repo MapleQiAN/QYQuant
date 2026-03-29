@@ -47,6 +47,52 @@ describe('strategies api', () => {
     expect(requestMock.mock.calls[0][0].url).toBe('/v1/strategies/import')
   })
 
+  it('calls analyze strategy import endpoint', async () => {
+    const file = new File(['source'], 'strategy.py', { type: 'text/x-python' })
+
+    const data = await strategies.analyzeStrategyImport(file)
+
+    expect(data).toEqual({ ok: true })
+    expect(requestMock).toHaveBeenCalledTimes(1)
+    expect(requestMock.mock.calls[0][0].method).toBe('post')
+    expect(requestMock.mock.calls[0][0].url).toBe('/v1/strategy-imports/analyze')
+  })
+
+  it('calls confirm strategy import endpoint', async () => {
+    const data = await strategies.confirmStrategyImport({
+      draftImportId: 'draft-1',
+      selectedEntrypoint: {
+        path: 'strategy.py',
+        callable: 'Strategy',
+        interface: 'event_v1'
+      },
+      metadata: {
+        name: 'Confirmed Strategy',
+        symbol: 'BTCUSDT'
+      },
+      parameterDefinitions: []
+    })
+
+    expect(data).toEqual({ ok: true })
+    expect(requestMock).toHaveBeenCalledWith({
+      method: 'post',
+      url: '/v1/strategy-imports/confirm',
+      data: {
+        draftImportId: 'draft-1',
+        selectedEntrypoint: {
+          path: 'strategy.py',
+          callable: 'Strategy',
+          interface: 'event_v1'
+        },
+        metadata: {
+          name: 'Confirmed Strategy',
+          symbol: 'BTCUSDT'
+        },
+        parameterDefinitions: []
+      }
+    })
+  })
+
   it('calls runtime descriptor endpoint', async () => {
     const data = await strategies.fetchRuntimeDescriptor('strategy-id')
     expect(data).toEqual({ ok: true })

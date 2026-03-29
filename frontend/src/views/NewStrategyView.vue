@@ -67,48 +67,20 @@
             <p class="hint">{{ $t('strategyNew.importHint') }}</p>
           </div>
           <div class="form-body">
-            <label class="field">
-              <span class="field-label">{{ $t('strategyNew.fileLabel') }}</span>
-              <input
-                class="field-input file-input"
-                type="file"
-                accept=".qys,.zip"
-                @change="handleFileChange"
-              />
-            </label>
-            <p class="field-help">{{ $t('strategyNew.fileHelp') }}</p>
-
-            <div v-if="importFile" class="file-meta">
-              <div class="file-row">
-                <span class="file-label">{{ $t('strategyNew.fileSelected') }}</span>
-                <span class="file-value">{{ importFile.name }}</span>
-              </div>
-              <div class="file-row">
-                <span class="file-label">{{ $t('strategyNew.sizeLabel') }}</span>
-                <span class="file-value">{{ formatBytes(importFile.size) }}</span>
-              </div>
-            </div>
-
-            <div v-if="importState.result" class="import-result">
-              <div class="result-title">{{ importState.result.strategy.name }}</div>
-              <div class="result-subtitle">
-                {{ $t('strategyNew.versionLabel') }}: {{ importState.result.version.version }}
-              </div>
+            <p class="field-help">
+              Use the guided import flow for `strategy.py`, source project zips, or existing `.qys` packages.
+            </p>
+            <div class="tag-row">
+              <span class="pill">strategy.py</span>
+              <span class="pill">source zip</span>
+              <span class="pill">.qys package</span>
             </div>
 
             <div class="form-actions">
-              <button
-                class="btn btn-primary"
-                type="button"
-                :disabled="importState.loading || !importFile"
-                @click="handleImport"
-              >
-                {{ $t('strategyNew.importAction') }}
-              </button>
+              <RouterLink class="btn btn-primary" to="/strategies/import">
+                Open import wizard
+              </RouterLink>
             </div>
-
-            <p v-if="importState.error" class="form-message error">{{ importState.error }}</p>
-            <p v-else-if="importState.success" class="form-message success">{{ importState.success }}</p>
           </div>
         </div>
       </div>
@@ -117,11 +89,10 @@
 </template>
 
 <script setup lang="ts">
-import { reactive, ref, h } from 'vue'
+import { reactive, h } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { RouterLink } from 'vue-router'
-import { createStrategy, importStrategy } from '../api/strategies'
-import type { StrategyImportResult } from '../types/Strategy'
+import { createStrategy } from '../api/strategies'
 import { useStrategiesStore } from '../stores'
 
 const { t } = useI18n()
@@ -137,19 +108,6 @@ const createState = reactive({
   loading: false,
   error: '',
   success: ''
-})
-
-const importFile = ref<File | null>(null)
-const importState = reactive<{
-  loading: boolean
-  error: string
-  success: string
-  result: StrategyImportResult | null
-}>({
-  loading: false,
-  error: '',
-  success: '',
-  result: null
 })
 
 function resetCreate() {
@@ -188,44 +146,6 @@ async function handleCreate() {
   } finally {
     createState.loading = false
   }
-}
-
-function handleFileChange(event: Event) {
-  const input = event.target as HTMLInputElement
-  importFile.value = input.files?.[0] || null
-  importState.error = ''
-  importState.success = ''
-  importState.result = null
-}
-
-async function handleImport() {
-  importState.error = ''
-  importState.success = ''
-  importState.result = null
-  if (!importFile.value) {
-    importState.error = t('strategyNew.fileRequired')
-    return
-  }
-  importState.loading = true
-  try {
-    const result = await importStrategy(importFile.value)
-    importState.result = result
-    importState.success = `${t('strategyNew.importSuccess')}: ${result.strategy.name}`
-    strategiesStore.loadRecent()
-    importFile.value = null
-  } catch (error: any) {
-    importState.error = error?.message || 'Failed to import strategy'
-  } finally {
-    importState.loading = false
-  }
-}
-
-function formatBytes(bytes: number) {
-  if (bytes === 0) return '0 B'
-  const k = 1024
-  const sizes = ['B', 'KB', 'MB', 'GB']
-  const i = Math.floor(Math.log(bytes) / Math.log(k))
-  return `${(bytes / Math.pow(k, i)).toFixed(1)} ${sizes[i]}`
 }
 
 const ArrowLeftIcon = () => h('svg', {
@@ -342,6 +262,20 @@ const ArrowLeftIcon = () => h('svg', {
   margin: 0;
   font-size: var(--font-size-xs);
   color: var(--color-text-muted);
+}
+
+.tag-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-xs);
+}
+
+.pill {
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: var(--color-background);
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-xs);
 }
 
 .file-meta {
