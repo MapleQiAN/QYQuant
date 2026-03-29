@@ -6,14 +6,19 @@ from .models import UserQuota
 
 PLAN_LIMITS = {
     "free": 10,
-    "lite": 200,
+    "go": 50,
+    "plus": 200,
     "pro": 500,
-    "expert": math.inf,
+    "ultra": math.inf,
 }
 
 PLAN_LEVEL_ALIASES = {
-    "basic": "lite",
-    "enterprise": "expert",
+    # legacy renames – keep reading old DB values correctly
+    "lite": "plus",
+    "expert": "ultra",
+    # older aliases
+    "basic": "go",
+    "enterprise": "ultra",
 }
 
 

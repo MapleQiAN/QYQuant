@@ -2,7 +2,7 @@ import { createHttpClient } from './http'
 
 const client = createHttpClient()
 
-export type PlanLevel = 'free' | 'lite' | 'pro' | 'expert'
+export type PlanLevel = 'free' | 'go' | 'plus' | 'pro' | 'ultra'
 export type PaymentProvider = 'wechat' | 'alipay'
 
 export interface CreatePaymentOrderRequest {

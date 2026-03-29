@@ -17,6 +17,7 @@ import StrategyDetailView from '../views/StrategyDetailView.vue'
 import MarketplaceView from '../views/Marketplace.vue'
 import MarketplaceStrategyDetailView from '../views/MarketplaceStrategyDetailView.vue'
 import PricingView from '../views/PricingView.vue'
+import CheckoutView from '../views/CheckoutView.vue'
 import UserProfileView from '../views/UserProfileView.vue'
 import AdminDashboardView from '../views/admin/AdminDashboard.vue'
 import BacktestMonitorView from '../views/admin/BacktestMonitor.vue'
@@ -45,6 +46,7 @@ const router = createRouter({
     { path: '/marketplace/strategies/:strategyId', name: 'marketplace-strategy-detail', component: MarketplaceStrategyDetailView },
     { path: '/backtests', name: 'backtests', component: BacktestsView },
     { path: '/pricing', name: 'pricing', component: PricingView },
+    { path: '/checkout', name: 'checkout', component: CheckoutView },
     { path: '/admin', name: 'admin-dashboard', component: AdminDashboardView, meta: { requiresAdmin: true } },
     { path: '/admin/backtest-monitor', name: 'admin-backtest-monitor', component: BacktestMonitorView, meta: { requiresAdmin: true } },
     { path: '/admin/data-source-health', name: 'admin-data-source-health', component: DataSourceHealthView, meta: { requiresAdmin: true } },
