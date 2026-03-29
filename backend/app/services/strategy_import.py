@@ -1,4 +1,3 @@
-import hashlib
 import json
 import os
 import uuid
@@ -9,7 +8,7 @@ from qysp.parameters import ValidationError as QYSPValidationError
 from qysp.validator import validate_integrity, validate_schema
 
 from ..extensions import db
-from ..models import File, Strategy, StrategyVersion
+from ..models import Strategy
 from ..utils.crypto import encrypt_strategy, hash_strategy_source
 from ..utils.time import now_ms
 
@@ -42,46 +41,70 @@ def import_strategy_package(file_storage, owner_id):
     temp_path = _strategy_storage_root() / "_tmp" / f"{uuid.uuid4().hex}{ext}"
     temp_path.parent.mkdir(parents=True, exist_ok=True)
     temp_path.write_bytes(payload)
-
     try:
-        manifest, entrypoint_source = _parse_package(temp_path)
+        from .strategy_import_analysis import StrategyImportAnalysisError, analyze_strategy_import
+        from .strategy_import_confirm import StrategyImportConfirmError, confirm_strategy_import
+
+        manifest, _ = _parse_package(temp_path)
         _validate_manifest(manifest)
         _validate_package_integrity(temp_path)
 
-        storage_key = f"strategies/{uuid.uuid4().hex}{ext}"
-        stored_path = _strategy_storage_root() / storage_key
-        stored_path.parent.mkdir(parents=True, exist_ok=True)
-        stored_path.write_bytes(payload)
-
-        strategy = _upsert_strategy(
-            manifest=manifest,
-            entrypoint_source=entrypoint_source,
-            owner_id=owner_id,
-            storage_key=storage_key,
-        )
-
-        file_record = File(
-            owner_id=owner_id,
+        buffered_upload = _BufferedImportUpload(
             filename=original_name,
-            content_type=file_storage.mimetype or "application/octet-stream",
-            size=len(payload),
-            path=stored_path.as_posix(),
+            mimetype=file_storage.mimetype or "application/octet-stream",
+            payload=payload,
         )
-        db.session.add(file_record)
-        db.session.flush()
+        draft, source_file, analysis = analyze_strategy_import(buffered_upload, owner_id)
+        errors = analysis.get("errors") or []
+        if errors:
+            raise StrategyImportError("INVALID_STRATEGY_PACKAGE", errors[0], 422, details=errors)
 
-        version = StrategyVersion(
-            strategy_id=strategy.id,
-            version=manifest.get("version") or "1.0.0",
-            file_id=file_record.id,
-            checksum=hashlib.sha256(payload).hexdigest(),
+        candidates = analysis.get("entrypointCandidates") or []
+        if not candidates:
+            raise StrategyImportError("INVALID_STRATEGY_PACKAGE", "Strategy entrypoint is missing", 422)
+        if len(candidates) > 1:
+            raise StrategyImportError(
+                "AMBIGUOUS_STRATEGY_ENTRYPOINT",
+                "Legacy import only supports a single detected strategy entrypoint",
+                422,
+                details=candidates,
+            )
+
+        strategy, version, _built_file = confirm_strategy_import(
+            draft.id,
+            owner_id=owner_id,
+            payload=_build_legacy_confirm_payload(draft.id, analysis, candidates[0]),
         )
-        db.session.add(version)
-        db.session.commit()
-        return strategy, version, file_record
+        return strategy, version, source_file
+    except StrategyImportAnalysisError as exc:
+        raise StrategyImportError(exc.code, exc.message, exc.status, details=exc.details) from exc
+    except StrategyImportConfirmError as exc:
+        raise StrategyImportError(exc.code, exc.message, exc.status, details=exc.details) from exc
     finally:
         if temp_path.exists():
             temp_path.unlink()
+
+
+def _build_legacy_confirm_payload(draft_import_id, analysis, entrypoint_candidate):
+    metadata = dict(analysis.get("metadataCandidates") or {})
+    if metadata.get("symbol") == "N/A":
+        metadata.pop("symbol")
+    return {
+        "draftImportId": draft_import_id,
+        "selectedEntrypoint": entrypoint_candidate,
+        "metadata": metadata,
+        "parameterDefinitions": analysis.get("parameterCandidates"),
+    }
+
+
+class _BufferedImportUpload:
+    def __init__(self, *, filename, mimetype, payload):
+        self.filename = filename
+        self.mimetype = mimetype
+        self._payload = payload
+
+    def read(self):
+        return self._payload
 
 
 def _parse_package(package_path):

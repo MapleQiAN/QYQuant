@@ -8,6 +8,14 @@ from flask_smorest import Blueprint
 from ..extensions import db
 from ..models import BacktestJob, File, Strategy, StrategyVersion
 from ..schemas import StrategyParameterSchema, StrategySchema
+from ..services.strategy_import_analysis import (
+    StrategyImportAnalysisError,
+    analyze_strategy_import,
+)
+from ..services.strategy_import_confirm import (
+    StrategyImportConfirmError,
+    confirm_strategy_import,
+)
 from ..services.strategy_import import StrategyImportError, import_strategy_package
 from ..strategy_runtime import StrategyRuntimeError
 from ..strategy_runtime.loader import load_strategy_package
@@ -160,6 +168,43 @@ def list_strategies():
         }
     )
 
+@bp.post("/v1/strategy-imports/analyze")
+@jwt_required()
+def analyze_strategy_import_v1():
+    incoming = request.files.get("file")
+    if not incoming:
+        return error_response("FILE_REQUIRED", "Strategy source file is required", 400)
+
+    try:
+        draft, _, analysis = analyze_strategy_import(incoming, owner_id=get_jwt_identity())
+    except StrategyImportAnalysisError as exc:
+        return error_response(exc.code, exc.message, exc.status, details=exc.details)
+
+    payload = dict(analysis)
+    payload["draftImportId"] = draft.id
+    return ok(payload)
+
+
+@bp.post("/v1/strategy-imports/confirm")
+@jwt_required()
+def confirm_strategy_import_v1():
+    payload = request.get_json() or {}
+    draft_import_id = payload.get("draftImportId")
+    if not draft_import_id:
+        return error_response("DRAFT_IMPORT_ID_REQUIRED", "Import draft id is required", 400)
+
+    try:
+        strategy, version, file_record = confirm_strategy_import(
+            draft_import_id,
+            owner_id=get_jwt_identity(),
+            payload=payload,
+        )
+    except StrategyImportConfirmError as exc:
+        return error_response(exc.code, exc.message, exc.status, details=exc.details)
+
+    response_payload = _build_import_payload(strategy, version, file_record)
+    response_payload["next"] = f"/strategies/{strategy.id}/parameters"
+    return ok(response_payload)
 
 @bp.delete("/v1/strategies/<strategy_id>")
 @jwt_required()
