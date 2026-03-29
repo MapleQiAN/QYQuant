@@ -60,6 +60,7 @@ function createTestRouter() {
       { path: '/backtests', component: { template: '<div />' } },
       { path: '/bots', component: { template: '<div />' } },
       { path: '/forum', component: { template: '<div />' } },
+      { path: '/settings', component: { template: '<div />' } },
     ]
   })
 }
@@ -104,13 +105,11 @@ describe('TopNav', () => {
     setActivePinia(createPinia())
   })
 
-  it('renders all primary navigation links and marks the current route active', async () => {
+  it('renders the header with breadcrumb showing current page', async () => {
     const { wrapper } = await mountTopNav('/backtests')
 
-    expect(wrapper.findAll('.nav-link')).toHaveLength(5)
-    expect(wrapper.findAll('.nav-link.active')).toHaveLength(1)
-    expect(wrapper.find('.nav-link.active').text()).toContain('Backtests')
-    expect(wrapper.find('.nav-links-shell').exists()).toBe(true)
+    expect(wrapper.find('.top-header').exists()).toBe(true)
+    expect(wrapper.find('.breadcrumb-current').text()).toBe('Backtests')
   })
 
   it('opens the help panel when the help button is clicked', async () => {
@@ -118,30 +117,30 @@ describe('TopNav', () => {
     const { useUserStore } = await import('../stores/user')
     const userStore = useUserStore()
 
-    await wrapper.findAll('.nav-actions > .nav-btn')[0].trigger('click')
+    const helpBtn = wrapper.findAll('.header-btn').find(btn => btn.attributes('aria-label') === 'Help')
+    expect(helpBtn).toBeTruthy()
+    await helpBtn!.trigger('click')
 
     expect(userStore.helpPanelOpen).toBe(true)
   })
 
-  it('shows notifications and profile summary from the notification and user stores', async () => {
+  it('shows notification dot and user info from stores', async () => {
     const { wrapper } = await mountTopNav('/', (userStore, notificationStore) => {
       userStore.profile.avatar = 'Q'
       userStore.profile.level = 'PRO'
       notificationStore.unreadCount = 3
     })
 
-    expect(wrapper.find('.notification-badge').text()).toBe('3')
-    expect(wrapper.find('.avatar-text').text()).toBe('Q')
-    expect(wrapper.find('.user-level').text()).toBe('PRO')
-    expect(wrapper.find('.nav-actions').exists()).toBe(true)
+    expect(wrapper.find('.notification-dot').exists()).toBe(true)
+    expect(wrapper.find('.user-avatar').text()).toBe('Q')
+    expect(wrapper.find('.header-actions').exists()).toBe(true)
   })
 
-  it('applies the onboarding highlight class to the targeted nav item', async () => {
-    const { wrapper } = await mountTopNav('/strategies', (userStore) => {
-      userStore.setOnboardingHighlightTarget('strategy-library-entry')
-    })
+  it('renders the search box with keyboard shortcut indicator', async () => {
+    const { wrapper } = await mountTopNav()
 
-    expect(wrapper.find('[data-onboarding-target="strategy-library-entry"]').classes()).toContain('onboarding-highlight')
+    expect(wrapper.find('.search-input').exists()).toBe(true)
+    expect(wrapper.find('.search-kbd').text()).toBe('/')
   })
 
   it('starts and stops notification polling with component lifecycle', async () => {

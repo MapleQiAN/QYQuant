@@ -567,4 +567,31 @@ const ArrowRightIcon = () => h('svg', {
 .view-all-link:hover {
   color: var(--color-primary-dark);
 }
+
+@media (max-width: 768px) {
+  .details-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--spacing-sm);
+    padding: var(--spacing-sm);
+  }
+
+  .list-footer {
+    padding: var(--spacing-sm) var(--spacing-md);
+  }
+}
+
+@media (max-width: 480px) {
+  .details-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .action-row {
+    flex-wrap: wrap;
+  }
+
+  .action-row .btn {
+    flex: 1;
+    min-width: 0;
+  }
+}
 </style>

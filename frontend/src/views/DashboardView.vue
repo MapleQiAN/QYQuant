@@ -1,5 +1,19 @@
 <template>
-  <div class="dashboard-terminal">
+  <div class="dashboard-view">
+    <!-- Page Header -->
+    <div class="page-header">
+      <div class="header-text">
+        <h1 class="page-title">{{ $t('dashboard.title', { name: user.name }) }}</h1>
+        <p class="page-subtitle">{{ $t('dashboard.subtitle') }}</p>
+      </div>
+      <div class="header-actions">
+        <RouterLink class="btn btn-secondary" to="/strategies">
+          <PlusIcon />
+          {{ $t('common.newStrategy') }}
+        </RouterLink>
+      </div>
+    </div>
+
     <OnboardingGuide
       :visible="showOnboardingGuide"
       @skip="handleSkipOnboarding"
@@ -8,46 +22,58 @@
       @complete="handleSkipOnboarding"
     />
 
-    <!-- KPI Ticker Strip -->
-    <div class="ticker-strip">
-      <div class="ticker-item">
-        <span class="ticker-label">P&L</span>
-        <span class="ticker-value tnum" :class="kpiReturn >= 0 ? 'positive' : 'negative'">
+    <!-- KPI Row - Enterprise Style -->
+    <div class="kpi-row">
+      <div class="kpi-card">
+        <div class="kpi-header">
+          <span class="kpi-label">{{ $t('dashboard.totalReturn') || 'Total Return' }}</span>
+          <span class="kpi-badge" :class="kpiReturn >= 0 ? 'badge-success' : 'badge-danger'">
+            {{ kpiReturn >= 0 ? 'Profit' : 'Loss' }}
+          </span>
+        </div>
+        <div class="kpi-value tnum" :class="kpiReturn >= 0 ? 'positive' : 'negative'">
           {{ kpiReturn >= 0 ? '+' : '' }}{{ kpiReturn.toFixed(2) }}%
-        </span>
+        </div>
+        <div class="kpi-footer">
+          <span class="kpi-sub">All strategies combined</span>
+        </div>
       </div>
-      <div class="ticker-sep">|</div>
-      <div class="ticker-item">
-        <span class="ticker-label">BOTS</span>
-        <span class="ticker-value tnum">{{ activeBotCount }}</span>
+
+      <div class="kpi-card">
+        <div class="kpi-header">
+          <span class="kpi-label">{{ $t('dashboard.activeBots') || 'Active Bots' }}</span>
+          <span class="kpi-indicator active" />
+        </div>
+        <div class="kpi-value tnum">{{ activeBotCount }}</div>
+        <div class="kpi-footer">
+          <span class="kpi-sub">Running in real-time</span>
+        </div>
       </div>
-      <div class="ticker-sep">|</div>
-      <div class="ticker-item">
-        <span class="ticker-label">STRAT</span>
-        <span class="ticker-value tnum">{{ strategyCount }}</span>
+
+      <div class="kpi-card">
+        <div class="kpi-header">
+          <span class="kpi-label">{{ $t('dashboard.strategies') || 'Strategies' }}</span>
+        </div>
+        <div class="kpi-value tnum">{{ strategyCount }}</div>
+        <div class="kpi-footer">
+          <span class="kpi-sub">In your library</span>
+        </div>
       </div>
-      <div class="ticker-sep">|</div>
-      <div class="ticker-item">
-        <span class="ticker-label">TESTS</span>
-        <span class="ticker-value tnum">{{ backtestCount }}</span>
-      </div>
-      <div class="ticker-sep">|</div>
-      <div class="ticker-item">
-        <span class="ticker-label">SYM</span>
-        <span class="ticker-value tnum">{{ backtestQuery.symbol }}</span>
-      </div>
-      <div class="ticker-spacer" />
-      <div class="ticker-actions">
-        <RouterLink class="ticker-btn" to="/strategies">
-          <PlusIcon /> {{ $t('common.newStrategy') }}
-        </RouterLink>
+
+      <div class="kpi-card">
+        <div class="kpi-header">
+          <span class="kpi-label">{{ $t('dashboard.backtests') || 'Backtests' }}</span>
+        </div>
+        <div class="kpi-value tnum">{{ backtestCount }}</div>
+        <div class="kpi-footer">
+          <span class="kpi-sub">Completed runs</span>
+        </div>
       </div>
     </div>
 
-    <!-- Workspace Grid -->
-    <div class="workspace">
-      <!-- Main Panel: Backtest -->
-      <div class="workspace-main">
+    <!-- Main Grid -->
+    <div class="dashboard-grid">
+      <div class="grid-area-backtest">
         <BacktestCard
           :data="backtestsStore.latest"
           :loading="backtestsStore.loading"
@@ -62,8 +88,7 @@
         />
       </div>
 
-      <!-- Right Sidebar: Stacked Panels -->
-      <div class="workspace-sidebar">
+      <div class="grid-area-recent">
         <RecentList
           :title="$t('dashboard.recentTitle')"
           :strategies="strategiesStore.recent"
@@ -80,7 +105,9 @@
           @toggle-bot="handleToggleBot"
           @view-all="handleViewAllRecent"
         />
+      </div>
 
+      <div class="grid-area-forum">
         <ForumMiniCard
           :posts="forumStore.posts"
           :loading="forumStore.loading"
@@ -92,6 +119,11 @@
           @open-post="handleOpenForumPost"
         />
       </div>
+
+      <div class="grid-area-sidebar">
+        <UpgradeCard @upgrade="handleOpenPricing" />
+        <ProgressCard />
+      </div>
     </div>
   </div>
 </template>
@@ -102,7 +134,9 @@ import { RouterLink, useRouter } from 'vue-router'
 import BacktestCard from '../components/BacktestCard.vue'
 import ForumMiniCard from '../components/ForumMiniCard.vue'
 import OnboardingGuide from '../components/onboarding/OnboardingGuide.vue'
+import ProgressCard from '../components/ProgressCard.vue'
 import RecentList from '../components/RecentList.vue'
+import UpgradeCard from '../components/UpgradeCard.vue'
 import { useBacktestsStore, useBotsStore, useForumStore, useStrategiesStore, useUserStore } from '../stores'
 import { useSimulationStore } from '../stores/useSimulationStore'
 
@@ -210,9 +244,19 @@ async function handleOpenForumPost(postId: string) {
   await router.push({ name: 'forum-post-detail', params: { postId } })
 }
 
+async function handleOpenPricing() {
+  await router.push({ name: 'pricing' })
+}
+
 const PlusIcon = () => h('svg', {
-  width: 12, height: 12, viewBox: '0 0 24 24', fill: 'none',
-  stroke: 'currentColor', 'stroke-width': 2, 'stroke-linecap': 'round', 'stroke-linejoin': 'round'
+  width: 14,
+  height: 14,
+  viewBox: '0 0 24 24',
+  fill: 'none',
+  stroke: 'currentColor',
+  'stroke-width': 2,
+  'stroke-linecap': 'round',
+  'stroke-linejoin': 'round'
 }, [
   h('path', { d: 'M5 12h14' }),
   h('path', { d: 'M12 5v14' })
@@ -220,156 +264,352 @@ const PlusIcon = () => h('svg', {
 </script>
 
 <style scoped>
-.dashboard-terminal {
+.dashboard-view {
+  width: 100%;
+  max-width: min(1280px, calc(100% - var(--spacing-lg) * 2));
+}
+
+@media (min-width: 1920px) {
+  .dashboard-view {
+    max-width: min(1760px, 100%);
+  }
+
+  .kpi-row {
+    grid-template-columns: repeat(4, 1fr);
+    gap: var(--grid-gap);
+  }
+
+  .kpi-card {
+    padding: 20px 24px;
+  }
+
+  .kpi-value {
+    font-size: var(--font-size-display);
+  }
+
+  .dashboard-grid {
+    grid-template-columns: 1fr 1fr 380px;
+    gap: var(--grid-gap);
+  }
+}
+
+@media (min-width: 2560px) {
+  .dashboard-view {
+    max-width: min(2400px, 100%);
+  }
+
+  .kpi-row {
+    gap: var(--grid-gap);
+  }
+
+  .kpi-card {
+    padding: 24px 28px;
+  }
+
+  .kpi-value {
+    font-size: var(--font-size-display);
+  }
+
+  .dashboard-grid {
+    grid-template-columns: 1fr 1fr 460px;
+    gap: var(--grid-gap);
+  }
+}
+
+@media (min-width: 3840px) {
+  .dashboard-view {
+    max-width: min(3600px, 100%);
+  }
+
+  .kpi-card {
+    padding: 32px 36px;
+  }
+
+  .dashboard-grid {
+    grid-template-columns: 1fr 1fr 600px;
+    gap: var(--grid-gap);
+  }
+}
+
+/* ── Page Header ── */
+.page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--spacing-lg);
+}
+
+.header-text {
   display: flex;
   flex-direction: column;
-  gap: var(--grid-gap);
-  height: calc(100vh - var(--status-bar-height) - var(--spacing-md) * 2);
+  gap: 2px;
 }
 
-/* ── Ticker Strip ── */
-.ticker-strip {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-md);
-  padding: 0 var(--spacing-md);
-  height: 36px;
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  font-family: var(--font-mono);
-  font-size: var(--font-size-sm);
-  flex-shrink: 0;
-  overflow: hidden;
-}
-
-.ticker-item {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  white-space: nowrap;
-}
-
-.ticker-label {
-  color: var(--color-text-muted);
-  font-size: var(--font-size-2xs);
-  font-weight: var(--font-weight-medium);
-  letter-spacing: 0.05em;
-}
-
-.ticker-value {
+.page-title {
+  font-size: var(--font-size-xxl);
+  font-weight: var(--font-weight-bold);
   color: var(--color-text-primary);
-  font-weight: var(--font-weight-semibold);
+  letter-spacing: var(--letter-spacing-tight);
+  margin: 0;
 }
 
-.ticker-value.positive {
-  color: var(--color-positive);
-}
-
-.ticker-value.negative {
-  color: var(--color-negative);
-}
-
-.ticker-sep {
-  color: var(--color-border);
+.page-subtitle {
   font-size: var(--font-size-sm);
-  user-select: none;
+  color: var(--color-text-muted);
+  margin: 0;
 }
 
-.ticker-spacer {
-  flex: 1;
-}
-
-.ticker-actions {
+.header-actions {
   display: flex;
   gap: var(--spacing-sm);
 }
 
-.ticker-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 3px 8px;
-  font-size: var(--font-size-2xs);
-  font-family: var(--font-family);
-  font-weight: var(--font-weight-medium);
-  color: var(--color-primary);
-  background: var(--color-primary-bg);
-  border-radius: var(--radius-sm);
-  text-decoration: none;
-  transition: all var(--transition-fast);
-  white-space: nowrap;
-}
-
-.ticker-btn:hover {
-  background: var(--color-primary);
-  color: #fff;
-}
-
-/* ── Workspace Grid ── */
-.workspace {
+/* ── KPI Row - Enterprise Financial ── */
+.kpi-row {
   display: grid;
-  grid-template-columns: 1fr 380px;
-  gap: var(--grid-gap);
-  flex: 1;
-  min-height: 0;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--spacing-md);
+  margin-bottom: var(--spacing-lg);
 }
 
-.workspace-main {
-  min-height: 0;
+.kpi-card {
+  position: relative;
+  padding: 16px 20px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  transition: border-color var(--transition-normal);
+}
+
+.kpi-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: var(--color-border-hover);
+  transition: background var(--transition-normal);
+}
+
+.kpi-card:hover {
+  border-color: var(--color-border-hover);
+}
+
+.kpi-card:first-child::before {
+  background: linear-gradient(90deg, var(--color-primary), var(--color-primary-light));
+}
+
+.kpi-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.kpi-label {
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: var(--letter-spacing-wider);
+}
+
+.kpi-badge {
+  font-size: 9px;
+  padding: 2px 6px;
+  border-radius: var(--radius-sm);
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: var(--letter-spacing-wide);
+  text-transform: uppercase;
+}
+
+.kpi-indicator {
+  width: 8px;
+  height: 8px;
+  border-radius: var(--radius-full);
+  background: var(--color-text-muted);
+}
+
+.kpi-indicator.active {
+  background: var(--color-success);
+  box-shadow: 0 0 0 3px var(--color-success-bg);
+  animation: pulse-dot 2s ease-in-out infinite;
+}
+
+@keyframes pulse-dot {
+  0%, 100% { box-shadow: 0 0 0 3px var(--color-success-bg); }
+  50% { box-shadow: 0 0 0 6px transparent; }
+}
+
+.kpi-value {
+  font-size: var(--font-size-xxxl);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text-primary);
+  line-height: 1.1;
+  letter-spacing: var(--letter-spacing-tight);
+  margin-bottom: 6px;
+}
+
+.kpi-value.positive {
+  color: var(--color-positive);
+}
+
+.kpi-value.negative {
+  color: var(--color-negative);
+}
+
+.kpi-footer {
+  display: flex;
+  align-items: center;
+}
+
+.kpi-sub {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+}
+
+/* ── Dashboard Grid ── */
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 320px;
+  grid-template-rows: auto auto;
+  gap: var(--spacing-md);
+  grid-template-areas:
+    "backtest backtest sidebar"
+    "recent   forum    sidebar";
+}
+
+.grid-area-backtest {
+  grid-area: backtest;
+}
+
+.grid-area-recent {
+  grid-area: recent;
+}
+
+.grid-area-forum {
+  grid-area: forum;
+}
+
+.grid-area-sidebar {
+  grid-area: sidebar;
   display: flex;
   flex-direction: column;
+  gap: var(--spacing-md);
 }
 
-.workspace-main > * {
-  flex: 1;
-  min-height: 0;
-}
-
-.workspace-sidebar {
-  display: flex;
-  flex-direction: column;
-  gap: var(--grid-gap);
-  min-height: 0;
-  overflow: hidden;
-}
-
-.workspace-sidebar > * {
-  flex: 1;
-  min-height: 0;
-  overflow: hidden;
+.grid-area-backtest > *,
+.grid-area-recent > *,
+.grid-area-forum > * {
+  height: 100%;
 }
 
 /* ── Responsive ── */
 @media (max-width: 1200px) {
-  .workspace {
-    grid-template-columns: 1fr 320px;
+  .dashboard-grid {
+    grid-template-columns: 1fr 1fr;
+    grid-template-areas:
+      "backtest backtest"
+      "recent   forum"
+      "sidebar  sidebar";
+  }
+
+  .grid-area-sidebar {
+    flex-direction: row;
+  }
+
+  .grid-area-sidebar > * {
+    flex: 1;
   }
 }
 
 @media (max-width: 1024px) {
-  .dashboard-terminal {
-    height: auto;
+  .kpi-row {
+    grid-template-columns: repeat(2, 1fr);
   }
 
-  .workspace {
-    grid-template-columns: 1fr;
-  }
-
-  .workspace-sidebar {
-    max-height: none;
+  .kpi-value {
+    font-size: var(--font-size-xxl);
   }
 }
 
 @media (max-width: 768px) {
-  .ticker-strip {
+  .page-header {
+    flex-direction: column;
     gap: var(--spacing-sm);
-    padding: 0 var(--spacing-sm);
-    font-size: var(--font-size-2xs);
+    align-items: flex-start;
   }
 
-  .ticker-actions {
-    display: none;
+  .page-title {
+    font-size: var(--font-size-xl);
+  }
+
+  .header-actions {
+    width: 100%;
+  }
+
+  .header-actions .btn {
+    flex: 1;
+  }
+
+  .kpi-row {
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--spacing-sm);
+  }
+
+  .kpi-card {
+    padding: 12px 14px;
+  }
+
+  .kpi-value {
+    font-size: var(--font-size-xxl);
+  }
+
+  .dashboard-grid {
+    grid-template-columns: 1fr;
+    grid-template-areas:
+      "backtest"
+      "recent"
+      "forum"
+      "sidebar";
+  }
+
+  .grid-area-sidebar {
+    flex-direction: column;
+  }
+}
+
+@media (max-width: 480px) {
+  .dashboard-view {
+    max-width: 100%;
+  }
+
+  .page-header {
+    margin-bottom: var(--spacing-sm);
+  }
+
+  .kpi-row {
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-bottom: var(--spacing-sm);
+  }
+
+  .kpi-card {
+    padding: 10px 12px;
+  }
+
+  .kpi-value {
+    font-size: var(--font-size-xl);
+  }
+
+  .kpi-label {
+    font-size: 10px;
+  }
+
+  .kpi-sub {
+    font-size: 10px;
   }
 }
 </style>

@@ -22,7 +22,10 @@ const zh = {
     dashboard: '概览',
     backtests: '回测',
     bots: '机器人',
-    forum: '广场'
+    forum: '广场',
+    marketplace: '策略市场',
+    overview: '总览',
+    community: '社区'
   },
   dashboard: {
     title: '欢迎回来，{name}',

@@ -22,7 +22,10 @@ const en = {
     dashboard: 'Dashboard',
     backtests: 'Backtests',
     bots: 'Bots',
-    forum: 'Forum'
+    forum: 'Forum',
+    marketplace: 'Marketplace',
+    overview: 'OVERVIEW',
+    community: 'COMMUNITY'
   },
   dashboard: {
     title: 'Welcome back, {name}',
