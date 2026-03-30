@@ -65,10 +65,12 @@
           <!-- Plan name & price -->
           <div class="pricing-card__header">
             <p class="pricing-card__name">{{ plan.name }}</p>
+            <div v-if="firstPurchaseEligible && plan.promoPrice != null" class="pricing-card__promo-tag">新用户首充</div>
             <div class="pricing-card__price-row">
               <span class="pricing-card__currency">¥</span>
-              <span class="pricing-card__price">{{ plan.price }}</span>
+              <span class="pricing-card__price">{{ firstPurchaseEligible && plan.promoPrice != null ? plan.promoPrice : plan.price }}</span>
               <span class="pricing-card__unit">/ 月</span>
+              <span v-if="firstPurchaseEligible && plan.promoPrice != null" class="pricing-card__original-price">¥{{ plan.price }}</span>
             </div>
           </div>
 
@@ -185,6 +187,7 @@ const loading = ref(true)
 const loadError = ref('')
 const isLoggedIn = ref(false)
 const currentPlanLevel = ref<PlanLevel>('free')
+const firstPurchaseEligible = ref(true)
 
 async function loadQuota() {
   loading.value = true
@@ -199,6 +202,7 @@ async function loadQuota() {
   try {
     const quota = await fetchMyQuota()
     currentPlanLevel.value = quota.plan_level as PlanLevel
+    firstPurchaseEligible.value = quota.first_purchase_eligible
   } catch (error: any) {
     loadError.value = error?.message || '套餐信息加载失败'
   } finally {
@@ -592,6 +596,26 @@ onMounted(() => {
   color: var(--color-text-muted);
   font-size: var(--font-size-sm);
   margin-left: 3px;
+}
+
+.pricing-card__promo-tag {
+  display: inline-block;
+  padding: 1px 8px;
+  border-radius: var(--radius-full);
+  background: linear-gradient(135deg, #ff4d4f 0%, #ff7a45 100%);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  width: fit-content;
+}
+
+.pricing-card__original-price {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+  text-decoration: line-through;
+  margin-left: 6px;
+  opacity: 0.7;
 }
 
 /* ── Quota ── */

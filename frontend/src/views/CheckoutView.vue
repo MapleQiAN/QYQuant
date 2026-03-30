@@ -25,10 +25,12 @@
 
             <div class="plan-summary__header">
               <p class="plan-summary__label">{{ plan.name }}</p>
+              <div v-if="firstPurchaseEligible && plan.promoPrice != null" class="plan-summary__promo-tag">新用户首充优惠</div>
               <div class="plan-summary__price-row">
                 <span class="plan-summary__currency">¥</span>
-                <span class="plan-summary__price">{{ plan.price }}</span>
+                <span class="plan-summary__price">{{ displayPrice }}</span>
                 <span class="plan-summary__unit">/ 月</span>
+                <span v-if="firstPurchaseEligible && plan.promoPrice != null" class="plan-summary__original-price">¥{{ plan.price }}</span>
               </div>
             </div>
 
@@ -70,7 +72,7 @@
           <!-- ── Right: Payment section ── -->
           <main class="payment-section">
             <h1 class="payment-section__title">选择支付方式</h1>
-            <p class="payment-section__subtitle">升级到 <strong>{{ plan.name }}</strong> 套餐，¥{{ plan.price }} / 月</p>
+            <p class="payment-section__subtitle">升级到 <strong>{{ plan.name }}</strong> 套餐，¥{{ displayPrice }} / 月</p>
 
             <div v-if="!isLoggedIn" class="auth-hint">
               <svg viewBox="0 0 20 20" fill="currentColor" class="auth-hint__icon" aria-hidden="true">
@@ -153,7 +155,7 @@
                   </svg>
                 </div>
                 <h2 class="qr-card__title">微信扫码支付</h2>
-                <p class="qr-card__amount">¥{{ plan.price }} / 月</p>
+                <p class="qr-card__amount">¥{{ displayPrice }} / 月</p>
                 <img class="qr-card__img" :src="wechatPayUrl" alt="微信支付二维码" />
                 <a class="qr-card__link" :href="wechatPayUrl" target="_blank" rel="noopener">
                   在浏览器中打开支付链接
@@ -169,9 +171,10 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { createPaymentOrder, type PaymentProvider } from '../api/payments'
+import { fetchMyQuota } from '../api/users'
 import { PLANS } from '../data/plans'
 
 const router = useRouter()
@@ -181,6 +184,25 @@ const planLevel = computed(() => (route.query.plan as string) || '')
 const plan = computed(() => PLANS.find((p) => p.level === planLevel.value) ?? null)
 
 const isLoggedIn = computed(() => !!localStorage.getItem('qyquant-token'))
+const firstPurchaseEligible = ref(true)
+
+const displayPrice = computed(() => {
+  if (!plan.value) return 0
+  return firstPurchaseEligible.value && plan.value.promoPrice != null
+    ? plan.value.promoPrice
+    : plan.value.price
+})
+
+onMounted(async () => {
+  if (isLoggedIn.value) {
+    try {
+      const quota = await fetchMyQuota()
+      firstPurchaseEligible.value = quota.first_purchase_eligible
+    } catch {
+      // 查询失败则保持默认展示优惠价，后端下单时会再次校验
+    }
+  }
+})
 
 const submitting = ref(false)
 const actionError = ref('')
@@ -338,6 +360,25 @@ async function handlePay(provider: PaymentProvider) {
   color: var(--color-text-muted);
   font-size: var(--font-size-sm);
   margin-left: 3px;
+}
+
+.plan-summary__promo-tag {
+  display: inline-block;
+  padding: 1px 8px;
+  border-radius: var(--radius-full);
+  background: linear-gradient(135deg, #ff4d4f 0%, #ff7a45 100%);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 600;
+  width: fit-content;
+}
+
+.plan-summary__original-price {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+  text-decoration: line-through;
+  margin-left: 6px;
+  opacity: 0.7;
 }
 
 .plan-summary__description {

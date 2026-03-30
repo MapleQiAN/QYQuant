@@ -26,7 +26,10 @@
     <div class="kpi-row">
       <div class="kpi-card">
         <div class="kpi-header">
-          <span class="kpi-label">{{ $t('dashboard.totalReturn') }}</span>
+          <div class="kpi-label-wrapper">
+            <TrendingIcon class="kpi-icon" />
+            <span class="kpi-label">{{ $t('dashboard.totalReturn') }}</span>
+          </div>
           <span class="kpi-badge" :class="kpiReturn >= 0 ? 'badge-success' : 'badge-danger'">
             {{ kpiReturn >= 0 ? $t('dashboard.profit') : $t('dashboard.loss') }}
           </span>
@@ -41,7 +44,10 @@
 
       <div class="kpi-card">
         <div class="kpi-header">
-          <span class="kpi-label">{{ $t('dashboard.activeBots') }}</span>
+          <div class="kpi-label-wrapper">
+            <BotIcon class="kpi-icon" />
+            <span class="kpi-label">{{ $t('dashboard.activeBots') }}</span>
+          </div>
           <span class="kpi-indicator active" />
         </div>
         <div class="kpi-value tnum">{{ activeBotCount }}</div>
@@ -52,7 +58,10 @@
 
       <div class="kpi-card">
         <div class="kpi-header">
-          <span class="kpi-label">{{ $t('dashboard.strategies') }}</span>
+          <div class="kpi-label-wrapper">
+            <StrategyIcon class="kpi-icon" />
+            <span class="kpi-label">{{ $t('dashboard.strategies') }}</span>
+          </div>
         </div>
         <div class="kpi-value tnum">{{ strategyCount }}</div>
         <div class="kpi-footer">
@@ -62,7 +71,10 @@
 
       <div class="kpi-card">
         <div class="kpi-header">
-          <span class="kpi-label">{{ $t('dashboard.backtests') }}</span>
+          <div class="kpi-label-wrapper">
+            <BacktestIcon class="kpi-icon" />
+            <span class="kpi-label">{{ $t('dashboard.backtests') }}</span>
+          </div>
         </div>
         <div class="kpi-value tnum">{{ backtestCount }}</div>
         <div class="kpi-footer">
@@ -261,6 +273,69 @@ const PlusIcon = () => h('svg', {
   h('path', { d: 'M5 12h14' }),
   h('path', { d: 'M12 5v14' })
 ])
+
+// KPI Icons
+const TrendingIcon = () => h('svg', {
+  width: 16,
+  height: 16,
+  viewBox: '0 0 24 24',
+  fill: 'none',
+  stroke: 'currentColor',
+  'stroke-width': 2,
+  'stroke-linecap': 'round',
+  'stroke-linejoin': 'round'
+}, [
+  h('polyline', { points: '23 6 13.5 15.5 8.5 10.5 1 18' }),
+  h('polyline', { points: '17 6 23 6 23 12' })
+])
+
+const BotIcon = () => h('svg', {
+  width: 16,
+  height: 16,
+  viewBox: '0 0 24 24',
+  fill: 'none',
+  stroke: 'currentColor',
+  'stroke-width': 2,
+  'stroke-linecap': 'round',
+  'stroke-linejoin': 'round'
+}, [
+  h('rect', { x: '3', y: '11', width: '18', height: '10', rx: '2' }),
+  h('circle', { cx: '12', cy: '5', r: '2' }),
+  h('path', { d: 'M12 7v4' }),
+  h('line', { x1: '8', y1: '16', x2: '8', y2: '16' }),
+  h('line', { x1: '16', y1: '16', x2: '16', y2: '16' })
+])
+
+const StrategyIcon = () => h('svg', {
+  width: 16,
+  height: 16,
+  viewBox: '0 0 24 24',
+  fill: 'none',
+  stroke: 'currentColor',
+  'stroke-width': 2,
+  'stroke-linecap': 'round',
+  'stroke-linejoin': 'round'
+}, [
+  h('path', { d: 'M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z' }),
+  h('polyline', { points: '14 2 14 8 20 8' }),
+  h('line', { x1: '16', y1: '13', x2: '8', y2: '13' }),
+  h('line', { x1: '16', y1: '17', x2: '8', y2: '17' }),
+  h('polyline', { points: '10 9 9 9 8 9' })
+])
+
+const BacktestIcon = () => h('svg', {
+  width: 16,
+  height: 16,
+  viewBox: '0 0 24 24',
+  fill: 'none',
+  stroke: 'currentColor',
+  'stroke-width': 2,
+  'stroke-linecap': 'round',
+  'stroke-linejoin': 'round'
+}, [
+  h('circle', { cx: '12', cy: '12', r: '10' }),
+  h('polyline', { points: '12 6 12 12 16 14' })
+])
 </script>
 
 <style scoped>
@@ -408,20 +483,31 @@ const PlusIcon = () => h('svg', {
   margin-bottom: 8px;
 }
 
-.kpi-label {
-  font-size: var(--font-size-xs);
-  font-weight: var(--font-weight-medium);
+.kpi-label-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.kpi-icon {
   color: var(--color-text-muted);
-  text-transform: uppercase;
-  letter-spacing: var(--letter-spacing-wider);
+  opacity: 0.7;
+  flex-shrink: 0;
+}
+
+.kpi-label {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-secondary);
+  letter-spacing: 0.02em;
 }
 
 .kpi-badge {
-  font-size: 9px;
-  padding: 2px 6px;
-  border-radius: var(--radius-sm);
+  font-size: 11px;
+  padding: 3px 8px;
+  border-radius: var(--radius-md);
   font-weight: var(--font-weight-semibold);
-  letter-spacing: var(--letter-spacing-wide);
+  letter-spacing: 0.02em;
   text-transform: uppercase;
 }
 
@@ -466,8 +552,9 @@ const PlusIcon = () => h('svg', {
 }
 
 .kpi-sub {
-  font-size: var(--font-size-xs);
-  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-tertiary);
+  font-weight: var(--font-weight-normal);
 }
 
 /* ── Dashboard Grid ── */
@@ -533,6 +620,11 @@ const PlusIcon = () => h('svg', {
   .kpi-value {
     font-size: var(--font-size-xxl);
   }
+
+  .kpi-icon {
+    width: 15px;
+    height: 15px;
+  }
 }
 
 @media (max-width: 768px) {
@@ -565,6 +657,11 @@ const PlusIcon = () => h('svg', {
 
   .kpi-value {
     font-size: var(--font-size-xxl);
+  }
+
+  .kpi-icon {
+    width: 15px;
+    height: 15px;
   }
 
   .dashboard-grid {
@@ -604,12 +701,22 @@ const PlusIcon = () => h('svg', {
     font-size: var(--font-size-xl);
   }
 
+  .kpi-icon {
+    width: 14px;
+    height: 14px;
+  }
+
   .kpi-label {
+    font-size: 11px;
+  }
+
+  .kpi-badge {
     font-size: 10px;
+    padding: 2px 6px;
   }
 
   .kpi-sub {
-    font-size: 10px;
+    font-size: 11px;
   }
 }
 </style>

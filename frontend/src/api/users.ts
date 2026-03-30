@@ -19,6 +19,7 @@ export interface UserQuotaResponse {
   plan_limit: number | 'unlimited'
   remaining: number | 'unlimited'
   reset_at: string | null
+  first_purchase_eligible: boolean
 }
 
 export function fetchProfile(): Promise<UserProfileResponse> {

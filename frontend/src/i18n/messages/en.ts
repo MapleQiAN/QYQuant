@@ -219,7 +219,7 @@ const en = {
       prioritySupport: 'Priority support'
     },
     price: '$99',
-    period: '/mo',
+    period: 'First month',
     originalPrice: '$199',
     cta: 'Upgrade now',
     trial: '7-day free trial, cancel anytime'

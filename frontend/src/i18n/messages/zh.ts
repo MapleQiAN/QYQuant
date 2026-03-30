@@ -1,7 +1,7 @@
 const zh = {
   common: {
     settings: '设置',
-    newStrategy: '新建策略',
+    newStrategy: '策略',
     viewAll: '查看全部',
     searchPlaceholder: '搜索策略、机器人...',
     language: '语言',
@@ -210,7 +210,7 @@ const zh = {
       prioritySupport: '优先技术支持'
     },
     price: '¥99',
-    period: '/月',
+    period: '首月',
     originalPrice: '¥199',
     cta: '立即升级',
     trial: '7 天免费试用，随时取消'
