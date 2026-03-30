@@ -84,7 +84,7 @@ async function handleSubmit() {
     <div class="login-card">
       <div class="login-header">
         <h1>{{ t('auth.title') }}</h1>
-        <p class="subtitle">{{ t('auth.subtitle') }}</p>
+        <!-- <p class="subtitle">{{ t('auth.subtitle') }}</p> -->
       </div>
 
       <div class="intent-switch">
