@@ -1,3 +1,11 @@
+export const PLAN_TIER_ORDER: Record<string, number> = {
+  free: 0,
+  go: 1,
+  plus: 2,
+  pro: 3,
+  ultra: 4,
+}
+
 export interface PlanFeature {
   text: string
   included: boolean
