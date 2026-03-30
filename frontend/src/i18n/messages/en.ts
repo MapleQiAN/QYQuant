@@ -46,7 +46,16 @@ const en = {
     marketStyle: 'Market Color Style',
     marketStyleHint: 'Choose how price moves are colored.',
     marketStyleCn: 'A-share style (red up, green down)',
-    marketStyleUs: 'US style (green up, red down)'
+    marketStyleUs: 'US style (green up, red down)',
+    integrationsTitle: 'Integrations',
+    integrationsHint: 'Connect broker APIs and market data providers.',
+    providerLabel: 'Provider',
+    displayNameLabel: 'Display name',
+    connectAction: 'Connect',
+    validateAction: 'Validate',
+    loadAccountAction: 'Load account',
+    loadPositionsAction: 'Load positions',
+    emptyIntegrations: 'No integrations yet.'
   },
   nav: {
     dashboard: 'Dashboard',

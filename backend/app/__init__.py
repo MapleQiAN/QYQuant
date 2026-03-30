@@ -9,6 +9,7 @@ from .blueprints.community import bp as community_bp
 from .blueprints.files import bp as files_bp
 from .blueprints.forum import bp as forum_bp
 from .blueprints.health import bp as health_bp
+from .blueprints.integrations import bp as integrations_bp
 from .blueprints.marketplace import bp as marketplace_bp
 from .blueprints.notifications import bp as notifications_bp
 from .blueprints.payments import bp as payments_bp
@@ -54,6 +55,7 @@ def create_app(env=None):
     app.register_blueprint(health_bp)
     app.register_blueprint(auth_bp)
     app.register_blueprint(admin_bp)
+    app.register_blueprint(integrations_bp)
     app.register_blueprint(users_bp)
     if strategies_bp is not None:
         app.register_blueprint(strategies_bp)
