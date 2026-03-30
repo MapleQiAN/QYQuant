@@ -69,8 +69,13 @@ watch(
 <template>
   <section class="comment-section">
     <header class="comment-header">
-      <h2>评论</h2>
-      <span>{{ total }} 条</span>
+      <div class="comment-title">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+        </svg>
+        <h2>评论</h2>
+      </div>
+      <span v-if="total > 0" class="comment-badge">{{ total }}</span>
     </header>
 
     <div v-if="userStore.profile.id" class="comment-form">
@@ -81,26 +86,52 @@ watch(
         placeholder="补充你的看法、问题或回测观察……"
       />
       <div class="comment-form-footer">
-        <span>{{ content.length }}/500</span>
+        <span class="char-count" :class="{ danger: content.length > 480 }">{{ content.length }}/500</span>
         <button :disabled="!canSubmit" @click="submitComment">
+          <svg v-if="communityStore.submittingComment" class="spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 12a9 9 0 1 1-6.219-8.56"/>
+          </svg>
+          <svg v-else viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="22" y1="2" x2="11" y2="13"/>
+            <polygon points="22 2 15 22 11 13 2 9 22 2"/>
+          </svg>
           {{ communityStore.submittingComment ? '发送中…' : '发送评论' }}
         </button>
       </div>
-      <p v-if="submitError" class="submit-error">{{ submitError }}</p>
+      <p v-if="submitError" class="submit-error">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+        </svg>
+        {{ submitError }}
+      </p>
     </div>
 
-    <p v-else class="comment-tip">登录后可以参与评论。</p>
+    <p v-else class="comment-tip">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+        <circle cx="12" cy="7" r="4"/>
+      </svg>
+      登录后可以参与评论。
+    </p>
 
     <div v-if="comments.length" class="comment-list">
       <article v-for="comment in comments" :key="comment.id" class="comment-item">
-        <header>
-          <strong>{{ comment.author.nickname || '匿名用户' }}</strong>
-          <span>{{ formatRelativeTime(comment.created_at) }}</span>
-        </header>
-        <p>{{ comment.content }}</p>
+        <div class="comment-avatar">{{ comment.author.nickname?.slice(0, 1).toUpperCase() || 'Q' }}</div>
+        <div class="comment-body">
+          <header class="comment-item-header">
+            <strong class="comment-author">{{ comment.author.nickname || '匿名用户' }}</strong>
+            <span class="comment-time">{{ formatRelativeTime(comment.created_at) }}</span>
+          </header>
+          <p>{{ comment.content }}</p>
+        </div>
       </article>
     </div>
-    <p v-else class="empty">还没有评论，来做第一个发言的人。</p>
+    <p v-else class="empty">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+      </svg>
+      还没有评论，来做第一个发言的人。
+    </p>
 
     <button v-if="hasMore" class="load-more" @click="loadComments(currentPage + 1)">
       加载更多评论
@@ -111,86 +142,260 @@ watch(
 <style scoped>
 .comment-section {
   display: grid;
-  gap: 16px;
-  padding: 20px;
+  gap: 20px;
+  padding: 24px;
   border: 1px solid var(--color-border);
   border-radius: 20px;
   background: var(--color-surface);
 }
 
-.comment-header,
-.comment-form-footer,
-.comment-item header {
+.comment-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
 }
 
-.comment-header h2 {
+.comment-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.comment-title svg {
+  width: 18px;
+  height: 18px;
+  color: var(--color-text-muted);
+}
+
+.comment-title h2 {
   margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--color-text-primary);
+}
+
+.comment-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 22px;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: var(--color-primary-bg);
+  color: var(--color-primary-light);
+  font-size: 12px;
+  font-weight: 600;
 }
 
 .comment-form {
   display: grid;
-  gap: 12px;
+  gap: 10px;
 }
 
 .comment-form textarea {
   width: 100%;
   resize: vertical;
   min-height: 100px;
-  padding: 14px;
-  border-radius: 16px;
+  padding: 14px 16px;
+  border-radius: 14px;
   border: 1px solid var(--color-border);
-  background: var(--color-surface);
+  background: var(--color-surface-elevated);
   font: inherit;
+  font-size: 14px;
+  color: var(--color-text-primary);
+  outline: none;
+  box-sizing: border-box;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
-.comment-form-footer span,
-.comment-tip,
-.empty,
-.comment-item header span {
+.comment-form textarea:focus {
+  border-color: var(--color-primary-border);
+  box-shadow: 0 0 0 3px var(--color-primary-bg);
+}
+
+.comment-form textarea::placeholder {
   color: var(--color-text-muted);
-  font-size: 14px;
+}
+
+.comment-form-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.char-count {
+  font-size: 12px;
+  color: var(--color-text-muted);
+}
+
+.char-count.danger {
+  color: var(--color-danger);
 }
 
 .comment-form button,
 .load-more {
-  justify-self: end;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
   border: 0;
   border-radius: 999px;
-  padding: 10px 16px;
+  padding: 9px 18px;
   background: linear-gradient(135deg, #0f766e, #0ea5e9);
-  color: var(--color-text-inverse);
+  color: #fff;
   font: inherit;
+  font-size: 13px;
+  font-weight: 600;
   cursor: pointer;
+  transition: opacity 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.comment-form button svg,
+.load-more svg {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+}
+
+.comment-form button:hover:not(:disabled),
+.load-more:hover {
+  opacity: 0.9;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(14, 165, 233, 0.25);
 }
 
 .comment-form button:disabled {
-  opacity: 0.5;
+  opacity: 0.4;
   cursor: not-allowed;
 }
 
+.load-more {
+  justify-self: center;
+}
+
 .submit-error {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   margin: 0;
-  color: #c53030;
+  padding: 10px 14px;
+  border-radius: 10px;
+  background: var(--color-danger-bg);
+  color: var(--color-danger);
+  font-size: 13px;
+}
+
+.submit-error svg {
+  width: 15px;
+  height: 15px;
+  flex-shrink: 0;
+}
+
+.comment-tip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  padding: 14px 16px;
+  border-radius: 12px;
+  background: var(--color-surface-elevated);
+  color: var(--color-text-muted);
   font-size: 14px;
+}
+
+.comment-tip svg {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
 }
 
 .comment-list {
   display: grid;
-  gap: 12px;
+  gap: 2px;
 }
 
 .comment-item {
-  padding: 14px 16px;
-  border-radius: 16px;
-  background: var(--color-background);
+  display: flex;
+  gap: 12px;
+  padding: 14px 4px;
+  border-bottom: 1px solid var(--color-border-light);
 }
 
-.comment-item p {
-  margin: 10px 0 0;
+.comment-item:last-child {
+  border-bottom: none;
+}
+
+.comment-avatar {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: linear-gradient(135deg, #7c3aed, #a855f7);
+  color: #fff;
+  font-weight: 700;
+  font-size: 13px;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.comment-body {
+  flex: 1;
+  min-width: 0;
+  display: grid;
+  gap: 6px;
+}
+
+.comment-item-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.comment-author {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.comment-time {
+  font-size: 12px;
+  color: var(--color-text-muted);
+}
+
+.comment-body p {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.65;
+  color: var(--color-text-secondary);
   white-space: pre-wrap;
+}
+
+.empty {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  padding: 20px;
+  border-radius: 12px;
+  background: var(--color-surface-elevated);
+  color: var(--color-text-muted);
+  font-size: 14px;
+  justify-content: center;
+}
+
+.empty svg {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.spin {
+  animation: spin 0.8s linear infinite;
 }
 </style>

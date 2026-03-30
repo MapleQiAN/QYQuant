@@ -1,10 +1,25 @@
 <template>
-  <section class="view">
+  <section class="view pricing-view">
+    <!-- Premium background layers -->
+    <div class="pricing-bg" aria-hidden="true">
+      <div class="pricing-bg__grid"></div>
+      <div class="pricing-bg__glow pricing-bg__glow--1"></div>
+      <div class="pricing-bg__glow pricing-bg__glow--2"></div>
+      <svg class="pricing-bg__chart" viewBox="0 0 1200 200" preserveAspectRatio="none">
+        <polyline points="0,160 80,140 160,150 240,100 320,110 400,60 480,80 560,40 640,70 720,30 800,50 880,20 960,45 1040,15 1120,35 1200,10" fill="none" stroke="currentColor" stroke-width="1.5"/>
+        <polyline points="0,180 80,170 160,175 240,155 320,160 400,130 480,145 560,120 640,135 720,110 800,125 880,105 960,115 1040,100 1120,108 1200,95" fill="none" stroke="currentColor" stroke-width="0.8"/>
+      </svg>
+    </div>
+
     <div class="container pricing-page">
       <header class="pricing-hero">
-        <p class="pricing-eyebrow">套餐升级</p>
+        <div class="pricing-eyebrow">
+          <span class="pricing-eyebrow__line"></span>
+          <span class="pricing-eyebrow__text">套餐升级</span>
+          <span class="pricing-eyebrow__line"></span>
+        </div>
         <h1 class="view-title">选择适合你的回测套餐</h1>
-        <p class="view-subtitle">按月解锁更多回测次数，支持微信支付和支付宝。</p>
+        <p class="view-subtitle">按月解锁更多回测次数和更多高级功能</p>
       </header>
 
       <p v-if="loading" class="message">正在加载套餐信息...</p>
@@ -15,17 +30,27 @@
 
       <div v-if="!loading && (isLoggedIn ? !loadError : true)" class="pricing-grid">
         <article
-          v-for="plan in PLANS"
+          v-for="(plan, index) in PLANS"
           :key="plan.level"
           class="pricing-card"
           :class="{
             'pricing-card--current': currentPlanLevel === plan.level,
             'pricing-card--featured': plan.featured,
+            [`pricing-card--tier-${index}`]: true,
           }"
+          :style="{ '--card-delay': `${index * 80}ms` }"
         >
+          <!-- Decorative corner accent -->
+          <div v-if="plan.featured" class="pricing-card__accent" aria-hidden="true"></div>
+
           <!-- Badge row -->
           <div class="pricing-card__badges">
-            <span v-if="plan.featured" class="badge badge--featured">推荐</span>
+            <span v-if="plan.featured" class="badge badge--featured">
+              <svg viewBox="0 0 12 12" fill="none" class="badge__icon" aria-hidden="true">
+                <path d="M6 1l1.5 3.2L11 4.8 8.5 7.1 9.2 11 6 9.2 2.8 11l.7-3.9L1 4.8l3.5-.6z" fill="currentColor"/>
+              </svg>
+              推荐
+            </span>
             <span v-if="currentPlanLevel === plan.level" class="badge badge--current">当前套餐</span>
           </div>
 
@@ -90,7 +115,7 @@
             >
               <span v-if="feature.included" class="feature-icon feature-icon--check" aria-hidden="true">
                 <svg viewBox="0 0 16 16" fill="none">
-                  <circle cx="8" cy="8" r="7" fill="currentColor" opacity="0.15"/>
+                  <circle cx="8" cy="8" r="7" fill="currentColor" opacity="0.12"/>
                   <path d="M5 8l2 2 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
                 </svg>
               </span>

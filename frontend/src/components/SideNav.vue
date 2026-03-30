@@ -9,9 +9,6 @@
           <span v-if="!collapsed" class="logo-text">QY Quant</span>
         </Transition>
       </div>
-      <button class="collapse-btn" type="button" :aria-label="collapsed ? 'Expand sidebar' : 'Collapse sidebar'" @click="$emit('toggle')">
-        <ChevronIcon :class="{ 'rotate-180': collapsed }" />
-      </button>
     </div>
 
     <div class="sidebar-nav">
@@ -48,6 +45,10 @@
         </RouterLink>
       </div>
     </div>
+
+    <button class="collapse-btn footer-collapse-btn" type="button" :aria-label="collapsed ? 'Expand sidebar' : 'Collapse sidebar'" @click="$emit('toggle')">
+      <ChevronIcon :class="{ 'rotate-180': collapsed }" />
+    </button>
 
     <div class="sidebar-footer">
       <RouterLink
@@ -268,9 +269,6 @@ function ChevronIcon() {
   border-color: var(--color-primary-border);
 }
 
-.collapsed .collapse-btn {
-  display: none;
-}
 
 .rotate-180 {
   transform: rotate(180deg);
@@ -405,6 +403,20 @@ function ChevronIcon() {
 .plan-upgrade:hover {
   color: var(--color-accent);
   background: var(--color-primary-bg);
+}
+
+.footer-collapse-btn {
+  width: 100%;
+  margin-bottom: 8px;
+  padding: 8px;
+  justify-content: center;
+  border-color: var(--color-border);
+}
+
+.footer-collapse-btn:hover {
+  background: var(--color-sidebar-hover);
+  color: var(--color-text-secondary);
+  border-color: var(--color-primary-border);
 }
 
 /* ── Transitions ── */
