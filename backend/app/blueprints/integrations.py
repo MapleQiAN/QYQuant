@@ -91,6 +91,7 @@ def get_account(integration_id):
         return error
 
     adapter = integrations_service.get_broker_adapter(integration.provider_key)
+    integrations_service.attach_secret_payload(integration)
     return ok(adapter.get_account_summary(integration))
 
 
@@ -102,4 +103,5 @@ def get_positions(integration_id):
         return error
 
     adapter = integrations_service.get_broker_adapter(integration.provider_key)
+    integrations_service.attach_secret_payload(integration)
     return ok(adapter.get_positions(integration))

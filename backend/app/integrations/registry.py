@@ -23,7 +23,15 @@ _PROVIDERS = {
         type="market_data",
         mode="hosted",
         capabilities={"daily_bars": True, "latest_quote": True},
-        config_schema={"fields": []},
+        config_schema={"public_fields": [], "secret_fields": [], "fields": []},
+    ),
+    "akshare_like": ProviderDefinition(
+        key="akshare_like",
+        name="A-Share Public Data",
+        type="market_data",
+        mode="hosted",
+        capabilities={"daily_bars": True, "latest_quote": True},
+        config_schema={"public_fields": [], "secret_fields": [], "fields": []},
     ),
     "longport": ProviderDefinition(
         key="longport",
@@ -31,7 +39,11 @@ _PROVIDERS = {
         type="broker_account",
         mode="hosted",
         capabilities={"account_summary": True, "positions": True},
-        config_schema={"fields": ["app_key", "app_secret", "access_token"]},
+        config_schema={
+            "public_fields": ["region"],
+            "secret_fields": ["app_key", "app_secret", "access_token"],
+            "fields": ["app_key", "app_secret", "access_token"],
+        },
     ),
     "gmtrade": ProviderDefinition(
         key="gmtrade",
@@ -39,7 +51,11 @@ _PROVIDERS = {
         type="broker_account",
         mode="hosted",
         capabilities={"account_summary": True, "positions": True},
-        config_schema={"fields": ["token"]},
+        config_schema={
+            "public_fields": ["account_id", "endpoint"],
+            "secret_fields": ["token"],
+            "fields": ["token"],
+        },
     ),
     "xtquant": ProviderDefinition(
         key="xtquant",
@@ -47,7 +63,11 @@ _PROVIDERS = {
         type="broker_account",
         mode="local_connector",
         capabilities={"account_summary": True, "positions": True},
-        config_schema={"fields": ["account_id", "endpoint"]},
+        config_schema={
+            "public_fields": ["account_id", "endpoint", "client_path"],
+            "secret_fields": [],
+            "fields": [],
+        },
     ),
 }
 

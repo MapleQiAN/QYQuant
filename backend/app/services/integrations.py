@@ -1,6 +1,7 @@
 import json
 
 from ..extensions import db
+from ..integrations.brokers import GMTradeBrokerAdapter, LongPortBrokerAdapter, XtQuantBrokerAdapter
 from ..integrations.registry import get_provider, list_providers
 from ..models import IntegrationProvider, UserIntegration, UserIntegrationSecret
 from ..utils.crypto import decrypt_text, encrypt_text
@@ -83,22 +84,39 @@ def decrypt_secret_payload(integration, session=None):
     return json.loads(decrypt_text(secret.encrypted_payload))
 
 
+def _required_config_fields(config_schema, key):
+    fields = (config_schema or {}).get(key)
+    if isinstance(fields, list):
+        return [str(field) for field in fields]
+    if key == "secret_fields":
+        legacy_fields = (config_schema or {}).get("fields")
+        if isinstance(legacy_fields, list):
+            return [str(field) for field in legacy_fields]
+    return []
+
+
 def create_integration(*, user_id, provider_key, display_name, config_public=None, secret_payload=None, session=None):
     session = session or db.session
     sync_provider_catalog(session)
     provider = get_provider(provider_key)
-    required_fields = list((provider.config_schema or {}).get("fields") or [])
+    config_schema = provider.config_schema or {}
+    required_public_fields = _required_config_fields(config_schema, "public_fields")
+    required_secret_fields = _required_config_fields(config_schema, "secret_fields")
+    config_public = config_public or {}
     secret_payload = secret_payload or {}
-    missing = [field for field in required_fields if not secret_payload.get(field)]
-    if missing:
-        raise ValueError(f"Missing required secret fields: {', '.join(missing)}")
+    missing_public_fields = [field for field in required_public_fields if not config_public.get(field)]
+    if missing_public_fields:
+        raise ValueError(f"Missing required public fields: {', '.join(missing_public_fields)}")
+    missing_secret_fields = [field for field in required_secret_fields if not secret_payload.get(field)]
+    if missing_secret_fields:
+        raise ValueError(f"Missing required secret fields: {', '.join(missing_secret_fields)}")
 
     integration = UserIntegration(
         user_id=user_id,
         provider_key=provider_key,
         display_name=display_name,
         status="active",
-        config_public=config_public or {},
+        config_public=config_public,
     )
     session.add(integration)
     session.flush()
@@ -153,5 +171,21 @@ def mark_validation_result(integration, result, session=None):
     session.commit()
 
 
+def attach_secret_payload(integration, session=None):
+    if session is None:
+        integration._secret_payload = decrypt_secret_payload(integration)
+    else:
+        integration._secret_payload = decrypt_secret_payload(integration, session=session)
+    return integration
+
+
 def get_broker_adapter(_provider_key):
-    return BrokerAdapterNotImplemented()
+    mapping = {
+        "longport": LongPortBrokerAdapter,
+        "gmtrade": GMTradeBrokerAdapter,
+        "xtquant": XtQuantBrokerAdapter,
+    }
+    adapter_cls = mapping.get(_provider_key)
+    if adapter_cls is None:
+        return BrokerAdapterNotImplemented()
+    return adapter_cls()

@@ -101,7 +101,10 @@ describe('SettingsView', () => {
         type: 'broker_account',
         mode: 'hosted',
         capabilities: { positions: true },
-        configSchema: { fields: ['access_token'] },
+        configSchema: {
+          public_fields: ['region'],
+          secret_fields: ['access_token']
+        },
         isEnabled: true
       }
     ])
@@ -162,13 +165,14 @@ describe('SettingsView', () => {
 
     await wrapper.find('[data-provider-key="longport"]').setValue('longport')
     await wrapper.find('[data-display-name="integration-display-name"]').setValue('New Account')
+    await wrapper.find('[data-public-field="region"]').setValue('hk')
     await wrapper.find('[data-secret-field="access_token"]').setValue('token-1')
     await wrapper.find('[data-action="connect-integration"]').trigger('submit')
 
     expect(createIntegrationMock).toHaveBeenCalledWith({
       providerKey: 'longport',
       displayName: 'New Account',
-      configPublic: {},
+      configPublic: { region: 'hk' },
       secretPayload: { access_token: 'token-1' }
     })
 

@@ -78,7 +78,11 @@
             <span>{{ $t('settings.displayNameLabel') }}</span>
             <input v-model="displayName" data-display-name="integration-display-name" type="text" />
           </label>
-          <label v-for="fieldName in providerFieldNames" :key="fieldName" class="field">
+          <label v-for="fieldName in providerPublicFieldNames" :key="`public-${fieldName}`" class="field">
+            <span>{{ fieldName }}</span>
+            <input v-model="configPublic[fieldName]" :data-public-field="fieldName" type="text" />
+          </label>
+          <label v-for="fieldName in providerSecretFieldNames" :key="`secret-${fieldName}`" class="field">
             <span>{{ fieldName }}</span>
             <input v-model="secretPayload[fieldName]" :data-secret-field="fieldName" type="text" />
           </label>
@@ -152,11 +156,16 @@ const { providers, integrations, validationState, accountById, positionsById } =
 
 const selectedProviderKey = ref('')
 const displayName = ref('')
+const configPublic = reactive<Record<string, string>>({})
 const secretPayload = reactive<Record<string, string>>({})
 
 const selectedProvider = computed(() => providers.value.find((provider) => provider.key === selectedProviderKey.value) ?? null)
-const providerFieldNames = computed(() => {
-  const fields = selectedProvider.value?.configSchema?.fields
+const providerPublicFieldNames = computed(() => {
+  const fields = selectedProvider.value?.configSchema?.public_fields
+  return Array.isArray(fields) ? fields.map((field) => String(field)) : []
+})
+const providerSecretFieldNames = computed(() => {
+  const fields = selectedProvider.value?.configSchema?.secret_fields ?? selectedProvider.value?.configSchema?.fields
   return Array.isArray(fields) ? fields.map((field) => String(field)) : []
 })
 
@@ -172,15 +181,19 @@ async function submitIntegration() {
   if (!selectedProviderKey.value || !displayName.value.trim()) {
     return
   }
-  const payload: Record<string, string> = {}
-  for (const fieldName of providerFieldNames.value) {
-    payload[fieldName] = secretPayload[fieldName] ?? ''
+  const publicPayload: Record<string, string> = {}
+  for (const fieldName of providerPublicFieldNames.value) {
+    publicPayload[fieldName] = configPublic[fieldName] ?? ''
+  }
+  const secretFieldPayload: Record<string, string> = {}
+  for (const fieldName of providerSecretFieldNames.value) {
+    secretFieldPayload[fieldName] = secretPayload[fieldName] ?? ''
   }
   await integrationsStore.createIntegration({
     providerKey: selectedProviderKey.value,
     displayName: displayName.value.trim(),
-    configPublic: {},
-    secretPayload: payload
+    configPublic: publicPayload,
+    secretPayload: secretFieldPayload
   })
 }
 

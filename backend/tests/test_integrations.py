@@ -87,6 +87,33 @@ def test_create_integration_persists_metadata_and_encrypted_secret(client, app):
         assert secret.encrypted_payload != '{"access_token": "token-1", "app_key": "key-1", "app_secret": "secret-1"}'
 
 
+def test_create_integration_validates_public_fields_separately_from_secrets(client, app):
+    token, _ = _login_user(client, email="gmtrade@example.com", nickname="GMTradeUser")
+    _seed_provider(
+        app,
+        key="gmtrade",
+        name="GMTrade",
+        provider_type="broker_account",
+        mode="hosted",
+        capabilities={"account_summary": True, "positions": True},
+        config_schema={"public_fields": ["account_id", "endpoint"], "secret_fields": ["token"]},
+    )
+
+    response = client.post(
+        "/api/v1/integrations",
+        headers=_auth_headers(token),
+        json={
+            "provider_key": "gmtrade",
+            "display_name": "Missing Account Id",
+            "config_public": {"endpoint": "api.myquant.cn:9000"},
+            "secret_payload": {"token": "token-1"},
+        },
+    )
+
+    assert response.status_code == 422
+    assert "account_id" in response.json["error"]["message"]
+
+
 def test_validate_and_read_broker_integration_uses_adapter_contract(client, app, monkeypatch):
     token, user_id = _login_user(client, email="broker@example.com", nickname="BrokerUser")
     _seed_provider(
