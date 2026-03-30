@@ -1,5 +1,6 @@
 from datetime import date, datetime, time, timezone
 
+from ...providers import AkShareClient
 from .base import MarketDataAdapter
 
 
@@ -33,17 +34,34 @@ def _to_bar(row):
 
 class AKShareLikeMarketDataAdapter(MarketDataAdapter):
     def __init__(self, client=None):
-        self.client = client
+        self.client = client or AkShareClient()
 
     def get_bars(self, symbol, interval, start_time=None, end_time=None, limit=None):
-        if self.client is None:
-            raise RuntimeError("AKShare-like adapter requires an injected public market data client")
-        rows = self.client.fetch_bars(
-            symbol,
-            _coerce_date(start_time),
-            _coerce_date(end_time),
-            interval,
-        )
+        if hasattr(self.client, "fetch_stock_history"):
+            interval_map = {
+                "1d": "daily",
+                "daily": "daily",
+                "1w": "weekly",
+                "weekly": "weekly",
+                "1m": "monthly",
+                "monthly": "monthly",
+            }
+            period = interval_map.get(str(interval or "1d").strip().lower())
+            if period is None:
+                raise ValueError(f"Unsupported interval for AkShare adapter: {interval}")
+            rows = self.client.fetch_stock_history(
+                symbol,
+                _coerce_date(start_time),
+                _coerce_date(end_time),
+                period=period,
+            )
+        else:
+            rows = self.client.fetch_bars(
+                symbol,
+                _coerce_date(start_time),
+                _coerce_date(end_time),
+                interval,
+            )
         bars = [_to_bar(row) for row in rows]
         try:
             limit = int(limit) if limit is not None else None
@@ -54,8 +72,6 @@ class AKShareLikeMarketDataAdapter(MarketDataAdapter):
         return bars
 
     def get_latest_quote(self, symbol):
-        if self.client is None:
-            raise RuntimeError("AKShare-like adapter requires an injected public market data client")
         return self.client.get_latest_quote(symbol)
 
     def supports_market(self, market):

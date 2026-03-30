@@ -25,12 +25,12 @@ _PROVIDERS = {
         capabilities={"daily_bars": True, "latest_quote": True},
         config_schema={"public_fields": [], "secret_fields": [], "fields": []},
     ),
-    "akshare_like": ProviderDefinition(
-        key="akshare_like",
-        name="A-Share Public Data",
+    "akshare": ProviderDefinition(
+        key="akshare",
+        name="AkShare",
         type="market_data",
         mode="hosted",
-        capabilities={"daily_bars": True, "latest_quote": True},
+        capabilities={"daily_bars": True, "latest_quote": True, "futures_quote": True, "fund_nav": True},
         config_schema={"public_fields": [], "secret_fields": [], "fields": []},
     ),
     "longport": ProviderDefinition(

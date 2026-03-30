@@ -2,6 +2,7 @@ import os
 from datetime import date, datetime, time, timedelta, timezone
 
 from ..marketdata import BinanceClient, FreeGoldClient
+from ..providers import AkShareClient
 from ..services import MarketDataService
 
 
@@ -138,6 +139,54 @@ class JoinQuantBacktestProvider:
         return bars[-1]["close"]
 
 
+class AkShareBacktestProvider:
+    def __init__(self, client=None, default_interval=None, default_adjust=None):
+        self.client = client or AkShareClient()
+        self.default_interval = default_interval or os.getenv('AKSHARE_INTERVAL', '1d')
+        self.default_adjust = default_adjust or os.getenv('AKSHARE_ADJUST', 'qfq')
+
+    def get_bars(self, symbol, limit=200, interval=None, start_time=None, end_time=None):
+        interval = (interval or self.default_interval).strip().lower()
+        interval_map = {
+            '1d': 'daily',
+            '1day': 'daily',
+            'day': 'daily',
+            'daily': 'daily',
+            '1w': 'weekly',
+            'week': 'weekly',
+            'weekly': 'weekly',
+            '1m': 'monthly',
+            'month': 'monthly',
+            'monthly': 'monthly',
+        }
+        period = interval_map.get(interval)
+        if period is None:
+            raise ValueError(f"AkShare provider does not support interval {interval}")
+
+        start_date, end_date = _daily_range(limit=limit, start_time=start_time, end_time=end_time)
+        rows = self.client.fetch_stock_history(
+            symbol,
+            start_date,
+            end_date,
+            period=period,
+            adjust=self.default_adjust,
+        )
+        bars = [_to_bar(row) for row in rows]
+        try:
+            limit = int(limit) if limit is not None else None
+        except (TypeError, ValueError):
+            limit = None
+        if limit and len(bars) > limit:
+            return bars[-limit:]
+        return bars
+
+    def get_latest_price(self, symbol):
+        quote = self.client.get_latest_quote(symbol)
+        if not quote:
+            raise ValueError(f"No AkShare quote available for {symbol}")
+        return quote["price"]
+
+
 class AutoProvider:
     def __init__(self, gold_provider=None, binance_provider=None):
         self.gold_provider = gold_provider or FreeGoldProvider()
@@ -161,7 +210,7 @@ class AutoProvider:
         return self._select(symbol).get_latest_price(symbol)
 
 
-_CANONICAL_PROVIDERS = {'mock', 'auto', 'freegold', 'binance', 'joinquant'}
+_CANONICAL_PROVIDERS = {'mock', 'auto', 'freegold', 'binance', 'joinquant', 'akshare'}
 _PROVIDER_ALIASES = {
     'mock': 'mock',
     'demo': 'mock',
@@ -178,6 +227,8 @@ _PROVIDER_ALIASES = {
     'jq': 'joinquant',
     'jqdata': 'joinquant',
     'cached': 'joinquant',
+    'akshare': 'akshare',
+    'ak': 'akshare',
 }
 
 
@@ -225,5 +276,7 @@ def get_backtest_provider(provider_override=None):
         return BinanceProvider()
     if provider == 'joinquant':
         return JoinQuantBacktestProvider()
+    if provider == 'akshare':
+        return AkShareBacktestProvider()
 
     return AutoProvider()
