@@ -7,6 +7,7 @@ export interface Plan {
   level: string
   name: string
   price: number
+  promoPrice?: number
   quota: number | null
   description: string
   featured?: boolean
@@ -35,6 +36,7 @@ export const PLANS: Plan[] = [
     level: 'go',
     name: 'Go',
     price: 49,
+    promoPrice: 29,
     quota: 50,
     description: '适合初学量化，开始系统性回测研究。',
     features: [
@@ -52,6 +54,7 @@ export const PLANS: Plan[] = [
     level: 'plus',
     name: 'Plus',
     price: 199,
+    promoPrice: 99,
     quota: 200,
     description: '适合个人量化爱好者，开展日常回测研究。',
     featured: true,
@@ -70,6 +73,7 @@ export const PLANS: Plan[] = [
     level: 'pro',
     name: 'Pro',
     price: 499,
+    promoPrice: 259,
     quota: 500,
     description: '适合中频研究和更稳定的策略迭代工作。',
     features: [
@@ -87,6 +91,7 @@ export const PLANS: Plan[] = [
     level: 'ultra',
     name: 'Ultra',
     price: 999,
+    promoPrice: 599,
     quota: null,
     description: '不限回测次数，适合高频研究与团队协作。',
     features: [

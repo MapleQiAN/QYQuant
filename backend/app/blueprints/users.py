@@ -7,7 +7,7 @@ from marshmallow import ValidationError
 from werkzeug.security import check_password_hash
 
 from ..extensions import db
-from ..models import Post, Strategy, User
+from ..models import PaymentOrder, Post, Strategy, User
 from ..quota import ensure_user_quota, get_plan_limit, serialize_plan_limit
 from ..schemas import UserPrivateSchema, UserPublicSchema, UserUpdateSchema
 from ..utils.audit import log_audit
@@ -225,12 +225,19 @@ def get_my_quota():
     else:
         remaining = max(0, int(plan_limit_raw) - quota.used_count)
 
+    has_paid_order = db.session.query(
+        PaymentOrder.query
+        .filter_by(user_id=user.id, status='paid')
+        .exists()
+    ).scalar()
+
     return ok({
         "plan_level": quota.plan_level,
         "used_count": quota.used_count,
         "plan_limit": serialize_plan_limit(quota.plan_level),
         "remaining": remaining,
         "reset_at": format_beijing_iso(quota.reset_at),
+        "first_purchase_eligible": not has_paid_order,
     })
 
 

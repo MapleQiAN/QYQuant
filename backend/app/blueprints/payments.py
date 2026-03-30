@@ -21,8 +21,23 @@ PLAN_PRICES = {
     "pro": 499,
     "ultra": 999,
 }
+PLAN_PROMO_PRICES = {
+    "go": 29,
+    "plus": 99,
+    "pro": 259,
+    "ultra": 599,
+}
 PAYABLE_PLAN_LEVELS = tuple(plan_level for plan_level in PLAN_PRICES if plan_level != "free")
 VALID_PROVIDERS = ("wechat", "alipay")
+
+
+def is_first_purchase(user_id):
+    """用户是否从未成功支付过（首充资格）"""
+    return not db.session.query(
+        PaymentOrder.query
+        .filter_by(user_id=user_id, status='paid')
+        .exists()
+    ).scalar()
 
 
 def _get_user_or_404(user_id):
@@ -76,7 +91,10 @@ def create_payment_order():
     if existing_order is not None:
         return ok(_serialize_order(existing_order))
 
-    amount = PLAN_PRICES[plan_level]
+    if is_first_purchase(user.id) and plan_level in PLAN_PROMO_PRICES:
+        amount = PLAN_PROMO_PRICES[plan_level]
+    else:
+        amount = PLAN_PRICES[plan_level]
     order = PaymentOrder(
         user_id=user.id,
         plan_level=plan_level,
