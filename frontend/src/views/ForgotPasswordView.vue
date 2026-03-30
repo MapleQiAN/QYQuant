@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import { ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { forgotPassword } from '../api/auth'
 
+const { t } = useI18n()
 const email = ref('')
 const loading = ref(false)
 const error = ref('')
@@ -9,7 +11,7 @@ const success = ref('')
 
 async function handleSubmit() {
   if (!email.value.trim()) {
-    error.value = '请输入邮箱'
+    error.value = t('auth.emailRequired')
     return
   }
 
@@ -20,7 +22,7 @@ async function handleSubmit() {
     const result = await forgotPassword(email.value.trim().toLowerCase())
     success.value = result.message
   } catch (e: any) {
-    error.value = e.message || '发送失败'
+    error.value = e.message || t('forgotPassword.sendFailed')
   } finally {
     loading.value = false
   }
@@ -30,12 +32,12 @@ async function handleSubmit() {
 <template>
   <section class="auth-view">
     <div class="auth-card">
-      <h1>找回密码</h1>
-      <input v-model="email" class="field-input" type="email" placeholder="请输入邮箱" data-test="forgot-email" @keyup.enter="handleSubmit" />
+      <h1>{{ t('forgotPassword.title') }}</h1>
+      <input v-model="email" class="field-input" type="email" :placeholder="t('auth.emailPlaceholder')" data-test="forgot-email" @keyup.enter="handleSubmit" />
       <p v-if="error" class="error-msg">{{ error }}</p>
       <p v-if="success" class="success-msg">{{ success }}</p>
       <button class="submit-btn" type="button" data-test="forgot-submit" :disabled="loading" @click="handleSubmit">
-        {{ loading ? '发送中...' : '发送重置邮件' }}
+        {{ loading ? t('forgotPassword.submitting') : t('forgotPassword.submitButton') }}
       </button>
     </div>
   </section>

@@ -1,8 +1,10 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { resetPassword } from '../api/auth'
 
+const { t } = useI18n()
 const route = useRoute()
 const router = useRouter()
 
@@ -15,11 +17,11 @@ const token = computed(() => String(route.query.token || ''))
 
 async function handleSubmit() {
   if (!token.value) {
-    error.value = '缺少重置令牌'
+    error.value = t('resetPassword.tokenMissing')
     return
   }
   if (password.value.length < 8) {
-    error.value = '密码至少 8 位'
+    error.value = t('auth.passwordTooShort')
     return
   }
 
@@ -31,7 +33,7 @@ async function handleSubmit() {
     success.value = result.message
     await router.replace('/login')
   } catch (e: any) {
-    error.value = e.message || '重置失败'
+    error.value = e.message || t('resetPassword.resetFailed')
   } finally {
     loading.value = false
   }
@@ -41,12 +43,12 @@ async function handleSubmit() {
 <template>
   <section class="auth-view">
     <div class="auth-card">
-      <h1>重置密码</h1>
-      <input v-model="password" class="field-input" type="password" placeholder="请输入新密码" data-test="reset-password" @keyup.enter="handleSubmit" />
+      <h1>{{ t('resetPassword.title') }}</h1>
+      <input v-model="password" class="field-input" type="password" :placeholder="t('resetPassword.passwordPlaceholder')" data-test="reset-password" @keyup.enter="handleSubmit" />
       <p v-if="error" class="error-msg">{{ error }}</p>
       <p v-if="success" class="success-msg">{{ success }}</p>
       <button class="submit-btn" type="button" data-test="reset-submit" :disabled="loading" @click="handleSubmit">
-        {{ loading ? '提交中...' : '更新密码' }}
+        {{ loading ? t('resetPassword.submitting') : t('resetPassword.submitButton') }}
       </button>
     </div>
   </section>

@@ -1,25 +1,26 @@
 <template>
   <section class="view pricing-view">
-    <!-- Premium background layers -->
+    <!-- Background financial atmosphere -->
     <div class="pricing-bg" aria-hidden="true">
       <div class="pricing-bg__grid"></div>
       <div class="pricing-bg__glow pricing-bg__glow--1"></div>
       <div class="pricing-bg__glow pricing-bg__glow--2"></div>
       <svg class="pricing-bg__chart" viewBox="0 0 1200 200" preserveAspectRatio="none">
-        <polyline points="0,160 80,140 160,150 240,100 320,110 400,60 480,80 560,40 640,70 720,30 800,50 880,20 960,45 1040,15 1120,35 1200,10" fill="none" stroke="currentColor" stroke-width="1.5"/>
-        <polyline points="0,180 80,170 160,175 240,155 320,160 400,130 480,145 560,120 640,135 720,110 800,125 880,105 960,115 1040,100 1120,108 1200,95" fill="none" stroke="currentColor" stroke-width="0.8"/>
+        <polyline points="0,160 80,140 160,150 240,110 320,130 400,90 480,100 560,60 640,80 720,40 800,65 880,30 960,50 1040,20 1120,35 1200,10" />
+        <polyline class="pricing-bg__chart--secondary" points="0,180 80,170 160,175 240,155 320,165 400,140 480,150 560,125 640,135 720,110 800,120 880,100 960,115 1040,95 1120,105 1200,85" />
       </svg>
     </div>
 
     <div class="container pricing-page">
       <header class="pricing-hero">
-        <div class="pricing-eyebrow">
-          <span class="pricing-eyebrow__line"></span>
-          <span class="pricing-eyebrow__text">套餐升级</span>
-          <span class="pricing-eyebrow__line"></span>
+        <div class="pricing-hero__badge">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z" fill="currentColor"/>
+          </svg>
+          <span>套餐升级</span>
         </div>
-        <h1 class="view-title">选择适合你的回测套餐</h1>
-        <p class="view-subtitle">按月解锁更多回测次数和更多高级功能</p>
+        <h1 class="pricing-hero__title">选择适合你的回测套餐</h1>
+        <p class="pricing-hero__subtitle">按月解锁更多回测次数和更多高级功能，助力你的量化研究之路。</p>
       </header>
 
       <p v-if="loading" class="message">正在加载套餐信息...</p>
@@ -36,20 +37,26 @@
           :class="{
             'pricing-card--current': currentPlanLevel === plan.level,
             'pricing-card--featured': plan.featured,
-            [`pricing-card--tier-${index}`]: true,
+            'pricing-card--ultra': plan.level === 'ultra',
           }"
-          :style="{ '--card-delay': `${index * 80}ms` }"
+          :style="{ '--card-delay': index * 80 + 'ms' }"
         >
-          <!-- Decorative corner accent -->
-          <div v-if="plan.featured" class="pricing-card__accent" aria-hidden="true"></div>
+          <!-- Decorative top accent -->
+          <div class="pricing-card__accent" aria-hidden="true"></div>
 
           <!-- Badge row -->
           <div class="pricing-card__badges">
             <span v-if="plan.featured" class="badge badge--featured">
-              <svg viewBox="0 0 12 12" fill="none" class="badge__icon" aria-hidden="true">
-                <path d="M6 1l1.5 3.2L11 4.8 8.5 7.1 9.2 11 6 9.2 2.8 11l.7-3.9L1 4.8l3.5-.6z" fill="currentColor"/>
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z"/>
               </svg>
               推荐
+            </span>
+            <span v-if="plan.level === 'ultra'" class="badge badge--ultra">
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                <path d="M3.5 18.49l6-6.01 4 4L22 6.92l-1.41-1.41-7.09 7.97-4-4L2 16.99z"/>
+              </svg>
+              旗舰
             </span>
             <span v-if="currentPlanLevel === plan.level" class="badge badge--current">当前套餐</span>
           </div>
@@ -82,7 +89,10 @@
             <button
               v-if="plan.level !== 'free' && currentPlanLevel !== plan.level"
               class="btn btn-upgrade"
-              :class="{ 'btn-upgrade--featured': plan.featured }"
+              :class="{
+                'btn-upgrade--featured': plan.featured,
+                'btn-upgrade--ultra': plan.level === 'ultra',
+              }"
               type="button"
               @click="goToCheckout(plan.level)"
             >
@@ -115,7 +125,7 @@
             >
               <span v-if="feature.included" class="feature-icon feature-icon--check" aria-hidden="true">
                 <svg viewBox="0 0 16 16" fill="none">
-                  <circle cx="8" cy="8" r="7" fill="currentColor" opacity="0.12"/>
+                  <circle cx="8" cy="8" r="7" fill="currentColor" opacity="0.15"/>
                   <path d="M5 8l2 2 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
                 </svg>
               </span>
@@ -128,6 +138,28 @@
             </li>
           </ul>
         </article>
+      </div>
+
+      <!-- Bottom trust strip -->
+      <div class="pricing-trust">
+        <div class="pricing-trust__item">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+          </svg>
+          <span>安全支付</span>
+        </div>
+        <div class="pricing-trust__item">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+          </svg>
+          <span>数据加密</span>
+        </div>
+        <div class="pricing-trust__item">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/>
+          </svg>
+          <span>随时升降级</span>
+        </div>
       </div>
     </div>
   </section>
@@ -177,39 +209,155 @@ onMounted(() => {
 </script>
 
 <style scoped>
-/* ── Page ── */
-.view {
+/* ── Premium Color Tokens (theme-adaptive) ── */
+.pricing-view {
+  --gold: #9A7B3A;
+  --gold-light: #B8944F;
+  --gold-dim: rgba(154, 123, 58, 0.1);
+  --gold-glow: rgba(154, 123, 58, 0.18);
+  --gold-text: #7A6230;
+  --card-bg: var(--color-surface);
+  --card-bg-glass: rgba(255, 255, 255, 0.85);
+  --card-featured-bg: linear-gradient(168deg, rgba(30, 90, 168, 0.06) 0%, var(--color-surface) 40%);
+  --card-ultra-bg: linear-gradient(168deg, rgba(154, 123, 58, 0.06) 0%, var(--color-surface) 35%);
+  --grid-line-color: rgba(154, 123, 58, 0.06);
+  --glow-primary: rgba(30, 90, 168, 0.08);
+  --glow-gold: rgba(154, 123, 58, 0.05);
+  --chart-opacity: 0.08;
+  --accent-ring-featured: rgba(30, 90, 168, 0.12);
+  --accent-ring-ultra: rgba(154, 123, 58, 0.12);
+  position: relative;
   width: 100%;
+  overflow: hidden;
 }
 
+/* Dark theme overrides */
+:root[data-theme="dark"] .pricing-view {
+  --gold: #C9A962;
+  --gold-light: #E2CA8A;
+  --gold-dim: rgba(201, 169, 98, 0.15);
+  --gold-glow: rgba(201, 169, 98, 0.25);
+  --gold-text: #C9A962;
+  --card-bg: var(--color-surface);
+  --card-bg-glass: rgba(10, 15, 29, 0.7);
+  --card-featured-bg: linear-gradient(168deg, rgba(30, 90, 168, 0.12) 0%, rgba(10, 15, 29, 0.8) 40%, rgba(10, 15, 29, 0.7) 100%);
+  --card-ultra-bg: linear-gradient(168deg, rgba(201, 169, 98, 0.08) 0%, rgba(10, 15, 29, 0.85) 35%, rgba(10, 15, 29, 0.7) 100%);
+  --grid-line-color: rgba(201, 169, 98, 0.03);
+  --glow-primary: rgba(30, 90, 168, 0.2);
+  --glow-gold: rgba(201, 169, 98, 0.1);
+  --chart-opacity: 0.06;
+  --accent-ring-featured: rgba(30, 90, 168, 0.1);
+  --accent-ring-ultra: rgba(201, 169, 98, 0.08);
+}
+
+/* ── Atmospheric Background ── */
+.pricing-bg {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.pricing-bg__grid {
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(var(--grid-line-color) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid-line-color) 1px, transparent 1px);
+  background-size: 60px 60px;
+  mask-image: radial-gradient(ellipse 80% 60% at 50% 0%, black 0%, transparent 70%);
+  -webkit-mask-image: radial-gradient(ellipse 80% 60% at 50% 0%, black 0%, transparent 70%);
+}
+
+.pricing-bg__glow {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(100px);
+  opacity: 0.4;
+}
+
+.pricing-bg__glow--1 {
+  width: 600px;
+  height: 400px;
+  top: -120px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: radial-gradient(circle, var(--glow-primary) 0%, transparent 70%);
+}
+
+.pricing-bg__glow--2 {
+  width: 400px;
+  height: 300px;
+  top: 40px;
+  right: 10%;
+  background: radial-gradient(circle, var(--glow-gold) 0%, transparent 70%);
+}
+
+.pricing-bg__chart {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 200px;
+  opacity: var(--chart-opacity);
+}
+
+.pricing-bg__chart polyline {
+  fill: none;
+  stroke: var(--gold);
+  stroke-width: 2;
+}
+
+.pricing-bg__chart--secondary {
+  stroke: var(--color-primary) !important;
+  stroke-dasharray: 4 4;
+}
+
+/* ── Page Layout ── */
 .pricing-page {
+  position: relative;
+  z-index: 1;
   padding-bottom: var(--spacing-xl);
 }
 
+/* ── Hero Section ── */
 .pricing-hero {
   margin-bottom: var(--spacing-xl);
   text-align: center;
+  padding-top: var(--spacing-md);
 }
 
-.pricing-eyebrow {
-  margin: 0 0 var(--spacing-xs);
-  color: var(--color-primary);
-  font-size: var(--font-size-sm);
-  font-weight: var(--font-weight-semibold);
-  letter-spacing: 0.08em;
+.pricing-hero__badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 14px;
+  margin-bottom: var(--spacing-md);
+  border-radius: var(--radius-full);
+  background: var(--gold-dim);
+  border: 1px solid var(--gold-glow);
+  color: var(--gold-text);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
 }
 
-.view-title {
+.pricing-hero__title {
   margin: 0 0 var(--spacing-sm);
   color: var(--color-text-primary);
-  font-size: var(--font-size-xxxl);
-  font-weight: var(--font-weight-bold);
+  font-size: clamp(1.6rem, 3vw, 2.2rem);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
 }
 
-.view-subtitle {
-  margin: 0;
+.pricing-hero__subtitle {
+  margin: 0 auto;
+  max-width: 480px;
   color: var(--color-text-muted);
+  font-size: var(--font-size-md);
+  line-height: 1.6;
 }
 
 /* ── Grid ── */
@@ -228,31 +376,105 @@ onMounted(() => {
   padding: var(--spacing-lg);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-xl);
-  background: var(--color-surface);
+  background: var(--card-bg-glass);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
   box-shadow: var(--shadow-sm);
-  transition: box-shadow 200ms ease, border-color 200ms ease, transform 200ms ease;
+  transition: box-shadow 280ms ease, border-color 280ms ease, transform 280ms ease;
   position: relative;
+  overflow: hidden;
+  animation: cardReveal 500ms ease both;
+  animation-delay: var(--card-delay, 0ms);
+}
+
+@keyframes cardReveal {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .pricing-card:hover {
   box-shadow: var(--shadow-md);
   border-color: var(--color-border-hover);
-  transform: translateY(-2px);
+  transform: translateY(-3px);
 }
 
+.pricing-card__accent {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent 0%, var(--color-primary) 50%, transparent 100%);
+  opacity: 0.4;
+  transition: opacity 280ms ease;
+}
+
+.pricing-card:hover .pricing-card__accent {
+  opacity: 0.8;
+}
+
+/* ── Current Plan ── */
 .pricing-card--current {
   border-color: var(--color-primary-border);
 }
 
+/* ── Featured Card (Plus) ── */
 .pricing-card--featured {
   border-color: var(--color-primary);
-  background: linear-gradient(160deg, var(--color-primary-bg) 0%, var(--color-surface) 55%);
-  box-shadow: var(--shadow-md), 0 0 0 1px var(--color-primary);
+  background: var(--card-featured-bg);
+  box-shadow: var(--shadow-md), 0 0 0 1px var(--color-primary-border), 0 0 30px var(--accent-ring-featured);
+}
+
+.pricing-card--featured .pricing-card__accent {
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--color-primary), var(--color-accent), var(--color-primary), transparent);
+  opacity: 0.8;
 }
 
 .pricing-card--featured:hover {
-  transform: translateY(-3px);
-  box-shadow: var(--shadow-lg), 0 0 0 1px var(--color-primary);
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-lg), 0 0 0 1px var(--color-primary-border), 0 0 40px var(--accent-ring-featured);
+}
+
+/* ── Ultra Card (Gold Premium) ── */
+.pricing-card--ultra {
+  border-color: var(--gold-glow);
+  background: var(--card-ultra-bg);
+  box-shadow: var(--shadow-md), 0 0 0 1px var(--gold-dim), 0 0 30px var(--accent-ring-ultra);
+}
+
+.pricing-card--ultra .pricing-card__accent {
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--gold), var(--gold-light), var(--gold), transparent);
+  opacity: 0.7;
+}
+
+.pricing-card--ultra:hover {
+  border-color: var(--gold);
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-lg), 0 0 0 1px var(--gold-glow), 0 0 30px var(--accent-ring-ultra);
+}
+
+.pricing-card--ultra .pricing-card__name {
+  color: var(--gold-text);
+}
+
+.pricing-card--ultra .pricing-card__quota {
+  color: var(--gold-text);
+}
+
+.pricing-card--ultra .quota-icon {
+  color: var(--gold-text);
+}
+
+.pricing-card--ultra .pricing-card__divider {
+  background: linear-gradient(90deg, transparent, var(--gold-dim), transparent);
 }
 
 /* ── Badges ── */
@@ -265,16 +487,24 @@ onMounted(() => {
 .badge {
   display: inline-flex;
   align-items: center;
+  gap: 4px;
   padding: 2px 10px;
   border-radius: var(--radius-full);
   font-size: var(--font-size-xs);
-  font-weight: var(--font-weight-semibold);
+  font-weight: 600;
   line-height: 1.6;
 }
 
 .badge--featured {
-  background: var(--color-primary);
+  background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-light) 100%);
   color: #fff;
+  box-shadow: 0 2px 8px var(--accent-ring-featured);
+}
+
+.badge--ultra {
+  background: linear-gradient(135deg, var(--gold) 0%, var(--gold-light) 100%);
+  color: #fff;
+  box-shadow: 0 2px 8px var(--gold-dim);
 }
 
 .badge--current {
@@ -294,9 +524,9 @@ onMounted(() => {
   margin: 0;
   color: var(--color-text-secondary);
   font-size: var(--font-size-sm);
-  font-weight: var(--font-weight-semibold);
+  font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.08em;
 }
 
 .pricing-card__price-row {
@@ -308,7 +538,7 @@ onMounted(() => {
 .pricing-card__currency {
   color: var(--color-text-primary);
   font-size: var(--font-size-lg);
-  font-weight: var(--font-weight-semibold);
+  font-weight: 600;
   align-self: flex-start;
   margin-top: 5px;
 }
@@ -316,10 +546,18 @@ onMounted(() => {
 .pricing-card__price {
   color: var(--color-text-primary);
   font-size: 2.2rem;
-  font-weight: var(--font-weight-bold);
+  font-weight: 700;
   line-height: 1;
   letter-spacing: -0.03em;
   font-variant-numeric: tabular-nums;
+}
+
+.pricing-card--ultra .pricing-card__currency,
+.pricing-card--ultra .pricing-card__price {
+  background: linear-gradient(135deg, var(--gold) 0%, var(--gold-light) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 
 .pricing-card__unit {
@@ -345,7 +583,7 @@ onMounted(() => {
 .pricing-card__quota {
   color: var(--color-primary);
   font-size: var(--font-size-sm);
-  font-weight: var(--font-weight-semibold);
+  font-weight: 600;
 }
 
 /* ── Description ── */
@@ -375,10 +613,21 @@ onMounted(() => {
   background: var(--color-surface-hover);
   color: var(--color-text-primary);
   font-size: var(--font-size-sm);
-  font-weight: var(--font-weight-semibold);
+  font-weight: 600;
   cursor: pointer;
-  transition: background 150ms ease, border-color 150ms ease, transform 150ms ease, box-shadow 150ms ease;
+  transition: all 200ms ease;
   white-space: nowrap;
+  position: relative;
+  overflow: hidden;
+}
+
+.btn-upgrade::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(255,255,255,0.05) 0%, transparent 60%);
+  opacity: 0;
+  transition: opacity 200ms ease;
 }
 
 .btn-upgrade:hover {
@@ -387,27 +636,49 @@ onMounted(() => {
   transform: translateY(-1px);
 }
 
+.btn-upgrade:hover::before {
+  opacity: 1;
+}
+
 .btn-upgrade:active {
   transform: translateY(0);
 }
 
 .btn-upgrade--featured {
-  background: var(--color-primary);
+  background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-light) 100%);
   border-color: var(--color-primary);
   color: #fff;
-  box-shadow: 0 2px 12px rgba(37, 99, 235, 0.35);
+  box-shadow: 0 2px 16px var(--accent-ring-featured);
 }
 
 .btn-upgrade--featured:hover {
-  background: var(--color-primary-light);
+  background: linear-gradient(135deg, var(--color-primary-light) 0%, var(--color-primary) 100%);
   border-color: var(--color-primary-light);
-  box-shadow: 0 4px 16px rgba(37, 99, 235, 0.45);
+  box-shadow: 0 4px 20px var(--accent-ring-featured);
+}
+
+.btn-upgrade--ultra {
+  background: linear-gradient(135deg, var(--gold) 0%, var(--gold-light) 100%);
+  border-color: var(--gold);
+  color: #fff;
+  box-shadow: 0 2px 16px var(--gold-dim);
+}
+
+.btn-upgrade--ultra:hover {
+  background: linear-gradient(135deg, var(--gold-light) 0%, var(--gold) 100%);
+  border-color: var(--gold-light);
+  box-shadow: 0 4px 20px var(--gold-glow);
 }
 
 .btn-arrow {
   width: 14px;
   height: 14px;
   flex-shrink: 0;
+  transition: transform 200ms ease;
+}
+
+.btn-upgrade:hover .btn-arrow {
+  transform: translateX(2px);
 }
 
 .btn-disabled {
@@ -421,7 +692,7 @@ onMounted(() => {
   background: transparent;
   color: var(--color-text-muted);
   font-size: var(--font-size-sm);
-  font-weight: var(--font-weight-medium);
+  font-weight: 500;
   border: 1px solid var(--color-border);
   cursor: default;
   user-select: none;
@@ -442,7 +713,7 @@ onMounted(() => {
 /* ── Divider ── */
 .pricing-card__divider {
   height: 1px;
-  background: var(--color-border);
+  background: linear-gradient(90deg, transparent, var(--color-border), transparent);
 }
 
 /* ── Features ── */
@@ -478,6 +749,8 @@ onMounted(() => {
 .feature-icon--check { color: var(--color-success); }
 .feature-icon--cross { color: var(--color-text-muted); }
 
+.pricing-card--ultra .feature-icon--check { color: var(--gold-text); }
+
 .feature-text {
   font-size: var(--font-size-sm);
   line-height: 1.4;
@@ -488,10 +761,37 @@ onMounted(() => {
   color: var(--color-text-muted);
 }
 
+/* ── Trust Strip ── */
+.pricing-trust {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-lg);
+  margin-top: var(--spacing-xl);
+  padding: var(--spacing-md) 0;
+  border-top: 1px solid var(--gold-dim);
+}
+
+.pricing-trust__item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-xs);
+  font-weight: 500;
+  letter-spacing: 0.02em;
+}
+
+.pricing-trust__item svg {
+  color: var(--gold);
+  opacity: 0.6;
+}
+
 /* ── Messages ── */
 .message {
   margin: 0 0 var(--spacing-md);
   color: var(--color-text-muted);
+  text-align: center;
 }
 
 .message.error {
@@ -509,6 +809,11 @@ onMounted(() => {
   .pricing-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+
+  .pricing-trust {
+    flex-wrap: wrap;
+    gap: var(--spacing-md);
+  }
 }
 
 @media (max-width: 560px) {
@@ -516,8 +821,17 @@ onMounted(() => {
     text-align: left;
   }
 
+  .pricing-hero__badge {
+    margin-left: 0;
+  }
+
   .pricing-grid {
     grid-template-columns: 1fr;
+  }
+
+  .pricing-trust {
+    flex-direction: column;
+    align-items: flex-start;
   }
 }
 </style>

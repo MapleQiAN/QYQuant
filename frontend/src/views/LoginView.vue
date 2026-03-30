@@ -1,11 +1,13 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { RouterLink, useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { loginWithPassword, registerWithPassword } from '../api/auth'
 import { useUserStore } from '../stores/user'
 
 type AuthIntent = 'login' | 'register'
 
+const { t } = useI18n()
 const router = useRouter()
 const userStore = useUserStore()
 
@@ -28,19 +30,19 @@ function switchIntent(nextIntent: AuthIntent) {
 function validate() {
   const normalizedEmail = email.value.trim().toLowerCase()
   if (!normalizedEmail) {
-    error.value = '请输入邮箱'
+    error.value = t('auth.emailRequired')
     return null
   }
   if (!password.value) {
-    error.value = '请输入密码'
+    error.value = t('auth.passwordRequired')
     return null
   }
   if (password.value.length < 8) {
-    error.value = '密码至少 8 位'
+    error.value = t('auth.passwordTooShort')
     return null
   }
   if (intent.value === 'register' && !nickname.value.trim()) {
-    error.value = '请输入昵称'
+    error.value = t('auth.nicknameRequired')
     return null
   }
   return {
@@ -70,7 +72,7 @@ async function handleSubmit() {
       : await loginWithPassword({ email: payload.email, password: payload.password })
     await finalizeLogin(result.access_token)
   } catch (e: any) {
-    error.value = e.message || (intent.value === 'register' ? '注册失败' : '登录失败')
+    error.value = e.message || (intent.value === 'register' ? t('auth.registerFailed') : t('auth.loginFailed'))
   } finally {
     loading.value = false
   }
@@ -81,8 +83,8 @@ async function handleSubmit() {
   <section class="login-view">
     <div class="login-card">
       <div class="login-header">
-        <h1>QY Quant</h1>
-        <p class="subtitle">企业级账户认证</p>
+        <h1>{{ t('auth.title') }}</h1>
+        <p class="subtitle">{{ t('auth.subtitle') }}</p>
       </div>
 
       <div class="intent-switch">
@@ -93,7 +95,7 @@ async function handleSubmit() {
           data-test="login-tab"
           @click="switchIntent('login')"
         >
-          登录
+          {{ t('auth.loginTab') }}
         </button>
         <button
           class="intent-btn"
@@ -102,40 +104,40 @@ async function handleSubmit() {
           data-test="register-tab"
           @click="switchIntent('register')"
         >
-          注册
+          {{ t('auth.registerTab') }}
         </button>
       </div>
 
       <div class="login-form">
-        <label class="field-label">邮箱</label>
+        <label class="field-label">{{ t('auth.emailLabel') }}</label>
         <input
           v-model="email"
           type="email"
           class="field-input"
-          placeholder="请输入邮箱"
+          :placeholder="t('auth.emailPlaceholder')"
           autocomplete="email"
           data-test="email-input"
           @keyup.enter="handleSubmit"
         />
 
-        <label class="field-label">密码</label>
+        <label class="field-label">{{ t('auth.passwordLabel') }}</label>
         <input
           v-model="password"
           type="password"
           class="field-input"
-          placeholder="请输入密码"
+          :placeholder="t('auth.passwordPlaceholder')"
           autocomplete="current-password"
           data-test="password-input"
           @keyup.enter="handleSubmit"
         />
 
         <template v-if="intent === 'register'">
-          <label class="field-label">昵称</label>
+          <label class="field-label">{{ t('auth.nicknameLabel') }}</label>
           <input
             v-model="nickname"
             type="text"
             class="field-input"
-            placeholder="请输入昵称"
+            :placeholder="t('auth.nicknamePlaceholder')"
             maxlength="20"
             data-test="nickname-input"
             @keyup.enter="handleSubmit"
@@ -143,12 +145,12 @@ async function handleSubmit() {
         </template>
 
         <RouterLink v-if="intent === 'login'" to="/forgot-password" class="forgot-link" data-test="forgot-link">
-          忘记密码？
+          {{ t('auth.forgotPassword') }}
         </RouterLink>
 
         <p v-if="error" class="error-msg">{{ error }}</p>
         <button class="submit-btn" :disabled="loading" type="button" data-test="submit-auth" @click="handleSubmit">
-          {{ loading ? (intent === 'register' ? '注册中...' : '登录中...') : (intent === 'register' ? '注册并登录' : '登录') }}
+          {{ loading ? (intent === 'register' ? t('auth.registering') : t('auth.loggingIn')) : (intent === 'register' ? t('auth.registerButton') : t('auth.loginButton')) }}
         </button>
       </div>
     </div>
