@@ -190,39 +190,43 @@ function ChevronIcon() {
   z-index: 110;
   transition: width 250ms var(--ease-out-expo);
   overflow: hidden;
+  box-shadow: 4px 0 16px rgba(0, 0, 0, 0.20);
 }
 
 .side-nav.collapsed {
   width: var(--sidebar-collapsed-width);
 }
 
-/* ── Header ── */
+/* ── Header - Premium Logo Area ── */
 .sidebar-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 14px 12px;
+  padding: 16px 14px;
   border-bottom: 1px solid var(--color-sidebar-border);
   min-height: var(--nav-height);
   flex-shrink: 0;
+  background: linear-gradient(135deg, var(--color-sidebar-bg) 0%, rgba(30, 90, 168, 0.05) 100%);
 }
 
 .logo-area {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
   overflow: hidden;
 }
 
 .logo-icon {
-  width: 28px;
-  height: 28px;
+  width: 32px;
+  height: 32px;
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-md);
   overflow: hidden;
   flex-shrink: 0;
+  background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-accent) 100%);
+  box-shadow: 0 4px 12px rgba(30, 90, 168, 0.30);
 }
 
 .logo-image {
@@ -232,22 +236,26 @@ function ChevronIcon() {
 }
 
 .logo-text {
-  font-size: 15px;
-  font-weight: var(--font-weight-bold);
+  font-size: 16px;
+  font-weight: 800;
   color: var(--color-text-primary);
   letter-spacing: -0.02em;
   white-space: nowrap;
+  background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-accent) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 
 .collapse-btn {
-  width: 28px;
-  height: 28px;
+  width: 32px;
+  height: 32px;
   display: flex;
   align-items: center;
   justify-content: center;
   background: transparent;
-  border: none;
-  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
   color: var(--color-text-muted);
   cursor: pointer;
   transition: all var(--transition-fast);
@@ -257,6 +265,7 @@ function ChevronIcon() {
 .collapse-btn:hover {
   background: var(--color-sidebar-hover);
   color: var(--color-text-secondary);
+  border-color: var(--color-primary-border);
 }
 
 .collapsed .collapse-btn {
@@ -267,26 +276,26 @@ function ChevronIcon() {
   transform: rotate(180deg);
 }
 
-/* ── Navigation ── */
+/* ── Navigation - Modern Minimalist ── */
 .sidebar-nav {
   flex: 1;
   overflow-y: auto;
   overflow-x: hidden;
-  padding: 8px;
+  padding: 12px 8px;
 }
 
 .nav-section {
-  margin-bottom: 8px;
+  margin-bottom: 12px;
 }
 
 .nav-section-label {
   display: block;
-  padding: 8px 12px 4px;
-  font-size: 10px;
-  font-weight: var(--font-weight-semibold);
+  padding: 10px 12px 6px;
+  font-size: 11px;
+  font-weight: 700;
   color: var(--color-text-muted);
   text-transform: uppercase;
-  letter-spacing: var(--letter-spacing-wider);
+  letter-spacing: 0.06em;
   white-space: nowrap;
 }
 
@@ -294,26 +303,29 @@ function ChevronIcon() {
   position: relative;
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 8px 12px;
+  gap: 12px;
+  padding: 10px 12px;
   border-radius: var(--radius-md);
   color: var(--color-text-secondary);
   text-decoration: none;
   font-size: var(--font-size-sm);
-  font-weight: var(--font-weight-medium);
-  transition: all var(--transition-fast);
+  font-weight: 600;
+  transition: all var(--transition-normal);
   white-space: nowrap;
   cursor: pointer;
+  border: 1px solid transparent;
 }
 
 .nav-item:hover {
   background: var(--color-sidebar-hover);
   color: var(--color-text-primary);
+  border-color: var(--color-primary-border);
 }
 
 .nav-item.active {
   background: var(--color-sidebar-active);
-  color: var(--color-primary-light);
+  color: var(--color-accent);
+  border-color: var(--color-primary-border);
 }
 
 .nav-item-indicator {
@@ -323,18 +335,19 @@ function ChevronIcon() {
   transform: translateY(-50%);
   width: 3px;
   height: 0;
-  background: var(--color-primary);
+  background: linear-gradient(180deg, var(--color-primary) 0%, var(--color-accent) 100%);
   border-radius: 0 2px 2px 0;
-  transition: height var(--transition-fast);
+  transition: height var(--transition-normal);
 }
 
 .nav-item.active .nav-item-indicator {
-  height: 20px;
+  height: 24px;
 }
 
 .nav-item-icon {
   flex-shrink: 0;
-  opacity: 0.7;
+  opacity: 0.6;
+  font-size: 18px;
 }
 
 .nav-item:hover .nav-item-icon,
@@ -345,11 +358,12 @@ function ChevronIcon() {
 .nav-item-label {
   overflow: hidden;
   text-overflow: ellipsis;
+  flex: 1;
 }
 
-/* ── Footer ── */
+/* ── Footer - Plan Badge ── */
 .sidebar-footer {
-  padding: 8px;
+  padding: 12px 8px;
   border-top: 1px solid var(--color-sidebar-border);
   flex-shrink: 0;
 }
@@ -358,31 +372,39 @@ function ChevronIcon() {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 8px 12px;
-  margin-top: 4px;
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
+  padding: 10px 12px;
+  background: linear-gradient(135deg, var(--color-primary-bg) 0%, transparent 100%);
+  border: 1px solid var(--color-primary-border);
   border-radius: var(--radius-md);
+  transition: all var(--transition-normal);
+}
+
+.plan-badge:hover {
+  border-color: var(--color-accent);
+  background: linear-gradient(135deg, var(--color-primary-bg) 0%, rgba(0, 217, 255, 0.08) 100%);
 }
 
 .plan-label {
   font-size: 10px;
-  font-weight: var(--font-weight-bold);
+  font-weight: 700;
   color: var(--color-accent);
-  letter-spacing: var(--letter-spacing-wide);
+  letter-spacing: 0.05em;
   text-transform: uppercase;
 }
 
 .plan-upgrade {
   font-size: 10px;
-  font-weight: var(--font-weight-semibold);
+  font-weight: 700;
   color: var(--color-primary);
   text-decoration: none;
+  padding: 2px 6px;
+  border-radius: var(--radius-sm);
+  transition: all var(--transition-fast);
 }
 
 .plan-upgrade:hover {
-  color: var(--color-primary-light);
-  text-decoration: underline;
+  color: var(--color-accent);
+  background: var(--color-primary-bg);
 }
 
 /* ── Transitions ── */

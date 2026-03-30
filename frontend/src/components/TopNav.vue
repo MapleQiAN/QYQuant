@@ -213,8 +213,9 @@ const LogoutIcon = () => h('svg', { width: 14, height: 14, viewBox: '0 0 24 24',
   height: var(--nav-height);
   background: var(--color-nav-bg);
   border-bottom: 1px solid var(--color-nav-border);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
 .header-content {
@@ -229,36 +230,42 @@ const LogoutIcon = () => h('svg', { width: 14, height: 14, viewBox: '0 0 24 24',
 .header-left {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 16px;
 }
 
 .mobile-menu-btn {
   display: none;
-  width: 32px;
-  height: 32px;
+  width: 36px;
+  height: 36px;
   align-items: center;
   justify-content: center;
   background: transparent;
-  border: none;
-  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
   color: var(--color-text-secondary);
   cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.mobile-menu-btn:hover {
+  border-color: var(--color-primary-border);
+  color: var(--color-text-primary);
 }
 
 .breadcrumb-current {
   font-size: var(--font-size-lg);
-  font-weight: var(--font-weight-semibold);
+  font-weight: 700;
   color: var(--color-text-primary);
-  letter-spacing: var(--letter-spacing-tight);
+  letter-spacing: -0.01em;
 }
 
 .header-right {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 4px;
 }
 
-/* ── Search ── */
+/* ── Search - Modern ── */
 .search-box {
   position: relative;
   display: flex;
@@ -267,28 +274,30 @@ const LogoutIcon = () => h('svg', { width: 14, height: 14, viewBox: '0 0 24 24',
 
 .search-icon {
   position: absolute;
-  left: 10px;
+  left: 12px;
   color: var(--color-text-muted);
   pointer-events: none;
 }
 
 .search-input {
   width: 220px;
-  height: 32px;
-  padding: 0 40px 0 32px;
+  height: 36px;
+  padding: 0 40px 0 36px;
   font-size: var(--font-size-sm);
   font-family: var(--font-family);
+  font-weight: 500;
   color: var(--color-text-primary);
-  background: var(--color-surface);
+  background: var(--color-surface-elevated);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
   outline: none;
-  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+  transition: all var(--transition-fast);
 }
 
 .search-input:focus {
   border-color: var(--color-primary-border);
   box-shadow: 0 0 0 3px var(--color-primary-bg);
+  background: var(--color-surface);
 }
 
 .search-input::placeholder {
@@ -297,70 +306,78 @@ const LogoutIcon = () => h('svg', { width: 14, height: 14, viewBox: '0 0 24 24',
 
 .search-kbd {
   position: absolute;
-  right: 8px;
-  padding: 1px 5px;
+  right: 10px;
+  padding: 2px 6px;
   font-size: 10px;
-  font-family: var(--font-family);
-  font-weight: var(--font-weight-medium);
+  font-family: var(--font-mono);
+  font-weight: 600;
   color: var(--color-text-muted);
-  background: var(--color-surface-elevated);
+  background: var(--color-surface-active);
   border: 1px solid var(--color-border);
-  border-radius: 3px;
-  line-height: 1.4;
+  border-radius: var(--radius-sm);
+  line-height: 1.2;
   pointer-events: none;
+  letter-spacing: 0.02em;
 }
 
-/* ── Action buttons ── */
+/* ── Action buttons - Premium ── */
 .header-actions {
   display: flex;
   align-items: center;
-  gap: 2px;
+  gap: 4px;
 }
 
 .header-btn {
   position: relative;
-  width: 32px;
-  height: 32px;
+  width: 36px;
+  height: 36px;
   display: flex;
   align-items: center;
   justify-content: center;
   background: transparent;
-  border: none;
+  border: 1px solid transparent;
   border-radius: var(--radius-md);
   color: var(--color-text-muted);
   cursor: pointer;
-  transition: color var(--transition-fast), background-color var(--transition-fast);
+  transition: all var(--transition-fast);
 }
 
 .header-btn:hover {
   background: var(--color-surface-hover);
   color: var(--color-text-primary);
+  border-color: var(--color-primary-border);
 }
 
 .divider-v {
   width: 1px;
-  height: 20px;
+  height: 24px;
   background: var(--color-border);
   margin: 0 6px;
 }
 
-/* ── Notifications ── */
+/* ── Notifications - Live Indicator ── */
 .notification-shell {
   position: relative;
 }
 
 .notification-dot {
   position: absolute;
-  top: 6px;
-  right: 6px;
-  width: 7px;
-  height: 7px;
+  top: 4px;
+  right: 4px;
+  width: 8px;
+  height: 8px;
   background: var(--color-danger);
-  border: 1.5px solid var(--color-nav-bg);
+  border: 2px solid var(--color-nav-bg);
   border-radius: var(--radius-full);
+  animation: pulse 2s ease-in-out infinite;
 }
 
-/* ── User Menu ── */
+@keyframes pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(255, 59, 59, 0.4); }
+  50% { box-shadow: 0 0 0 4px rgba(255, 59, 59, 0.1); }
+}
+
+/* ── User Menu - Premium ── */
 .user-menu-shell {
   position: relative;
 }
@@ -368,35 +385,37 @@ const LogoutIcon = () => h('svg', { width: 14, height: 14, viewBox: '0 0 24 24',
 .user-trigger {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 4px 8px 4px 4px;
+  gap: 10px;
+  padding: 6px 10px 6px 6px;
   background: transparent;
-  border: none;
+  border: 1px solid transparent;
   border-radius: var(--radius-md);
   cursor: pointer;
-  transition: background-color var(--transition-fast);
+  transition: all var(--transition-fast);
 }
 
 .user-trigger:hover {
   background: var(--color-surface-hover);
+  border-color: var(--color-primary-border);
 }
 
 .user-avatar {
-  width: 28px;
-  height: 28px;
+  width: 32px;
+  height: 32px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 11px;
-  font-weight: var(--font-weight-semibold);
-  background: linear-gradient(135deg, var(--color-primary), var(--color-primary-dark));
+  font-size: 12px;
+  font-weight: 700;
+  background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-accent) 100%);
   color: #fff;
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-md);
+  box-shadow: 0 2px 8px rgba(30, 90, 168, 0.25);
 }
 
 .user-name {
   font-size: var(--font-size-sm);
-  font-weight: var(--font-weight-medium);
+  font-weight: 600;
   color: var(--color-text-secondary);
   max-width: 100px;
   overflow: hidden;
@@ -406,46 +425,51 @@ const LogoutIcon = () => h('svg', { width: 14, height: 14, viewBox: '0 0 24 24',
 
 .user-trigger svg {
   color: var(--color-text-muted);
+  width: 14px;
+  height: 14px;
+  transition: transform var(--transition-fast);
 }
 
-/* ── Dropdown ── */
+/* ── Dropdown Menu - Glass Style ── */
 .user-dropdown {
   position: absolute;
   top: calc(100% + 8px);
   right: 0;
-  min-width: 200px;
-  padding: 4px;
-  background: var(--color-surface-elevated);
-  border: 1px solid var(--color-border);
+  min-width: 220px;
+  padding: 6px;
+  background: var(--glass-background);
+  backdrop-filter: var(--glass-backdrop);
+  -webkit-backdrop-filter: var(--glass-backdrop);
+  border: var(--glass-border);
   border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-lg);
+  box-shadow: var(--shadow-xl);
   z-index: 200;
 }
 
 .dropdown-header {
-  padding: 10px 12px 8px;
+  padding: 12px 14px 10px;
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 3px;
 }
 
 .dropdown-name {
   font-size: var(--font-size-sm);
-  font-weight: var(--font-weight-semibold);
+  font-weight: 700;
   color: var(--color-text-primary);
 }
 
 .dropdown-email {
   font-size: var(--font-size-xs);
   color: var(--color-accent);
-  font-weight: var(--font-weight-medium);
-  letter-spacing: var(--letter-spacing-wide);
+  font-weight: 700;
+  letter-spacing: 0.05em;
   text-transform: uppercase;
 }
 
 .dropdown-divider {
   height: 1px;
-  margin: 4px 8px;
+  margin: 6px 0;
   background: var(--color-border);
 }
 
@@ -454,26 +478,29 @@ const LogoutIcon = () => h('svg', { width: 14, height: 14, viewBox: '0 0 24 24',
   align-items: center;
   gap: 10px;
   width: 100%;
-  padding: 8px 12px;
+  padding: 9px 12px;
   font-size: var(--font-size-sm);
-  font-weight: var(--font-weight-medium);
+  font-weight: 600;
   color: var(--color-text-primary);
-  background: none;
+  background: transparent;
   border: none;
   border-radius: var(--radius-md);
   cursor: pointer;
   text-decoration: none;
   text-align: left;
-  transition: background-color var(--transition-fast);
+  transition: all var(--transition-fast);
 }
 
 .dropdown-item:hover {
   background: var(--color-surface-hover);
+  color: var(--color-accent);
 }
 
 .dropdown-icon {
   color: var(--color-text-muted);
   flex-shrink: 0;
+  width: 14px;
+  height: 14px;
 }
 
 .dropdown-item.danger {
