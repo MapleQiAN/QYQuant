@@ -39,9 +39,39 @@ ensure_env() {
   fi
 }
 
+parse_args() {
+  REBUILD=false
+
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --rebuild|--build|-b)
+        REBUILD=true
+        shift
+        ;;
+      --help|-h)
+        cat <<'EOF'
+Usage: ./deploy.sh [--rebuild]
+
+  --rebuild, --build, -b    Rebuild images before starting services
+EOF
+        exit 0
+        ;;
+      *)
+        print_error "Unknown argument: $1"
+        exit 1
+        ;;
+    esac
+  done
+}
+
 start_stack() {
-  print_info "Building and starting the QYQuant Docker stack..."
-  docker compose up -d --build
+  if [[ "${REBUILD}" == "true" ]]; then
+    print_info "Rebuilding images and starting the QYQuant Docker stack..."
+    docker compose up -d --build
+  else
+    print_info "Starting the QYQuant Docker stack with existing images..."
+    docker compose up -d
+  fi
   print_info "Services started."
 }
 
@@ -64,6 +94,7 @@ show_access_info() {
 }
 
 main() {
+  parse_args "$@"
   check_docker
   ensure_env
   start_stack

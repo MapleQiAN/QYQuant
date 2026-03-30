@@ -1,3 +1,7 @@
+param(
+    [switch]$Rebuild
+)
+
 $ErrorActionPreference = "Stop"
 
 function Write-Info {
@@ -36,8 +40,14 @@ function Ensure-EnvFile {
 }
 
 function Start-Stack {
-    Write-Info "Building and starting the QYQuant Docker stack..."
-    docker compose up -d --build
+    if ($Rebuild) {
+        Write-Info "Rebuilding images and starting the QYQuant Docker stack..."
+        docker compose up -d --build
+    }
+    else {
+        Write-Info "Starting the QYQuant Docker stack with existing images..."
+        docker compose up -d
+    }
 }
 
 function Show-AccessInfo {
