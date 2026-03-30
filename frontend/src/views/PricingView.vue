@@ -36,6 +36,7 @@
           class="pricing-card"
           :class="{
             'pricing-card--current': currentPlanLevel === plan.level,
+            'pricing-card--lower-tier': isLoggedIn && isPlanTierLowerThanCurrent(plan.level) && currentPlanLevel !== plan.level,
             'pricing-card--featured': plan.featured,
             'pricing-card--ultra': plan.level === 'ultra',
           }"
@@ -89,7 +90,7 @@
           <!-- CTA -->
           <div class="pricing-card__actions">
             <button
-              v-if="plan.level !== 'free' && currentPlanLevel !== plan.level"
+              v-if="plan.level !== 'free' && currentPlanLevel !== plan.level && !isPlanTierLowerThanCurrent(plan.level)"
               class="btn btn-upgrade"
               :class="{
                 'btn-upgrade--featured': plan.featured,
@@ -103,6 +104,12 @@
                 <path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
               </svg>
             </button>
+            <div v-else-if="plan.level === 'free' && isPlanTierLowerThanCurrent(plan.level)" class="btn btn-disabled" aria-disabled="true">
+              您已拥有{{ currentPlanName }}套餐
+            </div>
+            <div v-else-if="plan.level !== 'free' && currentPlanLevel !== plan.level && isPlanTierLowerThanCurrent(plan.level)" class="btn btn-disabled" aria-disabled="true">
+              您已拥有{{ currentPlanName }}套餐
+            </div>
             <div v-else-if="plan.level === 'free'" class="btn btn-disabled" aria-disabled="true">
               免费体验套餐
             </div>
@@ -168,11 +175,11 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import type { PlanLevel } from '../api/payments'
 import { fetchMyQuota } from '../api/users'
-import { PLANS } from '../data/plans'
+import { PLANS, PLAN_TIER_ORDER } from '../data/plans'
 
 const router = useRouter()
 
@@ -201,6 +208,16 @@ async function loadQuota() {
   } finally {
     loading.value = false
   }
+}
+
+const currentPlanName = computed(() => {
+  return PLANS.find(p => p.level === currentPlanLevel.value)?.name ?? ''
+})
+
+function isPlanTierLowerThanCurrent(planLevel: string): boolean {
+  const currentTier = PLAN_TIER_ORDER[currentPlanLevel.value] ?? 0
+  const planTier = PLAN_TIER_ORDER[planLevel] ?? 0
+  return currentTier > planTier
 }
 
 function goToCheckout(planLevel: string) {
@@ -426,6 +443,17 @@ onMounted(() => {
 /* ── Current Plan ── */
 .pricing-card--current {
   border-color: var(--color-primary-border);
+}
+
+/* ── Lower Tier Plan (user has a higher plan) ── */
+.pricing-card--lower-tier {
+  opacity: 0.65;
+}
+
+.pricing-card--lower-tier:hover {
+  transform: none;
+  box-shadow: var(--shadow-sm);
+  border-color: var(--color-border);
 }
 
 /* ── Featured Card (Plus) ── */

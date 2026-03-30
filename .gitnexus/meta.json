@@ -1,12 +1,13 @@
 {
-  "repoPath": "E:/QYQuant",
-  "lastCommit": "35bac9defa4b2173b2e380955db9c2f2b2132827",
-  "indexedAt": "2026-03-30T02:18:25.929Z",
+  "repoPath": "E:\\QYQuant",
+  "lastCommit": "c5c356ccaf5ef6bfb0d9981873b834852ffcc3f7",
+  "indexedAt": "2026-03-30T09:09:10.410Z",
   "stats": {
-    "files": 762,
-    "nodes": 2876,
-    "edges": 7151,
-    "communities": 187,
-    "processes": 192
+    "files": 748,
+    "nodes": 3223,
+    "edges": 9420,
+    "communities": 229,
+    "processes": 225,
+    "embeddings": 0
   }
 }
