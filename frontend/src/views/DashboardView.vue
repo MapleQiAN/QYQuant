@@ -26,47 +26,47 @@
     <div class="kpi-row">
       <div class="kpi-card">
         <div class="kpi-header">
-          <span class="kpi-label">{{ $t('dashboard.totalReturn') || 'Total Return' }}</span>
+          <span class="kpi-label">{{ $t('dashboard.totalReturn') }}</span>
           <span class="kpi-badge" :class="kpiReturn >= 0 ? 'badge-success' : 'badge-danger'">
-            {{ kpiReturn >= 0 ? 'Profit' : 'Loss' }}
+            {{ kpiReturn >= 0 ? $t('dashboard.profit') : $t('dashboard.loss') }}
           </span>
         </div>
         <div class="kpi-value tnum" :class="kpiReturn >= 0 ? 'positive' : 'negative'">
           {{ kpiReturn >= 0 ? '+' : '' }}{{ kpiReturn.toFixed(2) }}%
         </div>
         <div class="kpi-footer">
-          <span class="kpi-sub">All strategies combined</span>
+          <span class="kpi-sub">{{ $t('dashboard.allStrategiesCombined') }}</span>
         </div>
       </div>
 
       <div class="kpi-card">
         <div class="kpi-header">
-          <span class="kpi-label">{{ $t('dashboard.activeBots') || 'Active Bots' }}</span>
+          <span class="kpi-label">{{ $t('dashboard.activeBots') }}</span>
           <span class="kpi-indicator active" />
         </div>
         <div class="kpi-value tnum">{{ activeBotCount }}</div>
         <div class="kpi-footer">
-          <span class="kpi-sub">Running in real-time</span>
+          <span class="kpi-sub">{{ $t('dashboard.runningInRealtime') }}</span>
         </div>
       </div>
 
       <div class="kpi-card">
         <div class="kpi-header">
-          <span class="kpi-label">{{ $t('dashboard.strategies') || 'Strategies' }}</span>
+          <span class="kpi-label">{{ $t('dashboard.strategies') }}</span>
         </div>
         <div class="kpi-value tnum">{{ strategyCount }}</div>
         <div class="kpi-footer">
-          <span class="kpi-sub">In your library</span>
+          <span class="kpi-sub">{{ $t('dashboard.inYourLibrary') }}</span>
         </div>
       </div>
 
       <div class="kpi-card">
         <div class="kpi-header">
-          <span class="kpi-label">{{ $t('dashboard.backtests') || 'Backtests' }}</span>
+          <span class="kpi-label">{{ $t('dashboard.backtests') }}</span>
         </div>
         <div class="kpi-value tnum">{{ backtestCount }}</div>
         <div class="kpi-footer">
-          <span class="kpi-sub">Completed runs</span>
+          <span class="kpi-sub">{{ $t('dashboard.completedRuns') }}</span>
         </div>
       </div>
     </div>

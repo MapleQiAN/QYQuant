@@ -51,16 +51,16 @@
               <div class="dropdown-divider" />
               <RouterLink class="dropdown-item" :to="`/users/${profile.id}`" @click="isUserMenuOpen = false">
                 <UserIcon class="dropdown-icon" />
-                个人主页
+                {{ $t('common.userProfile') }}
               </RouterLink>
               <RouterLink class="dropdown-item" to="/settings" @click="isUserMenuOpen = false">
                 <SettingsSmIcon class="dropdown-icon" />
-                设置
+                {{ $t('common.settings') }}
               </RouterLink>
               <div class="dropdown-divider" />
               <button class="dropdown-item danger" type="button" @click="handleLogout">
                 <LogoutIcon class="dropdown-icon" />
-                退出登录
+                {{ $t('common.logout') }}
               </button>
             </div>
           </div>
@@ -74,6 +74,7 @@
 import { computed, h, onMounted, onUnmounted, ref } from 'vue'
 import { storeToRefs } from 'pinia'
 import { RouterLink, useRoute } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import NotificationPanel from './NotificationPanel.vue'
 import { useNotificationStore } from '../stores/useNotificationStore'
 import { useUserStore } from '../stores/user'
@@ -81,6 +82,7 @@ import { useUserStore } from '../stores/user'
 defineEmits<{ 'toggle-sidebar': [] }>()
 
 const route = useRoute()
+const { t } = useI18n()
 const userStore = useUserStore()
 const notificationStore = useNotificationStore()
 const { profile } = storeToRefs(userStore)
@@ -89,22 +91,23 @@ const isNotificationPanelOpen = ref(false)
 const isUserMenuOpen = ref(false)
 
 const pageTitles: Record<string, string> = {
-  '/': 'Dashboard',
-  '/strategies': 'Strategies',
-  '/backtests': 'Backtests',
-  '/bots': 'Trading Bots',
-  '/forum': 'Forum',
-  '/marketplace': 'Marketplace',
-  '/settings': 'Settings',
-  '/pricing': 'Pricing',
+  '/': 'pageTitle.dashboard',
+  '/learn': 'pageTitle.learn',
+  '/strategies': 'pageTitle.strategies',
+  '/backtests': 'pageTitle.backtests',
+  '/bots': 'pageTitle.bots',
+  '/forum': 'pageTitle.forum',
+  '/marketplace': 'pageTitle.marketplace',
+  '/settings': 'pageTitle.settings',
+  '/pricing': 'pageTitle.pricing',
 }
 
 const currentPageTitle = computed(() => {
-  for (const [path, title] of Object.entries(pageTitles)) {
-    if (path === '/' && route.path === '/') return title
-    if (path !== '/' && route.path.startsWith(path)) return title
+  for (const [path, key] of Object.entries(pageTitles)) {
+    if (path === '/' && route.path === '/') return t(key)
+    if (path !== '/' && route.path.startsWith(path)) return t(key)
   }
-  return 'QY Quant'
+  return t('pageTitle.default')
 })
 
 function handleAvatarClick() {

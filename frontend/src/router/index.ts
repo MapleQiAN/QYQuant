@@ -18,6 +18,7 @@ import MarketplaceView from '../views/Marketplace.vue'
 import MarketplaceStrategyDetailView from '../views/MarketplaceStrategyDetailView.vue'
 import PricingView from '../views/PricingView.vue'
 import CheckoutView from '../views/CheckoutView.vue'
+import LearnView from '../views/LearnView.vue'
 import UserProfileView from '../views/UserProfileView.vue'
 import AdminDashboardView from '../views/admin/AdminDashboard.vue'
 import BacktestMonitorView from '../views/admin/BacktestMonitor.vue'
@@ -31,11 +32,23 @@ import UserManagementView from '../views/admin/UserManagement.vue'
 
 const router = createRouter({
   history: createWebHistory(),
+  scrollBehavior(to) {
+    if (to.hash) {
+      return {
+        el: to.hash,
+        top: 88,
+        behavior: 'smooth',
+      }
+    }
+
+    return { top: 0 }
+  },
   routes: [
     { path: '/login', name: 'login', component: LoginView, meta: { hideChrome: true } },
     { path: '/forgot-password', name: 'forgot-password', component: ForgotPasswordView, meta: { hideChrome: true } },
     { path: '/reset-password', name: 'reset-password', component: ResetPasswordView, meta: { hideChrome: true } },
     { path: '/', name: 'dashboard', component: DashboardView },
+    { path: '/learn', name: 'learn', component: LearnView },
     { path: '/strategies', name: 'strategy-library', component: StrategyLibraryView },
     { path: '/strategies/new', name: 'strategy-new', component: NewStrategyView },
     { path: '/strategies/import', name: 'strategy-import', component: StrategyImportView },

@@ -24,7 +24,7 @@
           <span class="nav-item-indicator" />
           <component :is="item.iconComponent" class="nav-item-icon" />
           <Transition name="fade">
-            <span v-if="!collapsed" class="nav-item-label">{{ $t(item.label) }}</span>
+            <span v-if="!collapsed" class="nav-item-label">{{ t(item.label) }}</span>
           </Transition>
         </RouterLink>
       </div>
@@ -44,9 +44,25 @@
           </Transition>
         </RouterLink>
       </div>
+
+      <div class="nav-section">
+        <span v-if="!collapsed" class="nav-section-label">{{ $t('nav.learnSection') || 'LEARN' }}</span>
+        <RouterLink
+          v-for="item in learnItems"
+          :key="item.id"
+          :to="item.to"
+          :class="['nav-item', { active: isActive(item) }]"
+        >
+          <span class="nav-item-indicator" />
+          <component :is="item.iconComponent" class="nav-item-icon" />
+          <Transition name="fade">
+            <span v-if="!collapsed" class="nav-item-label">{{ t(item.label) }}</span>
+          </Transition>
+        </RouterLink>
+      </div>
     </div>
 
-    <button class="collapse-btn footer-collapse-btn" type="button" :aria-label="collapsed ? 'Expand sidebar' : 'Collapse sidebar'" @click="$emit('toggle')">
+    <button class="collapse-btn footer-collapse-btn" type="button" :aria-label="collapsed ? t('common.expandSidebar') : t('common.collapseSidebar')" @click="$emit('toggle')">
       <ChevronIcon :class="{ 'rotate-180': collapsed }" />
     </button>
 
@@ -61,17 +77,29 @@
           <span v-if="!collapsed" class="nav-item-label">{{ $t('common.settings') }}</span>
         </Transition>
       </RouterLink>
-      <div v-if="!collapsed" class="plan-badge">
-        <span class="plan-label">{{ profile.level || 'FREE' }}</span>
-        <RouterLink to="/pricing" class="plan-upgrade">Upgrade</RouterLink>
+      <div v-if="!collapsed" class="plan-badge" :class="{ 'plan-badge--premium': isPremiumPlan }">
+        <div class="plan-badge__inner">
+          <div class="plan-badge__info">
+            <span class="plan-badge__tier">{{ profile.level || 'FREE' }}</span>
+            <span class="plan-badge__hint">{{ isPremiumPlan ? t('common.premiumMember') : t('common.basicPlan') }}</span>
+          </div>
+          <RouterLink to="/pricing" class="plan-upgrade-btn">
+            {{ isPremiumPlan ? t('common.manage') : t('common.upgrade') }}
+            <svg width="10" height="10" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M6 4l4 4-4 4"/>
+            </svg>
+          </RouterLink>
+        </div>
+        <div v-if="!isPremiumPlan" class="plan-badge__accent" aria-hidden="true"></div>
       </div>
     </div>
   </aside>
 </template>
 
 <script setup lang="ts">
-import { h } from 'vue'
+import { h, computed } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { storeToRefs } from 'pinia'
 import { useUserStore } from '../stores/user'
 import logoUrl from '../logo.png'
@@ -80,8 +108,14 @@ defineProps<{ collapsed: boolean }>()
 defineEmits<{ toggle: [] }>()
 
 const route = useRoute()
+const { t } = useI18n()
 const userStore = useUserStore()
 const { profile } = storeToRefs(userStore)
+
+const isPremiumPlan = computed(() => {
+  const level = (profile.value.level || '').toLowerCase()
+  return ['plus', 'pro', 'ultra'].includes(level)
+})
 
 interface NavItem {
   id: string
@@ -102,6 +136,10 @@ const mainItems: NavItem[] = [
 const communityItems: NavItem[] = [
   { id: 'forum', to: '/forum', label: 'nav.forum', iconComponent: ForumIcon, matchPrefix: '/forum' },
   { id: 'marketplace', to: '/marketplace', label: 'nav.marketplace', iconComponent: MarketplaceIcon, matchPrefix: '/marketplace' },
+]
+
+const learnItems: NavItem[] = [
+  { id: 'learn', to: '/learn', label: 'nav.learn', iconComponent: LearnIcon, target: null, matchPrefix: '/learn' },
 ]
 
 function isActive(item: NavItem) {
@@ -143,6 +181,13 @@ function BotIcon() {
     h('path', { d: 'M12 7v4' }),
     h('circle', { cx: 8, cy: 16, r: 1 }),
     h('circle', { cx: 16, cy: 16, r: 1 }),
+  ])
+}
+
+function LearnIcon() {
+  return h('svg', { width: 18, height: 18, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', 'stroke-width': 1.75, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }, [
+    h('path', { d: 'M4 19.5A2.5 2.5 0 0 1 6.5 17H20' }),
+    h('path', { d: 'M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z' }),
   ])
 }
 
@@ -367,42 +412,106 @@ function ChevronIcon() {
 }
 
 .plan-badge {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
+  --badge-gold: #9A7B3A;
+  --badge-gold-dim: rgba(154, 123, 58, 0.1);
+  --badge-gold-border: rgba(154, 123, 58, 0.2);
+  position: relative;
+  overflow: hidden;
   padding: 10px 12px;
-  background: linear-gradient(135deg, var(--color-primary-bg) 0%, transparent 100%);
+  background: linear-gradient(135deg, var(--color-primary-bg) 0%, var(--color-sidebar-bg) 100%);
   border: 1px solid var(--color-primary-border);
   border-radius: var(--radius-md);
   transition: all var(--transition-normal);
 }
 
 .plan-badge:hover {
-  border-color: var(--color-accent);
-  background: linear-gradient(135deg, var(--color-primary-bg) 0%, rgba(0, 217, 255, 0.08) 100%);
+  border-color: var(--badge-gold-border);
+  background: linear-gradient(135deg, var(--badge-gold-dim) 0%, var(--color-sidebar-bg) 100%);
 }
 
-.plan-label {
+.plan-badge--premium {
+  border-color: var(--badge-gold-border);
+  background: linear-gradient(135deg, var(--badge-gold-dim) 0%, var(--color-sidebar-bg) 100%);
+}
+
+.plan-badge--premium:hover {
+  border-color: var(--badge-gold);
+}
+
+.plan-badge__inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: relative;
+  z-index: 1;
+}
+
+.plan-badge__info {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.plan-badge__tier {
   font-size: 10px;
   font-weight: 700;
-  color: var(--color-accent);
-  letter-spacing: 0.05em;
+  color: var(--badge-gold);
+  letter-spacing: 0.06em;
   text-transform: uppercase;
 }
 
-.plan-upgrade {
+.plan-badge__hint {
+  font-size: 9px;
+  color: var(--color-text-muted);
+  letter-spacing: 0.02em;
+}
+
+.plan-upgrade-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
   font-size: 10px;
   font-weight: 700;
   color: var(--color-primary);
   text-decoration: none;
-  padding: 2px 6px;
+  padding: 3px 8px;
   border-radius: var(--radius-sm);
+  background: var(--color-primary-bg);
+  border: 1px solid var(--color-primary-border);
   transition: all var(--transition-fast);
 }
 
-.plan-upgrade:hover {
-  color: var(--color-accent);
-  background: var(--color-primary-bg);
+.plan-upgrade-btn:hover {
+  color: var(--badge-gold);
+  background: var(--badge-gold-dim);
+  border-color: var(--badge-gold-border);
+}
+
+.plan-badge--premium .plan-upgrade-btn {
+  color: var(--badge-gold);
+  background: var(--badge-gold-dim);
+  border-color: var(--badge-gold-border);
+}
+
+.plan-badge--premium .plan-upgrade-btn:hover {
+  background: rgba(154, 123, 58, 0.15);
+  border-color: var(--badge-gold);
+}
+
+.plan-badge__accent {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--badge-gold-border), transparent);
+}
+
+/* Dark theme: richer gold */
+:root[data-theme="dark"] .plan-badge {
+  --badge-gold: #C9A962;
+  --badge-gold-dim: rgba(201, 169, 98, 0.1);
+  --badge-gold-border: rgba(201, 169, 98, 0.25);
 }
 
 .footer-collapse-btn {

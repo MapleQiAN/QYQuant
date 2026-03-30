@@ -19,6 +19,7 @@ vi.mock('../views/StrategyDetailView.vue', () => ({ default: { template: '<div /
 vi.mock('../views/Marketplace.vue', () => ({ default: { template: '<div />' } }))
 vi.mock('../views/MarketplaceStrategyDetailView.vue', () => ({ default: { template: '<div />' } }))
 vi.mock('../views/PricingView.vue', () => ({ default: { template: '<div />' } }))
+vi.mock('../views/LearnView.vue', () => ({ default: { template: '<div />' } }))
 vi.mock('../views/UserProfileView.vue', () => ({ default: { template: '<div />' } }))
 vi.mock('../views/admin/AdminDashboard.vue', () => ({ default: { template: '<div />' } }))
 vi.mock('../views/admin/DataSourceHealth.vue', () => ({ default: { template: '<div />' } }))
@@ -37,6 +38,7 @@ describe('router', () => {
     ;(pinia as any)._s.clear()
     setActivePinia(pinia)
     localStorage.clear()
+    vi.stubGlobal('scrollTo', vi.fn())
     vi.spyOn(toast, 'error').mockImplementation(() => undefined)
     await router.push('/')
     await router.isReady()
@@ -105,6 +107,11 @@ describe('router', () => {
   it('contains pricing route', () => {
     const hasPricing = router.getRoutes().some((route) => route.path === '/pricing')
     expect(hasPricing).toBe(true)
+  })
+
+  it('contains learn route', () => {
+    const hasLearn = router.getRoutes().some((route) => route.path === '/learn')
+    expect(hasLearn).toBe(true)
   })
 
   it('contains forgot password route', () => {
