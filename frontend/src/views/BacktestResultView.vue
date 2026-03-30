@@ -3,20 +3,20 @@
     <div class="container">
       <div class="page-header">
         <div>
-          <p class="eyebrow">Backtest Report</p>
-          <h1 class="page-title">Backtest Report</h1>
-          <p class="page-subtitle">Job {{ jobId }} equity curve, core metrics, and full report summary.</p>
+          <p class="eyebrow">{{ $t('backtestReport.eyebrow') }}</p>
+          <h1 class="page-title">{{ $t('backtestReport.title') }}</h1>
+          <p class="page-subtitle">{{ $t('backtestReport.subtitle', { jobId }) }}</p>
         </div>
       </div>
 
-      <div v-if="store.reportLoading" class="card state-card">Loading report...</div>
+      <div v-if="store.reportLoading" class="card state-card">{{ $t('backtestReport.loading') }}</div>
       <div v-else-if="store.reportError" class="card state-card error">{{ store.reportError }}</div>
       <template v-else-if="report">
         <div v-if="isGuidedMode" class="card guided-success">
-          <strong>你完成了第一次量化回测。</strong>
-          <p>重点先看累计收益率、最大回撤和夏普比率，理解“收益”和“波动”之间的关系。</p>
+          <strong>{{ $t('backtestReport.guidedSuccessTitle') }}</strong>
+          <p>{{ $t('backtestReport.guidedSuccessHint') }}</p>
           <button class="btn btn-primary" type="button" @click="finishGuidedOnboarding">
-            完成新手引导
+            {{ $t('backtestReport.finishGuidedOnboarding') }}
           </button>
         </div>
 
@@ -48,7 +48,7 @@
           <EquityCurveChart class="chart-block" :points="report.equity_curve || []" :trades="report.trades || []" />
 
           <details class="card details-card">
-            <summary>View all 11 metrics</summary>
+            <summary>{{ $t('backtestReport.viewAllMetrics') }}</summary>
             <div class="details-grid">
               <div v-for="metric in detailedMetrics" :key="metric.label" class="detail-item">
                 <span class="detail-label">
@@ -70,6 +70,7 @@
 <script setup lang="ts">
 import { computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import StatCard from '../components/StatCard.vue'
 import EquityCurveChart from '../components/backtest/EquityCurveChart.vue'
 import ErrorDisplay from '../components/backtest/ErrorDisplay.vue'
@@ -77,6 +78,8 @@ import DisclaimerFooter from '../components/disclaimer/DisclaimerFooter.vue'
 import MetricTooltip from '../components/help/MetricTooltip.vue'
 import { useUserStore } from '../stores'
 import { useBacktestsStore } from '../stores/backtests'
+
+const { t } = useI18n()
 
 const route = useRoute()
 const router = useRouter()
@@ -97,7 +100,7 @@ function formatMetric(value: number | undefined, digits = 2, suffix = '') {
 
 const coreMetrics = computed(() => ([
   {
-    label: 'Total Return',
+    label: t('backtestReport.metrics.totalReturn'),
     metricKey: 'total_return',
     value: formatMetric(summary.value.totalReturn, 2),
     suffix: '%',
@@ -106,7 +109,7 @@ const coreMetrics = computed(() => ([
     showDisclaimer: true
   },
   {
-    label: 'Annualized Return',
+    label: t('backtestReport.metrics.annualizedReturn'),
     metricKey: 'annualized_return',
     value: formatMetric(summary.value.annualizedReturn, 2),
     suffix: '%',
@@ -115,7 +118,7 @@ const coreMetrics = computed(() => ([
     showDisclaimer: true
   },
   {
-    label: 'Max Drawdown',
+    label: t('backtestReport.metrics.maxDrawdown'),
     metricKey: 'max_drawdown',
     value: formatMetric(summary.value.maxDrawdown, 2),
     suffix: '%',
@@ -124,7 +127,7 @@ const coreMetrics = computed(() => ([
     showDisclaimer: false
   },
   {
-    label: 'Sharpe Ratio',
+    label: t('backtestReport.metrics.sharpeRatio'),
     metricKey: 'sharpe_ratio',
     value: formatMetric(summary.value.sharpeRatio, 2),
     variant: 'default' as const,
@@ -135,17 +138,17 @@ const coreMetrics = computed(() => ([
 
 const detailedMetrics = computed(() =>
   [
-    ['Total Return', 'total_return', formatMetric(summary.value.totalReturn, 2, '%')],
-    ['Annualized Return', 'annualized_return', formatMetric(summary.value.annualizedReturn, 2, '%')],
-    ['Max Drawdown', 'max_drawdown', formatMetric(summary.value.maxDrawdown, 2, '%')],
-    ['Sharpe Ratio', 'sharpe_ratio', formatMetric(summary.value.sharpeRatio, 2)],
-    ['Volatility', 'volatility', formatMetric(summary.value.volatility, 2, '%')],
-    ['Sortino Ratio', 'sortino_ratio', formatMetric(summary.value.sortinoRatio, 2)],
-    ['Calmar Ratio', 'calmar_ratio', formatMetric(summary.value.calmarRatio, 2)],
-    ['Win Rate', 'win_rate', formatMetric(summary.value.winRate, 2, '%')],
-    ['Profit/Loss Ratio', 'profit_loss_ratio', formatMetric(summary.value.profitLossRatio, 2)],
-    ['Max Consecutive Losses', 'max_consecutive_losses', formatMetric(summary.value.maxConsecutiveLosses, 0)],
-    ['Total Trades', 'total_trades', formatMetric(summary.value.totalTrades, 0)]
+    [t('backtestReport.metrics.totalReturn'), 'total_return', formatMetric(summary.value.totalReturn, 2, '%')],
+    [t('backtestReport.metrics.annualizedReturn'), 'annualized_return', formatMetric(summary.value.annualizedReturn, 2, '%')],
+    [t('backtestReport.metrics.maxDrawdown'), 'max_drawdown', formatMetric(summary.value.maxDrawdown, 2, '%')],
+    [t('backtestReport.metrics.sharpeRatio'), 'sharpe_ratio', formatMetric(summary.value.sharpeRatio, 2)],
+    [t('backtestReport.metrics.volatility'), 'volatility', formatMetric(summary.value.volatility, 2, '%')],
+    [t('backtestReport.metrics.sortinoRatio'), 'sortino_ratio', formatMetric(summary.value.sortinoRatio, 2)],
+    [t('backtestReport.metrics.calmarRatio'), 'calmar_ratio', formatMetric(summary.value.calmarRatio, 2)],
+    [t('backtestReport.metrics.winRate'), 'win_rate', formatMetric(summary.value.winRate, 2, '%')],
+    [t('backtestReport.metrics.profitLossRatio'), 'profit_loss_ratio', formatMetric(summary.value.profitLossRatio, 2)],
+    [t('backtestReport.metrics.maxConsecutiveLosses'), 'max_consecutive_losses', formatMetric(summary.value.maxConsecutiveLosses, 0)],
+    [t('backtestReport.metrics.totalTrades'), 'total_trades', formatMetric(summary.value.totalTrades, 0)]
   ].map(([label, metricKey, value]) => ({ label, metricKey, value }))
 )
 

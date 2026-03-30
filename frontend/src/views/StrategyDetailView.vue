@@ -3,32 +3,32 @@
     <div class="container">
       <div class="page-header">
         <div>
-          <h1 class="page-title">Strategy Parameters</h1>
-          <p class="page-subtitle">Configure strategy inputs, save presets, and launch a backtest task.</p>
+          <h1 class="page-title">{{ $t('strategyDetail.title') }}</h1>
+          <p class="page-subtitle">{{ $t('strategyDetail.subtitle') }}</p>
         </div>
-        <RouterLink class="btn btn-secondary" to="/strategies">Back to strategy library</RouterLink>
+        <RouterLink class="btn btn-secondary" to="/strategies">{{ $t('strategyDetail.backToLibrary') }}</RouterLink>
       </div>
 
       <div v-if="isGuidedMode" class="card guided-banner">
-        Guided backtest is enabled. The default symbols, date range, and parameters are already prepared for your first run.
+        {{ $t('strategyDetail.guidedBanner') }}
       </div>
 
       <div class="layout-grid">
         <div class="card control-card">
-          <div class="section-title">Backtest Setup</div>
+          <div class="section-title">{{ $t('strategyDetail.backtestSetup') }}</div>
           <div class="field-grid">
             <label class="field">
-              <span class="field-label">Symbols</span>
+              <span class="field-label">{{ $t('strategyDetail.symbols') }}</span>
               <input
                 data-test="symbol-input"
                 v-model.trim="runForm.symbols"
                 class="field-input"
                 type="text"
-                placeholder="BTCUSDT, ETHUSDT"
+                :placeholder="$t('strategyDetail.symbolsPlaceholder')"
               />
             </label>
             <label class="field">
-              <span class="field-label">Start Date</span>
+              <span class="field-label">{{ $t('strategyDetail.startDate') }}</span>
               <input
                 data-test="start-date-input"
                 v-model="runForm.startDate"
@@ -37,7 +37,7 @@
               />
             </label>
             <label class="field">
-              <span class="field-label">End Date</span>
+              <span class="field-label">{{ $t('strategyDetail.endDate') }}</span>
               <input
                 data-test="end-date-input"
                 v-model="runForm.endDate"
@@ -59,8 +59,8 @@
         </div>
 
         <div class="card form-card">
-          <div class="section-title">Parameter Form</div>
-          <p v-if="loading" class="message">Loading strategy parameters...</p>
+          <div class="section-title">{{ $t('strategyDetail.parameterForm') }}</div>
+          <p v-if="loading" class="message">{{ $t('strategyDetail.loadingParameters') }}</p>
           <p v-else-if="loadError" class="message error">{{ loadError }}</p>
           <ParameterForm
             v-else
@@ -82,7 +82,7 @@
           :disabled="submitting || loading"
           @click="handleSubmit"
         >
-          {{ submitting ? 'Submitting...' : 'Start Backtest' }}
+          {{ submitting ? $t('strategyDetail.submitting') : $t('strategyDetail.startBacktest') }}
         </button>
       </div>
     </div>
@@ -92,6 +92,7 @@
 <script setup lang="ts">
 import { onMounted, reactive, ref } from 'vue'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { fetchBacktestStatus, submitBacktest } from '../api/backtests'
 import { fetchStrategyParameters } from '../api/strategies'
 import ParameterForm from '../components/strategy/ParameterForm.vue'
@@ -99,6 +100,8 @@ import PresetManager from '../components/strategy/PresetManager.vue'
 import { useUserStore } from '../stores'
 import { usePresetsStore } from '../stores/usePresetsStore'
 import type { StrategyParameterDefinition } from '../types/Strategy'
+
+const { t } = useI18n()
 
 const route = useRoute()
 const router = useRouter()
@@ -138,7 +141,7 @@ async function loadDetail() {
     definitions.value = parameterDefinitions
     parameterValues.value = mergeDefaults(parameterDefinitions, parameterValues.value)
   } catch (error: any) {
-    loadError.value = error?.message || 'Failed to load strategy parameters'
+    loadError.value = error?.message || t('strategyDetail.loadError')
   } finally {
     loading.value = false
   }
@@ -177,15 +180,15 @@ async function handleSubmit() {
     .filter(Boolean)
 
   if (!symbols.length) {
-    submitError.value = 'Please enter at least one symbol'
+    submitError.value = t('strategyDetail.errorAtLeastOneSymbol')
     return
   }
   if (!runForm.startDate || !runForm.endDate) {
-    submitError.value = 'Please choose a complete date range'
+    submitError.value = t('strategyDetail.errorCompleteDateRange')
     return
   }
   if (!formValid.value) {
-    submitError.value = 'Please fix the parameter form errors first'
+    submitError.value = t('strategyDetail.errorFixFormErrors')
     return
   }
 
@@ -212,10 +215,10 @@ async function handleSubmit() {
         query: { guided: 'true' },
       })
     } else {
-      submitSuccess.value = `Backtest submitted: ${result.job_id}`
+      submitSuccess.value = t('strategyDetail.backtestSubmitted', { jobId: result.job_id })
     }
   } catch (error: any) {
-    submitError.value = error?.message || 'Failed to submit backtest'
+    submitError.value = error?.message || t('strategyDetail.submitError')
   } finally {
     submitting.value = false
   }

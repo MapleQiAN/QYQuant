@@ -3,25 +3,25 @@
     <div class="container">
       <div class="page-header">
         <div>
-          <h1 class="page-title">Import Strategy</h1>
-          <p class="page-subtitle">Upload a Python file, source zip, or existing .qys package.</p>
+          <h1 class="page-title">{{ t('strategy.import.pageTitle') }}</h1>
+          <p class="page-subtitle">{{ t('strategy.import.pageSubtitle') }}</p>
         </div>
         <RouterLink class="btn btn-secondary" to="/strategies">
-          Back to library
+          {{ t('strategy.import.backToLibrary') }}
         </RouterLink>
       </div>
 
       <div class="card import-card">
         <label class="field">
-          <span class="field-label">Strategy source</span>
+          <span class="field-label">{{ t('strategy.import.strategySource') }}</span>
           <input class="field-input" type="file" accept=".py,.zip,.qys" @change="handleFileChange" />
         </label>
-        <p class="field-help">Supported: single `strategy.py`, source project zip, or `.qys` package.</p>
+        <p class="field-help">{{ t('strategy.import.supportedFormats') }}</p>
         <p v-if="selectedFile" class="selected-file">{{ selectedFile.name }}</p>
 
         <div class="actions">
           <button class="btn btn-primary" type="button" :disabled="loading || !selectedFile" @click="handleAnalyze">
-            {{ loading ? 'Analyzing...' : 'Analyze import' }}
+            {{ loading ? t('strategy.import.analyzing') : t('strategy.import.analyzeButton') }}
           </button>
         </div>
 
@@ -33,8 +33,11 @@
 
 <script setup lang="ts">
 import { ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { RouterLink, useRouter } from 'vue-router'
 import { analyzeStrategyImport } from '../api/strategies'
+
+const { t } = useI18n()
 
 const router = useRouter()
 const selectedFile = ref<File | null>(null)
@@ -49,7 +52,7 @@ function handleFileChange(event: Event) {
 
 async function handleAnalyze() {
   if (!selectedFile.value) {
-    error.value = 'Choose a strategy source first.'
+    error.value = t('strategy.import.chooseSourceFirst')
     return
   }
 
@@ -63,7 +66,7 @@ async function handleAnalyze() {
       query: { draftImportId: result.draftImportId }
     })
   } catch (err: any) {
-    error.value = err?.message || 'Failed to analyze import source'
+    error.value = err?.message || t('strategy.import.failedToAnalyze')
   } finally {
     loading.value = false
   }

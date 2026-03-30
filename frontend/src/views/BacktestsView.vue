@@ -1,28 +1,28 @@
 <template>
   <section class="view">
     <div class="container">
-      <h1 class="view-title">{{ $t('pages.backtestsTitle') }}</h1>
-      <p class="view-subtitle">{{ $t('pages.backtestsSubtitle') }}</p>
+      <h1 class="view-title">{{ $t('backtests.title') }}</h1>
+      <p class="view-subtitle">{{ $t('backtests.subtitle') }}</p>
       <div v-if="quota" class="quota-badge">
         <span class="quota-badge__info">
-          剩余回测次数：
-          <strong>{{ quota.remaining === 'unlimited' ? '无限' : quota.remaining }}</strong>
-          / {{ quota.plan_limit === 'unlimited' ? '无限' : quota.plan_limit }}
+          {{ $t('backtests.remainingQuota') }}：
+          <strong>{{ quota.remaining === 'unlimited' ? $t('common.unlimited') : quota.remaining }}</strong>
+          / {{ quota.plan_limit === 'unlimited' ? $t('common.unlimited') : quota.plan_limit }}
         </span>
         <span v-if="quota.reset_at" class="quota-badge__reset">
-          重置时间：{{ quota.reset_at.slice(0, 10) }}
+          {{ $t('backtests.resetTime') }}：{{ quota.reset_at.slice(0, 10) }}
         </span>
       </div>
       <p v-else-if="quotaError" class="message error quota-error">{{ quotaError }}</p>
 
       <div class="layout-grid">
         <div class="card panel">
-          <h3 class="panel-title">Run Backtest</h3>
+          <h3 class="panel-title">{{ $t('backtests.runBacktest') }}</h3>
 
           <label class="field">
-            <span class="field-label">Strategy</span>
+            <span class="field-label">{{ $t('backtests.strategy') }}</span>
             <select class="field-input" v-model="runForm.strategyId">
-              <option value="">Select a strategy</option>
+              <option value="">{{ $t('backtests.selectStrategy') }}</option>
               <option v-for="item in strategies" :key="item.id" :value="item.id">
                 {{ item.name }} ({{ item.symbol }})
               </option>
@@ -32,41 +32,41 @@
           <div v-if="strategiesError" class="message error">{{ strategiesError }}</div>
 
           <label class="field">
-            <span class="field-label">Symbol</span>
-            <input v-model.trim="runForm.symbol" class="field-input" type="text" placeholder="e.g. BTCUSDT" />
+            <span class="field-label">{{ $t('backtests.symbol') }}</span>
+            <input v-model.trim="runForm.symbol" class="field-input" type="text" :placeholder="$t('backtests.symbolPlaceholder')" />
           </label>
 
           <div class="field-row">
             <label class="field">
-              <span class="field-label">Interval</span>
-              <input v-model.trim="runForm.interval" class="field-input" type="text" placeholder="e.g. 1m" />
+              <span class="field-label">{{ $t('backtests.interval') }}</span>
+              <input v-model.trim="runForm.interval" class="field-input" type="text" :placeholder="$t('backtests.intervalPlaceholder')" />
             </label>
             <label class="field">
-              <span class="field-label">Bars</span>
+              <span class="field-label">{{ $t('backtests.bars') }}</span>
               <input v-model.number="runForm.limit" class="field-input" type="number" min="10" max="3000" />
             </label>
           </div>
 
           <div class="field-row">
             <label class="field">
-              <span class="field-label">Start Date</span>
+              <span class="field-label">{{ $t('backtests.startDate') }}</span>
               <input v-model="runForm.startDate" class="field-input" type="date" />
             </label>
             <label class="field">
-              <span class="field-label">End Date</span>
+              <span class="field-label">{{ $t('backtests.endDate') }}</span>
               <input v-model="runForm.endDate" class="field-input" type="date" />
             </label>
           </div>
 
           <div v-if="runForm.strategyId" class="runtime-box">
-            <div class="runtime-title">Strategy Runtime</div>
-            <p v-if="runtimeLoading" class="message">Loading strategy parameters...</p>
+            <div class="runtime-title">{{ $t('backtests.strategyRuntime') }}</div>
+            <p v-if="runtimeLoading" class="message">{{ $t('backtests.loadingParameters') }}</p>
             <p v-else-if="runtimeError" class="message error">{{ runtimeError }}</p>
             <template v-else-if="runtimeDescriptor">
-              <p class="runtime-version">Version: {{ runtimeDescriptor.strategyVersion }}</p>
+              <p class="runtime-version">{{ $t('backtests.version') }}: {{ runtimeDescriptor.strategyVersion }}</p>
 
               <div v-if="runtimeDescriptor.parameters.length === 0" class="message">
-                No custom parameters.
+                {{ $t('backtests.noCustomParameters') }}
               </div>
 
               <label v-for="param in runtimeDescriptor.parameters" :key="param.key" class="field">
@@ -123,7 +123,7 @@
               :disabled="runState.running || runtimeLoading"
               @click="handleRun"
             >
-              {{ runState.running ? 'Running...' : 'Run Backtest' }}
+              {{ runState.running ? $t('backtests.running') : $t('backtests.runBacktest') }}
             </button>
             <button
               v-else
@@ -131,7 +131,7 @@
               type="button"
               @click="goToPricing"
             >
-              升级套餐解锁更多次数
+              {{ $t('backtests.upgradeForMore') }}
             </button>
           </div>
 
@@ -140,19 +140,19 @@
         </div>
 
         <div class="card panel">
-          <h3 class="panel-title">Report Status</h3>
+          <h3 class="panel-title">{{ $t('backtests.reportStatus') }}</h3>
           <div class="result-grid">
             <div class="result-item wide">
-              <span class="result-label">Current State</span>
-              <span class="result-value">{{ runState.status || 'Fill the form and submit a backtest task.' }}</span>
+              <span class="result-label">{{ $t('backtests.currentState') }}</span>
+              <span class="result-value">{{ runState.status || $t('backtests.fillFormHint') }}</span>
             </div>
             <div v-if="runState.jobId" class="result-item wide">
-              <span class="result-label">Job ID</span>
+              <span class="result-label">{{ $t('backtests.jobId') }}</span>
               <span class="result-value">{{ runState.jobId }}</span>
             </div>
             <div v-if="runState.completedJobId" class="result-item wide">
               <button class="btn btn-primary" type="button" @click="openReport(runState.completedJobId)">
-                Open Report
+                {{ $t('backtests.openReport') }}
               </button>
             </div>
           </div>
@@ -267,7 +267,7 @@ async function loadQuota() {
   try {
     quota.value = await fetchMyQuota()
   } catch (error: any) {
-    quotaError.value = error?.message || '额度信息加载失败'
+    quotaError.value = error?.message || 'Failed to load quota information'
   }
 }
 

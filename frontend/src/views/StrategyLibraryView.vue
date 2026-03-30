@@ -3,25 +3,25 @@
     <div class="container">
       <div class="page-header">
         <div>
-          <h1 class="page-title">Strategy Library</h1>
-          <p class="page-subtitle">Manage imported strategies and bring new .qys packages into your workspace.</p>
+          <h1 class="page-title">{{ t('strategy.library.pageTitle') }}</h1>
+          <p class="page-subtitle">{{ t('strategy.library.pageSubtitle') }}</p>
         </div>
         <div class="header-actions">
           <RouterLink class="btn btn-primary" to="/strategies/import">
-            Open import wizard
+            {{ t('strategy.library.openImportWizard') }}
           </RouterLink>
           <RouterLink class="btn btn-secondary" to="/">
-            Back to dashboard
+            {{ t('strategy.library.backToDashboard') }}
           </RouterLink>
         </div>
       </div>
 
       <section v-if="isGuidedMode" :class="['card guided-card', { 'onboarding-highlight': userStore.onboardingHighlightTarget === 'guided-strategy-card' }]" data-onboarding-target="guided-strategy-card">
         <div class="section-header">
-          <h2>Guided Strategy</h2>
-          <p>Pick the recommended onboarding strategy to complete your first backtest with fewer decisions.</p>
+          <h2>{{ t('strategy.library.guidedStrategy') }}</h2>
+          <p>{{ t('strategy.library.guidedStrategyDesc') }}</p>
         </div>
-        <div v-if="guidedLoading" class="empty-state">Loading guided strategies...</div>
+        <div v-if="guidedLoading" class="empty-state">{{ t('strategy.library.loadingGuided') }}</div>
         <p v-else-if="guidedError" class="message error">{{ guidedError }}</p>
         <div v-else-if="guidedStrategies.length" class="strategy-list">
           <article v-for="strategy in guidedStrategies" :key="strategy.id" class="strategy-row guided-row">
@@ -37,10 +37,10 @@
             </div>
             <div class="guided-actions">
               <button class="btn btn-secondary" type="button" @click="handleGuidedPreview(strategy.id)">
-                View details
+                {{ t('strategy.library.viewDetails') }}
               </button>
               <button class="btn btn-primary" type="button" @click="handleGuidedSelect(strategy.id)">
-                Use this strategy
+                {{ t('strategy.library.useThisStrategy') }}
               </button>
             </div>
           </article>
@@ -50,8 +50,8 @@
       <div class="layout-grid">
         <div class="card import-card">
           <div class="section-header">
-            <h2>Import Strategy</h2>
-            <p>Use the guided flow to upload `strategy.py`, source project zips, or ready-made `.qys` packages.</p>
+            <h2>{{ t('strategy.library.importStrategy') }}</h2>
+            <p>{{ t('strategy.library.importStrategyDesc') }}</p>
           </div>
           <div class="import-format-list">
             <span class="pill">strategy.py</span>
@@ -59,7 +59,7 @@
             <span class="pill">.qys package</span>
           </div>
           <p class="import-note">
-            The wizard analyzes the upload first, then lets you confirm entrypoints and metadata before creating the final strategy version.
+            {{ t('strategy.library.importNote') }}
           </p>
           <div class="actions">
             <button
@@ -68,20 +68,20 @@
               data-test="open-import-wizard"
               @click="handleOpenImportWizard"
             >
-              Open import wizard
+              {{ t('strategy.library.openImportWizard') }}
             </button>
           </div>
         </div>
 
         <div class="card library-card">
           <div class="section-header">
-            <h2>My Strategies</h2>
-            <p>{{ total }} item<span v-if="total !== 1">s</span> in your private library.</p>
+            <h2>{{ t('strategy.library.myStrategies') }}</h2>
+            <p>{{ t('strategy.library.itemCount', { count: total, plural: total !== 1 ? 's' : '' }) }}</p>
           </div>
 
-          <div v-if="loading" class="empty-state">Loading strategy library...</div>
+          <div v-if="loading" class="empty-state">{{ t('strategy.library.loadingLibrary') }}</div>
           <p v-else-if="loadError" class="message error">{{ loadError }}</p>
-          <div v-else-if="items.length === 0" class="empty-state">No strategies yet. Import your first package.</div>
+          <div v-else-if="items.length === 0" class="empty-state">{{ t('strategy.library.noStrategies') }}</div>
           <div v-else class="strategy-list">
             <article v-for="strategy in items" :key="strategy.id" class="strategy-row">
               <div class="row-main">
@@ -98,7 +98,7 @@
                   </span>
                   <span>{{ formatCreatedAt(strategy.createdAt) }}</span>
                 </div>
-                <p class="row-description">{{ strategy.description || 'No description provided.' }}</p>
+                <p class="row-description">{{ strategy.description || t('strategy.library.noDescription') }}</p>
                 <div class="tag-row">
                   <span v-for="tag in strategy.tags" :key="tag" class="pill">{{ tag }}</span>
                 </div>
@@ -119,7 +119,7 @@
                   :data-test="`delete-${strategy.id}`"
                   @click="handleDelete(strategy.id)"
                 >
-                  Delete
+                  {{ t('strategy.library.delete') }}
                 </button>
               </div>
             </article>
@@ -127,7 +127,7 @@
 
           <div class="pagination">
             <button class="btn btn-secondary" type="button" :disabled="page <= 1 || loading" @click="changePage(page - 1)">
-              Previous
+              {{ t('strategy.library.previous') }}
             </button>
             <span>Page {{ page }} / {{ totalPages }}</span>
             <button
@@ -136,7 +136,7 @@
               :disabled="page >= totalPages || loading"
               @click="changePage(page + 1)"
             >
-              Next
+              {{ t('strategy.library.next') }}
             </button>
           </div>
         </div>
@@ -157,11 +157,14 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
 import StrategyPublishFlow from '../components/strategy/StrategyPublishFlow.vue'
 import { deleteStrategy, fetchMarketplaceStrategies, fetchStrategies } from '../api/strategies'
 import type { MarketplacePublishPayload, MarketplaceReviewStatus, Strategy } from '../types/Strategy'
 import { useMarketplaceStore, useUserStore } from '../stores'
+
+const { t } = useI18n()
 
 const router = useRouter()
 const route = useRoute()
@@ -207,7 +210,7 @@ async function loadPage(nextPage: number) {
     perPage.value = result.perPage
     total.value = result.total
   } catch (error: any) {
-    loadError.value = error?.message || 'Failed to load strategy library'
+    loadError.value = error?.message || t('strategy.library.failedToLoadLibrary')
   } finally {
     loading.value = false
   }
@@ -223,7 +226,7 @@ async function loadGuidedStrategies() {
   try {
     guidedStrategies.value = await fetchMarketplaceStrategies({ tag: 'onboarding' })
   } catch (error: any) {
-    guidedError.value = error?.message || 'Failed to load guided strategies'
+    guidedError.value = error?.message || t('strategy.library.failedToLoadGuided')
   } finally {
     guidedLoading.value = false
   }
@@ -234,7 +237,7 @@ async function handleOpenImportWizard() {
 }
 
 async function handleDelete(strategyId: string) {
-  if (!window.confirm('Delete this strategy?')) {
+  if (!window.confirm(t('strategy.library.deleteConfirm'))) {
     return
   }
 
@@ -281,7 +284,7 @@ async function handlePublishSubmit(payload: MarketplacePublishPayload) {
     selectedStrategy.value = items.value.find((item) => item.id === payload.strategyId) || selectedStrategy.value
     publishSubmitted.value = true
   } catch (error: any) {
-    publishError.value = error?.message || 'Failed to submit strategy for review'
+    publishError.value = error?.message || t('strategy.library.failedToSubmit')
   } finally {
     publishSubmitting.value = false
   }
@@ -306,21 +309,21 @@ async function handleGuidedPreview(strategyId: string) {
 }
 
 function formatCreatedAt(value?: string | number) {
-  if (!value) return 'Unknown time'
+  if (!value) return t('strategy.library.unknownTime')
   const numeric = typeof value === 'string' ? Number(value) : value
   if (!Number.isFinite(numeric)) return String(value)
   return new Date(numeric).toLocaleDateString()
 }
 
 function publishStatusLabel(status?: MarketplaceReviewStatus) {
-  if (status === 'pending') return 'Pending review'
-  if (status === 'approved') return 'Approved'
-  if (status === 'rejected') return 'Rejected'
-  return 'Not published'
+  if (status === 'pending') return t('strategy.library.pendingReview')
+  if (status === 'approved') return t('strategy.library.approved')
+  if (status === 'rejected') return t('strategy.library.rejected')
+  return t('strategy.library.notPublished')
 }
 
 function publishButtonLabel(status?: MarketplaceReviewStatus) {
-  return status === 'rejected' ? 'Resubmit' : 'Publish to marketplace'
+  return status === 'rejected' ? t('strategy.library.resubmit') : t('strategy.library.publishToMarketplace')
 }
 
 function isPublishDisabled(status?: MarketplaceReviewStatus) {
