@@ -306,6 +306,55 @@ class DataSourceHealthStatus(db.Model):
     last_notified_status = db.Column(db.String(20), nullable=True)
 
 
+class IntegrationProvider(db.Model):
+    __tablename__ = 'integration_providers'
+
+    key = db.Column(db.String(64), primary_key=True)
+    name = db.Column(db.String(100), nullable=False)
+    type = db.Column(db.String(32), nullable=False)
+    mode = db.Column(db.String(32), nullable=False)
+    capabilities = db.Column(job_json_type, nullable=False, default=dict)
+    config_schema = db.Column(job_json_type, nullable=False, default=dict)
+    is_enabled = db.Column(db.Boolean, nullable=False, default=True)
+    created_at = db.Column(db.DateTime(timezone=True), nullable=False, default=now_utc)
+    updated_at = db.Column(db.DateTime(timezone=True), nullable=False, default=now_utc, onupdate=now_utc)
+
+
+class UserIntegration(db.Model):
+    __tablename__ = 'user_integrations'
+    __table_args__ = (
+        db.Index('ix_user_integrations_user_status', 'user_id', 'status'),
+        db.Index('ix_user_integrations_provider_key', 'provider_key'),
+    )
+
+    id = db.Column(db.String, primary_key=True, default=gen_id)
+    user_id = db.Column(db.String, db.ForeignKey('users.id'), nullable=False)
+    provider_key = db.Column(db.String(64), db.ForeignKey('integration_providers.key'), nullable=False)
+    display_name = db.Column(db.String(100), nullable=False)
+    status = db.Column(db.String(32), nullable=False, default='draft')
+    config_public = db.Column(job_json_type, nullable=False, default=dict)
+    last_validated_at = db.Column(db.DateTime(timezone=True), nullable=True)
+    last_success_at = db.Column(db.DateTime(timezone=True), nullable=True)
+    last_failure_at = db.Column(db.DateTime(timezone=True), nullable=True)
+    last_error_message = db.Column(db.Text, nullable=True)
+    created_at = db.Column(db.DateTime(timezone=True), nullable=False, default=now_utc)
+    updated_at = db.Column(db.DateTime(timezone=True), nullable=False, default=now_utc, onupdate=now_utc)
+    deleted_at = db.Column(db.DateTime(timezone=True), nullable=True)
+
+
+class UserIntegrationSecret(db.Model):
+    __tablename__ = 'user_integration_secrets'
+
+    integration_id = db.Column(
+        db.String,
+        db.ForeignKey('user_integrations.id', ondelete='CASCADE'),
+        primary_key=True,
+    )
+    encrypted_payload = db.Column(db.Text, nullable=False)
+    schema_version = db.Column(db.Integer, nullable=False, default=1)
+    updated_at = db.Column(db.DateTime(timezone=True), nullable=False, default=now_utc, onupdate=now_utc)
+
+
 class BotInstance(db.Model):
     __tablename__ = 'bot_instances'
     id = db.Column(db.String, primary_key=True, default=gen_id)
