@@ -363,6 +363,9 @@ a:hover {
 .card:hover {
   border-color: var(--color-border-hover);
   box-shadow: 0 8px 16px rgba(0, 0, 0, 0.12);
+}
+
+.card--interactive:hover {
   transform: translateY(-2px);
 }
 

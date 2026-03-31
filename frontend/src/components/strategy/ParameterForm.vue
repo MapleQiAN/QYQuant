@@ -11,30 +11,35 @@
         </label>
         <span
           v-if="definition.description"
-          class="tooltip-indicator"
+          class="tooltip-trigger"
           :data-test="`parameter-${definition.name}-tooltip`"
-          :title="definition.description || ''"
+          tabindex="0"
         >
-          ?
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+          <span class="tooltip-bubble">{{ definition.description }}</span>
         </span>
       </div>
 
-      <input
-        v-if="showSlider(definition)"
-        :id="`parameter-${definition.name}`"
-        :data-test="`parameter-${definition.name}-slider`"
-        class="field-input"
-        :class="{ invalid: Boolean(errors[definition.name]) }"
-        type="range"
-        :disabled="disabled"
-        :min="definition.min ?? undefined"
-        :max="definition.max ?? undefined"
-        :step="definition.step ?? 1"
-        :value="String(readValue(definition))"
-        @input="updateNumericValue(definition, ($event.target as HTMLInputElement).value)"
-      />
-
-      <div v-if="showSlider(definition)" class="slider-value">{{ readValue(definition) }}</div>
+      <div v-if="showSlider(definition)" class="slider-group">
+        <input
+          :id="`parameter-${definition.name}`"
+          :data-test="`parameter-${definition.name}-slider`"
+          class="slider-input"
+          :class="{ invalid: Boolean(errors[definition.name]) }"
+          type="range"
+          :disabled="disabled"
+          :min="definition.min ?? undefined"
+          :max="definition.max ?? undefined"
+          :step="definition.step ?? 1"
+          :value="String(readValue(definition))"
+          @input="updateNumericValue(definition, ($event.target as HTMLInputElement).value)"
+        />
+        <div class="slider-info">
+          <span class="slider-bound">{{ definition.min }}</span>
+          <span class="slider-current">{{ readValue(definition) }}</span>
+          <span class="slider-bound">{{ definition.max }}</span>
+        </div>
+      </div>
 
       <select
         v-else-if="definition.type === 'enum'"
@@ -249,6 +254,11 @@ function formatValue(value: StrategyParameterValue | number) {
   border: 1px solid var(--color-border-light);
   border-radius: var(--radius-md);
   background: var(--color-surface);
+  transition: border-color 0.15s;
+}
+
+.parameter-card:hover {
+  border-color: var(--color-border);
 }
 
 .parameter-head {
@@ -260,40 +270,152 @@ function formatValue(value: StrategyParameterValue | number) {
 
 .parameter-label {
   font-weight: var(--font-weight-semibold);
+  font-size: var(--font-size-sm);
   color: var(--color-text-primary);
 }
 
-.tooltip-indicator {
+/* ── Tooltip ── */
+.tooltip-trigger {
+  position: relative;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 18px;
-  height: 18px;
-  border-radius: 999px;
-  background: var(--color-primary-bg);
-  color: var(--color-primary);
-  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
   cursor: help;
 }
 
+.tooltip-bubble {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 6px 10px;
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-active);
+  border: 1px solid var(--color-border);
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-xs);
+  font-weight: 400;
+  line-height: 1.4;
+  white-space: nowrap;
+  max-width: 260px;
+  white-space: normal;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.15s;
+  z-index: 10;
+  box-shadow: var(--shadow-md);
+}
+
+.tooltip-bubble::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 5px solid transparent;
+  border-top-color: var(--color-border);
+}
+
+.tooltip-trigger:hover .tooltip-bubble,
+.tooltip-trigger:focus .tooltip-bubble {
+  opacity: 1;
+}
+
+/* ── Field Input ── */
 .field-input {
   width: 100%;
   padding: var(--spacing-sm) var(--spacing-md);
   border-radius: var(--radius-md);
   border: 1px solid var(--color-border);
-  background: var(--color-surface);
+  background: var(--color-surface-elevated);
   color: var(--color-text-primary);
+  font-size: var(--font-size-sm);
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.field-input:focus {
+  outline: none;
+  border-color: var(--color-primary-border);
+  box-shadow: 0 0 0 3px rgba(30, 90, 168, 0.12);
 }
 
 .field-input.invalid {
   border-color: var(--color-danger);
-  box-shadow: 0 0 0 1px rgba(220, 38, 38, 0.18);
+  box-shadow: 0 0 0 2px rgba(255, 59, 59, 0.12);
 }
 
-.slider-value {
-  margin-top: var(--spacing-xs);
-  font-size: var(--font-size-sm);
+/* ── Slider ── */
+.slider-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+}
+
+.slider-input {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--color-border);
+  outline: none;
+  cursor: pointer;
+}
+
+.slider-input::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--color-accent);
+  border: 2px solid var(--color-surface);
+  box-shadow: 0 0 0 2px var(--color-primary-border);
+  cursor: pointer;
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+
+.slider-input::-webkit-slider-thumb:hover {
+  transform: scale(1.15);
+  box-shadow: 0 0 0 3px var(--color-primary-border);
+}
+
+.slider-input::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--color-accent);
+  border: 2px solid var(--color-surface);
+  box-shadow: 0 0 0 2px var(--color-primary-border);
+  cursor: pointer;
+}
+
+.slider-input.invalid::-webkit-slider-thumb {
+  background: var(--color-danger);
+  box-shadow: 0 0 0 2px rgba(255, 59, 59, 0.3);
+}
+
+.slider-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.slider-bound {
+  font-size: 10px;
+  font-family: var(--font-mono);
   color: var(--color-text-muted);
+}
+
+.slider-current {
+  font-size: var(--font-size-xs);
+  font-family: var(--font-mono);
+  font-weight: 700;
+  color: var(--color-accent);
+  padding: 1px 6px;
+  border-radius: var(--radius-sm);
+  background: var(--color-primary-bg);
 }
 
 .field-error {

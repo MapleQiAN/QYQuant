@@ -1,0 +1,103 @@
+<h2>量化课程页改版方向</h2>
+<p class="subtitle">目标：消除宽屏右侧空白，同时承载更专业、更密集的量化课程内容与参数词典。</p>
+
+<div class="options">
+  <div class="option" data-choice="a" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>Research Terminal</h3>
+      <p>推荐。全宽流体布局，左侧课程索引，右侧主内容，章节内部支持 2-3 列知识面板与参数表。</p>
+    </div>
+  </div>
+  <div class="option" data-choice="b" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>Notebook Docs</h3>
+      <p>文档感更强，阅读舒适，但宽屏利用率较弱，容易再次出现留白感。</p>
+    </div>
+  </div>
+  <div class="option" data-choice="c" onclick="toggleSelect(this)">
+    <div class="letter">C</div>
+    <div class="content">
+      <h3>Dashboard Atlas</h3>
+      <p>视觉冲击强，适合信息总览，但不如 A 适合长课程与术语解释的连续学习。</p>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <div class="split">
+    <div class="mockup">
+      <div class="mockup-header">A. Research Terminal</div>
+      <div class="mockup-body">
+        <div style="display:grid;grid-template-columns:240px 1fr;gap:16px;">
+          <div style="border:1px solid #2f3d57;border-radius:16px;padding:14px;background:#0f1724;">
+            <div class="label">课程索引</div>
+            <div style="display:grid;gap:8px;margin-top:10px;">
+              <div class="mock-button" style="text-align:left;">01 市场结构</div>
+              <div class="mock-button" style="text-align:left;">02 回测参数</div>
+              <div class="mock-button" style="text-align:left;">03 因子参数</div>
+              <div class="mock-button" style="text-align:left;">04 风控参数</div>
+              <div class="mock-button" style="text-align:left;">05 AI 策略参数</div>
+            </div>
+          </div>
+          <div style="display:grid;gap:16px;">
+            <div style="border:1px solid #2f3d57;border-radius:18px;padding:18px;background:linear-gradient(135deg,#111a2a,#0d1320);">
+              <div class="label">Hero + 学习地图</div>
+              <div style="display:grid;grid-template-columns:1.4fr .9fr;gap:14px;margin-top:12px;">
+                <div class="placeholder" style="min-height:110px;">课程定位 / 专业摘要 / 学习路径</div>
+                <div class="placeholder" style="min-height:110px;">核心指标 / 风险等级 / 先修要求</div>
+              </div>
+            </div>
+            <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;">
+              <div class="placeholder" style="min-height:120px;">参数表</div>
+              <div class="placeholder" style="min-height:120px;">公式与解释</div>
+              <div class="placeholder" style="min-height:120px;">常见误区</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="mockup">
+      <div class="mockup-header">B. Notebook Docs</div>
+      <div class="mockup-body">
+        <div style="display:grid;gap:14px;">
+          <div class="placeholder" style="min-height:88px;">居中 Hero</div>
+          <div class="placeholder" style="min-height:72px;">横向锚点导航</div>
+          <div class="placeholder" style="min-height:260px;">连续正文 + 插图 + 参数解释</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <div class="mockup">
+    <div class="mockup-header">C. Dashboard Atlas</div>
+    <div class="mockup-body">
+      <div style="display:grid;grid-template-columns:1.1fr 1.1fr .8fr;gap:14px;">
+        <div class="placeholder" style="min-height:160px;">课程模块卡片</div>
+        <div class="placeholder" style="min-height:160px;">参数词典卡片</div>
+        <div class="placeholder" style="min-height:160px;">快捷目录</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="pros-cons">
+  <div class="pros">
+    <h4>我推荐 A 的原因</h4>
+    <ul>
+      <li>宽屏可以真正吃满，不会右侧空一大片。</li>
+      <li>更适合“课程 + 术语 + 参数表 + AI 模块”同时出现。</li>
+      <li>后续继续扩章节时，结构最稳，不容易重做。</li>
+    </ul>
+  </div>
+  <div class="cons">
+    <h4>需要注意</h4>
+    <ul>
+      <li>内容密度更高，必须靠清晰层级和折叠节奏控制阅读负担。</li>
+      <li>移动端需要降成单列，不然会显得过挤。</li>
+    </ul>
+  </div>
+</div>

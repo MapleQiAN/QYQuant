@@ -42,6 +42,13 @@ function createTestI18n() {
           bots: 'Bots',
           forum: 'Forum'
         },
+        pageTitle: {
+          dashboard: 'Dashboard',
+          backtests: 'Backtests',
+          bots: 'Bots',
+          forum: 'Forum',
+          default: 'QY Quant'
+        },
         common: {
           newStrategy: 'New Strategy',
           searchPlaceholder: 'Search strategies, bots, or discussions'

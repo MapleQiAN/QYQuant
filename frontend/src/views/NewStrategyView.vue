@@ -3,6 +3,7 @@
     <div class="container">
       <div class="page-header">
         <div class="header-text">
+          <p class="eyebrow">{{ $t('pageTitle.strategies') }}</p>
           <h1 class="page-title">{{ $t('strategyNew.title') }}</h1>
           <p class="page-subtitle">{{ $t('strategyNew.subtitle') }}</p>
         </div>
@@ -67,18 +68,22 @@
             <p class="hint">{{ $t('strategyNew.importHint') }}</p>
           </div>
           <div class="form-body">
-            <p class="field-help">
-              Use the guided import flow for `strategy.py`, source project zips, or existing `.qys` packages.
-            </p>
+            <div class="import-visual">
+              <div class="import-visual__icon">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+              </div>
+              <p class="import-visual__text">{{ $t('strategyNew.importHint') }}</p>
+            </div>
             <div class="tag-row">
-              <span class="pill">strategy.py</span>
-              <span class="pill">source zip</span>
-              <span class="pill">.qys package</span>
+              <span class="pill">.py</span>
+              <span class="pill">.zip</span>
+              <span class="pill pill--accent">.qys</span>
             </div>
 
             <div class="form-actions">
               <RouterLink class="btn btn-primary" to="/strategies/import">
-                Open import wizard
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                {{ $t('strategyNew.importAction') }}
               </RouterLink>
             </div>
           </div>
@@ -208,6 +213,10 @@ const ArrowLeftIcon = () => h('svg', {
   gap: var(--spacing-md);
 }
 
+.form-card:hover {
+  transform: none;
+}
+
 .card-header h3 {
   margin: 0 0 var(--spacing-xs);
   font-size: var(--font-size-lg);
@@ -270,12 +279,58 @@ const ArrowLeftIcon = () => h('svg', {
   gap: var(--spacing-xs);
 }
 
-.pill {
-  padding: 4px 10px;
-  border-radius: 999px;
-  background: var(--color-background);
-  color: var(--color-text-secondary);
+.eyebrow {
+  margin: 0 0 6px;
   font-size: var(--font-size-xs);
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--color-accent);
+}
+
+.pill {
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: var(--color-surface-elevated);
+  border: 1px solid var(--color-border);
+  color: var(--color-text-muted);
+  font-size: 10px;
+  font-family: var(--font-mono);
+  font-weight: 700;
+}
+
+.pill--accent {
+  border-color: var(--color-primary-border);
+  color: var(--color-accent);
+  background: var(--color-primary-bg);
+}
+
+.import-visual {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: var(--spacing-lg) 0;
+}
+
+.import-visual__icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  border-radius: var(--radius-lg);
+  background: var(--color-primary-bg);
+  color: var(--color-accent);
+  margin-bottom: var(--spacing-sm);
+}
+
+.import-visual__text {
+  margin: 0;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+  max-width: 260px;
+  line-height: 1.5;
 }
 
 .file-meta {

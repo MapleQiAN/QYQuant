@@ -1,5 +1,6 @@
 <template>
-  <div v-if="open" class="publish-backdrop" @click.self="emit('close')">
+  <Transition name="drawer">
+    <div v-if="open" class="publish-backdrop" @click.self="emit('close')">
     <aside class="publish-drawer" role="dialog" aria-modal="true" aria-label="Publish strategy">
       <header class="drawer-header">
         <div>
@@ -133,6 +134,9 @@
       </section>
 
       <section v-else class="drawer-body success-state">
+        <div class="success-icon">
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+        </div>
         <h3>Strategy submitted for review</h3>
         <p>Your strategy is now pending review. You can close this drawer and continue working in your library.</p>
         <footer class="drawer-actions">
@@ -140,7 +144,8 @@
         </footer>
       </section>
     </aside>
-  </div>
+    </div>
+  </Transition>
 </template>
 
 <script setup lang="ts">
@@ -410,6 +415,50 @@ function toPrefillNumber(value: string | number | null | undefined) {
 
 .message.error {
   color: var(--color-danger);
+}
+
+/* ── Success State ── */
+.success-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: var(--color-success-bg);
+  color: var(--color-success);
+  margin-bottom: var(--spacing-md);
+}
+
+.success-state {
+  align-items: center;
+  text-align: center;
+}
+
+/* ── Drawer Transition ── */
+.drawer-enter-active {
+  transition: opacity 0.25s ease;
+}
+.drawer-enter-active .publish-drawer {
+  transition: transform 0.3s var(--ease-out-expo, cubic-bezier(0.16, 1, 0.3, 1));
+}
+.drawer-leave-active {
+  transition: opacity 0.2s ease;
+}
+.drawer-leave-active .publish-drawer {
+  transition: transform 0.2s ease;
+}
+.drawer-enter-from {
+  opacity: 0;
+}
+.drawer-enter-from .publish-drawer {
+  transform: translateX(100%);
+}
+.drawer-leave-to {
+  opacity: 0;
+}
+.drawer-leave-to .publish-drawer {
+  transform: translateX(100%);
 }
 
 @media (max-width: 768px) {

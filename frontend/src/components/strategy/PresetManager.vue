@@ -7,7 +7,7 @@
         :value="selectedPresetId"
         @change="emit('select', ($event.target as HTMLSelectElement).value)"
       >
-        <option value="">选择预设</option>
+        <option value="">{{ t('strategy.presets.loadPreset') }}</option>
         <option v-for="preset in presets" :key="preset.id" :value="preset.id">
           {{ preset.name }}
         </option>
@@ -21,7 +21,7 @@
           :disabled="saving"
           @click="dialogOpen = true"
         >
-          保存为预设
+          {{ t('strategy.presets.savePreset') }}
         </button>
         <button
           data-test="delete-preset"
@@ -30,41 +30,47 @@
           :disabled="deleting || !selectedPresetId"
           @click="emit('delete', selectedPresetId)"
         >
-          删除预设
+          {{ t('strategy.presets.deletePreset') }}
         </button>
       </div>
     </div>
 
-    <div v-if="dialogOpen" class="dialog-backdrop">
-      <div class="dialog-panel">
-        <h3 class="dialog-title">保存预设</h3>
-        <input
-          data-test="preset-name-input"
-          v-model.trim="presetName"
-          class="preset-input"
-          type="text"
-          placeholder="输入预设名称"
-        />
-        <div class="dialog-actions">
-          <button class="btn btn-secondary" type="button" @click="closeDialog">取消</button>
-          <button
-            data-test="confirm-save-preset"
-            class="btn btn-primary"
-            type="button"
-            :disabled="!presetName"
-            @click="confirmSave"
-          >
-            保存
-          </button>
+    <Transition name="dialog">
+      <div v-if="dialogOpen" class="dialog-backdrop" @click.self="closeDialog">
+        <div class="dialog-panel">
+          <h3 class="dialog-title">{{ t('strategy.presets.savePreset') }}</h3>
+          <input
+            data-test="preset-name-input"
+            v-model.trim="presetName"
+            class="preset-input"
+            type="text"
+            :placeholder="t('strategy.presets.presetNamePlaceholder')"
+            @keydown.enter="confirmSave"
+          />
+          <div class="dialog-actions">
+            <button class="btn btn-secondary" type="button" @click="closeDialog">{{ t('common.cancel') }}</button>
+            <button
+              data-test="confirm-save-preset"
+              class="btn btn-primary"
+              type="button"
+              :disabled="!presetName"
+              @click="confirmSave"
+            >
+              {{ t('common.save') }}
+            </button>
+          </div>
         </div>
       </div>
-    </div>
+    </Transition>
   </section>
 </template>
 
 <script setup lang="ts">
 import { ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 import type { StrategyPreset } from '../../types/Strategy'
+
+const { t } = useI18n()
 
 defineProps<{
   presets: StrategyPreset[]
@@ -117,8 +123,17 @@ function confirmSave() {
   padding: var(--spacing-sm) var(--spacing-md);
   border-radius: var(--radius-md);
   border: 1px solid var(--color-border);
-  background: var(--color-surface);
+  background: var(--color-surface-elevated);
   color: var(--color-text-primary);
+  font-size: var(--font-size-sm);
+  transition: border-color 0.15s;
+}
+
+.preset-select:focus,
+.preset-input:focus {
+  outline: none;
+  border-color: var(--color-primary-border);
+  box-shadow: 0 0 0 3px rgba(30, 90, 168, 0.12);
 }
 
 .preset-actions {
@@ -126,10 +141,12 @@ function confirmSave() {
   gap: var(--spacing-sm);
 }
 
+/* ── Dialog ── */
 .dialog-backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(15, 23, 42, 0.32);
+  z-index: 50;
+  background: var(--color-overlay);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -137,16 +154,18 @@ function confirmSave() {
 }
 
 .dialog-panel {
-  width: min(100%, 360px);
+  width: min(100%, 380px);
   padding: var(--spacing-lg);
   border-radius: var(--radius-lg);
   background: var(--color-surface);
-  border: 1px solid var(--color-border-light);
-  box-shadow: var(--shadow-lg);
+  border: 1px solid var(--color-border);
+  box-shadow: var(--shadow-xl);
 }
 
 .dialog-title {
   margin: 0 0 var(--spacing-md);
+  font-size: var(--font-size-lg);
+  font-weight: 700;
   color: var(--color-text-primary);
 }
 
@@ -154,10 +173,38 @@ function confirmSave() {
   display: flex;
   justify-content: flex-end;
   gap: var(--spacing-sm);
-  margin-top: var(--spacing-md);
+  margin-top: var(--spacing-lg);
 }
 
 .danger {
   color: var(--color-danger);
+}
+
+/* ── Dialog Transition ── */
+.dialog-enter-active {
+  transition: opacity 0.2s ease;
+}
+.dialog-enter-active .dialog-panel {
+  transition: opacity 0.2s ease, transform 0.2s var(--ease-out-expo, ease);
+}
+.dialog-leave-active {
+  transition: opacity 0.15s ease;
+}
+.dialog-leave-active .dialog-panel {
+  transition: opacity 0.15s ease, transform 0.15s ease;
+}
+.dialog-enter-from {
+  opacity: 0;
+}
+.dialog-enter-from .dialog-panel {
+  opacity: 0;
+  transform: scale(0.96) translateY(8px);
+}
+.dialog-leave-to {
+  opacity: 0;
+}
+.dialog-leave-to .dialog-panel {
+  opacity: 0;
+  transform: scale(0.96);
 }
 </style>
