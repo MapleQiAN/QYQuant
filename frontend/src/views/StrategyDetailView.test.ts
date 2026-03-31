@@ -40,14 +40,24 @@ vi.mock('vue-router', () => ({
   useRoute: () => routeState,
 }))
 
+vi.mock('vue-i18n', () => ({
+  useI18n: () => ({
+    t: (key: string, params?: Record<string, string>) => (params?.jobId ? `${key}:${params.jobId}` : key),
+  }),
+}))
+
 vi.mock('../api/strategies', () => ({
   fetchStrategyParameters: fetchStrategyParametersMock,
 }))
 
-vi.mock('../api/backtests', () => ({
-  fetchBacktestStatus: fetchBacktestStatusMock,
-  submitBacktest: submitBacktestMock,
-}))
+vi.mock('../api/backtests', async () => {
+  const actual = await vi.importActual<typeof import('../api/backtests')>('../api/backtests')
+  return {
+    ...actual,
+    fetchBacktestStatus: fetchBacktestStatusMock,
+    submitBacktest: submitBacktestMock,
+  }
+})
 
 vi.mock('../stores', () => ({
   useUserStore: () => ({
@@ -96,7 +106,13 @@ describe('StrategyDetailView', () => {
     ])
     submitBacktestMock.mockResolvedValue({ job_id: 'job-1' })
 
-    const wrapper = mount(StrategyDetailView)
+    const wrapper = mount(StrategyDetailView, {
+      global: {
+        mocks: {
+          $t: (key: string, params?: Record<string, string>) => (params?.jobId ? `${key}:${params.jobId}` : key),
+        },
+      },
+    })
     await flushPromises()
 
     expect(fetchStrategyParametersMock).toHaveBeenCalledWith('strategy-1')
@@ -115,7 +131,7 @@ describe('StrategyDetailView', () => {
       end_date: '2024-01-31',
       parameters: { window: 20 },
     })
-    expect(wrapper.text()).toContain('job-1')
+    expect(wrapper.text()).toContain('strategyDetail.backtestSubmitted:job-1')
   })
 
   it('shows detailed failure reason when guided polling sees a failed job', async () => {
@@ -141,7 +157,13 @@ describe('StrategyDetailView', () => {
       },
     })
 
-    const wrapper = mount(StrategyDetailView)
+    const wrapper = mount(StrategyDetailView, {
+      global: {
+        mocks: {
+          $t: (key: string, params?: Record<string, string>) => (params?.jobId ? `${key}:${params.jobId}` : key),
+        },
+      },
+    })
     await flushPromises()
 
     await wrapper.get('[data-test="symbol-input"]').setValue('BTCUSDT')
@@ -151,6 +173,6 @@ describe('StrategyDetailView', () => {
     await flushPromises()
 
     expect(fetchBacktestStatusMock).toHaveBeenCalledWith('job-1')
-    expect(wrapper.text()).toContain("Undefined variable 'sma_period'")
+    expect(wrapper.text()).toContain("Backtest failed: Undefined variable 'sma_period' (line 15)")
   })
 })

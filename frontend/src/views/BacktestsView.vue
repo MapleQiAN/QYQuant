@@ -234,7 +234,7 @@
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { fetchRecent, fetchRuntimeDescriptor } from '../api/strategies'
-import { fetchBacktestStatus, submitBacktest } from '../api/backtests'
+import { fetchBacktestStatus, getBacktestFailureMessage, submitBacktest } from '../api/backtests'
 import { fetchMyQuota, type UserQuotaResponse } from '../api/users'
 import type { SubmitBacktestPayload } from '../types/Backtest'
 import type { Strategy, StrategyParameter, StrategyRuntimeDescriptor } from '../types/Strategy'
@@ -401,7 +401,7 @@ async function waitJobSuccess(jobId: string): Promise<string> {
       return jobId
     }
     if (job.status === 'failed' || job.status === 'timeout') {
-      throw new Error(`Backtest job failed: ${job.status}`)
+      throw new Error(getBacktestFailureMessage(job))
     }
     runState.status = `Task ${job.status}...`
     await sleep(1000)

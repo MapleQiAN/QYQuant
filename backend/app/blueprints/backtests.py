@@ -58,7 +58,7 @@ def _estimate_wait_time():
 
 
 def _serialize_job_status(job_record):
-    return {
+    data = {
         "job_id": job_record.id,
         "status": job_record.status,
         "created_at": format_beijing_iso(job_record.created_at),
@@ -66,6 +66,10 @@ def _serialize_job_status(job_record):
         "completed_at": format_beijing_iso(job_record.completed_at),
         "estimated_wait_time": _estimate_wait_time() if job_record.status == BacktestJobStatus.PENDING.value else 0,
     }
+    if job_record.status in {BacktestJobStatus.FAILED.value, BacktestJobStatus.TIMEOUT.value} and job_record.error_message:
+        data["error_message"] = job_record.error_message
+        data["error"] = load_execution_error(job_record.error_message)
+    return data
 
 
 def _get_strategy_for_submit(strategy_id, user_id):
