@@ -8,6 +8,8 @@ const {
   validateIntegrationMock,
   fetchIntegrationAccountMock,
   fetchIntegrationPositionsMock,
+  toastSuccessMock,
+  toastWarningMock,
 } = vi.hoisted(() => ({
   fetchIntegrationProvidersMock: vi.fn(),
   fetchIntegrationsMock: vi.fn(),
@@ -15,6 +17,8 @@ const {
   validateIntegrationMock: vi.fn(),
   fetchIntegrationAccountMock: vi.fn(),
   fetchIntegrationPositionsMock: vi.fn(),
+  toastSuccessMock: vi.fn(),
+  toastWarningMock: vi.fn(),
 }))
 
 vi.mock('../api/integrations', () => ({
@@ -24,6 +28,13 @@ vi.mock('../api/integrations', () => ({
   validateIntegration: validateIntegrationMock,
   fetchIntegrationAccount: fetchIntegrationAccountMock,
   fetchIntegrationPositions: fetchIntegrationPositionsMock,
+}))
+
+vi.mock('../lib/toast', () => ({
+  toast: {
+    success: toastSuccessMock,
+    warning: toastWarningMock,
+  }
 }))
 
 import { useIntegrationsStore } from './useIntegrationsStore'
@@ -37,6 +48,8 @@ describe('integrations store', () => {
     validateIntegrationMock.mockReset()
     fetchIntegrationAccountMock.mockReset()
     fetchIntegrationPositionsMock.mockReset()
+    toastSuccessMock.mockReset()
+    toastWarningMock.mockReset()
   })
 
   it('loads provider catalog and integrations', async () => {
@@ -92,6 +105,7 @@ describe('integrations store', () => {
 
     expect(result.id).toBe('integration-1')
     expect(store.integrations).toHaveLength(1)
+    expect(toastSuccessMock).toHaveBeenCalledWith('连接已创建')
   })
 
   it('validates integration and loads account and positions', async () => {
@@ -109,5 +123,8 @@ describe('integrations store', () => {
     expect(positions).toEqual([{ symbol: '00700.HK', quantity: '100', market: 'hk' }])
     expect(store.accountById['integration-1']).toEqual({ currency: 'HKD', equity: '12345.67' })
     expect(store.positionsById['integration-1']).toEqual([{ symbol: '00700.HK', quantity: '100', market: 'hk' }])
+    expect(toastSuccessMock).toHaveBeenNthCalledWith(1, '连接验证成功')
+    expect(toastSuccessMock).toHaveBeenNthCalledWith(2, '账户信息已加载')
+    expect(toastSuccessMock).toHaveBeenNthCalledWith(3, '持仓信息已加载')
   })
 })

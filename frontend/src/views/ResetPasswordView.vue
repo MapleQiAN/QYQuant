@@ -3,6 +3,7 @@ import { computed, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { resetPassword } from '../api/auth'
+import { toast } from '../lib/toast'
 
 const { t } = useI18n()
 const route = useRoute()
@@ -18,10 +19,12 @@ const token = computed(() => String(route.query.token || ''))
 async function handleSubmit() {
   if (!token.value) {
     error.value = t('resetPassword.tokenMissing')
+    toast.error(error.value)
     return
   }
   if (password.value.length < 8) {
     error.value = t('auth.passwordTooShort')
+    toast.error(error.value)
     return
   }
 
@@ -31,6 +34,7 @@ async function handleSubmit() {
   try {
     const result = await resetPassword(token.value, password.value)
     success.value = result.message
+    toast.success(result.message)
     await router.replace('/login')
   } catch (e: any) {
     error.value = e.message || t('resetPassword.resetFailed')

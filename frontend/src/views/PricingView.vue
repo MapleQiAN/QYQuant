@@ -37,7 +37,7 @@
           :class="{
             'pricing-card--current': currentPlanLevel === plan.level,
             'pricing-card--lower-tier': isLoggedIn && isPlanTierLowerThanCurrent(plan.level) && currentPlanLevel !== plan.level,
-            'pricing-card--featured': plan.featured,
+            'pricing-card--featured': plan.featured && shouldShowFeatured,
             'pricing-card--ultra': plan.level === 'ultra',
           }"
           :style="{ '--card-delay': index * 80 + 'ms' }"
@@ -47,7 +47,7 @@
 
           <!-- Badge row -->
           <div class="pricing-card__badges">
-            <span v-if="plan.featured" class="badge badge--featured">
+            <span v-if="plan.featured && shouldShowFeatured" class="badge badge--featured">
               <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
                 <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z"/>
               </svg>
@@ -93,7 +93,7 @@
               v-if="plan.level !== 'free' && currentPlanLevel !== plan.level && !isPlanTierLowerThanCurrent(plan.level)"
               class="btn btn-upgrade"
               :class="{
-                'btn-upgrade--featured': plan.featured,
+                'btn-upgrade--featured': plan.featured && shouldShowFeatured,
                 'btn-upgrade--ultra': plan.level === 'ultra',
               }"
               type="button"
@@ -219,6 +219,12 @@ function isPlanTierLowerThanCurrent(planLevel: string): boolean {
   const planTier = PLAN_TIER_ORDER[planLevel] ?? 0
   return currentTier > planTier
 }
+
+/** True when the user does NOT already own Plus or a higher tier. */
+const shouldShowFeatured = computed(() => {
+  const currentTier = PLAN_TIER_ORDER[currentPlanLevel.value] ?? 0
+  return currentTier < PLAN_TIER_ORDER['plus']
+})
 
 function goToCheckout(planLevel: string) {
   router.push({ name: 'checkout', query: { plan: planLevel } })

@@ -86,6 +86,7 @@
 import { computed, ref } from 'vue'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
 import { confirmStrategyImport } from '../api/strategies'
+import { toast } from '../lib/toast'
 import type { StrategyImportAnalysis } from '../types/Strategy'
 
 const route = useRoute()
@@ -118,10 +119,12 @@ const selectedEntrypoint = computed(() => {
 async function handleConfirm() {
   if (!analysis.value || !selectedEntrypoint.value) {
     error.value = 'Select an entrypoint before continuing.'
+    toast.error(error.value)
     return
   }
   if (!name.value.trim()) {
     error.value = 'Strategy name is required.'
+    toast.error(error.value)
     return
   }
 
@@ -148,6 +151,7 @@ async function handleConfirm() {
       parameterDefinitions: analysis.value.parameterCandidates
     })
     sessionStorage.removeItem(`strategy-import:${analysis.value.draftImportId}`)
+    toast.success(`策略已导入：${result.strategy.name}`)
     if (result.next) {
       await router.push(result.next)
     }

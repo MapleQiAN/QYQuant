@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
 import { acceptSimDisclaimer, createSimBot, deleteSimBot, getSimBots, getSimPositions, patchSimBot } from '../api/simulation'
+import { toast } from '../lib/toast'
 import type { CreateBotPayload, SimulationBot, SimulationPosition } from '../types/Simulation'
 
 export const useSimulationStore = defineStore('simulation', {
@@ -16,6 +17,7 @@ export const useSimulationStore = defineStore('simulation', {
     },
     async acceptDisclaimer() {
       await acceptSimDisclaimer()
+      toast.success('免责声明已确认')
     },
     async fetchBots(): Promise<void> {
       this.isLoading = true
@@ -37,6 +39,7 @@ export const useSimulationStore = defineStore('simulation', {
       try {
         const bot = await createSimBot(payload)
         this.bots.unshift(bot)
+        toast.success('模拟机器人已创建')
         return bot
       } catch (error: any) {
         this.error = error?.message || 'Failed to create simulation bot'
@@ -50,15 +53,18 @@ export const useSimulationStore = defineStore('simulation', {
       await patchSimBot(botId, { status: 'paused' })
       const bot = this.bots.find(b => b.id === botId)
       if (bot) bot.status = 'paused'
+      toast.success('模拟机器人已暂停')
     },
     async resumeBot(botId: string): Promise<void> {
       await patchSimBot(botId, { status: 'active' })
       const bot = this.bots.find(b => b.id === botId)
       if (bot) bot.status = 'active'
+      toast.success('模拟机器人已恢复')
     },
     async deleteBot(botId: string): Promise<void> {
       await deleteSimBot(botId)
       this.bots = this.bots.filter(b => b.id !== botId)
+      toast.success('模拟机器人已删除')
     },
   },
 })

@@ -3,6 +3,7 @@ import { ref } from 'vue'
 import { RouterLink, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { loginWithPassword, registerWithPassword } from '../api/auth'
+import { toast } from '../lib/toast'
 import { useUserStore } from '../stores/user'
 
 type AuthIntent = 'login' | 'register'
@@ -31,18 +32,22 @@ function validate() {
   const normalizedEmail = email.value.trim().toLowerCase()
   if (!normalizedEmail) {
     error.value = t('auth.emailRequired')
+    toast.error(error.value)
     return null
   }
   if (!password.value) {
     error.value = t('auth.passwordRequired')
+    toast.error(error.value)
     return null
   }
   if (password.value.length < 8) {
     error.value = t('auth.passwordTooShort')
+    toast.error(error.value)
     return null
   }
   if (intent.value === 'register' && !nickname.value.trim()) {
     error.value = t('auth.nicknameRequired')
+    toast.error(error.value)
     return null
   }
   return {
@@ -70,6 +75,7 @@ async function handleSubmit() {
     const result = intent.value === 'register'
       ? await registerWithPassword(payload)
       : await loginWithPassword({ email: payload.email, password: payload.password })
+    toast.success(intent.value === 'register' ? '注册成功' : '登录成功')
     await finalizeLogin(result.access_token)
   } catch (e: any) {
     error.value = e.message || (intent.value === 'register' ? t('auth.registerFailed') : t('auth.loginFailed'))

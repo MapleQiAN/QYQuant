@@ -36,6 +36,7 @@ import { ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { RouterLink, useRouter } from 'vue-router'
 import { analyzeStrategyImport } from '../api/strategies'
+import { toast } from '../lib/toast'
 
 const { t } = useI18n()
 
@@ -53,6 +54,7 @@ function handleFileChange(event: Event) {
 async function handleAnalyze() {
   if (!selectedFile.value) {
     error.value = t('strategy.import.chooseSourceFirst')
+    toast.error(error.value)
     return
   }
 
@@ -61,6 +63,7 @@ async function handleAnalyze() {
   try {
     const result = await analyzeStrategyImport(selectedFile.value)
     sessionStorage.setItem(`strategy-import:${result.draftImportId}`, JSON.stringify(result))
+    toast.success('导入分析已生成')
     await router.push({
       name: 'strategy-import-confirm',
       query: { draftImportId: result.draftImportId }

@@ -21,7 +21,7 @@
         <div class="checkout-layout">
           <!-- ── Left: Plan summary ── -->
           <aside class="plan-summary">
-            <div class="plan-summary__badge" v-if="plan.featured">推荐套餐</div>
+            <div class="plan-summary__badge" v-if="plan.featured && shouldShowFeatured">推荐套餐</div>
 
             <div class="plan-summary__header">
               <p class="plan-summary__label">{{ plan.name }}</p>
@@ -175,7 +175,7 @@ import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { createPaymentOrder, type PaymentProvider } from '../api/payments'
 import { fetchMyQuota } from '../api/users'
-import { PLANS } from '../data/plans'
+import { PLANS, PLAN_TIER_ORDER } from '../data/plans'
 
 const router = useRouter()
 const route = useRoute()
@@ -185,6 +185,12 @@ const plan = computed(() => PLANS.find((p) => p.level === planLevel.value) ?? nu
 
 const isLoggedIn = computed(() => !!localStorage.getItem('qyquant-token'))
 const firstPurchaseEligible = ref(true)
+const currentPlanLevel = ref('free')
+
+const shouldShowFeatured = computed(() => {
+  const currentTier = PLAN_TIER_ORDER[currentPlanLevel.value] ?? 0
+  return currentTier < PLAN_TIER_ORDER['plus']
+})
 
 const displayPrice = computed(() => {
   if (!plan.value) return 0
@@ -198,6 +204,7 @@ onMounted(async () => {
     try {
       const quota = await fetchMyQuota()
       firstPurchaseEligible.value = quota.first_purchase_eligible
+      currentPlanLevel.value = quota.plan_level
     } catch {
       // 查询失败则保持默认展示优惠价，后端下单时会再次校验
     }

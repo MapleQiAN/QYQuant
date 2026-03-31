@@ -253,6 +253,7 @@ const metricEntries = computed(() => {
 async function handleImport() {
   if (!strategy.value) return
   const result = await marketplaceStore.importStrategy(strategy.value.id)
+  toast.success('策略已导入，即将跳转回测配置')
   await router.push(result.redirectTo || buildBacktestConfigurePath(result.strategyId))
 }
 
