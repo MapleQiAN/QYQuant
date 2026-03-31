@@ -112,4 +112,30 @@ describe('BacktestsView', () => {
 
     expect(pushMock).toHaveBeenCalledWith('/pricing')
   })
+
+  it('shows detailed failure reason when polled backtest job fails', async () => {
+    fetchBacktestStatusMock.mockResolvedValueOnce({
+      status: 'failed',
+      error: {
+        type: 'NameError',
+        line: 15,
+        message: "Undefined variable 'sma_period'",
+      },
+    })
+
+    const wrapper = mount(BacktestsView, {
+      global: {
+        mocks: {
+          $t: (key: string) => key,
+        },
+      },
+    })
+
+    await flushPromises()
+    await wrapper.get('.btn-run').trigger('click')
+    await flushPromises()
+
+    expect(submitBacktestMock).toHaveBeenCalled()
+    expect(wrapper.text()).toContain("Undefined variable 'sma_period'")
+  })
 })

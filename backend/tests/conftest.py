@@ -61,6 +61,7 @@ def app(tmp_path, monkeypatch):
     monkeypatch.setenv('BACKTEST_DATA_PROVIDER', 'mock')
     monkeypatch.setenv('BACKTEST_STORAGE_DIR', storage_root.as_posix())
     monkeypatch.setenv('STRATEGY_STORAGE_DIR', storage_root.as_posix())
+    monkeypatch.setenv('FILE_STORAGE_DIR', (storage_root / 'files').as_posix())
     monkeypatch.setenv('STRATEGY_ENCRYPT_KEY', 'MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=')
     monkeypatch.setenv('E2B_API_KEY', 'test-e2b-api-key')
 

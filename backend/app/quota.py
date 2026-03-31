@@ -6,6 +6,7 @@ from .models import UserQuota
 
 PLAN_LIMITS = {
     "free": 10,
+    "basic": 100,
     "go": 50,
     "plus": 200,
     "pro": 500,
@@ -17,7 +18,6 @@ PLAN_LEVEL_ALIASES = {
     "lite": "plus",
     "expert": "ultra",
     # older aliases
-    "basic": "go",
     "enterprise": "ultra",
 }
 
@@ -38,8 +38,8 @@ def serialize_plan_limit(plan_level):
     return int(limit)
 
 
-def ensure_user_quota(user_id, plan_level="free"):
-    normalized_plan_level = normalize_plan_level(plan_level)
+def ensure_user_quota(user_id, plan_level=None):
+    normalized_plan_level = normalize_plan_level(plan_level or "free")
     quota = db.session.get(UserQuota, user_id)
     if quota is None:
         quota = UserQuota(user_id=user_id, plan_level=normalized_plan_level, used_count=0)
@@ -51,7 +51,7 @@ def ensure_user_quota(user_id, plan_level="free"):
     if quota.plan_level != current_plan_level:
         quota.plan_level = current_plan_level
 
-    if plan_level and quota.plan_level != normalized_plan_level:
+    if plan_level is not None and quota.plan_level != normalized_plan_level:
         quota.plan_level = normalized_plan_level
     return quota
 

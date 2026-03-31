@@ -77,20 +77,8 @@
           <span v-if="!collapsed" class="nav-item-label">{{ $t('common.settings') }}</span>
         </Transition>
       </RouterLink>
-      <div v-if="!collapsed" class="plan-badge" :class="{ 'plan-badge--premium': isPremiumPlan }">
-        <div class="plan-badge__inner">
-          <div class="plan-badge__info">
-            <span class="plan-badge__tier">{{ profile.level || 'FREE' }}</span>
-            <span class="plan-badge__hint">{{ isPremiumPlan ? t('common.premiumMember') : t('common.basicPlan') }}</span>
-          </div>
-          <RouterLink to="/pricing" class="plan-upgrade-btn">
-            {{ isPremiumPlan ? t('common.manage') : t('common.upgrade') }}
-            <svg width="10" height="10" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-              <path d="M6 4l4 4-4 4"/>
-            </svg>
-          </RouterLink>
-        </div>
-        <div v-if="!isPremiumPlan" class="plan-badge__accent" aria-hidden="true"></div>
+      <div v-if="!collapsed" class="plan-badge" :class="planBadgeClass" @click="handlePlanBadgeClick">
+        {{ currentLevel }}
       </div>
     </div>
   </aside>
@@ -98,7 +86,7 @@
 
 <script setup lang="ts">
 import { h, computed } from 'vue'
-import { RouterLink, useRoute } from 'vue-router'
+import { RouterLink, useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { storeToRefs } from 'pinia'
 import { useUserStore } from '../stores/user'
@@ -108,14 +96,22 @@ defineProps<{ collapsed: boolean }>()
 defineEmits<{ toggle: [] }>()
 
 const route = useRoute()
+const router = useRouter()
 const { t } = useI18n()
 const userStore = useUserStore()
 const { profile } = storeToRefs(userStore)
 
-const isPremiumPlan = computed(() => {
-  const level = (profile.value.level || '').toLowerCase()
-  return ['plus', 'pro', 'ultra'].includes(level)
+const currentLevel = computed(() => {
+  if (!userStore.token) return 'FREE'
+  return (profile.value.level || 'FREE').toUpperCase()
 })
+
+const planBadgeClass = computed(() => ({
+  'plan-badge--free': currentLevel.value === 'FREE',
+  'plan-badge--plus': currentLevel.value === 'PLUS',
+  'plan-badge--pro': currentLevel.value === 'PRO',
+  'plan-badge--ultra': currentLevel.value === 'ULTRA',
+}))
 
 interface NavItem {
   id: string
@@ -146,6 +142,14 @@ function isActive(item: NavItem) {
   if (item.to === '/') return route.path === '/'
   if (item.matchPrefix) return route.path.startsWith(item.matchPrefix)
   return route.path === item.to
+}
+
+function handlePlanBadgeClick() {
+  if (!userStore.token) {
+    router.push('/login')
+    return
+  }
+  router.push('/pricing')
 }
 
 // ── Icons ──
@@ -406,112 +410,108 @@ function ChevronIcon() {
 
 /* ── Footer - Plan Badge ── */
 .sidebar-footer {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
   padding: 12px 8px;
   border-top: 1px solid var(--color-sidebar-border);
   flex-shrink: 0;
 }
 
 .plan-badge {
-  --badge-gold: #9A7B3A;
-  --badge-gold-dim: rgba(154, 123, 58, 0.1);
-  --badge-gold-border: rgba(154, 123, 58, 0.2);
-  position: relative;
-  overflow: hidden;
-  padding: 10px 12px;
-  background: linear-gradient(135deg, var(--color-primary-bg) 0%, var(--color-sidebar-bg) 100%);
-  border: 1px solid var(--color-primary-border);
+  display: block;
+  text-align: center;
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  padding: 7px 12px;
   border-radius: var(--radius-md);
-  transition: all var(--transition-normal);
-}
-
-.plan-badge:hover {
-  border-color: var(--badge-gold-border);
-  background: linear-gradient(135deg, var(--badge-gold-dim) 0%, var(--color-sidebar-bg) 100%);
-}
-
-.plan-badge--premium {
-  border-color: var(--badge-gold-border);
-  background: linear-gradient(135deg, var(--badge-gold-dim) 0%, var(--color-sidebar-bg) 100%);
-}
-
-.plan-badge--premium:hover {
-  border-color: var(--badge-gold);
-}
-
-.plan-badge__inner {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  position: relative;
-  z-index: 1;
-}
-
-.plan-badge__info {
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-}
-
-.plan-badge__tier {
-  font-size: 10px;
-  font-weight: 700;
-  color: var(--badge-gold);
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-}
-
-.plan-badge__hint {
-  font-size: 9px;
-  color: var(--color-text-muted);
-  letter-spacing: 0.02em;
-}
-
-.plan-upgrade-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 2px;
-  font-size: 10px;
-  font-weight: 700;
-  color: var(--color-primary);
   text-decoration: none;
-  padding: 3px 8px;
-  border-radius: var(--radius-sm);
+  transition: all var(--transition-normal);
+  cursor: pointer;
+}
+
+/* ── FREE: neutral gray ── */
+.plan-badge--free {
+  color: var(--color-text-muted);
   background: var(--color-primary-bg);
   border: 1px solid var(--color-primary-border);
-  transition: all var(--transition-fast);
 }
 
-.plan-upgrade-btn:hover {
-  color: var(--badge-gold);
-  background: var(--badge-gold-dim);
-  border-color: var(--badge-gold-border);
+.plan-badge--free:hover {
+  color: var(--color-text-secondary);
+  border-color: var(--color-primary);
 }
 
-.plan-badge--premium .plan-upgrade-btn {
-  color: var(--badge-gold);
-  background: var(--badge-gold-dim);
-  border-color: var(--badge-gold-border);
+/* ── PLUS: teal ── */
+.plan-badge--plus {
+  color: #1B7A6E;
+  background: rgba(27, 122, 110, 0.08);
+  border: 1px solid rgba(27, 122, 110, 0.2);
 }
 
-.plan-badge--premium .plan-upgrade-btn:hover {
-  background: rgba(154, 123, 58, 0.15);
-  border-color: var(--badge-gold);
+.plan-badge--plus:hover {
+  background: rgba(27, 122, 110, 0.14);
+  border-color: #1B7A6E;
 }
 
-.plan-badge__accent {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  height: 1px;
-  background: linear-gradient(90deg, transparent, var(--badge-gold-border), transparent);
+/* ── PRO: gold ── */
+.plan-badge--pro {
+  color: #9A7B3A;
+  background: linear-gradient(135deg, rgba(154, 123, 58, 0.08), rgba(201, 169, 98, 0.04));
+  border: 1px solid rgba(154, 123, 58, 0.25);
 }
 
-/* Dark theme: richer gold */
-:root[data-theme="dark"] .plan-badge {
-  --badge-gold: #C9A962;
-  --badge-gold-dim: rgba(201, 169, 98, 0.1);
-  --badge-gold-border: rgba(201, 169, 98, 0.25);
+.plan-badge--pro:hover {
+  background: linear-gradient(135deg, rgba(154, 123, 58, 0.14), rgba(201, 169, 98, 0.08));
+  border-color: #9A7B3A;
+}
+
+/* ── ULTRA: purple shimmer ── */
+.plan-badge--ultra {
+  background: linear-gradient(135deg, rgba(139, 92, 246, 0.10), rgba(217, 70, 239, 0.06));
+  border: 1px solid rgba(139, 92, 246, 0.25);
+  background-clip: padding-box;
+  color: #8B5CF6;
+}
+
+.plan-badge--ultra:hover {
+  background: linear-gradient(135deg, rgba(139, 92, 246, 0.18), rgba(217, 70, 239, 0.10));
+  border-color: #8B5CF6;
+}
+
+/* Dark theme */
+:root[data-theme="dark"] .plan-badge--plus {
+  color: #4DB6AC;
+  background: rgba(77, 182, 172, 0.08);
+  border-color: rgba(77, 182, 172, 0.2);
+}
+
+:root[data-theme="dark"] .plan-badge--plus:hover {
+  background: rgba(77, 182, 172, 0.14);
+  border-color: #4DB6AC;
+}
+
+:root[data-theme="dark"] .plan-badge--pro {
+  color: #C9A962;
+  background: linear-gradient(135deg, rgba(201, 169, 98, 0.08), rgba(201, 169, 98, 0.03));
+  border-color: rgba(201, 169, 98, 0.25);
+}
+
+:root[data-theme="dark"] .plan-badge--pro:hover {
+  background: linear-gradient(135deg, rgba(201, 169, 98, 0.14), rgba(201, 169, 98, 0.08));
+  border-color: #C9A962;
+}
+
+:root[data-theme="dark"] .plan-badge--ultra {
+  color: #A78BFA;
+  background: linear-gradient(135deg, rgba(167, 139, 250, 0.10), rgba(232, 121, 249, 0.06));
+  border-color: rgba(167, 139, 250, 0.25);
+}
+
+:root[data-theme="dark"] .plan-badge--ultra:hover {
+  background: linear-gradient(135deg, rgba(167, 139, 250, 0.18), rgba(232, 121, 249, 0.10));
+  border-color: #A78BFA;
 }
 
 .footer-collapse-btn {

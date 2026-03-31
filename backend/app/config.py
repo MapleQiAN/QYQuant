@@ -49,6 +49,7 @@ class BaseConfig:
         self.CELERYD_CONCURRENCY = int(os.getenv('CELERYD_CONCURRENCY', '10'))
         self.CELERY_TASK_SOFT_TIME_LIMIT = int(os.getenv('CELERY_TASK_SOFT_TIME_LIMIT', '300'))
         self.CELERY_TASK_TIME_LIMIT = int(os.getenv('CELERY_TASK_TIME_LIMIT', '330'))
+        self.FILE_STORAGE_DIR = os.getenv('FILE_STORAGE_DIR')
         self.MAIL_SERVER = os.getenv('MAIL_SERVER', 'smtp.example.com')
         self.MAIL_PORT = int(os.getenv('MAIL_PORT', '587'))
         self.MAIL_USE_TLS = os.getenv('MAIL_USE_TLS', 'true').lower() == 'true'

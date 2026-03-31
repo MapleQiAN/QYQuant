@@ -25,17 +25,19 @@ const presetsStoreState = {
   error: null as string | null,
 }
 
+const routeState = vi.hoisted(() => ({
+  params: {
+    strategyId: 'strategy-1',
+  },
+  query: {} as Record<string, string>,
+}))
+
 vi.mock('vue-router', () => ({
   RouterLink: { template: '<a><slot /></a>' },
   useRouter: () => ({
     push: vi.fn(),
   }),
-  useRoute: () => ({
-    params: {
-      strategyId: 'strategy-1',
-    },
-    query: {},
-  }),
+  useRoute: () => routeState,
 }))
 
 vi.mock('../api/strategies', () => ({
@@ -76,6 +78,8 @@ describe('StrategyDetailView', () => {
     presetsStoreState.presets = []
     presetsStoreState.loading = false
     presetsStoreState.error = null
+    routeState.params.strategyId = 'strategy-1'
+    routeState.query = {}
   })
 
   it('loads parameter definitions and submits a backtest', async () => {
@@ -112,5 +116,41 @@ describe('StrategyDetailView', () => {
       parameters: { window: 20 },
     })
     expect(wrapper.text()).toContain('job-1')
+  })
+
+  it('shows detailed failure reason when guided polling sees a failed job', async () => {
+    routeState.query = { guided: 'true' }
+    fetchStrategyParametersMock.mockResolvedValue([
+      {
+        name: 'window',
+        type: 'int',
+        default: 20,
+        min: 5,
+        max: 50,
+        step: 1,
+        required: false,
+      },
+    ])
+    submitBacktestMock.mockResolvedValue({ job_id: 'job-1' })
+    fetchBacktestStatusMock.mockResolvedValue({
+      status: 'failed',
+      error: {
+        type: 'NameError',
+        line: 15,
+        message: "Undefined variable 'sma_period'",
+      },
+    })
+
+    const wrapper = mount(StrategyDetailView)
+    await flushPromises()
+
+    await wrapper.get('[data-test="symbol-input"]').setValue('BTCUSDT')
+    await wrapper.get('[data-test="start-date-input"]').setValue('2024-01-01')
+    await wrapper.get('[data-test="end-date-input"]').setValue('2024-01-31')
+    await wrapper.get('[data-test="start-backtest"]').trigger('click')
+    await flushPromises()
+
+    expect(fetchBacktestStatusMock).toHaveBeenCalledWith('job-1')
+    expect(wrapper.text()).toContain("Undefined variable 'sma_period'")
   })
 })

@@ -18,6 +18,7 @@ from ..utils.auth import (
     as_utc,
     blacklist_refresh_tokens,
     clear_refresh_cookie,
+    consume_verification_code,
     revoke_all_user_tokens,
     revoke_token_record,
     seconds_until,
@@ -29,6 +30,7 @@ from ..utils.time import now_utc
 bp = Blueprint('auth', __name__, url_prefix='/api/v1/auth')
 
 EMAIL_RE = re.compile(r'^[^@\s]+@[^@\s]+\.[^@\s]+$')
+PHONE_RE = re.compile(r'^1\d{10}$')
 _private_schema = UserPrivateSchema()
 PASSWORD_RESET_TTL_MINUTES = 30
 
@@ -104,6 +106,12 @@ def _validate_email(email):
     return None
 
 
+def _validate_phone(phone):
+    if not PHONE_RE.match(phone or ""):
+        return error_response("INVALID_PHONE", "Invalid phone number", 422)
+    return None
+
+
 def _validate_password(password):
     if len(password or "") < 8:
         return error_response("INVALID_PASSWORD", "Password must be at least 8 characters", 422)
@@ -126,6 +134,13 @@ def _issue_auth_response(user):
 
 def _find_active_user_by_email(email):
     user = User.query.filter_by(email=email).one_or_none()
+    if user is not None and user.deleted_at is not None:
+        return None
+    return user
+
+
+def _find_active_user_by_phone(phone):
+    user = User.query.filter_by(phone=phone).one_or_none()
     if user is not None and user.deleted_at is not None:
         return None
     return user
@@ -205,6 +220,32 @@ def register():
 @bp.post('/login')
 def login():
     payload = request.get_json() or {}
+    phone = (payload.get('phone') or '').strip()
+    if phone:
+        phone_error = _validate_phone(phone)
+        if phone_error:
+            return phone_error
+
+        code = (payload.get('code') or '').strip()
+        code_error = consume_verification_code(phone, code)
+        if code_error:
+            return code_error
+
+        user = _find_active_user_by_phone(phone)
+        if user is None:
+            nickname = (payload.get('nickname') or '').strip()
+            if not nickname:
+                return error_response("NICKNAME_REQUIRED", "Nickname is required for first login", 422)
+            user = User(phone=phone, nickname=nickname)
+            db.session.add(user)
+            db.session.flush()
+
+        if user.is_banned:
+            return error_response("USER_BANNED", "璐﹀彿宸茶灏佺", 403)
+
+        ensure_user_quota(user.id, plan_level=user.plan_level)
+        return _issue_auth_response(user)
+
     email = (payload.get('email') or '').strip().lower()
     password = payload.get('password') or ''
 

@@ -313,6 +313,55 @@ def test_get_backtest_job_returns_estimated_wait_time_for_owner(monkeypatch, cli
     assert data["completed_at"] is None
 
 
+def test_get_backtest_status_returns_structured_error_for_failed_job(client, app):
+    import json
+
+    from app.extensions import db
+    from app.models import BacktestJob, BacktestJobStatus, Strategy
+
+    token, user_id = _login_user(client, phone="13800138013", nickname="StatusErrorUser")
+
+    structured_error = {
+        "type": "NameError",
+        "line": 15,
+        "message": "Undefined variable 'sma_period'",
+        "suggestion": "Define sma_period before using it.",
+        "example_code": "sma_period = ctx.params.get('sma_period', 20)",
+        "raw_error": "NameError: name 'sma_period' is not defined",
+    }
+
+    with app.app_context():
+        db.session.add(
+            Strategy(
+                id="status-error-strategy",
+                name="Status Error Strategy",
+                symbol="BTCUSDT",
+                status="draft",
+                owner_id=user_id,
+            )
+        )
+        job = BacktestJob(
+            user_id=user_id,
+            strategy_id="status-error-strategy",
+            status=BacktestJobStatus.FAILED.value,
+            params={"symbol": "BTCUSDT"},
+            error_message=json.dumps(structured_error, ensure_ascii=False),
+        )
+        db.session.add(job)
+        db.session.commit()
+        job_id = job.id
+
+    response = client.get(f"/api/v1/backtest/{job_id}", headers=_auth_headers(token))
+
+    assert response.status_code == 200
+    data = response.json["data"]
+    assert data["job_id"] == job_id
+    assert data["status"] == "failed"
+    assert data["error"]["type"] == "NameError"
+    assert data["error"]["line"] == 15
+    assert data["error"]["message"] == "Undefined variable 'sma_period'"
+
+
 def test_get_backtest_quota_returns_plan_snapshot(client, app):
     from app.extensions import db
     from app.models import UserQuota

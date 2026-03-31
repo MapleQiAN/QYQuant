@@ -87,4 +87,23 @@ describe('users api', () => {
     expect(data.plan_level).toBe('free')
     expect(data.remaining).toBe(7)
   })
+
+  it('updates my profile fields', async () => {
+    const data = await users.updateMyProfile({
+      nickname: 'Updated Trader',
+      bio: 'New bio',
+      avatar_url: '/api/files/avatar-1/content'
+    })
+
+    expect(data).toEqual({ ok: true })
+    expect(requestMock).toHaveBeenCalledWith({
+      method: 'patch',
+      url: '/v1/users/me',
+      data: {
+        nickname: 'Updated Trader',
+        bio: 'New bio',
+        avatar_url: '/api/files/avatar-1/content'
+      }
+    })
+  })
 })
