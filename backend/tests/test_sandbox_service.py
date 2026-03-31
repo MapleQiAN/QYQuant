@@ -312,3 +312,44 @@ def test_execute_strategy_uses_inline_runner_in_local_mode_for_daemon_process(mo
             "params": {"window": 5},
         }
     ]
+
+
+def test_execute_strategy_allows_safe_imports_in_inline_local_mode(monkeypatch):
+    monkeypatch.setenv('FLASK_ENV', 'production')
+    monkeypatch.setenv('BACKTEST_SANDBOX_MODE', 'local')
+    monkeypatch.delenv('E2B_API_KEY', raising=False)
+
+    from app.services.sandbox import SandboxService
+
+    class _FakeProcess:
+        daemon = True
+
+    monkeypatch.setattr('app.services.sandbox.multiprocessing.current_process', lambda: _FakeProcess())
+
+    service = SandboxService(sandbox_cls=object)
+
+    result = service.execute_strategy(
+        code=(
+            'import math\n\n'
+            'class Strategy:\n'
+            '    def on_bar(self, ctx, bar):\n'
+            '        quantity = math.floor(bar["close"])\n'
+            '        if quantity > 0:\n'
+            '            ctx.emit_order({"side": "buy", "price": bar["close"], "quantity": quantity})\n'
+        ),
+        market_data={"symbol": "BTCUSDT", "bars": [{"time": 1, "close": 1.8}]},
+        params={},
+        metadata={"callable_name": "Strategy"},
+    )
+
+    assert result["logs"] == []
+    assert result["trades"] == [
+        {
+            "symbol": "BTCUSDT",
+            "side": "buy",
+            "price": 1.8,
+            "quantity": 1.0,
+            "timestamp": 1,
+            "pnl": None,
+        }
+    ]

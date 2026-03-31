@@ -34,6 +34,8 @@ FORBIDDEN_BUILTINS = {
     'vars',
 }
 
+_REAL_IMPORT = builtins.__import__
+
 
 def guard_strategy_source(source):
     try:
@@ -54,6 +56,13 @@ def guard_strategy_source(source):
         if isinstance(node, ast.Call) and isinstance(node.func, ast.Name):
             if node.func.id in FORBIDDEN_BUILTINS:
                 raise StrategyRuntimeError('sandbox_rejected', {"reason": f"forbidden_builtin:{node.func.id}"})
+
+
+def _restricted_import(name, globals=None, locals=None, fromlist=(), level=0):
+    root = (name or '').split('.')[0]
+    if root in FORBIDDEN_IMPORTS:
+        raise ImportError(f'forbidden_import:{root}')
+    return _REAL_IMPORT(name, globals, locals, fromlist, level)
 
 
 def _build_safe_builtins():
@@ -82,7 +91,9 @@ def _build_safe_builtins():
         'zip',
         'Exception',
     }
-    return {name: getattr(builtins, name) for name in allowed}
+    safe = {name: getattr(builtins, name) for name in allowed}
+    safe['__import__'] = _restricted_import
+    return safe
 
 
 def _invoke_optional(strategy, name, *args):
