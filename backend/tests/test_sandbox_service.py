@@ -197,3 +197,56 @@ def test_execute_strategy_requires_api_key_outside_test_env(monkeypatch):
 
     assert exc_info.value.message == 'sandbox_unavailable'
     assert exc_info.value.details['reason'] == 'missing_e2b_api_key'
+
+
+def test_execute_strategy_allows_local_mode_without_e2b_api_key(monkeypatch):
+    monkeypatch.setenv('FLASK_ENV', 'development')
+    monkeypatch.setenv('BACKTEST_SANDBOX_MODE', 'local')
+    monkeypatch.delenv('E2B_API_KEY', raising=False)
+
+    from app.services.sandbox import SandboxService
+
+    local_calls = []
+
+    def _fake_local_runner(symbol, source, callable_name, bars, params, timeout_seconds=10):
+        local_calls.append(
+            {
+                "symbol": symbol,
+                "source": source,
+                "callable_name": callable_name,
+                "bars": bars,
+                "params": params,
+                "timeout_seconds": timeout_seconds,
+            }
+        )
+        return {
+            "trades": [{"symbol": symbol, "side": "buy", "price": 100.0, "quantity": 1}],
+            "logs": ["local-mode"],
+        }
+
+    monkeypatch.setattr('app.services.sandbox.run_strategy_in_subprocess', _fake_local_runner)
+
+    class FakeSandboxCls:
+        def __init__(self, **kwargs):
+            raise AssertionError('remote sandbox should not be used in local mode')
+
+    service = SandboxService(sandbox_cls=FakeSandboxCls)
+
+    result = service.execute_strategy(
+        code='class Strategy:\n    pass\n',
+        market_data={"symbol": "BTCUSDT", "bars": [{"time": 1}]},
+        params={"window": 5},
+        metadata={"callable_name": "Strategy", "timeout_seconds": 45},
+    )
+
+    assert result["logs"] == ["local-mode"]
+    assert local_calls == [
+        {
+            "symbol": "BTCUSDT",
+            "source": 'class Strategy:\n    pass\n',
+            "callable_name": "Strategy",
+            "bars": [{"time": 1}],
+            "params": {"window": 5},
+            "timeout_seconds": 45,
+        }
+    ]

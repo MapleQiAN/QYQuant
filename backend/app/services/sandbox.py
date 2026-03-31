@@ -16,12 +16,14 @@ except ImportError:  # pragma: no cover
 DEFAULT_TIMEOUT_SECONDS = 300
 DEFAULT_POOL_SIZE = 1
 _DEFAULT_SANDBOX_CLS = object()
+LOCAL_SANDBOX_MODE = 'local'
 
 
 class SandboxService:
     def __init__(self, sandbox_cls=_DEFAULT_SANDBOX_CLS):
         self.sandbox_cls = E2BSandbox if sandbox_cls is _DEFAULT_SANDBOX_CLS else sandbox_cls
         self.api_key = os.getenv('E2B_API_KEY')
+        self.sandbox_mode = (os.getenv('BACKTEST_SANDBOX_MODE') or '').strip().lower()
         self.pool_size = max(int(os.getenv('E2B_WARM_POOL_SIZE', DEFAULT_POOL_SIZE)), 0)
         self._pool = []
         self._lock = threading.Lock()
@@ -30,7 +32,7 @@ class SandboxService:
         execution_metadata = dict(metadata or {})
         timeout_seconds = int(execution_metadata.get('timeout_seconds') or DEFAULT_TIMEOUT_SECONDS)
 
-        if self._is_test_env():
+        if self._should_use_local():
             outcome = self._execute_locally(code, market_data, params, execution_metadata, timeout_seconds)
             return outcome
 
@@ -81,6 +83,9 @@ class SandboxService:
     def _is_test_env():
         return os.getenv('FLASK_ENV', '').lower() in {'test', 'testing'}
 
+    def _should_use_local(self):
+        return self._is_test_env() or self.sandbox_mode == LOCAL_SANDBOX_MODE
+
     def _ensure_remote_available(self):
         if self.sandbox_cls is None:
             raise StrategyRuntimeError('sandbox_unavailable', {"reason": "e2b_code_interpreter_not_installed"})
@@ -88,7 +93,7 @@ class SandboxService:
             raise StrategyRuntimeError('sandbox_unavailable', {"reason": "missing_e2b_api_key"})
 
     def _should_use_remote(self):
-        return not self._is_test_env()
+        return not self._should_use_local()
 
     def _warm_pool_if_needed(self, timeout_seconds):
         if not self._should_use_remote():
