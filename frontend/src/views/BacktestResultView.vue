@@ -2,19 +2,37 @@
   <section class="view">
     <div class="container">
       <div class="page-header">
-        <div>
-          <p class="eyebrow">{{ $t('backtestReport.eyebrow') }}</p>
+        <div class="header-left">
+          <div class="header-badges">
+            <span class="eyebrow">{{ $t('backtestReport.eyebrow') }}</span>
+            <span class="job-chip">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+              JOB&nbsp;<span class="job-chip__id">{{ jobId }}</span>
+            </span>
+          </div>
           <h1 class="page-title">{{ $t('backtestReport.title') }}</h1>
           <p class="page-subtitle">{{ $t('backtestReport.subtitle', { jobId }) }}</p>
         </div>
       </div>
 
-      <div v-if="store.reportLoading" class="card state-card">{{ $t('backtestReport.loading') }}</div>
-      <div v-else-if="store.reportError" class="card state-card error">{{ store.reportError }}</div>
+      <div v-if="store.reportLoading" class="state-block">
+        <div class="state-block__spinner"></div>
+        <span>{{ $t('backtestReport.loading') }}</span>
+      </div>
+      <div v-else-if="store.reportError" class="state-block state-block--error">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        {{ store.reportError }}
+      </div>
+
       <template v-else-if="report">
-        <div v-if="isGuidedMode" class="card guided-success">
-          <strong>{{ $t('backtestReport.guidedSuccessTitle') }}</strong>
-          <p>{{ $t('backtestReport.guidedSuccessHint') }}</p>
+        <div v-if="isGuidedMode" class="guided-success">
+          <div class="guided-success__icon">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+          </div>
+          <div class="guided-success__content">
+            <strong>{{ $t('backtestReport.guidedSuccessTitle') }}</strong>
+            <p>{{ $t('backtestReport.guidedSuccessHint') }}</p>
+          </div>
           <button class="btn btn-primary" type="button" @click="finishGuidedOnboarding">
             {{ $t('backtestReport.finishGuidedOnboarding') }}
           </button>
@@ -28,7 +46,11 @@
         />
 
         <template v-else>
-          <div :class="['metrics-grid', { 'onboarding-highlight': userStore.onboardingHighlightTarget === 'backtest-results-section' }]" data-onboarding-target="backtest-results-section">
+          <!-- Core Metrics Grid -->
+          <div
+            :class="['metrics-grid', { 'onboarding-highlight': userStore.onboardingHighlightTarget === 'backtest-results-section' }]"
+            data-onboarding-target="backtest-results-section"
+          >
             <StatCard
               v-for="metric in coreMetrics"
               :key="metric.label"
@@ -45,12 +67,29 @@
             </StatCard>
           </div>
 
-          <EquityCurveChart class="chart-block" :points="report.equity_curve || []" :trades="report.trades || []" />
+          <!-- Equity Curve -->
+          <div class="chart-section">
+            <div class="chart-section__header">
+              <div class="chart-section__title-group">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+                <span class="chart-section__title">资产曲线</span>
+              </div>
+              <span class="chart-section__subtitle">含买卖信号标记</span>
+            </div>
+            <EquityCurveChart class="chart-block" :points="report.equity_curve || []" :trades="report.trades || []" />
+          </div>
 
-          <details class="card details-card">
-            <summary>{{ $t('backtestReport.viewAllMetrics') }}</summary>
+          <!-- Detailed Metrics -->
+          <details class="details-card">
+            <summary class="details-summary">
+              <div class="details-summary__left">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+                {{ $t('backtestReport.viewAllMetrics') }}
+              </div>
+              <span class="details-count">{{ detailedMetrics.length }} 项指标</span>
+            </summary>
             <div class="details-grid">
-              <div v-for="metric in detailedMetrics" :key="metric.label" class="detail-item">
+              <div v-for="metric in detailedMetrics" :key="metric.label" class="detail-row">
                 <span class="detail-label">
                   {{ metric.label }}
                   <MetricTooltip :metric-key="metric.metricKey" />
@@ -167,90 +206,260 @@ onMounted(() => {
 </script>
 
 <style scoped>
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+@keyframes slide-up {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
 .view {
   width: 100%;
 }
 
+/* ── Page Header ── */
 .page-header {
-  margin-bottom: var(--spacing-lg);
+  margin-bottom: var(--spacing-xl);
+  padding-bottom: var(--spacing-lg);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.header-badges {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  margin-bottom: 8px;
+  flex-wrap: wrap;
 }
 
 .eyebrow {
-  margin: 0 0 6px;
-  color: var(--color-primary);
-  font-size: var(--font-size-sm);
+  font-size: var(--font-size-xs);
+  font-weight: 700;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
-  letter-spacing: 0.08em;
+  color: var(--color-accent);
+}
+
+.job-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 10px;
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  background: var(--color-surface-elevated);
+  font-size: 11px;
+  color: var(--color-text-muted);
+}
+
+.job-chip__id {
+  font-family: 'Space Mono', monospace;
+  color: var(--color-text-secondary);
 }
 
 .page-title {
   margin: 0;
-  font-size: var(--font-size-xl);
+  font-size: var(--font-size-xxl);
+  font-weight: 800;
   color: var(--color-text-primary);
+  letter-spacing: -0.02em;
 }
 
 .page-subtitle {
   margin: var(--spacing-xs) 0 0;
   color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
 }
 
-.state-card {
-  padding: var(--spacing-lg);
+/* ── State Blocks ── */
+.state-block {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-xl);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+  justify-content: center;
 }
 
-.state-card.error {
+.state-block--error {
   color: var(--color-danger);
+  border-color: rgba(255, 59, 59, 0.2);
+  background: rgba(255, 59, 59, 0.04);
 }
 
+.state-block__spinner {
+  width: 18px;
+  height: 18px;
+  border: 2px solid var(--color-border);
+  border-top-color: var(--color-accent);
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+
+/* ── Guided Success ── */
 .guided-success {
   display: flex;
   align-items: center;
-  justify-content: space-between;
   gap: var(--spacing-md);
-  padding: var(--spacing-md);
+  padding: var(--spacing-md) var(--spacing-lg);
   margin-bottom: var(--spacing-lg);
+  background: rgba(16, 185, 129, 0.08);
+  border: 1px solid rgba(16, 185, 129, 0.25);
+  border-radius: var(--radius-lg);
+  animation: slide-up 0.3s ease;
 }
 
-.guided-success p {
-  margin: 6px 0 0;
+.guided-success__icon {
+  color: var(--color-success);
+  flex-shrink: 0;
+  display: flex;
+}
+
+.guided-success__content {
+  flex: 1;
+}
+
+.guided-success__content strong {
+  display: block;
+  color: var(--color-success);
+  font-size: var(--font-size-sm);
+  font-weight: 700;
+}
+
+.guided-success__content p {
+  margin: 4px 0 0;
   color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
 }
 
+/* ── Metrics Grid ── */
 .metrics-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: var(--spacing-md);
+  margin-bottom: var(--spacing-xl);
+}
+
+/* ── Chart Section ── */
+.chart-section {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
   margin-bottom: var(--spacing-lg);
 }
 
-.chart-block {
-  margin-bottom: var(--spacing-lg);
+.chart-section__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--spacing-md) var(--spacing-lg);
+  border-bottom: 1px solid var(--color-border-light);
+  background: var(--color-surface-elevated);
 }
 
-.details-card {
-  padding: var(--spacing-md);
-  margin-bottom: var(--spacing-lg);
+.chart-section__title-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--color-accent);
 }
 
-.details-card summary {
-  cursor: pointer;
-  font-weight: var(--font-weight-semibold);
+.chart-section__title {
+  font-size: var(--font-size-sm);
+  font-weight: 700;
   color: var(--color-text-primary);
 }
 
-.details-grid {
-  margin-top: var(--spacing-md);
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: var(--spacing-sm) var(--spacing-lg);
+.chart-section__subtitle {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
 }
 
-.detail-item {
+.chart-block {
+  padding: var(--spacing-sm);
+}
+
+/* ── Details Card ── */
+.details-card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  margin-bottom: var(--spacing-lg);
+}
+
+.details-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--spacing-md) var(--spacing-lg);
+  cursor: pointer;
+  user-select: none;
+  background: var(--color-surface-elevated);
+  border-bottom: 1px solid transparent;
+  transition: background 0.15s;
+  list-style: none;
+  color: var(--color-text-primary);
+  font-weight: 700;
+  font-size: var(--font-size-sm);
+}
+
+.details-summary::-webkit-details-marker {
+  display: none;
+}
+
+.details-card[open] .details-summary {
+  border-bottom-color: var(--color-border-light);
+}
+
+.details-summary:hover {
+  background: var(--color-surface-hover);
+}
+
+.details-summary__left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--color-text-primary);
+}
+
+.details-count {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+  background: var(--color-surface-active);
+  padding: 3px 10px;
+  border-radius: 999px;
+}
+
+.details-grid {
+  padding: var(--spacing-md) var(--spacing-lg);
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0;
+}
+
+.detail-row {
   display: flex;
   justify-content: space-between;
-  gap: var(--spacing-sm);
-  padding-bottom: var(--spacing-xs);
+  align-items: center;
+  gap: var(--spacing-md);
+  padding: 11px var(--spacing-sm);
   border-bottom: 1px solid var(--color-border-light);
+}
+
+.detail-row:nth-child(odd) {
+  border-right: 1px solid var(--color-border-light);
+  padding-right: var(--spacing-lg);
+}
+
+.detail-row:nth-last-child(-n+2) {
+  border-bottom: none;
 }
 
 .detail-label {
@@ -258,13 +467,21 @@ onMounted(() => {
   align-items: center;
   gap: 4px;
   color: var(--color-text-muted);
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
 }
 
 .detail-value {
   color: var(--color-text-primary);
-  font-weight: var(--font-weight-semibold);
+  font-weight: 700;
+  font-size: var(--font-size-sm);
+  font-variant-numeric: tabular-nums;
+  font-family: 'Space Mono', monospace;
 }
 
+/* ── Responsive ── */
 @media (max-width: 900px) {
   .metrics-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -273,11 +490,29 @@ onMounted(() => {
   .details-grid {
     grid-template-columns: 1fr;
   }
+
+  .detail-row:nth-child(odd) {
+    border-right: none;
+    padding-right: var(--spacing-sm);
+  }
+
+  .detail-row:nth-last-child(-n+2) {
+    border-bottom: 1px solid var(--color-border-light);
+  }
+
+  .detail-row:last-child {
+    border-bottom: none;
+  }
 }
 
 @media (max-width: 640px) {
   .metrics-grid {
     grid-template-columns: 1fr;
+  }
+
+  .guided-success {
+    flex-direction: column;
+    align-items: flex-start;
   }
 }
 </style>

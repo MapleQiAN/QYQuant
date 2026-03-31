@@ -1,160 +1,228 @@
 <template>
   <section class="view">
     <div class="container">
-      <h1 class="view-title">{{ $t('backtests.title') }}</h1>
-      <p class="view-subtitle">{{ $t('backtests.subtitle') }}</p>
-      <div v-if="quota" class="quota-badge">
-        <span class="quota-badge__info">
-          {{ $t('backtests.remainingQuota') }}：
-          <strong>{{ quota.remaining === 'unlimited' ? $t('common.unlimited') : quota.remaining }}</strong>
-          / {{ quota.plan_limit === 'unlimited' ? $t('common.unlimited') : quota.plan_limit }}
-        </span>
-        <span v-if="quota.reset_at" class="quota-badge__reset">
-          {{ $t('backtests.resetTime') }}：{{ quota.reset_at.slice(0, 10) }}
-        </span>
+      <div class="page-header">
+        <div class="header-text">
+          <p class="eyebrow">{{ $t('backtests.title') }}</p>
+          <h1 class="view-title">{{ $t('backtests.runBacktest') }}</h1>
+          <p class="view-subtitle">{{ $t('backtests.subtitle') }}</p>
+        </div>
+
+        <div v-if="quota" class="quota-widget">
+          <div class="quota-widget__top">
+            <span class="quota-label">{{ $t('backtests.remainingQuota') }}</span>
+            <span class="quota-count">
+              <strong class="quota-num">{{ quota.remaining === 'unlimited' ? '∞' : quota.remaining }}</strong>
+              <span class="quota-sep">/</span>
+              <span>{{ quota.plan_limit === 'unlimited' ? '∞' : quota.plan_limit }}</span>
+            </span>
+          </div>
+          <div v-if="quota.remaining !== 'unlimited' && quota.plan_limit !== 'unlimited'" class="quota-bar">
+            <div
+              class="quota-bar__fill"
+              :style="{ width: `${Math.min(100, (Number(quota.remaining) / Number(quota.plan_limit)) * 100)}%` }"
+              :class="{ 'quota-bar__fill--low': Number(quota.remaining) / Number(quota.plan_limit) < 0.2 }"
+            ></div>
+          </div>
+          <span v-if="quota.reset_at" class="quota-reset">
+            {{ $t('backtests.resetTime') }}：{{ quota.reset_at.slice(0, 10) }}
+          </span>
+        </div>
+        <p v-else-if="quotaError" class="message error quota-error">{{ quotaError }}</p>
       </div>
-      <p v-else-if="quotaError" class="message error quota-error">{{ quotaError }}</p>
 
       <div class="layout-grid">
-        <div class="card panel">
-          <h3 class="panel-title">{{ $t('backtests.runBacktest') }}</h3>
-
-          <label class="field">
-            <span class="field-label">{{ $t('backtests.strategy') }}</span>
-            <select class="field-input" v-model="runForm.strategyId">
-              <option value="">{{ $t('backtests.selectStrategy') }}</option>
-              <option v-for="item in strategies" :key="item.id" :value="item.id">
-                {{ item.name }} ({{ item.symbol }})
-              </option>
-            </select>
-          </label>
-
-          <div v-if="strategiesError" class="message error">{{ strategiesError }}</div>
-
-          <label class="field">
-            <span class="field-label">{{ $t('backtests.symbol') }}</span>
-            <input v-model.trim="runForm.symbol" class="field-input" type="text" :placeholder="$t('backtests.symbolPlaceholder')" />
-          </label>
-
-          <div class="field-row">
-            <label class="field">
-              <span class="field-label">{{ $t('backtests.interval') }}</span>
-              <input v-model.trim="runForm.interval" class="field-input" type="text" :placeholder="$t('backtests.intervalPlaceholder')" />
-            </label>
-            <label class="field">
-              <span class="field-label">{{ $t('backtests.bars') }}</span>
-              <input v-model.number="runForm.limit" class="field-input" type="number" min="10" max="3000" />
-            </label>
+        <!-- Left Panel: Config Form -->
+        <div class="card panel panel--form">
+          <div class="panel-header">
+            <span class="panel-header__icon">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+            </span>
+            <h3 class="panel-title">{{ $t('backtests.runBacktest') }}</h3>
           </div>
 
-          <div class="field-row">
+          <div class="form-section">
+            <div class="form-section__label">{{ $t('backtests.strategy') }}</div>
             <label class="field">
-              <span class="field-label">{{ $t('backtests.startDate') }}</span>
-              <input v-model="runForm.startDate" class="field-input" type="date" />
+              <select class="field-input" v-model="runForm.strategyId">
+                <option value="">{{ $t('backtests.selectStrategy') }}</option>
+                <option v-for="item in strategies" :key="item.id" :value="item.id">
+                  {{ item.name }} ({{ item.symbol }})
+                </option>
+              </select>
             </label>
+            <div v-if="strategiesError" class="message error">{{ strategiesError }}</div>
+          </div>
+
+          <div class="form-divider"></div>
+
+          <div class="form-section">
+            <div class="form-section__label">{{ $t('backtests.symbol') }}</div>
             <label class="field">
-              <span class="field-label">{{ $t('backtests.endDate') }}</span>
-              <input v-model="runForm.endDate" class="field-input" type="date" />
+              <input v-model.trim="runForm.symbol" class="field-input" type="text" :placeholder="$t('backtests.symbolPlaceholder')" />
             </label>
+
+            <div class="field-row">
+              <label class="field">
+                <span class="field-label">{{ $t('backtests.interval') }}</span>
+                <input v-model.trim="runForm.interval" class="field-input" type="text" :placeholder="$t('backtests.intervalPlaceholder')" />
+              </label>
+              <label class="field">
+                <span class="field-label">{{ $t('backtests.bars') }}</span>
+                <input v-model.number="runForm.limit" class="field-input" type="number" min="10" max="3000" />
+              </label>
+            </div>
+
+            <div class="field-row">
+              <label class="field">
+                <span class="field-label">{{ $t('backtests.startDate') }}</span>
+                <input v-model="runForm.startDate" class="field-input" type="date" />
+              </label>
+              <label class="field">
+                <span class="field-label">{{ $t('backtests.endDate') }}</span>
+                <input v-model="runForm.endDate" class="field-input" type="date" />
+              </label>
+            </div>
           </div>
 
           <div v-if="runForm.strategyId" class="runtime-box">
-            <div class="runtime-title">{{ $t('backtests.strategyRuntime') }}</div>
-            <p v-if="runtimeLoading" class="message">{{ $t('backtests.loadingParameters') }}</p>
+            <div class="runtime-header">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+              <span class="runtime-title">{{ $t('backtests.strategyRuntime') }}</span>
+              <span v-if="runtimeDescriptor" class="runtime-version-badge">v{{ runtimeDescriptor.strategyVersion }}</span>
+            </div>
+            <p v-if="runtimeLoading" class="message runtime-loading">
+              <span class="loading-dots"><span></span><span></span><span></span></span>
+              {{ $t('backtests.loadingParameters') }}
+            </p>
             <p v-else-if="runtimeError" class="message error">{{ runtimeError }}</p>
             <template v-else-if="runtimeDescriptor">
-              <p class="runtime-version">{{ $t('backtests.version') }}: {{ runtimeDescriptor.strategyVersion }}</p>
-
-              <div v-if="runtimeDescriptor.parameters.length === 0" class="message">
+              <div v-if="runtimeDescriptor.parameters.length === 0" class="message runtime-empty">
                 {{ $t('backtests.noCustomParameters') }}
               </div>
 
-              <label v-for="param in runtimeDescriptor.parameters" :key="param.key" class="field">
-                <span class="field-label">{{ param.key }}</span>
+              <div class="runtime-params">
+                <label v-for="param in runtimeDescriptor.parameters" :key="param.key" class="field">
+                  <span class="field-label field-label--mono">{{ param.key }}</span>
 
-                <select
-                  v-if="param.type === 'enum'"
-                  class="field-input"
-                  :value="String(paramValues[param.key] ?? '')"
-                  @change="onParamInput(param.key, $event)"
-                >
-                  <option v-for="option in param.enum || []" :key="String(option)" :value="String(option)">
-                    {{ option }}
-                  </option>
-                </select>
+                  <select
+                    v-if="param.type === 'enum'"
+                    class="field-input"
+                    :value="String(paramValues[param.key] ?? '')"
+                    @change="onParamInput(param.key, $event)"
+                  >
+                    <option v-for="option in param.enum || []" :key="String(option)" :value="String(option)">
+                      {{ option }}
+                    </option>
+                  </select>
 
-                <input
-                  v-else-if="param.type === 'boolean'"
-                  class="field-checkbox"
-                  type="checkbox"
-                  :checked="Boolean(paramValues[param.key])"
-                  @change="onBooleanParamInput(param.key, $event)"
-                />
+                  <input
+                    v-else-if="param.type === 'boolean'"
+                    class="field-checkbox"
+                    type="checkbox"
+                    :checked="Boolean(paramValues[param.key])"
+                    @change="onBooleanParamInput(param.key, $event)"
+                  />
 
-                <input
-                  v-else-if="param.type === 'integer' || param.type === 'number'"
-                  class="field-input"
-                  type="number"
-                  :min="param.min"
-                  :max="param.max"
-                  :step="param.step ?? (param.type === 'integer' ? 1 : 0.01)"
-                  :value="paramValues[param.key]"
-                  @input="onParamInput(param.key, $event)"
-                />
+                  <input
+                    v-else-if="param.type === 'integer' || param.type === 'number'"
+                    class="field-input"
+                    type="number"
+                    :min="param.min"
+                    :max="param.max"
+                    :step="param.step ?? (param.type === 'integer' ? 1 : 0.01)"
+                    :value="paramValues[param.key]"
+                    @input="onParamInput(param.key, $event)"
+                  />
 
-                <input
-                  v-else
-                  class="field-input"
-                  type="text"
-                  :value="String(paramValues[param.key] ?? '')"
-                  @input="onParamInput(param.key, $event)"
-                />
+                  <input
+                    v-else
+                    class="field-input"
+                    type="text"
+                    :value="String(paramValues[param.key] ?? '')"
+                    @input="onParamInput(param.key, $event)"
+                  />
 
-                <span v-if="param.description" class="field-help">{{ param.description }}</span>
-              </label>
+                  <span v-if="param.description" class="field-help">{{ param.description }}</span>
+                </label>
+              </div>
             </template>
           </div>
 
           <div class="actions">
             <button
               v-if="!isQuotaExhausted"
-              class="btn btn-primary"
+              :class="['btn btn-run', { 'btn-run--active': runState.running }]"
               type="button"
               :disabled="runState.running || runtimeLoading"
               @click="handleRun"
             >
+              <span v-if="runState.running" class="btn-run__spinner"></span>
+              <svg v-else width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="5 3 19 12 5 21 5 3"/></svg>
               {{ runState.running ? $t('backtests.running') : $t('backtests.runBacktest') }}
             </button>
             <button
               v-else
-              class="btn btn-primary btn--upgrade"
+              class="btn btn-upgrade"
               type="button"
               @click="goToPricing"
             >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87L18.18 21 12 17.27 5.82 21 7 14.14l-5-4.87 6.91-1.01L12 2z"/></svg>
               {{ $t('backtests.upgradeForMore') }}
             </button>
           </div>
 
-          <p v-if="runState.status" class="message">{{ runState.status }}</p>
-          <p v-if="runState.error" class="message error">{{ runState.error }}</p>
+          <p v-if="runState.error" class="message error run-error">{{ runState.error }}</p>
         </div>
 
-        <div class="card panel">
-          <h3 class="panel-title">{{ $t('backtests.reportStatus') }}</h3>
-          <div class="result-grid">
-            <div class="result-item wide">
-              <span class="result-label">{{ $t('backtests.currentState') }}</span>
-              <span class="result-value">{{ runState.status || $t('backtests.fillFormHint') }}</span>
+        <!-- Right Panel: Status Terminal -->
+        <div class="card panel panel--status">
+          <div class="panel-header">
+            <span class="panel-header__icon panel-header__icon--status">
+              <span :class="['status-dot', { 'status-dot--active': runState.running, 'status-dot--done': runState.completedJobId }]"></span>
+            </span>
+            <h3 class="panel-title">{{ $t('backtests.reportStatus') }}</h3>
+          </div>
+
+          <div class="terminal">
+            <div class="terminal__bar">
+              <span class="terminal__dot terminal__dot--red"></span>
+              <span class="terminal__dot terminal__dot--yellow"></span>
+              <span class="terminal__dot terminal__dot--green"></span>
+              <span class="terminal__path">QYQuant / backtest</span>
             </div>
-            <div v-if="runState.jobId" class="result-item wide">
-              <span class="result-label">{{ $t('backtests.jobId') }}</span>
-              <span class="result-value">{{ runState.jobId }}</span>
+            <div class="terminal__body">
+              <div class="terminal__line">
+                <span class="terminal__prompt">›</span>
+                <span class="terminal__key">{{ $t('backtests.currentState') }}</span>
+              </div>
+              <div class="terminal__output">
+                {{ runState.status || $t('backtests.fillFormHint') }}
+                <span v-if="runState.running" class="terminal__cursor">_</span>
+              </div>
+
+              <template v-if="runState.jobId">
+                <div class="terminal__line terminal__line--gap">
+                  <span class="terminal__prompt">›</span>
+                  <span class="terminal__key">{{ $t('backtests.jobId') }}</span>
+                </div>
+                <div class="terminal__output terminal__output--mono">{{ runState.jobId }}</div>
+              </template>
             </div>
-            <div v-if="runState.completedJobId" class="result-item wide">
-              <button class="btn btn-primary" type="button" @click="openReport(runState.completedJobId)">
-                {{ $t('backtests.openReport') }}
-              </button>
+          </div>
+
+          <div v-if="runState.completedJobId" class="report-ready">
+            <div class="report-ready__icon">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
             </div>
+            <div class="report-ready__text">
+              <strong>回测完成</strong>
+              <span>结果已就绪，点击查看完整报告</span>
+            </div>
+            <button class="btn btn-report" type="button" @click="openReport(runState.completedJobId)">
+              {{ $t('backtests.openReport') }}
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+            </button>
           </div>
         </div>
       </div>
@@ -408,66 +476,221 @@ onMounted(() => {
 </script>
 
 <style scoped>
+/* ── Animations ── */
+@keyframes pulse-ring {
+  0% { box-shadow: 0 0 0 0 rgba(0, 217, 255, 0.35); }
+  70% { box-shadow: 0 0 0 12px rgba(0, 217, 255, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(0, 217, 255, 0); }
+}
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+@keyframes dot-bounce {
+  0%, 80%, 100% { transform: scale(0); opacity: 0.3; }
+  40% { transform: scale(1); opacity: 1; }
+}
+@keyframes status-dot-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.4; transform: scale(0.75); }
+}
+@keyframes slide-up {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Page Layout ── */
 .view {
   width: 100%;
 }
 
+.page-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--spacing-xl);
+  margin-bottom: var(--spacing-xl);
+  padding-bottom: var(--spacing-lg);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.header-text {
+  min-width: 0;
+}
+
+.eyebrow {
+  margin: 0 0 6px;
+  font-size: var(--font-size-xs);
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--color-accent);
+}
+
 .view-title {
-  margin: 0 0 var(--spacing-sm);
-  font-size: var(--font-size-xl);
+  margin: 0 0 var(--spacing-xs);
+  font-size: var(--font-size-xxl);
+  font-weight: 800;
   color: var(--color-text-primary);
+  letter-spacing: -0.02em;
 }
 
 .view-subtitle {
   margin: 0;
   color: var(--color-text-muted);
-}
-
-.quota-badge {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  padding: 8px 12px;
-  margin-top: var(--spacing-md);
-  background: var(--color-surface-alt);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
   font-size: var(--font-size-sm);
 }
 
-.quota-badge__info {
-  color: var(--color-text-primary);
+/* ── Quota Widget ── */
+.quota-widget {
+  flex-shrink: 0;
+  min-width: 200px;
+  padding: 14px 18px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
 
-.quota-badge__reset {
-  color: var(--color-text-muted);
+.quota-widget__top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-sm);
+}
+
+.quota-label {
   font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.quota-count {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+}
+
+.quota-num {
+  font-size: var(--font-size-lg);
+  font-weight: 800;
+  color: var(--color-accent);
+  font-variant-numeric: tabular-nums;
+}
+
+.quota-sep {
+  color: var(--color-text-muted);
+}
+
+.quota-bar {
+  height: 3px;
+  background: var(--color-border);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.quota-bar__fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--color-primary), var(--color-accent));
+  border-radius: 999px;
+  transition: width 0.6s ease;
+}
+
+.quota-bar__fill--low {
+  background: linear-gradient(90deg, var(--color-danger), #ff8080);
+}
+
+.quota-reset {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
 }
 
 .quota-error {
   margin-top: var(--spacing-sm);
 }
 
+/* ── Grid Layout ── */
 .layout-grid {
-  margin-top: var(--spacing-lg);
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: var(--spacing-lg);
+  align-items: start;
 }
 
+/* ── Panel Cards ── */
 .panel {
-  padding: var(--spacing-lg);
+  padding: 0;
+  overflow: hidden;
+}
+
+.panel-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: var(--spacing-md) var(--spacing-lg);
+  border-bottom: 1px solid var(--color-border-light);
+  background: var(--color-surface-elevated);
+}
+
+.panel-header__icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-sm);
+  background: var(--color-primary-bg);
+  color: var(--color-accent);
+  flex-shrink: 0;
+}
+
+.panel-header__icon--status {
+  background: transparent;
+  width: auto;
+  height: auto;
 }
 
 .panel-title {
-  margin: 0 0 var(--spacing-md);
+  margin: 0;
+  font-size: var(--font-size-md);
+  font-weight: 700;
   color: var(--color-text-primary);
+  letter-spacing: -0.01em;
+}
+
+/* ── Form Sections ── */
+.form-section {
+  padding: var(--spacing-md) var(--spacing-lg);
+}
+
+.form-section__label {
+  font-size: var(--font-size-xs);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--color-text-muted);
+  margin-bottom: var(--spacing-sm);
+}
+
+.form-divider {
+  height: 1px;
+  background: var(--color-border-light);
+  margin: 0 var(--spacing-lg);
 }
 
 .field {
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-xs);
+  gap: 6px;
   margin-bottom: var(--spacing-sm);
 }
 
@@ -479,101 +702,377 @@ onMounted(() => {
 
 .field-label {
   color: var(--color-text-secondary);
-  font-size: var(--font-size-sm);
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+}
+
+.field-label--mono {
+  font-family: 'Space Mono', monospace;
+  font-size: 11px;
+  color: var(--color-accent);
 }
 
 .field-input {
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
-  padding: 8px 10px;
-  background: var(--color-surface);
+  padding: 9px 12px;
+  background: var(--color-surface-elevated);
   color: var(--color-text-primary);
+  font-size: var(--font-size-sm);
+  transition: border-color 0.15s, box-shadow 0.15s;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.field-input:focus {
+  outline: none;
+  border-color: var(--color-primary-border);
+  box-shadow: 0 0 0 3px rgba(30, 90, 168, 0.12);
+}
+
+.field-input:hover:not(:focus) {
+  border-color: var(--color-border-strong);
 }
 
 .field-checkbox {
   width: 18px;
   height: 18px;
+  accent-color: var(--color-accent);
 }
 
 .field-help {
   color: var(--color-text-muted);
   font-size: var(--font-size-xs);
+  line-height: 1.4;
 }
 
+/* ── Runtime Box ── */
 .runtime-box {
-  border: 1px solid var(--color-border);
+  margin: 0 var(--spacing-lg);
+  padding: var(--spacing-md);
+  border: 1px solid var(--color-primary-border);
   border-radius: var(--radius-md);
-  padding: var(--spacing-sm);
+  background: var(--color-primary-bg);
   margin-bottom: var(--spacing-md);
 }
 
-.runtime-title {
-  font-weight: var(--font-weight-semibold);
-  margin-bottom: var(--spacing-xs);
-  color: var(--color-text-primary);
+.runtime-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: var(--spacing-sm);
+  color: var(--color-accent);
 }
 
-.runtime-version {
-  margin: 0 0 var(--spacing-sm);
+.runtime-title {
+  font-size: var(--font-size-xs);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  flex: 1;
+}
+
+.runtime-version-badge {
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: rgba(0, 217, 255, 0.12);
+  color: var(--color-accent);
+  font-size: 11px;
+  font-family: 'Space Mono', monospace;
+  font-weight: 700;
+}
+
+.runtime-loading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.runtime-empty {
   color: var(--color-text-muted);
   font-size: var(--font-size-sm);
 }
 
-.actions {
-  margin-top: var(--spacing-md);
+.runtime-params {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
 }
 
-.btn--upgrade {
-  border-color: var(--color-accent);
-  background: var(--color-surface-alt);
-  color: var(--color-accent, #0b6bcb);
+/* ── Loading Dots ── */
+.loading-dots {
+  display: inline-flex;
+  gap: 3px;
+}
+
+.loading-dots span {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--color-accent);
+  animation: dot-bounce 1.2s infinite ease-in-out both;
+}
+
+.loading-dots span:nth-child(1) { animation-delay: -0.32s; }
+.loading-dots span:nth-child(2) { animation-delay: -0.16s; }
+
+/* ── Run Button ── */
+.actions {
+  padding: var(--spacing-md) var(--spacing-lg) var(--spacing-lg);
+}
+
+.btn-run {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 24px;
+  border: none;
+  border-radius: var(--radius-md);
+  background: linear-gradient(135deg, var(--color-primary), var(--color-primary-light));
+  color: #fff;
+  font-size: var(--font-size-sm);
+  font-weight: 700;
+  letter-spacing: 0.03em;
   cursor: pointer;
-  opacity: 1;
-  font-weight: var(--font-weight-semibold);
+  transition: all 0.2s;
+  width: 100%;
+  justify-content: center;
+}
+
+.btn-run:hover:not(:disabled) {
+  background: linear-gradient(135deg, var(--color-primary-light), var(--color-accent));
+  transform: translateY(-1px);
+  box-shadow: 0 8px 24px rgba(30, 90, 168, 0.4);
+}
+
+.btn-run:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.btn-run--active {
+  animation: pulse-ring 1.5s infinite;
+  background: linear-gradient(135deg, var(--color-primary-dark), var(--color-primary));
+}
+
+.btn-run__spinner {
+  width: 14px;
+  height: 14px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+  flex-shrink: 0;
+}
+
+.btn-upgrade {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 24px;
+  border: 1px solid var(--color-accent);
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--color-accent);
+  font-size: var(--font-size-sm);
+  font-weight: 700;
+  cursor: pointer;
+  width: 100%;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.btn-upgrade:hover {
+  background: var(--color-accent-bg);
+  transform: translateY(-1px);
+}
+
+.run-error {
+  padding: 0 var(--spacing-lg) var(--spacing-md);
+  color: var(--color-danger);
+  font-size: var(--font-size-sm);
 }
 
 .message {
-  margin: var(--spacing-sm) 0 0;
   color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
 }
 
 .message.error {
   color: var(--color-danger);
 }
 
-.result-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: var(--spacing-sm);
+/* ── Status Dot ── */
+.status-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--color-border-strong);
 }
 
-.result-item {
-  padding: var(--spacing-sm);
+.status-dot--active {
+  background: var(--color-accent);
+  animation: status-dot-pulse 1s infinite;
+}
+
+.status-dot--done {
+  background: var(--color-success);
+}
+
+/* ── Terminal ── */
+.terminal {
+  margin: var(--spacing-md) var(--spacing-lg);
+  border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
-  background: var(--color-surface-alt);
+  overflow: hidden;
+  font-family: 'Space Mono', monospace;
+}
+
+.terminal__bar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  background: var(--color-surface-elevated);
+  border-bottom: 1px solid var(--color-border-light);
+}
+
+.terminal__dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+
+.terminal__dot--red { background: #FF5F57; }
+.terminal__dot--yellow { background: #FFBD2E; }
+.terminal__dot--green { background: #28CA41; }
+
+.terminal__path {
+  margin-left: 8px;
+  font-size: 11px;
+  color: var(--color-text-muted);
+}
+
+.terminal__body {
+  padding: var(--spacing-md);
+  min-height: 120px;
+  background: #02050D;
+}
+
+.terminal__line {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.terminal__line--gap {
+  margin-top: var(--spacing-md);
+}
+
+.terminal__prompt {
+  color: var(--color-accent);
+  font-size: 13px;
+}
+
+.terminal__key {
+  font-size: 11px;
+  color: var(--color-text-muted);
+  letter-spacing: 0.05em;
+}
+
+.terminal__output {
+  padding: 6px 10px;
+  font-size: 12px;
+  color: var(--color-text-primary);
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 4px;
+  line-height: 1.5;
+}
+
+.terminal__output--mono {
+  color: var(--color-accent);
+  letter-spacing: 0.05em;
+}
+
+.terminal__cursor {
+  animation: blink 1s step-end infinite;
+  color: var(--color-accent);
+}
+
+/* ── Report Ready Banner ── */
+.report-ready {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+  margin: 0 var(--spacing-lg) var(--spacing-lg);
+  padding: var(--spacing-md);
+  background: rgba(16, 185, 129, 0.08);
+  border: 1px solid rgba(16, 185, 129, 0.25);
+  border-radius: var(--radius-md);
+  animation: slide-up 0.3s ease;
+}
+
+.report-ready__icon {
+  color: var(--color-success);
+  flex-shrink: 0;
+  display: flex;
+}
+
+.report-ready__text {
+  flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 2px;
 }
 
-.result-item.wide {
-  grid-column: 1 / -1;
+.report-ready__text strong {
+  font-size: var(--font-size-sm);
+  color: var(--color-success);
 }
 
-.result-label {
+.report-ready__text span {
   font-size: var(--font-size-xs);
   color: var(--color-text-muted);
 }
 
-.result-value {
-  font-size: var(--font-size-md);
-  color: var(--color-text-primary);
-  font-weight: var(--font-weight-semibold);
+.btn-report {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 9px 16px;
+  border: 1px solid var(--color-success);
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--color-success);
+  font-size: var(--font-size-sm);
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.2s;
+  flex-shrink: 0;
 }
 
+.btn-report:hover {
+  background: rgba(16, 185, 129, 0.12);
+  transform: translateX(2px);
+}
+
+/* ── Responsive ── */
 @media (max-width: 960px) {
   .layout-grid {
     grid-template-columns: 1fr;
+  }
+
+  .page-header {
+    flex-direction: column;
+  }
+
+  .quota-widget {
+    width: 100%;
+    min-width: unset;
   }
 }
 </style>
