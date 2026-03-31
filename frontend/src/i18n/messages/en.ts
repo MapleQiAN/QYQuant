@@ -385,7 +385,12 @@ const en = {
       profitLossRatio: 'Profit/Loss Ratio',
       maxConsecutiveLosses: 'Max Consecutive Losses',
       totalTrades: 'Total Trades'
-    }
+    },
+    equityCurveTitle: 'Equity Curve',
+    equityCurveSubtitle: 'With buy/sell signal markers',
+    metricsCount: '{count} metrics',
+    backtestCompleted: 'Backtest completed',
+    reportReady: 'Results are ready. Click to view full report.'
   },
   strategyDetail: {
     title: 'Strategy Parameters',

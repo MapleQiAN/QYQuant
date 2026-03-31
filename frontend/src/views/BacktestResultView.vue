@@ -72,9 +72,9 @@
             <div class="chart-section__header">
               <div class="chart-section__title-group">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
-                <span class="chart-section__title">资产曲线</span>
+                <span class="chart-section__title">{{ $t('backtestReport.equityCurveTitle') }}</span>
               </div>
-              <span class="chart-section__subtitle">含买卖信号标记</span>
+              <span class="chart-section__subtitle">{{ $t('backtestReport.equityCurveSubtitle') }}</span>
             </div>
             <EquityCurveChart class="chart-block" :points="report.equity_curve || []" :trades="report.trades || []" />
           </div>
@@ -86,7 +86,7 @@
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
                 {{ $t('backtestReport.viewAllMetrics') }}
               </div>
-              <span class="details-count">{{ detailedMetrics.length }} 项指标</span>
+              <span class="details-count">{{ $t('backtestReport.metricsCount', { count: detailedMetrics.length }) }}</span>
             </summary>
             <div class="details-grid">
               <div v-for="metric in detailedMetrics" :key="metric.label" class="detail-row">
@@ -221,8 +221,6 @@ onMounted(() => {
 /* ── Page Header ── */
 .page-header {
   margin-bottom: var(--spacing-xl);
-  padding-bottom: var(--spacing-lg);
-  border-bottom: 1px solid var(--color-border);
 }
 
 .header-badges {
