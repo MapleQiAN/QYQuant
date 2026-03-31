@@ -111,6 +111,10 @@ def _create_strategy(target, ctx):
 
 
 def _worker(payload, queue):
+    queue.put(_execute_payload(payload))
+
+
+def _execute_payload(payload):
     strategy = None
     try:
         safe_builtins = _build_safe_builtins()
@@ -152,19 +156,19 @@ def _worker(payload, queue):
             _invoke_optional(strategy, 'on_timer', ctx, {"index": index, "time": bar.get('time')})
 
         _invoke_optional(strategy, 'on_finish', ctx, {"tradeCount": len(trades)})
-        queue.put({"ok": True, "trades": trades, "logs": ctx.logs})
+        return {"ok": True, "trades": trades, "logs": ctx.logs}
     except Exception as exc:
         if strategy is not None:
             try:
                 _invoke_optional(strategy, 'on_error', None, {"error": str(exc)})
             except Exception:
                 pass
-        queue.put({
+        return {
             "ok": False,
             "error_code": 'strategy_runtime_error',
             "error": str(exc),
             "traceback": traceback.format_exc(),
-        })
+        }
 
 
 def run_strategy_in_subprocess(symbol, source, callable_name, bars, params, timeout_seconds=10):
@@ -193,6 +197,24 @@ def run_strategy_in_subprocess(symbol, source, callable_name, bars, params, time
         raise StrategyRuntimeError('strategy_runtime_error', {"reason": "no_result"})
 
     result = queue.get()
+    if not result.get('ok'):
+        raise StrategyRuntimeError(result.get('error_code') or 'strategy_runtime_error', {
+            "reason": result.get('error'),
+        })
+
+    return result
+
+
+def run_strategy_inline(symbol, source, callable_name, bars, params):
+    guard_strategy_source(source)
+
+    result = _execute_payload({
+        "symbol": symbol,
+        "source": source,
+        "callable_name": callable_name,
+        "bars": bars,
+        "params": params,
+    })
     if not result.get('ok'):
         raise StrategyRuntimeError(result.get('error_code') or 'strategy_runtime_error', {
             "reason": result.get('error'),

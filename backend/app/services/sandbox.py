@@ -1,11 +1,12 @@
 import inspect
 import json
+import multiprocessing
 import os
 import threading
 
 from ..backtest.sandbox_template import RESULT_PREFIX, build_sandbox_script
 from ..strategy_runtime.errors import StrategyRuntimeError
-from ..strategy_runtime.sandbox import run_strategy_in_subprocess
+from ..strategy_runtime.sandbox import run_strategy_in_subprocess, run_strategy_inline
 
 try:
     from e2b_code_interpreter import Sandbox as E2BSandbox
@@ -66,14 +67,17 @@ class SandboxService:
             self._release(sandbox, keep_warm)
 
     def _execute_locally(self, code, market_data, params, metadata, timeout_seconds):
-        outcome = run_strategy_in_subprocess(
-            symbol=(market_data or {}).get('symbol'),
-            source=code,
-            callable_name=metadata.get('callable_name'),
-            bars=(market_data or {}).get('bars') or [],
-            params=params,
-            timeout_seconds=timeout_seconds,
-        )
+        runner = run_strategy_inline if self._should_use_inline_local() else run_strategy_in_subprocess
+        runner_kwargs = {
+            "symbol": (market_data or {}).get('symbol'),
+            "source": code,
+            "callable_name": metadata.get('callable_name'),
+            "bars": (market_data or {}).get('bars') or [],
+            "params": params,
+        }
+        if runner is run_strategy_in_subprocess:
+            runner_kwargs["timeout_seconds"] = timeout_seconds
+        outcome = runner(**runner_kwargs)
         return {
             "trades": outcome.get('trades') or [],
             "logs": outcome.get('logs') or [],
@@ -85,6 +89,9 @@ class SandboxService:
 
     def _should_use_local(self):
         return self._is_test_env() or self.sandbox_mode == LOCAL_SANDBOX_MODE
+
+    def _should_use_inline_local(self):
+        return self.sandbox_mode == LOCAL_SANDBOX_MODE and multiprocessing.current_process().daemon
 
     def _ensure_remote_available(self):
         if self.sandbox_cls is None:
