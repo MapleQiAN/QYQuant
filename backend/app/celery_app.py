@@ -25,11 +25,22 @@ def _celery_url(env_name, default_db):
     return _replace_redis_db(os.getenv('REDIS_URL'), default_db)
 
 
+def _build_eager_celery_app():
+    os.environ['CELERY_BROKER_URL'] = 'memory://'
+    os.environ['CELERY_RESULT_BACKEND'] = 'cache+memory://'
+    app = Celery('qyquant', broker='memory://', backend='cache+memory://')
+    app.conf.update(
+        broker_url='memory://',
+        result_backend='cache+memory://',
+        task_always_eager=True,
+        task_eager_propagates=False,
+        task_store_eager_result=True,
+    )
+    return app
+
+
 if _is_eager():
-    celery_app = Celery('qyquant', broker='memory://', backend='cache+memory://')
-    celery_app.conf.task_always_eager = True
-    celery_app.conf.task_eager_propagates = False
-    celery_app.conf.task_store_eager_result = True
+    celery_app = _build_eager_celery_app()
 else:
     broker = _celery_url('CELERY_BROKER_URL', 1)
     backend = _celery_url('CELERY_RESULT_BACKEND', 1)

@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { flushPromises, mount } from '@vue/test-utils'
+import { createI18n } from 'vue-i18n'
 import LoginView from './LoginView.vue'
 
 const {
@@ -8,11 +9,13 @@ const {
   refreshProfileMock,
   loginWithPasswordMock,
   registerWithPasswordMock,
+  toastSuccessMock,
 } = vi.hoisted(() => ({
   replaceMock: vi.fn(),
   refreshProfileMock: vi.fn(),
   loginWithPasswordMock: vi.fn(),
   registerWithPasswordMock: vi.fn(),
+  toastSuccessMock: vi.fn(),
 }))
 
 vi.mock('vue-router', () => ({
@@ -36,14 +39,61 @@ vi.mock('../api/auth', () => ({
   registerWithPassword: registerWithPasswordMock,
 }))
 
+vi.mock('../lib/toast', () => ({
+  toast: {
+    success: toastSuccessMock,
+    error: vi.fn(),
+  },
+}))
+
 describe('LoginView', () => {
   beforeEach(() => {
     replaceMock.mockReset()
     refreshProfileMock.mockReset()
     loginWithPasswordMock.mockReset()
     registerWithPasswordMock.mockReset()
+    toastSuccessMock.mockReset()
     localStorage.clear()
   })
+
+  function mountView() {
+    return mount(LoginView, {
+      global: {
+        plugins: [
+          createI18n({
+            legacy: false,
+            locale: 'en',
+            messages: {
+              en: {
+                auth: {
+                  title: 'Auth',
+                  loginTab: 'Login',
+                  registerTab: 'Register',
+                  emailLabel: 'Email',
+                  emailPlaceholder: 'Email',
+                  passwordLabel: 'Password',
+                  passwordPlaceholder: 'Password',
+                  nicknameLabel: 'Nickname',
+                  nicknamePlaceholder: 'Nickname',
+                  forgotPassword: 'Forgot password',
+                  loginButton: 'Login',
+                  registerButton: 'Register',
+                  loggingIn: 'Logging in',
+                  registering: 'Registering',
+                  emailRequired: 'Email required',
+                  passwordRequired: 'Password required',
+                  passwordTooShort: 'Password too short',
+                  nicknameRequired: 'Nickname required',
+                  registerFailed: 'Register failed',
+                  loginFailed: 'Login failed',
+                }
+              }
+            }
+          })
+        ]
+      }
+    })
+  }
 
   it('submits email password login and redirects after profile refresh', async () => {
     loginWithPasswordMock.mockResolvedValueOnce({
@@ -58,7 +108,7 @@ describe('LoginView', () => {
     refreshProfileMock.mockResolvedValueOnce(undefined)
     replaceMock.mockResolvedValueOnce(undefined)
 
-    const wrapper = mount(LoginView)
+    const wrapper = mountView()
 
     await wrapper.get('[data-test="email-input"]').setValue('alice@example.com')
     await wrapper.get('[data-test="password-input"]').setValue('Secret123!')
@@ -72,6 +122,7 @@ describe('LoginView', () => {
     expect(localStorage.getItem('qyquant-token')).toBe('token-1')
     expect(refreshProfileMock).toHaveBeenCalled()
     expect(replaceMock).toHaveBeenCalledWith('/')
+    expect(toastSuccessMock).toHaveBeenCalledWith('登录成功')
   })
 
   it('submits email registration with nickname', async () => {
@@ -85,7 +136,7 @@ describe('LoginView', () => {
       },
     })
 
-    const wrapper = mount(LoginView)
+    const wrapper = mountView()
 
     await wrapper.get('[data-test="register-tab"]').trigger('click')
     await wrapper.get('[data-test="email-input"]').setValue('alice@example.com')
@@ -99,10 +150,11 @@ describe('LoginView', () => {
       password: 'Secret123!',
       nickname: 'Alice',
     })
+    expect(toastSuccessMock).toHaveBeenCalledWith('注册成功')
   })
 
   it('shows forgot password link on login tab', () => {
-    const wrapper = mount(LoginView)
+    const wrapper = mountView()
 
     expect(wrapper.get('[data-test="forgot-link"]').attributes('href')).toBe('/forgot-password')
   })

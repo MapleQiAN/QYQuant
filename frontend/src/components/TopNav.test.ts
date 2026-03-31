@@ -51,7 +51,8 @@ function createTestI18n() {
         },
         common: {
           newStrategy: 'New Strategy',
-          searchPlaceholder: 'Search strategies, bots, or discussions'
+          searchPlaceholder: 'Search strategies, bots, or discussions',
+          notLoggedIn: 'Not logged in'
         }
       }
     }
@@ -110,6 +111,7 @@ async function mountTopNav(
 describe('TopNav', () => {
   beforeEach(() => {
     setActivePinia(createPinia())
+    storage.clear()
   })
 
   it('renders the header with breadcrumb showing current page', async () => {
@@ -133,6 +135,7 @@ describe('TopNav', () => {
 
   it('shows notification dot and user info from stores', async () => {
     const { wrapper } = await mountTopNav('/', (userStore, notificationStore) => {
+      storage.setItem('qyquant-token', 'token-1')
       userStore.profile.avatar = 'Q'
       userStore.profile.level = 'PRO'
       notificationStore.unreadCount = 3
@@ -141,6 +144,19 @@ describe('TopNav', () => {
     expect(wrapper.find('.notification-dot').exists()).toBe(true)
     expect(wrapper.find('.user-avatar').text()).toBe('Q')
     expect(wrapper.find('.header-actions').exists()).toBe(true)
+  })
+
+  it('renders the uploaded avatar image in the user trigger when avatar url exists', async () => {
+    const { wrapper } = await mountTopNav('/', (userStore) => {
+      storage.setItem('qyquant-token', 'token-1')
+      userStore.profile.avatar = 'Q'
+      userStore.profile.avatar_url = '/api/files/topnav-avatar/content'
+      userStore.profile.name = 'Quant Alice'
+    })
+
+    const avatarImage = wrapper.get('[data-test="topnav-avatar-image"]')
+    expect(avatarImage.attributes('src')).toBe('/api/files/topnav-avatar/content')
+    expect(wrapper.find('[data-test="topnav-avatar-fallback"]').exists()).toBe(false)
   })
 
   it('renders the search box with keyboard shortcut indicator', async () => {

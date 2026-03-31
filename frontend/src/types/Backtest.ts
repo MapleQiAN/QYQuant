@@ -81,6 +81,8 @@ export interface BacktestStatusResponse {
   started_at?: string | null
   completed_at?: string | null
   estimated_wait_time?: number
+  error?: StructuredBacktestError | null
+  error_message?: string | null
 }
 
 export interface BacktestReportPoint {

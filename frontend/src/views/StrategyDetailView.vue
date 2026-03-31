@@ -143,7 +143,7 @@
 import { onMounted, reactive, ref } from 'vue'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
-import { fetchBacktestStatus, submitBacktest } from '../api/backtests'
+import { fetchBacktestStatus, getBacktestFailureMessage, submitBacktest } from '../api/backtests'
 import { fetchStrategyParameters } from '../api/strategies'
 import ParameterForm from '../components/strategy/ParameterForm.vue'
 import PresetManager from '../components/strategy/PresetManager.vue'
@@ -320,7 +320,7 @@ async function waitForGuidedReport(jobId: string) {
       return
     }
     if (status.status === 'failed' || status.status === 'timeout') {
-      throw new Error(`Backtest job failed: ${status.status}`)
+      throw new Error(getBacktestFailureMessage(status))
     }
     await sleep(1000)
   }

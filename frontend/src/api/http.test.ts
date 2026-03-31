@@ -19,6 +19,7 @@ vi.mock('axios', () => {
 describe('http client', () => {
   beforeEach(() => {
     requestMock.mockReset()
+    localStorage.clear()
   })
 
   it('retries GET requests by default', async () => {
@@ -87,5 +88,51 @@ describe('http client', () => {
       data: { ok: true },
       meta: { total: 24, page: 2, page_size: 20 }
     })
+  })
+
+  it('refreshes expired access tokens and retries the original request once', async () => {
+    localStorage.setItem('qyquant-token', 'expired-token')
+    requestMock
+      .mockRejectedValueOnce({
+        response: { status: 401, data: { error: { code: 'TOKEN_EXPIRED', message: 'Login expired' } } }
+      })
+      .mockResolvedValueOnce({
+        data: {
+          code: 0,
+          message: 'ok',
+          data: { access_token: 'fresh-token' }
+        }
+      })
+      .mockResolvedValueOnce({
+        data: {
+          code: 0,
+          message: 'ok',
+          data: { ok: true }
+        }
+      })
+
+    const client = createHttpClient()
+    const data = await client.request({ method: 'get', url: '/v1/auth/profile' })
+
+    expect(data).toEqual({ ok: true })
+    expect(localStorage.getItem('qyquant-token')).toBe('fresh-token')
+    expect(requestMock).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({
+        method: 'post',
+        url: '/v1/auth/refresh',
+        withCredentials: true
+      })
+    )
+    expect(requestMock).toHaveBeenNthCalledWith(
+      3,
+      expect.objectContaining({
+        method: 'get',
+        url: '/v1/auth/profile',
+        headers: expect.objectContaining({
+          Authorization: 'Bearer fresh-token'
+        })
+      })
+    )
   })
 })

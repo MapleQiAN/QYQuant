@@ -66,3 +66,15 @@ export function fetchMyQuota(): Promise<UserQuotaResponse> {
     url: '/v1/users/me/quota'
   })
 }
+
+export function updateMyProfile(payload: {
+  nickname?: string
+  bio?: string
+  avatar_url?: string
+}): Promise<UserProfileResponse> {
+  return client.request({
+    method: 'patch',
+    url: '/v1/users/me',
+    data: payload
+  })
+}

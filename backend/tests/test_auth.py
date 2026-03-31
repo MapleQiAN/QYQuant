@@ -87,6 +87,26 @@ def test_login_returns_tokens_with_email_and_password(client):
     assert isinstance(response.json["access_token"], str)
 
 
+def test_login_supports_phone_and_verification_code(client, app):
+    from app.utils.redis_client import get_auth_store
+
+    with app.app_context():
+        get_auth_store().set_verification_code("13800138000", "123456", ttl=300)
+
+    response = client.post(
+        "/api/v1/auth/login",
+        json={
+            "phone": "13800138000",
+            "code": "123456",
+            "nickname": "PhoneUser",
+        },
+    )
+
+    assert response.status_code == 200
+    assert response.json["data"]["nickname"] == "PhoneUser"
+    assert isinstance(response.json["access_token"], str)
+
+
 def test_login_rejects_invalid_password(client):
     register = client.post(
         "/api/v1/auth/register",

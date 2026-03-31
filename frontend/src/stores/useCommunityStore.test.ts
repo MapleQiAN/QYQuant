@@ -10,7 +10,8 @@ const {
   likePostMock,
   collectPostMock,
   getCommentsMock,
-  createCommentMock
+  createCommentMock,
+  toastSuccessMock,
 } = vi.hoisted(() => ({
   getPostsMock: vi.fn(),
   createPostMock: vi.fn(),
@@ -18,7 +19,8 @@ const {
   likePostMock: vi.fn(),
   collectPostMock: vi.fn(),
   getCommentsMock: vi.fn(),
-  createCommentMock: vi.fn()
+  createCommentMock: vi.fn(),
+  toastSuccessMock: vi.fn(),
 }))
 
 vi.mock('../api/community', () => ({
@@ -31,6 +33,12 @@ vi.mock('../api/community', () => ({
   createComment: createCommentMock
 }))
 
+vi.mock('../lib/toast', () => ({
+  toast: {
+    success: toastSuccessMock,
+  }
+}))
+
 describe('useCommunityStore', () => {
   beforeEach(() => {
     setActivePinia(createPinia())
@@ -41,6 +49,7 @@ describe('useCommunityStore', () => {
     collectPostMock.mockReset()
     getCommentsMock.mockReset()
     createCommentMock.mockReset()
+    toastSuccessMock.mockReset()
   })
 
   it('loads feed and appends next pages', async () => {
@@ -105,6 +114,7 @@ describe('useCommunityStore', () => {
 
     expect(createPostMock).toHaveBeenCalledWith({ content: 'New', strategy_id: undefined })
     expect(store.posts.map((post) => post.id)).toEqual(['post-new', 'post-1'])
+    expect(toastSuccessMock).toHaveBeenCalledWith('帖子已发布')
   })
 
   it('fetches and stores post detail', async () => {
@@ -155,6 +165,7 @@ describe('useCommunityStore', () => {
     expect(likePostMock).toHaveBeenCalledWith('post-1')
     expect(store.posts[0].likes_count).toBe(1)
     expect(store.likedPostIds['post-1']).toBe(true)
+    expect(toastSuccessMock).toHaveBeenCalledWith('已点赞')
   })
 
   it('rolls back optimistic like when the request fails', async () => {
@@ -206,6 +217,33 @@ describe('useCommunityStore', () => {
     expect(store.commentsByPostId['post-1'].map((comment) => comment.id)).toEqual(['comment-1', 'comment-2'])
   })
 
+  it('toggles collection and shows feedback', async () => {
+    collectPostMock.mockResolvedValue({ collected: true })
+
+    const store = useCommunityStore()
+    store.posts = [
+      {
+        id: 'post-1',
+        content: 'Collect me',
+        user_id: 'user-1',
+        strategy_id: null,
+        likes_count: 0,
+        comments_count: 0,
+        created_at: '2026-03-20T20:00:00+08:00',
+        author: { nickname: 'Trader', avatar_url: '' },
+        strategy: null,
+        liked: false,
+        collected: false
+      }
+    ]
+
+    await store.toggleCollect('post-1')
+
+    expect(collectPostMock).toHaveBeenCalledWith('post-1')
+    expect(store.posts[0].collected).toBe(true)
+    expect(toastSuccessMock).toHaveBeenCalledWith('已收藏')
+  })
+
   it('creates a comment and updates the post comment count', async () => {
     const userStore = useUserStore()
     userStore.profile.id = 'user-1'
@@ -242,5 +280,6 @@ describe('useCommunityStore', () => {
     expect(createCommentMock).toHaveBeenCalledWith('post-1', { content: 'Nice post' })
     expect(store.posts[0].comments_count).toBe(1)
     expect(store.commentsByPostId['post-1'][0].id).toBe('comment-1')
+    expect(toastSuccessMock).toHaveBeenCalledWith('评论已发布')
   })
 })

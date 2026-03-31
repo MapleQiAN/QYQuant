@@ -9,6 +9,7 @@ import {
   getPosts,
   likePost as apiLikePost
 } from '../api/community'
+import { toast } from '../lib/toast'
 import type { CommunityComment, CommunityPost } from '../types/community'
 import { useUserStore } from './user'
 
@@ -130,6 +131,7 @@ export const useCommunityStore = defineStore('community', {
         this.syncPostFlags(post)
         this.posts = [post, ...this.posts]
         this.postsTotal += 1
+        toast.success('帖子已发布')
         return post
       } catch (error: any) {
         this.error = error?.message || 'Failed to create post'
@@ -178,6 +180,7 @@ export const useCommunityStore = defineStore('community', {
         } else {
           delete this.likedPostIds[postId]
         }
+        toast.success(result.liked ? '已点赞' : '已取消点赞')
         return result
       } catch (error: any) {
         this.patchPost(postId, (post) => {
@@ -215,6 +218,7 @@ export const useCommunityStore = defineStore('community', {
         } else {
           delete this.collectedPostIds[postId]
         }
+        toast.success(result.collected ? '已收藏' : '已取消收藏')
         return result
       } catch (error: any) {
         this.patchPost(postId, (post) => {
@@ -276,6 +280,7 @@ export const useCommunityStore = defineStore('community', {
         this.commentsByPostId[postId] = (this.commentsByPostId[postId] || []).map((comment) =>
           comment.id === tempId ? saved : comment
         )
+        toast.success('评论已发布')
         return saved
       } catch (error: any) {
         this.commentsByPostId[postId] = (this.commentsByPostId[postId] || []).filter(

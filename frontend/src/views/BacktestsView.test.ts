@@ -33,10 +33,14 @@ vi.mock('../api/users', () => ({
   fetchMyQuota: fetchMyQuotaMock,
 }))
 
-vi.mock('../api/backtests', () => ({
-  fetchBacktestStatus: fetchBacktestStatusMock,
-  submitBacktest: submitBacktestMock,
-}))
+vi.mock('../api/backtests', async () => {
+  const actual = await vi.importActual<typeof import('../api/backtests')>('../api/backtests')
+  return {
+    ...actual,
+    fetchBacktestStatus: fetchBacktestStatusMock,
+    submitBacktest: submitBacktestMock,
+  }
+})
 
 describe('BacktestsView', () => {
   beforeEach(() => {
@@ -77,7 +81,7 @@ describe('BacktestsView', () => {
     await flushPromises()
 
     expect(fetchMyQuotaMock).toHaveBeenCalled()
-    expect(wrapper.text()).toContain('剩余回测次数')
+    expect(wrapper.text()).toContain('backtests.remainingQuota')
     expect(wrapper.text()).toContain('7')
     expect(wrapper.text()).toContain('10')
     expect(wrapper.text()).toContain('2026-04-01')
@@ -104,12 +108,38 @@ describe('BacktestsView', () => {
 
     const actionButton = wrapper.get('.actions button')
 
-    expect(actionButton.text()).toBe('升级套餐解锁更多次数')
-    expect(actionButton.classes()).toContain('btn--upgrade')
+    expect(actionButton.text()).toBe('backtests.upgradeForMore')
+    expect(actionButton.classes()).toContain('btn-upgrade')
     expect(actionButton.attributes('disabled')).toBeUndefined()
 
     await actionButton.trigger('click')
 
     expect(pushMock).toHaveBeenCalledWith('/pricing')
+  })
+
+  it('shows detailed failure reason when polled backtest job fails', async () => {
+    fetchBacktestStatusMock.mockResolvedValueOnce({
+      status: 'failed',
+      error: {
+        type: 'NameError',
+        line: 15,
+        message: "Undefined variable 'sma_period'",
+      },
+    })
+
+    const wrapper = mount(BacktestsView, {
+      global: {
+        mocks: {
+          $t: (key: string) => key,
+        },
+      },
+    })
+
+    await flushPromises()
+    await wrapper.get('.btn-run').trigger('click')
+    await flushPromises()
+
+    expect(submitBacktestMock).toHaveBeenCalled()
+    expect(wrapper.text()).toContain("Backtest failed: Undefined variable 'sma_period' (line 15)")
   })
 })

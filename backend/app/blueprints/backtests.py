@@ -20,6 +20,7 @@ from ..utils.time import format_beijing_iso
 AVERAGE_BACKTEST_SECONDS = 30
 REPORT_DISCLAIMER = "回测结果仅供研究参考，不构成任何投资建议。"
 
+_EAGER_BACKTEST_RESULTS = {}
 bp = Blueprint("backtests", __name__, url_prefix="/api")
 
 
@@ -28,7 +29,6 @@ def _build_legacy_job_data(job_id):
     if job_record is None:
         return None
 
-    result = AsyncResult(job_id, app=celery_app)
     data = {
         "job_id": job_record.id,
         "status": job_record.status,
@@ -38,8 +38,15 @@ def _build_legacy_job_data(job_id):
         "started_at": format_beijing_iso(job_record.started_at),
         "completed_at": format_beijing_iso(job_record.completed_at),
         "created_at": format_beijing_iso(job_record.created_at),
-        "celery_status": result.status,
     }
+
+    if celery_app.conf.task_always_eager and job_id in _EAGER_BACKTEST_RESULTS:
+        data["celery_status"] = "SUCCESS"
+        data["result"] = _EAGER_BACKTEST_RESULTS[job_id]
+        return data
+
+    result = AsyncResult(job_id, app=celery_app)
+    data["celery_status"] = result.status
     if result.status == "SUCCESS":
         data["result"] = result.result
     return data
@@ -51,7 +58,7 @@ def _estimate_wait_time():
 
 
 def _serialize_job_status(job_record):
-    return {
+    data = {
         "job_id": job_record.id,
         "status": job_record.status,
         "created_at": format_beijing_iso(job_record.created_at),
@@ -59,6 +66,10 @@ def _serialize_job_status(job_record):
         "completed_at": format_beijing_iso(job_record.completed_at),
         "estimated_wait_time": _estimate_wait_time() if job_record.status == BacktestJobStatus.PENDING.value else 0,
     }
+    if job_record.status in {BacktestJobStatus.FAILED.value, BacktestJobStatus.TIMEOUT.value} and job_record.error_message:
+        data["error_message"] = job_record.error_message
+        data["error"] = load_execution_error(job_record.error_message)
+    return data
 
 
 def _get_strategy_for_submit(strategy_id, user_id):
@@ -128,7 +139,10 @@ def run():
     db.session.add(job_record)
     db.session.commit()
 
-    run_backtest_task.apply_async(args=[job_record.id], task_id=job_record.id, queue="backtest")
+    if celery_app.conf.task_always_eager:
+        _EAGER_BACKTEST_RESULTS[job_record.id] = run_backtest_task.run(job_record.id)
+    else:
+        run_backtest_task.apply_async(args=[job_record.id], task_id=job_record.id, queue="backtest")
     return ok({"job_id": job_record.id})
 
 

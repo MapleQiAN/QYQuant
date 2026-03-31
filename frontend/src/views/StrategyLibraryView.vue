@@ -203,6 +203,7 @@ import { useI18n } from 'vue-i18n'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
 import StrategyPublishFlow from '../components/strategy/StrategyPublishFlow.vue'
 import { deleteStrategy, fetchMarketplaceStrategies, fetchStrategies } from '../api/strategies'
+import { toast } from '../lib/toast'
 import type { MarketplacePublishPayload, MarketplaceReviewStatus, Strategy } from '../types/Strategy'
 import { useMarketplaceStore, useUserStore } from '../stores'
 
@@ -297,6 +298,7 @@ async function handleDelete(strategyId: string) {
   await deleteStrategy(strategyId)
   const fallbackPage = items.value.length === 1 && page.value > 1 ? page.value - 1 : page.value
   await loadPage(fallbackPage)
+  toast.success('策略已删除')
 }
 
 function openPublishFlow(strategy: Strategy) {
@@ -336,6 +338,7 @@ async function handlePublishSubmit(payload: MarketplacePublishPayload) {
     )
     selectedStrategy.value = items.value.find((item) => item.id === payload.strategyId) || selectedStrategy.value
     publishSubmitted.value = true
+    toast.success('发布申请已提交')
   } catch (error: any) {
     publishError.value = error?.message || t('strategy.library.failedToSubmit')
   } finally {

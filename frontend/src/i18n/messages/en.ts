@@ -35,10 +35,18 @@ const en = {
     manage: 'Manage',
     upgrade: 'Upgrade',
     userProfile: 'Profile',
-    logout: 'Logout'
+    logout: 'Logout',
+    notLoggedIn: 'Not logged in'
   },
   settings: {
     title: 'Settings',
+    profileTitle: 'Profile',
+    profileHint: 'Update how you appear in the community square.',
+    nicknameLabel: 'Nickname',
+    bioLabel: 'Bio',
+    avatarLabel: 'Avatar',
+    avatarAction: 'Upload avatar',
+    saveProfileAction: 'Save profile',
     language: 'Language',
     languageHint: 'Choose your interface language.',
     zh: '中文',

@@ -35,10 +35,18 @@ const zh = {
     manage: '管理',
     upgrade: '升级',
     userProfile: '个人主页',
-    logout: '退出登录'
+    logout: '退出登录',
+    notLoggedIn: '未登录'
   },
   settings: {
     title: '设置',
+    profileTitle: '个人资料',
+    profileHint: '更新你在广场中的展示信息。',
+    nicknameLabel: '昵称',
+    bioLabel: '简介',
+    avatarLabel: '头像',
+    avatarAction: '上传头像',
+    saveProfileAction: '保存资料',
     language: '语言',
     languageHint: '选择界面语言。',
     zh: '中文',
@@ -46,7 +54,16 @@ const zh = {
     marketStyle: '行情颜色风格',
     marketStyleHint: '选择涨跌颜色显示方式。',
     marketStyleCn: 'A股风格（红涨绿跌）',
-    marketStyleUs: '美股风格（绿涨红跌）'
+    marketStyleUs: '美股风格（绿涨红跌）',
+    integrationsTitle: '数据源与券商连接',
+    integrationsHint: '连接你的券商 API 和市场数据源。',
+    providerLabel: '服务商',
+    displayNameLabel: '显示名称',
+    connectAction: '连接',
+    validateAction: '验证',
+    loadAccountAction: '加载账户',
+    loadPositionsAction: '加载持仓',
+    emptyIntegrations: '暂无连接。'
   },
   nav: {
     dashboard: '概览',

@@ -42,7 +42,16 @@ async function toggleCollect() {
   <article class="post-card">
     <header class="post-header">
       <div class="author">
-        <div class="avatar">{{ post.author.nickname?.slice(0, 1).toUpperCase() || 'Q' }}</div>
+        <img
+          v-if="post.author.avatar_url"
+          :src="post.author.avatar_url"
+          :alt="post.author.nickname || '用户头像'"
+          class="avatar"
+          data-test="post-author-avatar-image"
+        />
+        <div v-else class="avatar avatar-fallback" data-test="post-author-avatar-fallback">
+          {{ post.author.nickname?.slice(0, 1).toUpperCase() || 'Q' }}
+        </div>
         <div class="author-info">
           <div class="nickname">{{ post.author.nickname || '匿名用户' }}</div>
           <div class="meta">{{ formatRelativeTime(post.created_at) }}</div>
@@ -68,12 +77,8 @@ async function toggleCollect() {
       </div>
       <div class="strategy-meta">
         <span class="strategy-tag">{{ post.strategy.category || '未分类' }}</span>
-        <span class="strategy-metric positive">
-          收益 {{ post.strategy.returns }}
-        </span>
-        <span class="strategy-metric negative">
-          回撤 {{ post.strategy.max_drawdown }}
-        </span>
+        <span class="strategy-metric positive">收益 {{ post.strategy.returns }}</span>
+        <span class="strategy-metric negative">回撤 {{ post.strategy.max_drawdown }}</span>
       </div>
     </section>
 
@@ -144,14 +149,18 @@ async function toggleCollect() {
   width: 44px;
   height: 44px;
   border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+  box-shadow: 0 0 0 2px var(--color-surface), 0 0 0 3px rgba(14, 165, 233, 0.3);
+}
+
+.avatar-fallback {
   display: grid;
   place-items: center;
   background: linear-gradient(135deg, #0f766e, #0ea5e9);
   color: #fff;
   font-weight: 700;
   font-size: 16px;
-  flex-shrink: 0;
-  box-shadow: 0 0 0 2px var(--color-surface), 0 0 0 3px rgba(14, 165, 233, 0.3);
 }
 
 .author-info {

@@ -5,6 +5,7 @@ from app.strategy_runtime.errors import StrategyRuntimeError
 
 def test_execute_strategy_requires_e2b_outside_test_env(monkeypatch):
     monkeypatch.setenv('FLASK_ENV', 'development')
+    monkeypatch.delenv('BACKTEST_SANDBOX_MODE', raising=False)
     monkeypatch.delenv('E2B_API_KEY', raising=False)
     monkeypatch.setattr('app.services.sandbox.E2BSandbox', None)
 
@@ -26,6 +27,7 @@ def test_execute_strategy_requires_e2b_outside_test_env(monkeypatch):
 
 def test_execute_strategy_replenishes_remote_warm_pool(monkeypatch):
     monkeypatch.setenv('FLASK_ENV', 'development')
+    monkeypatch.delenv('BACKTEST_SANDBOX_MODE', raising=False)
     monkeypatch.setenv('E2B_API_KEY', 'sandbox-key')
     monkeypatch.setenv('E2B_WARM_POOL_SIZE', '2')
 
@@ -82,6 +84,7 @@ def test_execute_strategy_replenishes_remote_warm_pool(monkeypatch):
 def test_execute_strategy_timeout_raises_strategy_timeout(monkeypatch):
     """AC#4: 超时后任务状态更新为 timeout"""
     monkeypatch.setenv('FLASK_ENV', 'development')
+    monkeypatch.delenv('BACKTEST_SANDBOX_MODE', raising=False)
     monkeypatch.setenv('E2B_API_KEY', 'sandbox-key')
     monkeypatch.setenv('E2B_WARM_POOL_SIZE', '0')
 
@@ -112,6 +115,7 @@ def test_execute_strategy_timeout_raises_strategy_timeout(monkeypatch):
 def test_execute_strategy_destroys_sandbox_after_execution(monkeypatch):
     """AC#1: 执行完毕后沙箱销毁，明文不落盘"""
     monkeypatch.setenv('FLASK_ENV', 'development')
+    monkeypatch.delenv('BACKTEST_SANDBOX_MODE', raising=False)
     monkeypatch.setenv('E2B_API_KEY', 'sandbox-key')
     monkeypatch.setenv('E2B_WARM_POOL_SIZE', '0')
 
@@ -144,6 +148,7 @@ def test_execute_strategy_destroys_sandbox_after_execution(monkeypatch):
 def test_execute_strategy_destroys_sandbox_on_error(monkeypatch):
     """沙箱执行失败时也必须销毁沙箱"""
     monkeypatch.setenv('FLASK_ENV', 'development')
+    monkeypatch.delenv('BACKTEST_SANDBOX_MODE', raising=False)
     monkeypatch.setenv('E2B_API_KEY', 'sandbox-key')
     monkeypatch.setenv('E2B_WARM_POOL_SIZE', '1')
 
@@ -179,6 +184,7 @@ def test_execute_strategy_destroys_sandbox_on_error(monkeypatch):
 def test_execute_strategy_requires_api_key_outside_test_env(monkeypatch):
     """AC#2/AC#3: 非测试环境必须通过 E2B 远程沙箱执行（网络隔离+文件系统隔离由平台保证）"""
     monkeypatch.setenv('FLASK_ENV', 'development')
+    monkeypatch.delenv('BACKTEST_SANDBOX_MODE', raising=False)
     monkeypatch.delenv('E2B_API_KEY', raising=False)
 
     from app.services.sandbox import SandboxService
@@ -197,3 +203,153 @@ def test_execute_strategy_requires_api_key_outside_test_env(monkeypatch):
 
     assert exc_info.value.message == 'sandbox_unavailable'
     assert exc_info.value.details['reason'] == 'missing_e2b_api_key'
+
+
+def test_execute_strategy_allows_local_mode_without_e2b_api_key(monkeypatch):
+    monkeypatch.setenv('FLASK_ENV', 'development')
+    monkeypatch.setenv('BACKTEST_SANDBOX_MODE', 'local')
+    monkeypatch.delenv('E2B_API_KEY', raising=False)
+
+    from app.services.sandbox import SandboxService
+
+    local_calls = []
+
+    def _fake_local_runner(symbol, source, callable_name, bars, params, timeout_seconds=10):
+        local_calls.append(
+            {
+                "symbol": symbol,
+                "source": source,
+                "callable_name": callable_name,
+                "bars": bars,
+                "params": params,
+                "timeout_seconds": timeout_seconds,
+            }
+        )
+        return {
+            "trades": [{"symbol": symbol, "side": "buy", "price": 100.0, "quantity": 1}],
+            "logs": ["local-mode"],
+        }
+
+    monkeypatch.setattr('app.services.sandbox.run_strategy_in_subprocess', _fake_local_runner)
+
+    class FakeSandboxCls:
+        def __init__(self, **kwargs):
+            raise AssertionError('remote sandbox should not be used in local mode')
+
+    service = SandboxService(sandbox_cls=FakeSandboxCls)
+
+    result = service.execute_strategy(
+        code='class Strategy:\n    pass\n',
+        market_data={"symbol": "BTCUSDT", "bars": [{"time": 1}]},
+        params={"window": 5},
+        metadata={"callable_name": "Strategy", "timeout_seconds": 45},
+    )
+
+    assert result["logs"] == ["local-mode"]
+    assert local_calls == [
+        {
+            "symbol": "BTCUSDT",
+            "source": 'class Strategy:\n    pass\n',
+            "callable_name": "Strategy",
+            "bars": [{"time": 1}],
+            "params": {"window": 5},
+            "timeout_seconds": 45,
+        }
+    ]
+
+
+def test_execute_strategy_uses_inline_runner_in_local_mode_for_daemon_process(monkeypatch):
+    monkeypatch.setenv('FLASK_ENV', 'production')
+    monkeypatch.setenv('BACKTEST_SANDBOX_MODE', 'local')
+    monkeypatch.delenv('E2B_API_KEY', raising=False)
+
+    from app.services.sandbox import SandboxService
+
+    subprocess_calls = []
+    inline_calls = []
+
+    class _FakeProcess:
+        daemon = True
+
+    monkeypatch.setattr('app.services.sandbox.multiprocessing.current_process', lambda: _FakeProcess())
+
+    def _fake_subprocess_runner(*args, **kwargs):
+        subprocess_calls.append({"args": args, "kwargs": kwargs})
+        raise AssertionError('subprocess runner should not be used for daemon process')
+
+    def _fake_inline_runner(symbol, source, callable_name, bars, params):
+        inline_calls.append(
+            {
+                "symbol": symbol,
+                "source": source,
+                "callable_name": callable_name,
+                "bars": bars,
+                "params": params,
+            }
+        )
+        return {"trades": [], "logs": ["inline-local-mode"]}
+
+    monkeypatch.setattr('app.services.sandbox.run_strategy_in_subprocess', _fake_subprocess_runner)
+    monkeypatch.setattr('app.services.sandbox.run_strategy_inline', _fake_inline_runner)
+
+    service = SandboxService(sandbox_cls=object)
+
+    result = service.execute_strategy(
+        code='class Strategy:\n    pass\n',
+        market_data={"symbol": "BTCUSDT", "bars": [{"time": 1}]},
+        params={"window": 5},
+        metadata={"callable_name": "Strategy", "timeout_seconds": 45},
+    )
+
+    assert result["logs"] == ["inline-local-mode"]
+    assert subprocess_calls == []
+    assert inline_calls == [
+        {
+            "symbol": "BTCUSDT",
+            "source": 'class Strategy:\n    pass\n',
+            "callable_name": "Strategy",
+            "bars": [{"time": 1}],
+            "params": {"window": 5},
+        }
+    ]
+
+
+def test_execute_strategy_allows_safe_imports_in_inline_local_mode(monkeypatch):
+    monkeypatch.setenv('FLASK_ENV', 'production')
+    monkeypatch.setenv('BACKTEST_SANDBOX_MODE', 'local')
+    monkeypatch.delenv('E2B_API_KEY', raising=False)
+
+    from app.services.sandbox import SandboxService
+
+    class _FakeProcess:
+        daemon = True
+
+    monkeypatch.setattr('app.services.sandbox.multiprocessing.current_process', lambda: _FakeProcess())
+
+    service = SandboxService(sandbox_cls=object)
+
+    result = service.execute_strategy(
+        code=(
+            'import math\n\n'
+            'class Strategy:\n'
+            '    def on_bar(self, ctx, bar):\n'
+            '        quantity = math.floor(bar["close"])\n'
+            '        if quantity > 0:\n'
+            '            ctx.emit_order({"side": "buy", "price": bar["close"], "quantity": quantity})\n'
+        ),
+        market_data={"symbol": "BTCUSDT", "bars": [{"time": 1, "close": 1.8}]},
+        params={},
+        metadata={"callable_name": "Strategy"},
+    )
+
+    assert result["logs"] == []
+    assert result["trades"] == [
+        {
+            "symbol": "BTCUSDT",
+            "side": "buy",
+            "price": 1.8,
+            "quantity": 1.0,
+            "timestamp": 1,
+            "pnl": None,
+        }
+    ]

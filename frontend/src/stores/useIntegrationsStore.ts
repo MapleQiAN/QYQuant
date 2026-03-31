@@ -10,6 +10,7 @@ import {
   type UserIntegration,
   validateIntegration as validateIntegrationRequest,
 } from '../api/integrations'
+import { toast } from '../lib/toast'
 
 export const useIntegrationsStore = defineStore('integrations', {
   state: () => ({
@@ -44,6 +45,7 @@ export const useIntegrationsStore = defineStore('integrations', {
       try {
         const integration = await createIntegrationRequest(payload)
         this.integrations = [integration, ...this.integrations]
+        toast.success('连接已创建')
         return integration
       } finally {
         this.createSubmitting = false
@@ -52,16 +54,23 @@ export const useIntegrationsStore = defineStore('integrations', {
     async validateIntegration(integrationId: string) {
       const result = await validateIntegrationRequest(integrationId)
       this.validationState[integrationId] = result
+      if (result.status === 'valid') {
+        toast.success('连接验证成功')
+      } else {
+        toast.warning(result.message || '连接验证未通过')
+      }
       return result
     },
     async loadAccount(integrationId: string) {
       const data = await fetchIntegrationAccount(integrationId)
       this.accountById[integrationId] = data
+      toast.success('账户信息已加载')
       return data
     },
     async loadPositions(integrationId: string) {
       const data = await fetchIntegrationPositions(integrationId)
       this.positionsById[integrationId] = data
+      toast.success('持仓信息已加载')
       return data
     }
   }

@@ -8,6 +8,11 @@ const { pushMock, confirmStrategyImportMock } = vi.hoisted(() => ({
   confirmStrategyImportMock: vi.fn()
 }))
 
+const { toastSuccessMock, toastErrorMock } = vi.hoisted(() => ({
+  toastSuccessMock: vi.fn(),
+  toastErrorMock: vi.fn(),
+}))
+
 vi.mock('vue-router', () => ({
   RouterLink: {
     template: '<a><slot /></a>'
@@ -24,10 +29,19 @@ vi.mock('../api/strategies', () => ({
   confirmStrategyImport: confirmStrategyImportMock
 }))
 
+vi.mock('../lib/toast', () => ({
+  toast: {
+    success: toastSuccessMock,
+    error: toastErrorMock,
+  }
+}))
+
 describe('StrategyImportConfirmView', () => {
   beforeEach(() => {
     pushMock.mockReset()
     confirmStrategyImportMock.mockReset()
+    toastSuccessMock.mockReset()
+    toastErrorMock.mockReset()
     sessionStorage.clear()
     sessionStorage.setItem(
       'strategy-import:draft-1',
@@ -92,5 +106,6 @@ describe('StrategyImportConfirmView', () => {
     })
     expect(pushMock).toHaveBeenCalledWith('/strategies/strategy-1/parameters')
     expect(sessionStorage.getItem('strategy-import:draft-1')).toBeNull()
+    expect(toastSuccessMock).toHaveBeenCalledWith('策略已导入：Detected Strategy')
   })
 })

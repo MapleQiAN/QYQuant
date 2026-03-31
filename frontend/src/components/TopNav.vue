@@ -39,8 +39,22 @@
 
           <div class="user-menu-shell">
             <button class="user-trigger" type="button" @click="handleAvatarClick">
-              <span class="user-avatar">{{ profile.avatar }}</span>
-              <span v-if="profile.name" class="user-name">{{ profile.name }}</span>
+              <img
+                v-if="userStore.token && profile.avatar_url"
+                :src="profile.avatar_url"
+                :alt="profile.name || 'User avatar'"
+                class="user-avatar user-avatar--image"
+                data-test="topnav-avatar-image"
+              />
+              <span
+                v-else
+                class="user-avatar"
+                :class="{ 'user-avatar--guest': !userStore.token }"
+                data-test="topnav-avatar-fallback"
+              >
+                {{ userStore.token ? profile.avatar : '?' }}
+              </span>
+              <span class="user-name">{{ userStore.token ? (profile.name || '') : t('common.notLoggedIn') }}</span>
               <ChevronDownIcon />
             </button>
             <div v-if="isUserMenuOpen" class="user-dropdown">
@@ -414,6 +428,17 @@ const LogoutIcon = () => h('svg', { width: 14, height: 14, viewBox: '0 0 24 24',
   color: #fff;
   border-radius: var(--radius-md);
   box-shadow: 0 2px 8px rgba(30, 90, 168, 0.25);
+}
+
+.user-avatar--image {
+  object-fit: cover;
+}
+
+.user-avatar--guest {
+  background: var(--color-surface-active);
+  color: var(--color-text-muted);
+  box-shadow: none;
+  border: 1px solid var(--color-border);
 }
 
 .user-name {

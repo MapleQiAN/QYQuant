@@ -12,6 +12,7 @@ const {
   fetchMarketplaceStrategyImportStatusMock,
   importMarketplaceStrategyMock,
   reportMarketplaceStrategyMock,
+  toastSuccessMock,
 } = vi.hoisted(() => ({
   pushMock: vi.fn(),
   fetchMarketplaceStrategyDetailMock: vi.fn(),
@@ -19,6 +20,7 @@ const {
   fetchMarketplaceStrategyImportStatusMock: vi.fn(),
   importMarketplaceStrategyMock: vi.fn(),
   reportMarketplaceStrategyMock: vi.fn(),
+  toastSuccessMock: vi.fn(),
 }))
 
 vi.mock('vue-router', () => ({
@@ -41,6 +43,13 @@ vi.mock('../api/strategies', () => ({
   reportMarketplaceStrategy: reportMarketplaceStrategyMock,
 }))
 
+vi.mock('../lib/toast', () => ({
+  toast: {
+    success: toastSuccessMock,
+    error: vi.fn(),
+  }
+}))
+
 vi.mock('../components/backtest/EquityCurveChart.vue', () => ({
   default: {
     props: ['points'],
@@ -60,6 +69,7 @@ describe('MarketplaceStrategyDetailView', () => {
     fetchMarketplaceStrategyImportStatusMock.mockReset()
     importMarketplaceStrategyMock.mockReset()
     reportMarketplaceStrategyMock.mockReset()
+    toastSuccessMock.mockReset()
     fetchMarketplaceStrategyEquityCurveMock.mockResolvedValue({
       dates: [1700000000000, 1700086400000],
       values: [100000, 101250.5],
@@ -118,6 +128,7 @@ describe('MarketplaceStrategyDetailView', () => {
 
     expect(importMarketplaceStrategyMock).toHaveBeenCalledWith('strategy-1')
     expect(pushMock).toHaveBeenCalledWith('/backtest/configure?strategy_id=imported-1')
+    expect(toastSuccessMock).toHaveBeenCalledWith('策略已导入，即将跳转回测配置')
   })
 
   it('shows imported state and routes to the imported strategy configuration', async () => {

@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { flushPromises, mount } from '@vue/test-utils'
+import { createI18n } from 'vue-i18n'
 import StrategyLibraryView from './StrategyLibraryView.vue'
 import StrategyPublishFlow from '../components/strategy/StrategyPublishFlow.vue'
 
@@ -11,7 +12,8 @@ const {
   deleteStrategyMock,
   importStrategyMock,
   publishStrategyMock,
-  getPublishStatusMock
+  getPublishStatusMock,
+  toastSuccessMock,
 } = vi.hoisted(() => ({
   pushMock: vi.fn(),
   fetchStrategiesMock: vi.fn(),
@@ -19,7 +21,8 @@ const {
   deleteStrategyMock: vi.fn(),
   importStrategyMock: vi.fn(),
   publishStrategyMock: vi.fn(),
-  getPublishStatusMock: vi.fn()
+  getPublishStatusMock: vi.fn(),
+  toastSuccessMock: vi.fn(),
 }))
 
 vi.mock('vue-router', () => ({
@@ -54,6 +57,13 @@ vi.mock('../stores', () => ({
   })
 }))
 
+vi.mock('../lib/toast', () => ({
+  toast: {
+    success: toastSuccessMock,
+    error: vi.fn(),
+  }
+}))
+
 describe('StrategyLibraryView', () => {
   beforeEach(() => {
     pushMock.mockClear()
@@ -63,8 +73,61 @@ describe('StrategyLibraryView', () => {
     importStrategyMock.mockReset()
     publishStrategyMock.mockReset()
     getPublishStatusMock.mockReset()
+    toastSuccessMock.mockReset()
     vi.stubGlobal('confirm', vi.fn(() => true))
   })
+
+  function mountView() {
+    return mount(StrategyLibraryView, {
+      global: {
+        plugins: [
+          createI18n({
+            legacy: false,
+            locale: 'en',
+            messages: {
+              en: {
+                strategy: {
+                  library: {
+                    pageTitle: 'Strategy Library',
+                    pageSubtitle: 'Manage your strategies',
+                    backToDashboard: 'Back',
+                    openImportWizard: 'Open import wizard',
+                    guidedStrategy: 'Guided strategy',
+                    guidedStrategyDesc: 'Guided picks',
+                    loadingGuided: 'Loading guided',
+                    failedToLoadGuided: 'Failed to load guided',
+                    viewDetails: 'View details',
+                    useThisStrategy: 'Use this strategy',
+                    importStrategy: 'Import strategy',
+                    importStrategyDesc: 'Import',
+                    importNote: 'Import note',
+                    myStrategies: 'My strategies',
+                    itemCount: '{count} items',
+                    loadingLibrary: 'Loading library',
+                    failedToLoadLibrary: 'Failed to load library',
+                    noStrategies: 'No strategies',
+                    noDescription: 'No description',
+                    delete: 'Delete',
+                    previous: 'Previous',
+                    next: 'Next',
+                    unknownTime: 'Unknown',
+                    pendingReview: 'Pending review',
+                    approved: 'Approved',
+                    rejected: 'Rejected',
+                    notPublished: 'Draft',
+                    resubmit: 'Resubmit',
+                    publishToMarketplace: 'Publish',
+                    failedToSubmit: 'Failed to submit',
+                    deleteConfirm: 'Delete?',
+                  }
+                }
+              }
+            }
+          })
+        ]
+      }
+    })
+  }
 
   it('loads and renders strategy library rows', async () => {
     fetchStrategiesMock.mockResolvedValue({
@@ -85,7 +148,7 @@ describe('StrategyLibraryView', () => {
     })
     deleteStrategyMock.mockResolvedValue({ deletedId: 'strategy-1' })
 
-    const wrapper = mount(StrategyLibraryView)
+    const wrapper = mountView()
     await flushPromises()
 
     expect(fetchStrategiesMock).toHaveBeenCalledWith({ page: 1, perPage: 10 })
@@ -95,12 +158,13 @@ describe('StrategyLibraryView', () => {
     await flushPromises()
 
     expect(deleteStrategyMock).toHaveBeenCalledWith('strategy-1')
+    expect(toastSuccessMock).toHaveBeenCalledWith('策略已删除')
   })
 
   it('opens the import wizard from the library entry point', async () => {
     fetchStrategiesMock.mockResolvedValue({ items: [], page: 1, perPage: 10, total: 0 })
 
-    const wrapper = mount(StrategyLibraryView)
+    const wrapper = mountView()
     await flushPromises()
 
     await wrapper.get('[data-test="open-import-wizard"]').trigger('click')
@@ -129,7 +193,7 @@ describe('StrategyLibraryView', () => {
       total: 1
     })
 
-    const wrapper = mount(StrategyLibraryView)
+    const wrapper = mountView()
     await flushPromises()
 
     expect(wrapper.get('[data-test="publish-status-strategy-1"]').text()).toContain('Pending review')
@@ -165,7 +229,7 @@ describe('StrategyLibraryView', () => {
     publishStrategyMock.mockResolvedValue({ strategyId: 'strategy-1', reviewStatus: 'pending' })
     getPublishStatusMock.mockResolvedValue({ reviewStatus: 'pending', isPublic: false })
 
-    const wrapper = mount(StrategyLibraryView)
+    const wrapper = mountView()
     await flushPromises()
 
     await wrapper.get('[data-test="publish-open-strategy-1"]').trigger('click')
@@ -186,5 +250,6 @@ describe('StrategyLibraryView', () => {
     expect(publishStrategyMock).toHaveBeenCalled()
     expect(getPublishStatusMock).toHaveBeenCalledWith('strategy-1')
     expect(wrapper.get('[data-test="publish-status-strategy-1"]').text()).toContain('Pending review')
+    expect(toastSuccessMock).toHaveBeenCalledWith('发布申请已提交')
   })
 })

@@ -25,16 +25,24 @@ const presetsStoreState = {
   error: null as string | null,
 }
 
+const routeState = vi.hoisted(() => ({
+  params: {
+    strategyId: 'strategy-1',
+  },
+  query: {} as Record<string, string>,
+}))
+
 vi.mock('vue-router', () => ({
   RouterLink: { template: '<a><slot /></a>' },
   useRouter: () => ({
     push: vi.fn(),
   }),
-  useRoute: () => ({
-    params: {
-      strategyId: 'strategy-1',
-    },
-    query: {},
+  useRoute: () => routeState,
+}))
+
+vi.mock('vue-i18n', () => ({
+  useI18n: () => ({
+    t: (key: string, params?: Record<string, string>) => (params?.jobId ? `${key}:${params.jobId}` : key),
   }),
 }))
 
@@ -42,10 +50,14 @@ vi.mock('../api/strategies', () => ({
   fetchStrategyParameters: fetchStrategyParametersMock,
 }))
 
-vi.mock('../api/backtests', () => ({
-  fetchBacktestStatus: fetchBacktestStatusMock,
-  submitBacktest: submitBacktestMock,
-}))
+vi.mock('../api/backtests', async () => {
+  const actual = await vi.importActual<typeof import('../api/backtests')>('../api/backtests')
+  return {
+    ...actual,
+    fetchBacktestStatus: fetchBacktestStatusMock,
+    submitBacktest: submitBacktestMock,
+  }
+})
 
 vi.mock('../stores', () => ({
   useUserStore: () => ({
@@ -76,6 +88,8 @@ describe('StrategyDetailView', () => {
     presetsStoreState.presets = []
     presetsStoreState.loading = false
     presetsStoreState.error = null
+    routeState.params.strategyId = 'strategy-1'
+    routeState.query = {}
   })
 
   it('loads parameter definitions and submits a backtest', async () => {
@@ -92,7 +106,13 @@ describe('StrategyDetailView', () => {
     ])
     submitBacktestMock.mockResolvedValue({ job_id: 'job-1' })
 
-    const wrapper = mount(StrategyDetailView)
+    const wrapper = mount(StrategyDetailView, {
+      global: {
+        mocks: {
+          $t: (key: string, params?: Record<string, string>) => (params?.jobId ? `${key}:${params.jobId}` : key),
+        },
+      },
+    })
     await flushPromises()
 
     expect(fetchStrategyParametersMock).toHaveBeenCalledWith('strategy-1')
@@ -111,6 +131,48 @@ describe('StrategyDetailView', () => {
       end_date: '2024-01-31',
       parameters: { window: 20 },
     })
-    expect(wrapper.text()).toContain('job-1')
+    expect(wrapper.text()).toContain('strategyDetail.backtestSubmitted:job-1')
+  })
+
+  it('shows detailed failure reason when guided polling sees a failed job', async () => {
+    routeState.query = { guided: 'true' }
+    fetchStrategyParametersMock.mockResolvedValue([
+      {
+        name: 'window',
+        type: 'int',
+        default: 20,
+        min: 5,
+        max: 50,
+        step: 1,
+        required: false,
+      },
+    ])
+    submitBacktestMock.mockResolvedValue({ job_id: 'job-1' })
+    fetchBacktestStatusMock.mockResolvedValue({
+      status: 'failed',
+      error: {
+        type: 'NameError',
+        line: 15,
+        message: "Undefined variable 'sma_period'",
+      },
+    })
+
+    const wrapper = mount(StrategyDetailView, {
+      global: {
+        mocks: {
+          $t: (key: string, params?: Record<string, string>) => (params?.jobId ? `${key}:${params.jobId}` : key),
+        },
+      },
+    })
+    await flushPromises()
+
+    await wrapper.get('[data-test="symbol-input"]').setValue('BTCUSDT')
+    await wrapper.get('[data-test="start-date-input"]').setValue('2024-01-01')
+    await wrapper.get('[data-test="end-date-input"]').setValue('2024-01-31')
+    await wrapper.get('[data-test="start-backtest"]').trigger('click')
+    await flushPromises()
+
+    expect(fetchBacktestStatusMock).toHaveBeenCalledWith('job-1')
+    expect(wrapper.text()).toContain("Backtest failed: Undefined variable 'sma_period' (line 15)")
   })
 })

@@ -2,6 +2,7 @@
 import { ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { forgotPassword } from '../api/auth'
+import { toast } from '../lib/toast'
 
 const { t } = useI18n()
 const email = ref('')
@@ -12,6 +13,7 @@ const success = ref('')
 async function handleSubmit() {
   if (!email.value.trim()) {
     error.value = t('auth.emailRequired')
+    toast.error(error.value)
     return
   }
 
@@ -21,6 +23,7 @@ async function handleSubmit() {
   try {
     const result = await forgotPassword(email.value.trim().toLowerCase())
     success.value = result.message
+    toast.success(result.message)
   } catch (e: any) {
     error.value = e.message || t('forgotPassword.sendFailed')
   } finally {
