@@ -33,7 +33,7 @@ class BaseConfig:
         self.CORS_ORIGINS = os.getenv('CORS_ORIGINS', 'http://localhost:5173,http://localhost:5174').split(',')
         self.JSON_SORT_KEYS = False
         self.PROPAGATE_EXCEPTIONS = True
-        self.JWT_ACCESS_TOKEN_EXPIRES = timedelta(minutes=int(os.getenv('JWT_ACCESS_TOKEN_MINUTES', '15')))
+        self.JWT_ACCESS_TOKEN_EXPIRES = timedelta(minutes=int(os.getenv('JWT_ACCESS_TOKEN_MINUTES', '60')))
         self.JWT_REFRESH_TOKEN_EXPIRES = timedelta(days=int(os.getenv('JWT_REFRESH_TOKEN_DAYS', '30')))
         self.JWT_TOKEN_LOCATION = ["headers"]
         self.JWT_COOKIE_SECURE = os.getenv('JWT_COOKIE_SECURE', 'false').lower() == 'true'
