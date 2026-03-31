@@ -18,6 +18,15 @@
         {{ $t('strategyDetail.guidedBanner') }}
       </div>
 
+      <div v-if="strategyId" class="strategy-identity">
+        <div class="strategy-identity__icon">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+        </div>
+        <div class="strategy-identity__info">
+          <span class="strategy-identity__id">ID: {{ strategyId }}</span>
+        </div>
+      </div>
+
       <div class="layout-grid">
         <!-- Control Card: Backtest Setup -->
         <div class="card panel-card">
@@ -61,7 +70,7 @@
             </div>
 
             <div class="preset-divider">
-              <span>预设方案</span>
+              <span>{{ $t('strategy.presets.title') }}</span>
             </div>
 
             <PresetManager
@@ -594,6 +603,44 @@ async function waitForGuidedReport(jobId: string) {
   animation: spin 0.7s linear infinite;
 }
 
+/* ── Strategy Identity ── */
+.strategy-identity {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-sm) var(--spacing-md);
+  margin-bottom: var(--spacing-lg);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border-light);
+  border-radius: var(--radius-md);
+  width: fit-content;
+}
+
+.strategy-identity__icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: var(--radius-sm);
+  background: var(--color-primary-bg);
+  color: var(--color-accent);
+  flex-shrink: 0;
+}
+
+.strategy-identity__info {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+}
+
+.strategy-identity__id {
+  font-size: var(--font-size-xs);
+  font-family: var(--font-mono);
+  color: var(--color-text-muted);
+  letter-spacing: 0.02em;
+}
+
 /* ── Responsive ── */
 @media (max-width: 960px) {
   .page-header,
@@ -618,6 +665,10 @@ async function waitForGuidedReport(jobId: string) {
   .btn-run {
     width: 100%;
     justify-content: center;
+  }
+
+  .strategy-identity {
+    width: 100%;
   }
 }
 </style>

@@ -64,139 +64,123 @@
         </div>
       </section>
 
-      <div class="layout-grid">
-        <!-- Import Card -->
-        <div class="card panel-card">
-          <div class="panel-card__header">
-            <div class="panel-card__icon">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-            </div>
-            <div>
-              <h2 class="section-title">{{ t('strategy.library.importStrategy') }}</h2>
-              <p class="section-subtitle">{{ t('strategy.library.importStrategyDesc') }}</p>
-            </div>
+      <!-- Import Strip -->
+      <div class="import-strip">
+        <div class="import-strip__info">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+          <span class="import-strip__text">{{ t('strategy.library.importStrategyDesc') }}</span>
+          <div class="import-strip__formats">
+            <span class="format-chip">.py</span>
+            <span class="format-chip">.zip</span>
+            <span class="format-chip format-chip--accent">.qys</span>
           </div>
-
-          <div class="format-group">
-            <p class="format-group__label">支持格式</p>
-            <div class="format-list">
-              <span class="format-pill">
-                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-                strategy.py
-              </span>
-              <span class="format-pill">
-                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
-                source zip
-              </span>
-              <span class="format-pill format-pill--accent">
-                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
-                .qys package
-              </span>
-            </div>
-          </div>
-
-          <p class="import-note">{{ t('strategy.library.importNote') }}</p>
-
-          <button
-            class="btn btn-primary btn--full"
-            type="button"
-            data-test="open-import-wizard"
-            @click="handleOpenImportWizard"
-          >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-            {{ t('strategy.library.openImportWizard') }}
-          </button>
         </div>
+        <button
+          class="btn btn-primary btn--compact"
+          type="button"
+          data-test="open-import-wizard"
+          @click="handleOpenImportWizard"
+        >
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          {{ t('strategy.library.openImportWizard') }}
+        </button>
+      </div>
 
-        <!-- Library Card -->
-        <div class="card panel-card">
-          <div class="panel-card__header">
+      <!-- Library Section -->
+      <div class="card library-card">
+        <div class="library-card__header">
+          <div class="library-card__title-row">
             <div class="panel-card__icon">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
             </div>
-            <div style="flex:1">
-              <div class="section-header-row">
-                <h2 class="section-title">{{ t('strategy.library.myStrategies') }}</h2>
-                <span class="count-badge">{{ total }}</span>
+            <h2 class="section-title">{{ t('strategy.library.myStrategies') }}</h2>
+            <span class="count-badge">{{ total }}</span>
+          </div>
+          <p class="section-subtitle">{{ t('strategy.library.itemCount', { count: total, plural: total !== 1 ? 's' : '' }) }}</p>
+        </div>
+
+        <div v-if="loading" class="empty-state">
+          <div class="empty-state__spinner"></div>
+          {{ t('strategy.library.loadingLibrary') }}
+        </div>
+        <p v-else-if="loadError" class="message error">{{ loadError }}</p>
+        <div v-else-if="items.length === 0" class="empty-state empty-state--dashed">
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/><line x1="12" y1="11" x2="12" y2="17"/><line x1="9" y1="14" x2="15" y2="14"/></svg>
+          {{ t('strategy.library.noStrategies') }}
+        </div>
+        <div v-else class="strategy-list">
+          <article
+            v-for="(strategy, index) in items"
+            :key="strategy.id"
+            class="strategy-card"
+            :style="{ animationDelay: `${index * 40}ms` }"
+          >
+            <div class="strategy-card__body">
+              <div class="strategy-card__name-row">
+                <span class="strategy-card__name">{{ strategy.title || strategy.name }}</span>
+                <span
+                  class="status-badge"
+                  :class="statusClass(strategy.reviewStatus)"
+                  :data-test="`publish-status-${strategy.id}`"
+                >
+                  <span class="status-badge__dot"></span>
+                  {{ publishStatusLabel(strategy.reviewStatus) }}
+                </span>
               </div>
-              <p class="section-subtitle">{{ t('strategy.library.itemCount', { count: total, plural: total !== 1 ? 's' : '' }) }}</p>
+              <div class="strategy-card__meta">
+                <span class="meta-item">{{ strategy.category || 'other' }}</span>
+                <span class="meta-divider">·</span>
+                <span class="meta-item">{{ strategy.source || 'upload' }}</span>
+                <span class="meta-divider">·</span>
+                <span class="meta-item">{{ formatCreatedAt(strategy.createdAt) }}</span>
+              </div>
+              <p class="strategy-card__desc">{{ strategy.description || t('strategy.library.noDescription') }}</p>
+              <div v-if="strategy.tags?.length" class="tag-row">
+                <span v-for="tag in strategy.tags" :key="tag" class="tag">{{ tag }}</span>
+              </div>
             </div>
-          </div>
+            <div class="strategy-card__actions">
+              <button
+                class="btn btn-secondary btn--sm"
+                type="button"
+                :data-test="`publish-open-${strategy.id}`"
+                :disabled="isPublishDisabled(strategy.reviewStatus)"
+                @click="openPublishFlow(strategy)"
+              >
+                {{ publishButtonLabel(strategy.reviewStatus) }}
+              </button>
+              <button
+                class="btn btn-ghost btn--danger btn--sm"
+                type="button"
+                :data-test="`delete-${strategy.id}`"
+                @click="handleDelete(strategy.id)"
+              >
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+              </button>
+            </div>
+          </article>
+        </div>
 
-          <div v-if="loading" class="empty-state">
-            <div class="empty-state__spinner"></div>
-            {{ t('strategy.library.loadingLibrary') }}
-          </div>
-          <p v-else-if="loadError" class="message error">{{ loadError }}</p>
-          <div v-else-if="items.length === 0" class="empty-state empty-state--dashed">
-            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/><line x1="12" y1="11" x2="12" y2="17"/><line x1="9" y1="14" x2="15" y2="14"/></svg>
-            {{ t('strategy.library.noStrategies') }}
-          </div>
-          <div v-else class="strategy-list">
-            <article v-for="strategy in items" :key="strategy.id" class="strategy-card">
-              <div class="strategy-card__body">
-                <div class="strategy-card__name-row">
-                  <span class="strategy-card__name">{{ strategy.title || strategy.name }}</span>
-                  <span
-                    class="status-badge"
-                    :class="statusClass(strategy.reviewStatus)"
-                    :data-test="`publish-status-${strategy.id}`"
-                  >
-                    <span class="status-badge__dot"></span>
-                    {{ publishStatusLabel(strategy.reviewStatus) }}
-                  </span>
-                </div>
-                <div class="strategy-card__meta">
-                  <span class="meta-item">{{ strategy.category || 'other' }}</span>
-                  <span class="meta-divider">·</span>
-                  <span class="meta-item">{{ strategy.source || 'upload' }}</span>
-                  <span class="meta-divider">·</span>
-                  <span class="meta-item">{{ formatCreatedAt(strategy.createdAt) }}</span>
-                </div>
-                <p class="strategy-card__desc">{{ strategy.description || t('strategy.library.noDescription') }}</p>
-                <div v-if="strategy.tags?.length" class="tag-row">
-                  <span v-for="tag in strategy.tags" :key="tag" class="tag">{{ tag }}</span>
-                </div>
-              </div>
-              <div class="strategy-card__actions">
-                <button
-                  class="btn btn-secondary"
-                  type="button"
-                  :data-test="`publish-open-${strategy.id}`"
-                  :disabled="isPublishDisabled(strategy.reviewStatus)"
-                  @click="openPublishFlow(strategy)"
-                >
-                  {{ publishButtonLabel(strategy.reviewStatus) }}
-                </button>
-                <button
-                  class="btn btn-ghost btn--danger"
-                  type="button"
-                  :data-test="`delete-${strategy.id}`"
-                  @click="handleDelete(strategy.id)"
-                >
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
-                  {{ t('strategy.library.delete') }}
-                </button>
-              </div>
-            </article>
-          </div>
-
-          <div class="pagination">
-            <button class="btn btn-ghost" type="button" :disabled="page <= 1 || loading" @click="changePage(page - 1)">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
-              {{ t('strategy.library.previous') }}
-            </button>
-            <span class="pagination__info">{{ page }} / {{ totalPages }}</span>
+        <div v-if="totalPages > 1" class="pagination">
+          <button class="btn btn-ghost btn--sm" type="button" :disabled="page <= 1 || loading" @click="changePage(page - 1)">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+          </button>
+          <div class="pagination__pages">
             <button
-              class="btn btn-ghost"
+              v-for="p in paginationRange"
+              :key="p"
+              class="pagination__page"
+              :class="{ 'pagination__page--active': p === page }"
               type="button"
-              :disabled="page >= totalPages || loading"
-              @click="changePage(page + 1)"
+              :disabled="loading"
+              @click="changePage(p)"
             >
-              {{ t('strategy.library.next') }}
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+              {{ p }}
             </button>
           </div>
+          <button class="btn btn-ghost btn--sm" type="button" :disabled="page >= totalPages || loading" @click="changePage(page + 1)">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+          </button>
         </div>
       </div>
     </div>
@@ -246,6 +230,17 @@ const selectedStrategy = ref<Strategy | null>(null)
 
 const totalPages = computed(() => Math.max(1, Math.ceil(total.value / perPage.value)))
 const isGuidedMode = computed(() => route.query.guided === 'true')
+
+const paginationRange = computed(() => {
+  const total = totalPages.value
+  const current = page.value
+  const delta = 2
+  const range: number[] = []
+  for (let i = Math.max(1, current - delta); i <= Math.min(total, current + delta); i++) {
+    range.push(i)
+  }
+  return range
+})
 
 onMounted(() => {
   void loadPage(1)
@@ -415,9 +410,7 @@ function statusClass(status?: MarketplaceReviewStatus) {
   justify-content: space-between;
   align-items: flex-start;
   gap: var(--spacing-lg);
-  margin-bottom: var(--spacing-xl);
-  padding-bottom: var(--spacing-lg);
-  border-bottom: 1px solid var(--color-border);
+  margin-bottom: var(--spacing-lg);
 }
 
 .eyebrow {
@@ -490,46 +483,103 @@ function statusClass(status?: MarketplaceReviewStatus) {
   flex-shrink: 0;
 }
 
-/* ── Grid Layout ── */
-.layout-grid {
-  display: grid;
-  grid-template-columns: minmax(300px, 0.85fr) minmax(0, 1.15fr);
-  gap: var(--spacing-lg);
-  align-items: start;
+/* ── Import Strip ── */
+.import-strip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-md);
+  padding: var(--spacing-md) var(--spacing-lg);
+  margin-bottom: var(--spacing-lg);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  transition: border-color 0.2s;
 }
 
-/* ── Panel Cards ── */
-.panel-card {
+.import-strip:hover {
+  border-color: var(--color-primary-border);
+}
+
+.import-strip__info {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+  flex: 1;
+  min-width: 0;
+  color: var(--color-text-muted);
+}
+
+.import-strip__text {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.import-strip__formats {
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.format-chip {
+  padding: 2px 7px;
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-elevated);
+  border: 1px solid var(--color-border);
+  color: var(--color-text-muted);
+  font-size: 10px;
+  font-family: var(--font-mono);
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.format-chip--accent {
+  border-color: var(--color-primary-border);
+  color: var(--color-accent);
+  background: var(--color-primary-bg);
+}
+
+.btn--compact {
+  padding: 7px 16px;
+  font-size: var(--font-size-xs);
+  flex-shrink: 0;
+}
+
+/* ── Library Card ── */
+.library-card {
   padding: 0;
   overflow: hidden;
 }
 
-.panel-card__header {
-  display: flex;
-  align-items: flex-start;
-  gap: var(--spacing-md);
+.library-card:hover {
+  transform: none;
+}
+
+.library-card__header {
   padding: var(--spacing-md) var(--spacing-lg);
   border-bottom: 1px solid var(--color-border-light);
   background: var(--color-surface-elevated);
+}
+
+.library-card__title-row {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
 }
 
 .panel-card__icon {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 32px;
-  height: 32px;
-  border-radius: var(--radius-md);
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-sm);
   background: var(--color-primary-bg);
   color: var(--color-accent);
   flex-shrink: 0;
-  margin-top: 2px;
-}
-
-.section-header-row {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-sm);
 }
 
 .section-title {
@@ -541,92 +591,40 @@ function statusClass(status?: MarketplaceReviewStatus) {
 
 .section-subtitle {
   margin: 4px 0 0;
+  padding-left: 36px;
   color: var(--color-text-muted);
-  font-size: var(--font-size-sm);
+  font-size: var(--font-size-xs);
 }
 
 .count-badge {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 22px;
-  height: 22px;
-  padding: 0 7px;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
   border-radius: 999px;
   background: var(--color-primary-bg);
   color: var(--color-accent);
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
-}
-
-/* ── Format Group ── */
-.format-group {
-  padding: var(--spacing-md) var(--spacing-lg) 0;
-}
-
-.format-group__label {
-  font-size: var(--font-size-xs);
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: var(--color-text-muted);
-  margin: 0 0 var(--spacing-sm);
-}
-
-.format-list {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--spacing-xs);
-}
-
-.format-pill {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  padding: 5px 10px;
-  border-radius: var(--radius-sm);
-  background: var(--color-surface-elevated);
-  border: 1px solid var(--color-border);
-  color: var(--color-text-secondary);
-  font-size: 11px;
-  font-family: 'Space Mono', monospace;
-}
-
-.format-pill--accent {
-  border-color: var(--color-primary-border);
-  color: var(--color-accent);
-  background: var(--color-primary-bg);
-}
-
-.import-note {
-  margin: var(--spacing-md) var(--spacing-lg);
-  color: var(--color-text-muted);
-  font-size: var(--font-size-sm);
-  line-height: 1.5;
-}
-
-.btn--full {
-  width: calc(100% - var(--spacing-xl));
-  margin: 0 var(--spacing-lg) var(--spacing-lg);
-  justify-content: center;
 }
 
 /* ── Strategy Cards ── */
 .strategy-list {
   display: flex;
   flex-direction: column;
-  gap: 0;
 }
 
 .strategy-card {
   display: flex;
-  justify-content: space-between;
+  align-items: center;
   gap: var(--spacing-md);
   padding: var(--spacing-md) var(--spacing-lg);
   border-bottom: 1px solid var(--color-border-light);
   transition: background 0.15s;
-  animation: slide-up 0.2s ease both;
+  animation: slide-up 0.25s ease both;
 }
 
 .strategy-card:last-child {
@@ -671,7 +669,7 @@ function statusClass(status?: MarketplaceReviewStatus) {
   display: flex;
   align-items: center;
   gap: 4px;
-  margin-top: 5px;
+  margin-top: 4px;
   font-size: var(--font-size-xs);
   color: var(--color-text-muted);
 }
@@ -701,23 +699,26 @@ function statusClass(status?: MarketplaceReviewStatus) {
 }
 
 .strategy-card__desc {
-  margin: var(--spacing-xs) 0 0;
+  margin: 3px 0 0;
   color: var(--color-text-secondary);
   font-size: var(--font-size-sm);
   line-height: 1.4;
   display: -webkit-box;
-  -webkit-line-clamp: 2;
+  -webkit-line-clamp: 1;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
 
 .strategy-card__actions {
   display: flex;
-  flex-direction: column;
-  align-items: stretch;
+  align-items: center;
   gap: var(--spacing-xs);
-  min-width: 160px;
-  justify-content: center;
+  flex-shrink: 0;
+}
+
+.btn--sm {
+  padding: 5px 12px;
+  font-size: var(--font-size-xs);
 }
 
 /* ── Tags ── */
@@ -725,16 +726,16 @@ function statusClass(status?: MarketplaceReviewStatus) {
   display: flex;
   flex-wrap: wrap;
   gap: 4px;
-  margin-top: var(--spacing-sm);
+  margin-top: var(--spacing-xs);
 }
 
 .tag {
-  padding: 3px 8px;
+  padding: 2px 7px;
   border-radius: 999px;
   background: var(--color-background);
   border: 1px solid var(--color-border-light);
   color: var(--color-text-muted);
-  font-size: 11px;
+  font-size: 10px;
 }
 
 /* ── Status Badges ── */
@@ -742,9 +743,9 @@ function statusClass(status?: MarketplaceReviewStatus) {
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  padding: 3px 9px;
+  padding: 2px 8px;
   border-radius: 999px;
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 700;
 }
 
@@ -780,7 +781,7 @@ function statusClass(status?: MarketplaceReviewStatus) {
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  padding: 7px 12px;
+  padding: 6px 10px;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-sm);
   background: transparent;
@@ -818,16 +819,43 @@ function statusClass(status?: MarketplaceReviewStatus) {
 .pagination {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: var(--spacing-sm);
+  justify-content: center;
+  gap: var(--spacing-xs);
   padding: var(--spacing-md) var(--spacing-lg);
   border-top: 1px solid var(--color-border-light);
 }
 
-.pagination__info {
-  font-size: var(--font-size-xs);
+.pagination__pages {
+  display: flex;
+  gap: 2px;
+}
+
+.pagination__page {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  background: transparent;
   color: var(--color-text-muted);
+  font-size: var(--font-size-xs);
+  font-weight: 600;
   font-variant-numeric: tabular-nums;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.pagination__page:hover:not(:disabled) {
+  background: var(--color-surface-hover);
+  color: var(--color-text-primary);
+}
+
+.pagination__page--active {
+  background: var(--color-primary-bg);
+  color: var(--color-accent);
+  border-color: var(--color-primary-border);
 }
 
 /* ── Empty State ── */
@@ -837,7 +865,7 @@ function statusClass(status?: MarketplaceReviewStatus) {
   align-items: center;
   justify-content: center;
   gap: var(--spacing-sm);
-  padding: var(--spacing-xl);
+  padding: var(--spacing-xxl) var(--spacing-xl);
   color: var(--color-text-muted);
   font-size: var(--font-size-sm);
   text-align: center;
@@ -875,17 +903,23 @@ function statusClass(status?: MarketplaceReviewStatus) {
     justify-content: flex-start;
   }
 
-  .layout-grid {
-    grid-template-columns: 1fr;
+  .import-strip {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .import-strip__formats {
+    display: none;
   }
 
   .strategy-card {
     flex-direction: column;
+    align-items: flex-start;
   }
 
   .strategy-card__actions {
-    flex-direction: row;
-    min-width: unset;
+    width: 100%;
+    justify-content: flex-end;
   }
 }
 </style>

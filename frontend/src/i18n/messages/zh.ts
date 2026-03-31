@@ -356,6 +356,11 @@ const zh = {
     guidedSuccessHint: '重点先看累计收益率、最大回撤和夏普比率，理解"收益"和"波动"之间的关系。',
     finishGuidedOnboarding: '完成新手引导',
     viewAllMetrics: '查看所有 11 个指标',
+    equityCurveTitle: '资产曲线',
+    equityCurveSubtitle: '含买卖信号标记',
+    metricsCount: '{count} 项指标',
+    backtestCompleted: '回测完成',
+    reportReady: '结果已就绪，点击查看完整报告',
     metrics: {
       totalReturn: '总收益率',
       annualizedReturn: '年化收益率',
