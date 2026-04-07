@@ -412,11 +412,13 @@ const TargetIcon = () => h('svg', {
 
 .quick-stats {
   display: flex;
-  gap: var(--spacing-lg);
+  flex-direction: column;
+  gap: var(--spacing-sm);
   padding: var(--spacing-lg);
   border-top: 1px solid var(--color-border);
   margin-top: auto;
   background: linear-gradient(135deg, var(--color-surface-elevated), var(--color-surface-active));
+  overflow: hidden;
 }
 
 .quick-stat-item {

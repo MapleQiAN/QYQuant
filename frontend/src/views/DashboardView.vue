@@ -133,7 +133,7 @@
       </div>
 
       <div class="grid-area-sidebar">
-        <UpgradeCard @upgrade="handleOpenPricing" />
+        <UpgradeCard v-if="isFreePlan" @upgrade="handleOpenPricing" />
         <ProgressCard />
       </div>
     </div>
@@ -149,6 +149,7 @@ import OnboardingGuide from '../components/onboarding/OnboardingGuide.vue'
 import ProgressCard from '../components/ProgressCard.vue'
 import RecentList from '../components/RecentList.vue'
 import UpgradeCard from '../components/UpgradeCard.vue'
+import { PLAN_TIER_ORDER } from '../data/plans'
 import { useBacktestsStore, useBotsStore, useForumStore, useStrategiesStore, useUserStore } from '../stores'
 import { useSimulationStore } from '../stores/useSimulationStore'
 
@@ -180,6 +181,11 @@ const activeBotCount = computed(() => {
 })
 const strategyCount = computed(() => strategiesStore.recent?.length ?? 0)
 const backtestCount = computed(() => backtestsStore.latest ? 1 : 0)
+
+const isFreePlan = computed(() => {
+  const tier = PLAN_TIER_ORDER[user.value.plan_level] ?? 0
+  return tier === 0
+})
 
 const loadBacktest = () => {
   backtestsStore.loadLatest({ ...backtestQuery })

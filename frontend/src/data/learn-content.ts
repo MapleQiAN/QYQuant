@@ -6,7 +6,8 @@ export const learnContentByLocale = {
       '这份课程手册参考 Quant Wiki 的知识结构，把市场、数据、参数、风控、执行和 AI 策略串成一条可执行的研究链。目标不是背术语，而是知道每个参数在真实研究里控制了什么。',
     stats: [
       { label: '课程模块', value: '7', detail: '从研究地图到 AI 策略工作流' },
-      { label: '参数词条', value: '20+', detail: '覆盖回测、因子、风险、微观结构和机器学习' },
+      { label: '参数词条', value: '30+', detail: '覆盖回测、因子、风险、微观结构、时序和机器学习' },
+      { label: '实战案例', value: '12+', detail: '每模块附带典型场景与代码级检查点' },
       { label: '输出目标', value: '可验证策略', detail: '假设、回测、风控、执行和复盘闭环' },
     ],
     principles: [
@@ -15,13 +16,13 @@ export const learnContentByLocale = {
       'AI 放大研究效率，不能替代研究纪律。',
     ],
     syllabus: [
-      { id: 'research-map', label: '研究地图', meta: '市场 / 数据 / 信号 / 执行' },
-      { id: 'research-loop', label: '研究流程', meta: '从假设到复盘' },
-      { id: 'parameter-manual', label: '参数词典', meta: '回测 / 因子 / 风险 / 微观结构' },
+      { id: 'research-map', label: '研究地图', meta: '市场 / 宏观 / 数据 / 另类数据 / 信号 / 执行' },
+      { id: 'research-loop', label: '研究流程', meta: '从假设到迭代优化' },
+      { id: 'parameter-manual', label: '参数词典', meta: '回测 / 因子 / 风险 / 微观结构 / 时序 / 组合优化' },
       { id: 'risk-console', label: '指标与风控', meta: '收益质量而非只看斜率' },
-      { id: 'ai-lab', label: 'AI 策略工作流', meta: 'NLP / 监督学习 / GenAI / 合规' },
-      { id: 'execution-roadmap', label: '训练路线', meta: '8 周输出一个可解释原型' },
-      { id: 'field-notes', label: '延伸阅读', meta: '继续深挖 Quant Wiki' },
+      { id: 'ai-lab', label: 'AI 策略工作流', meta: 'NLP / 监督学习 / GenAI / 强化学习 / 异常检测 / 合规' },
+      { id: 'execution-roadmap', label: '训练路线', meta: '8 周周计划与具体输出' },
+      { id: 'field-notes', label: '延伸阅读', meta: '按专题深挖 Quant Wiki 全领域' },
     ],
     sections: [
       {
@@ -34,7 +35,7 @@ export const learnContentByLocale = {
         cards: [
           {
             title: '市场与产品层',
-            text: '股票、期货、期权、外汇、加密资产在杠杆、保证金、交易时段和流动性上差异很大。很多“策略失效”其实是把一种市场的假设错误迁移到了另一种市场。',
+            text: '股票、期货、期权、外汇、加密资产在杠杆、保证金、交易时段和流动性上差异很大。很多”策略失效”其实是把一种市场的假设错误迁移到了另一种市场。',
             tags: ['交易时段', '保证金', '流动性'],
           },
           {
@@ -44,13 +45,23 @@ export const learnContentByLocale = {
           },
           {
             title: '策略与因子层',
-            text: '趋势、均值回归、横截面因子、事件驱动和统计套利是常见主线。真正值得保留的信号，不是“回测漂亮”，而是能解释经济含义和风险来源。',
+            text: '趋势、均值回归、横截面因子、事件驱动和统计套利是常见主线。真正值得保留的信号，不是”回测漂亮”，而是能解释经济含义和风险来源。',
             tags: ['趋势', '因子', '事件驱动'],
           },
           {
             title: '执行与组合层',
             text: '研究结论不等于可交易收益。仓位上限、换手约束、交易成本、相关性暴露和风险预算决定策略能否进入真实资金体系。',
             tags: ['仓位', '换手', '风险预算'],
+          },
+          {
+            title: '宏观与微观分析',
+            text: '利率、通胀、政策周期和产业链传导决定大类资产的长期方向。微观上，财务报表、行业数据和供应链指标帮助你在横截面内做选择。两层结合才能解释”为什么现在是这个方向”。',
+            tags: ['利率周期', '财务分析', '行业比较'],
+          },
+          {
+            title: '另类数据源',
+            text: '卫星图像、信用卡消费、App 日活、船舶 AIS 和招聘数据等另类数据提供了传统报表无法覆盖的实时信号。但接入前必须评估数据覆盖度、时间一致性和合规边界。',
+            tags: ['卫星数据', '消费指标', '合规审查'],
           },
         ],
       },
@@ -74,7 +85,7 @@ export const learnContentByLocale = {
           },
           {
             title: '写成明确交易规则',
-            text: '入场、出场、加减仓、止损、调仓频率、权重约束和最大暴露都必须显式化，不要把“看情况”留在代码外。',
+            text: '入场、出场、加减仓、止损、调仓频率、权重约束和最大暴露都必须显式化，不要把”看情况”留在代码外。',
             checkpoint: '所有关键规则都能在配置里找到。',
           },
           {
@@ -83,9 +94,19 @@ export const learnContentByLocale = {
             checkpoint: '至少做一次手续费/滑点扰动和一次样本外验证。',
           },
           {
+            title: '组合构建与权重分配',
+            text: '单策略验证通过后，需要考虑它在组合中的角色：与现有策略的相关性、风险预算分配和资金占用。等权、风险平价、均值-方差优化各有取舍，关键是理解每个权重方案的隐含假设。',
+            checkpoint: '输出一份组合层面的相关性矩阵和风险贡献分解。',
+          },
+          {
             title: '仿真执行与复盘',
             text: '进入模拟盘后重点观察延迟、成交偏差、风控阈值和监控报警是否合理。这里暴露的问题通常比历史回测更真实。',
             checkpoint: '形成一份复盘日志，记录偏差来源和修正方案。',
+          },
+          {
+            title: '迭代优化与版本管理',
+            text: '策略上线后不是终点。定期做样本外滚动验证，监控因子衰减和参数漂移，记录每次调整的理由和效果。建立策略版本日志，确保每一步改动都可追溯。',
+            checkpoint: '维护一份策略变更日志，包含版本号、修改原因和样本外表现。',
           },
         ],
       },
@@ -220,7 +241,7 @@ export const learnContentByLocale = {
               {
                 name: '样本泄漏',
                 definition: '训练特征或处理流程中混入未来信息，导致离线结果虚高。',
-                impact: '是 AI 策略最常见也最致命的问题，能让模型看起来“神准”。',
+                impact: '是 AI 策略最常见也最致命的问题，能让模型看起来”神准”。',
                 pitfall: '全样本标准化、未来收益字段未滞后、事件时间对齐错误。',
                 practice: '从特征生成到归一化都按时间顺序执行，并保留审计日志。',
               },
@@ -230,6 +251,74 @@ export const learnContentByLocale = {
                 impact: '对分类信号、风险预警和阈值决策尤为关键。',
                 pitfall: '直接拿未经校准的模型概率作为仓位或风控触发依据。',
                 practice: '上线前用独立验证集检查 calibration curve 和阈值稳定性。',
+              },
+            ],
+          },
+          {
+            title: '时间序列与频率参数',
+            description: '控制数据采样频率和时间窗口，直接决定信号捕获能力和噪声水平。',
+            parameters: [
+              {
+                name: '采样频率',
+                definition: '数据的时间粒度，如日线、小时线、分钟线或 Tick 级别。',
+                impact: '频率越高越能捕获微观结构信号，但噪声和成本也指数级增长。',
+                pitfall: '用低频假设设计高频策略，或高频数据却不建模微观结构。',
+                practice: '根据策略逻辑选择频率，趋势用日线，做市用 Tick，保持逻辑和频率一致。',
+              },
+              {
+                name: '回看窗口',
+                definition: '计算技术指标或统计量时使用的历史数据长度，例如 20 日均线。',
+                impact: '窗口过短对噪声敏感，过长则反应迟缓。',
+                pitfall: '只看单窗口结果，不做窗口长度敏感性测试。',
+                practice: '在核心窗口周围做扰动测试，确认结果不依赖单一窗口长度。',
+              },
+              {
+                name: '持有期',
+                definition: '从建仓到平仓的时间跨度，决定了策略的资金效率和风险暴露时长。',
+                impact: '持有期越短，交易成本占比越高；越长，市场环境变化越大。',
+                pitfall: '回测用 5 日持有期，实盘却因为流动性拖到 20 日。',
+                practice: '让持有期和信号衰减周期匹配，并在回测中模拟滑点和延迟。',
+              },
+              {
+                name: '对齐与滞后',
+                definition: '确保特征使用的是信号产生时刻已知的信息，而不是未来数据。',
+                impact: '滞后处理错误是样本泄漏最常见的来源之一。',
+                pitfall: '用当日收盘价计算信号又在当日收盘成交，逻辑上矛盾。',
+                practice: '所有特征必须做 lag 处理，在代码中显式标注数据时间戳和信号时间戳。',
+              },
+            ],
+          },
+          {
+            title: '组合优化参数',
+            description: '控制从信号到最终仓位的转换方式，决定策略在组合层面的表现。',
+            parameters: [
+              {
+                name: '风险平价',
+                definition: '按每个资产的波动率倒数分配权重，让各资产对组合风险的贡献大致相等。',
+                impact: '能有效避免单一资产主导组合波动，适合多资产配置。',
+                pitfall: '在相关性剧变时，等风险贡献不等于等损失贡献。',
+                practice: '定期重估相关性矩阵，并加入尾部相关性约束。',
+              },
+              {
+                name: '最大持仓数',
+                definition: '组合中同时持有的标的数量上限。',
+                impact: '限制持仓数可以集中 alpha，但也放大了 idiosyncratic 风险。',
+                pitfall: '持仓数过少导致策略表现依赖少数个股，样本外方差大。',
+                practice: '做不同持仓数下的收益-波动曲线，找到集中度和分散化的平衡点。',
+              },
+              {
+                name: '行业/风格约束',
+                definition: '限制组合在特定行业或风格因子上的暴露上限。',
+                impact: '防止无意中把赌注押在单一方向上。',
+                pitfall: '约束设得太紧会限制 alpha 表达，太松形同虚设。',
+                practice: '先做因子暴露归因，根据暴露来源决定约束边界。',
+              },
+              {
+                name: '换手惩罚',
+                definition: '在优化目标中加入换手成本项，抑制不必要的仓位调整。',
+                impact: '能显著降低交易成本，但也会让策略对新信息反应变慢。',
+                pitfall: '惩罚系数设太大导致策略几乎不调仓。',
+                practice: '从回测的交易成本数据反推合适的惩罚系数。',
               },
             ],
           },
@@ -246,7 +335,7 @@ export const learnContentByLocale = {
           {
             title: '年化收益',
             formula: 'Annualized Return',
-            text: '回答“如果按当前节奏复利，一年能赚多少”。适合作为输出目标，不适合作为唯一排序依据。',
+            text: '回答”如果按当前节奏复利，一年能赚多少”。适合作为输出目标，不适合作为唯一排序依据。',
             watch: '必须和回撤、波动和容量一起看。',
           },
           {
@@ -267,12 +356,33 @@ export const learnContentByLocale = {
             text: '先把策略对市场方向的依赖拆出来，再看真正独立于基准的超额收益有多少。',
             watch: '如果高收益主要来自高 Beta，本质可能只是放大了市场敞口。',
           },
+          {
+            title: '最大回撤修复期',
+            formula: 'Recovery Duration',
+            text: '从回撤谷底恢复到前高需要多长时间。这个指标比回撤深度更能反映策略对资金方的心理压力。',
+            watch: '修复期超过 6 个月的策略在真实资金环境中很难获得持续信任。',
+          },
+          {
+            title: '盈亏比 / 胜率',
+            formula: 'Win Rate & Profit Factor',
+            text: '胜率告诉你赚钱交易的比例，盈亏比告诉你平均赚的是亏的多少倍。两者组合才是完整的收益质量图景。',
+            watch: '高胜率 + 低盈亏比和低胜率 + 高盈亏比可以达到同样的 Sharpe，但心理体验和回撤特征完全不同。',
+          },
+          {
+            title: '策略容量',
+            formula: 'Capacity Estimate',
+            text: '策略在不显著侵蚀 alpha 的前提下能管理多少资金。超过容量后冲击成本和滑点会让收益快速衰减。',
+            watch: '做一组资金规模敏感性测试：当 AUM 从 100 万到 1 亿时，Sharpe 变化了多少。',
+          },
         ],
         checklist: [
           '先做样本外验证，再做参数优化；顺序反了通常就是过拟合。',
           '把风险规则写成硬约束，例如最大回撤阈值和行业权重上限。',
           '记录回撤持续时间、恢复期和不同市场阶段表现，而不只是一张净值图。',
           '任何准备进入实盘的策略，都要重新审视容量、冲击成本和监控告警设计。',
+          '定期检查收益分布的偏度和峰度，判断正态假设是否还成立。',
+          '对策略做压力测试：极端行情（如 2008、2020）下最大回撤和恢复情况。',
+          '维护一份”策略死亡清单”：什么条件下策略应该被强制下线。',
         ],
       },
       {
@@ -301,6 +411,18 @@ export const learnContentByLocale = {
             useCases: ['研究资料摘要', '实验日志整理', '合规文档初稿'],
             controls: ['人工审校', '敏感信息脱敏', '保存中间推理与引用来源'],
           },
+          {
+            title: '强化学习与组合优化',
+            text: '强化学习把组合管理建模为序贯决策问题，让模型在模拟环境中学习动态调仓、执行拆单和风险控制策略。相比传统优化器，它能处理更复杂的约束和非线性目标，但对奖励函数设计和训练稳定性要求极高。',
+            useCases: ['动态仓位调整', '最优执行拆单', '多目标风险收益权衡'],
+            controls: ['奖励函数要包含交易成本和回撤惩罚', '在多个市场环境下验证泛化能力', '保留确定性策略快照用于回溯审计'],
+          },
+          {
+            title: '异常检测与风险预警',
+            text: '无监督学习方法（如孤立森林、自编码器）可以在不依赖标签的情况下识别市场结构突变、流动性枯竭和极端波动等异常模式，作为风控系统的前置预警层。',
+            useCases: ['流动性危机预警', '市场结构突变检测', '策略行为异常监控'],
+            controls: ['异常阈值需要滚动校准', '必须保留人工确认环节', '与已知风险事件回测验证召回率'],
+          },
         ],
         governance: [
           '可解释性不是可选项，任何进入投资决策链的模型都应保留版本和决策日志。',
@@ -317,10 +439,14 @@ export const learnContentByLocale = {
           '入门阶段不追求“一口气学完量化”。更现实的目标是 8 周内做出一套有假设、有参数、有回测、有样本外验证、有风控规则的策略原型。',
         kind: 'roadmap',
         roadmap: [
-          { window: '第 1-2 周', focus: '市场与回测底层', output: '搞清收益率、复权、成交成本、杠杆和回测参数含义。' },
-          { window: '第 3-4 周', focus: '数据处理与研究日志', output: '完成行情清洗、标签对齐和特征生成，并记录实验过程。' },
-          { window: '第 5-6 周', focus: '策略原型与参数面板', output: '完成一套趋势、均值回归或因子策略，输出核心配置。' },
-          { window: '第 7-8 周', focus: 'AI 扩展与仿真执行', output: '加入 AI 辅助研究或简单监督学习模块，完成 walk-forward 和模拟盘复盘。' },
+          { window: '第 1 周', focus: '市场基础与工具搭建', output: '了解主要市场结构（股票、期货、期权）的交易规则。安装 Python 环境和核心库（pandas、numpy、matplotlib）。用真实数据画出第一根 K 线。' },
+          { window: '第 2 周', focus: '收益率与回测底层', output: '搞清收益率计算、复权方式、成交成本建模、杠杆和回测参数含义。用代码实现一个最简单的买入持有策略并跑通回测。' },
+          { window: '第 3 周', focus: '数据清洗与标签对齐', output: '完成行情数据清洗（缺失值、停牌、异常值）、标签对齐和基础特征生成。输出一份完整的数据处理日志。' },
+          { window: '第 4 周', focus: '因子研究与实验框架', output: '实现 2-3 个经典因子（动量、波动率、成交量），计算 IC/IR，画出分层回测收益图。建立实验日志记录模板。' },
+          { window: '第 5 周', focus: '策略原型 v1', output: '选择趋势跟踪、均值回归或横截面因子中的一个方向，实现完整的策略原型：入场、出场、仓位、止损。' },
+          { window: '第 6 周', focus: '参数面板与稳健性检验', output: '对策略核心参数做扰动测试和手续费/滑点敏感性分析。输出参数热力图和成本敏感性报告。' },
+          { window: '第 7 周', focus: 'AI 辅助与样本外验证', output: '加入简单的机器学习模块（如随机森林因子合成）或 AI 辅助研究工具。完成 walk-forward 样本外验证。' },
+          { window: '第 8 周', focus: '组合构建与仿真复盘', output: '将策略放入组合框架，做相关性分析和风险预算分配。进入模拟盘，形成完整的复盘报告和策略文档。' },
         ],
       },
       {
@@ -334,12 +460,19 @@ export const learnContentByLocale = {
           { title: 'Quant Wiki 首页', text: '适合作为总导航，快速进入 AI 量化、因子投资、期权、期货、加密和高频等专题。', href: 'https://quant-wiki.com/' },
           { title: 'AI 量化专题', text: '关注生成式 AI、文本分析、组合优化、风险预警和合规问题。', href: 'https://quant-wiki.com/ai/ai-quant/' },
           { title: '入门书单', text: '适合补系统化基础，把金融、数学和工程实现各补一轮。', href: 'https://quant-wiki.com/library/book/beginner/' },
+          { title: '因子投资专题', text: '深入理解价值、动量、质量、低波等经典因子，以及因子动物园和多因子模型的构建方法。', href: 'https://quant-wiki.com/factor/' },
+          { title: '期权与衍生品', text: '掌握期权定价、希腊字母、波动率曲面和期权策略在组合中的应用。', href: 'https://quant-wiki.com/option/' },
+          { title: '高频与微观结构', text: '理解订单簿 dynamics、做市策略、最优执行和市场冲击模型。', href: 'https://quant-wiki.com/high-frequency/' },
+          { title: '风险管理专题', text: '从 VaR、CVaR 到尾部风险、压力测试和全面风控框架的系统梳理。', href: 'https://quant-wiki.com/risk/' },
         ],
         pitfalls: [
           '一上来就追复杂模型，却没有先做可解释的基准策略。',
           '把回测平台输出当成真相，没有核查数据口径和成交时点。',
           '没有研究日志，导致调参过程和失败原因不可复盘。',
           '直接把历史最优参数带去实盘，没有经过仿真和样本外检查。',
+          '只看策略在牛市的表现，忽略熊市和震荡期的表现差异。',
+          '忽视交易成本的真实影响——回测里一笔手续费和实盘的滑点可能是两个量级。',
+          '忽略策略间的相关性，以为多策略就是分散化。',
         ],
       },
     ],
@@ -351,7 +484,8 @@ export const learnContentByLocale = {
       'This course manual follows Quant Wiki and turns markets, data, parameters, risk, execution, and AI strategy into one practical research chain.',
     stats: [
       { label: 'Modules', value: '7', detail: 'From research map to AI workflow' },
-      { label: 'Parameters', value: '20+', detail: 'Backtest, factor, risk, microstructure, and ML settings' },
+      { label: 'Parameters', value: '30+', detail: 'Backtest, factor, risk, microstructure, time-series, and ML settings' },
+      { label: 'Case Studies', value: '12+', detail: 'Practical scenarios and code-level checkpoints per module' },
       { label: 'Target', value: 'Verifiable strategy', detail: 'Hypothesis, backtest, execution, and review in one loop' },
     ],
     principles: [
@@ -360,13 +494,13 @@ export const learnContentByLocale = {
       'AI improves speed, not discipline.',
     ],
     syllabus: [
-      { id: 'research-map', label: 'Research Map', meta: 'Markets / Data / Signals / Execution' },
-      { id: 'research-loop', label: 'Research Loop', meta: 'Hypothesis to review' },
-      { id: 'parameter-manual', label: 'Parameter Manual', meta: 'Backtest / Factor / Risk / Microstructure' },
+      { id: 'research-map', label: 'Research Map', meta: 'Markets / Data / Macro / Alt Data / Signals / Execution' },
+      { id: 'research-loop', label: 'Research Loop', meta: 'Hypothesis to iteration' },
+      { id: 'parameter-manual', label: 'Parameter Manual', meta: 'Backtest / Factor / Risk / Microstructure / Time-Series / Portfolio' },
       { id: 'risk-console', label: 'Risk Console', meta: 'Read quality before size' },
-      { id: 'ai-lab', label: 'AI Strategy Workflow', meta: 'NLP / ML / GenAI / governance' },
-      { id: 'execution-roadmap', label: 'Roadmap', meta: 'Build one explainable prototype in 8 weeks' },
-      { id: 'field-notes', label: 'Further Reading', meta: 'Go deeper with Quant Wiki' },
+      { id: 'ai-lab', label: 'AI Strategy Workflow', meta: 'NLP / ML / GenAI / RL / Anomaly Detection / governance' },
+      { id: 'execution-roadmap', label: 'Roadmap', meta: '8-week weekly plan with concrete outputs' },
+      { id: 'field-notes', label: 'Further Reading', meta: 'Deepen with Quant Wiki across all domains' },
     ],
     sections: [],
   },
