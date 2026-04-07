@@ -75,22 +75,34 @@ const router = createRouter({
   ]
 })
 
-router.beforeEach(async (to) => {
-  if (!to.meta.requiresAdmin) {
-    return true
-  }
+const publicRoutes = new Set(['login', 'forgot-password', 'reset-password'])
 
+router.beforeEach(async (to) => {
   const userStore = useUserStore(pinia)
+  const isPublic = publicRoutes.has(to.name as string)
+
+  // Load profile if token exists but profile not yet loaded
   if (userStore.token && !userStore.profileLoaded && !userStore.profileLoading) {
     await userStore.loadProfile()
   }
 
-  if (userStore.profile.role === 'admin') {
-    return true
+  // Redirect logged-in users away from auth pages
+  if (isPublic && userStore.token) {
+    return { path: '/' }
   }
 
-  toast.error('无权限')
-  return { path: '/' }
+  // Redirect unauthenticated users to login (except public pages)
+  if (!isPublic && !userStore.token) {
+    return { name: 'login', query: { redirect: to.fullPath } }
+  }
+
+  // Admin-only check
+  if (to.meta.requiresAdmin && userStore.profile.role !== 'admin') {
+    toast.error('无权限')
+    return { path: '/' }
+  }
+
+  return true
 })
 
 export default router

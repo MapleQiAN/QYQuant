@@ -87,7 +87,7 @@
 <script setup lang="ts">
 import { computed, h, onMounted, onUnmounted, ref } from 'vue'
 import { storeToRefs } from 'pinia'
-import { RouterLink, useRoute } from 'vue-router'
+import { RouterLink, useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import NotificationPanel from './NotificationPanel.vue'
 import { useNotificationStore } from '../stores/useNotificationStore'
@@ -96,6 +96,7 @@ import { useUserStore } from '../stores/user'
 defineEmits<{ 'toggle-sidebar': [] }>()
 
 const route = useRoute()
+const router = useRouter()
 const { t } = useI18n()
 const userStore = useUserStore()
 const notificationStore = useNotificationStore()
@@ -135,7 +136,8 @@ function handleAvatarClick() {
 function handleLogout() {
   isUserMenuOpen.value = false
   localStorage.removeItem('qyquant-token')
-  window.location.href = '/login'
+  userStore.$reset()
+  router.replace({ name: 'login' })
 }
 
 function handleClickOutside(e: MouseEvent) {

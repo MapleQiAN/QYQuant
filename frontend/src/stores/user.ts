@@ -100,11 +100,12 @@ export const useUserStore = defineStore('user', {
         return
       }
 
-      this.profileLoading = true
       try {
         await this.refreshProfile()
-      } finally {
-        this.profileLoading = false
+      } catch {
+        // Token may be invalid/expired — clear it
+        window.localStorage.removeItem('qyquant-token')
+        this.profileLoaded = true
       }
     },
     async markOnboardingCompleted(completed = true) {

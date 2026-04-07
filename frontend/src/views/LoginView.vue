@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref } from 'vue'
-import { RouterLink, useRouter } from 'vue-router'
+import { RouterLink, useRouter, useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { loginWithPassword, registerWithPassword } from '../api/auth'
 import { toast } from '../lib/toast'
@@ -10,6 +10,7 @@ type AuthIntent = 'login' | 'register'
 
 const { t } = useI18n()
 const router = useRouter()
+const route = useRoute()
 const userStore = useUserStore()
 
 const intent = ref<AuthIntent>('login')
@@ -60,7 +61,8 @@ function validate() {
 async function finalizeLogin(accessToken: string) {
   localStorage.setItem('qyquant-token', accessToken)
   await userStore.refreshProfile()
-  await router.replace('/')
+  const redirect = typeof route.query.redirect === 'string' ? route.query.redirect : '/'
+  await router.replace(redirect)
 }
 
 async function handleSubmit() {
