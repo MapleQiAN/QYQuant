@@ -5,9 +5,17 @@
         <button class="mobile-menu-btn" type="button" aria-label="Toggle menu" @click="$emit('toggle-sidebar')">
           <MenuIcon />
         </button>
-        <div class="breadcrumb">
-          <span class="breadcrumb-current">{{ currentPageTitle }}</span>
-        </div>
+
+        <nav class="nav-tabs">
+          <RouterLink
+            v-for="tab in navTabs"
+            :key="tab.path"
+            :to="tab.path"
+            :class="['nav-tab', { active: isTabActive(tab) }]"
+          >
+            {{ t(tab.label) }}
+          </RouterLink>
+        </nav>
       </div>
 
       <div class="header-right">
@@ -35,8 +43,6 @@
             <NotificationPanel v-if="isNotificationPanelOpen" />
           </div>
 
-          <div class="divider-v" />
-
           <div class="user-menu-shell">
             <button class="user-trigger" type="button" @click="handleAvatarClick">
               <img
@@ -54,8 +60,6 @@
               >
                 {{ userStore.token ? profile.avatar : '?' }}
               </span>
-              <span class="user-name">{{ userStore.token ? (profile.name || '') : t('common.notLoggedIn') }}</span>
-              <ChevronDownIcon />
             </button>
             <div v-if="isUserMenuOpen" class="user-dropdown">
               <div class="dropdown-header">
@@ -105,25 +109,25 @@ const notificationCount = computed(() => notificationStore.unreadCount)
 const isNotificationPanelOpen = ref(false)
 const isUserMenuOpen = ref(false)
 
-const pageTitles: Record<string, string> = {
-  '/': 'pageTitle.dashboard',
-  '/learn': 'pageTitle.learn',
-  '/strategies': 'pageTitle.strategies',
-  '/backtests': 'pageTitle.backtests',
-  '/bots': 'pageTitle.bots',
-  '/forum': 'pageTitle.forum',
-  '/marketplace': 'pageTitle.marketplace',
-  '/settings': 'pageTitle.settings',
-  '/pricing': 'pageTitle.pricing',
+interface NavTab {
+  path: string
+  label: string
+  matchPrefix?: string
 }
 
-const currentPageTitle = computed(() => {
-  for (const [path, key] of Object.entries(pageTitles)) {
-    if (path === '/' && route.path === '/') return t(key)
-    if (path !== '/' && route.path.startsWith(path)) return t(key)
-  }
-  return t('pageTitle.default')
-})
+const navTabs: NavTab[] = [
+  { path: '/', label: 'pageTitle.dashboard' },
+  { path: '/strategies', label: 'pageTitle.strategies', matchPrefix: '/strategies' },
+  { path: '/backtests', label: 'pageTitle.backtests', matchPrefix: '/backtests' },
+  { path: '/bots', label: 'pageTitle.bots', matchPrefix: '/bots' },
+  { path: '/marketplace', label: 'pageTitle.marketplace', matchPrefix: '/marketplace' },
+]
+
+function isTabActive(tab: NavTab) {
+  if (tab.path === '/') return route.path === '/'
+  if (tab.matchPrefix) return route.path.startsWith(tab.matchPrefix)
+  return route.path === tab.path
+}
 
 function handleAvatarClick() {
   if (!userStore.token) {
@@ -164,7 +168,7 @@ function toggleNotifications() {
   isNotificationPanelOpen.value = !isNotificationPanelOpen.value
 }
 
-// ── Icons ──
+// Icons
 const MenuIcon = () => h('svg', { width: 18, height: 18, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', 'stroke-width': 2, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }, [
   h('line', { x1: 3, y1: 6, x2: 21, y2: 6 }),
   h('line', { x1: 3, y1: 12, x2: 21, y2: 12 }),
@@ -203,10 +207,6 @@ const HelpIcon = () => h('svg', { width: 16, height: 16, viewBox: '0 0 24 24', f
   h('line', { x1: 12, y1: 17, x2: 12.01, y2: 17 }),
 ])
 
-const ChevronDownIcon = () => h('svg', { width: 12, height: 12, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', 'stroke-width': 2, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }, [
-  h('path', { d: 'M6 9l6 6 6-6' }),
-])
-
 const UserIcon = () => h('svg', { width: 14, height: 14, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', 'stroke-width': 2, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }, [
   h('path', { d: 'M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2' }),
   h('circle', { cx: 12, cy: 7, r: 4 }),
@@ -232,9 +232,6 @@ const LogoutIcon = () => h('svg', { width: 14, height: 14, viewBox: '0 0 24 24',
   height: var(--nav-height);
   background: var(--color-nav-bg);
   border-bottom: 1px solid var(--color-nav-border);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
 .header-content {
@@ -263,28 +260,54 @@ const LogoutIcon = () => h('svg', { width: 14, height: 14, viewBox: '0 0 24 24',
   border-radius: var(--radius-md);
   color: var(--color-text-secondary);
   cursor: pointer;
-  transition: all var(--transition-fast);
+  transition: color var(--transition-fast), background var(--transition-fast);
 }
 
 .mobile-menu-btn:hover {
-  border-color: var(--color-primary-border);
   color: var(--color-text-primary);
+  background: var(--color-surface-hover);
 }
 
-.breadcrumb-current {
-  font-size: var(--font-size-lg);
-  font-weight: 700;
-  color: var(--color-text-primary);
-  letter-spacing: -0.01em;
-}
-
-.header-right {
+/* Pill tab navigation */
+.nav-tabs {
   display: flex;
   align-items: center;
   gap: 4px;
 }
 
-/* ── Search - Modern ── */
+.nav-tab {
+  padding: 6px 16px;
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  color: var(--color-text-muted);
+  text-decoration: none;
+  border-radius: var(--radius-full);
+  transition: color var(--transition-fast), background var(--transition-fast);
+}
+
+.nav-tab:hover {
+  color: var(--color-text-primary);
+  background: var(--color-surface-hover);
+}
+
+.nav-tab.active {
+  color: var(--color-text-inverse);
+  background: var(--color-text-primary);
+  font-weight: 600;
+}
+
+:root[data-theme="light"] .nav-tab.active {
+  color: #ffffff;
+  background: var(--color-text-primary);
+}
+
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Search */
 .search-box {
   position: relative;
   display: flex;
@@ -299,24 +322,22 @@ const LogoutIcon = () => h('svg', { width: 14, height: 14, viewBox: '0 0 24 24',
 }
 
 .search-input {
-  width: 220px;
+  width: 200px;
   height: 36px;
   padding: 0 40px 0 36px;
   font-size: var(--font-size-sm);
   font-family: var(--font-family);
   font-weight: 500;
   color: var(--color-text-primary);
-  background: var(--color-surface-elevated);
+  background: var(--color-surface);
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-full);
   outline: none;
-  transition: all var(--transition-fast);
+  transition: border-color var(--transition-fast);
 }
 
 .search-input:focus {
-  border-color: var(--color-primary-border);
-  box-shadow: 0 0 0 3px var(--color-primary-bg);
-  background: var(--color-surface);
+  border-color: var(--color-primary);
 }
 
 .search-input::placeholder {
@@ -331,15 +352,14 @@ const LogoutIcon = () => h('svg', { width: 14, height: 14, viewBox: '0 0 24 24',
   font-family: var(--font-mono);
   font-weight: 600;
   color: var(--color-text-muted);
-  background: var(--color-surface-active);
+  background: var(--color-surface-elevated);
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-xs);
   line-height: 1.2;
   pointer-events: none;
-  letter-spacing: 0.02em;
 }
 
-/* ── Action buttons - Premium ── */
+/* Action buttons */
 .header-actions {
   display: flex;
   align-items: center;
@@ -354,49 +374,35 @@ const LogoutIcon = () => h('svg', { width: 14, height: 14, viewBox: '0 0 24 24',
   align-items: center;
   justify-content: center;
   background: transparent;
-  border: 1px solid transparent;
-  border-radius: var(--radius-md);
+  border: none;
+  border-radius: var(--radius-full);
   color: var(--color-text-muted);
   cursor: pointer;
-  transition: all var(--transition-fast);
+  transition: color var(--transition-fast), background var(--transition-fast);
 }
 
 .header-btn:hover {
   background: var(--color-surface-hover);
   color: var(--color-text-primary);
-  border-color: var(--color-primary-border);
 }
 
-.divider-v {
-  width: 1px;
-  height: 24px;
-  background: var(--color-border);
-  margin: 0 6px;
-}
-
-/* ── Notifications - Live Indicator ── */
+/* Notification dot */
 .notification-shell {
   position: relative;
 }
 
 .notification-dot {
   position: absolute;
-  top: 4px;
-  right: 4px;
-  width: 8px;
-  height: 8px;
+  top: 6px;
+  right: 6px;
+  width: 7px;
+  height: 7px;
   background: var(--color-danger);
   border: 2px solid var(--color-nav-bg);
   border-radius: var(--radius-full);
-  animation: pulse 2s ease-in-out infinite;
 }
 
-@keyframes pulse {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(255, 59, 59, 0.4); }
-  50% { box-shadow: 0 0 0 4px rgba(255, 59, 59, 0.1); }
-}
-
-/* ── User Menu - Premium ── */
+/* User menu */
 .user-menu-shell {
   position: relative;
 }
@@ -404,18 +410,16 @@ const LogoutIcon = () => h('svg', { width: 14, height: 14, viewBox: '0 0 24 24',
 .user-trigger {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 6px 10px 6px 6px;
+  padding: 4px;
   background: transparent;
-  border: 1px solid transparent;
-  border-radius: var(--radius-md);
+  border: none;
+  border-radius: var(--radius-full);
   cursor: pointer;
-  transition: all var(--transition-fast);
+  transition: opacity var(--transition-fast);
 }
 
 .user-trigger:hover {
-  background: var(--color-surface-hover);
-  border-color: var(--color-primary-border);
+  opacity: 0.85;
 }
 
 .user-avatar {
@@ -426,10 +430,9 @@ const LogoutIcon = () => h('svg', { width: 14, height: 14, viewBox: '0 0 24 24',
   justify-content: center;
   font-size: 12px;
   font-weight: 700;
-  background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-accent) 100%);
+  background: var(--color-primary);
   color: #fff;
-  border-radius: var(--radius-md);
-  box-shadow: 0 2px 8px rgba(30, 90, 168, 0.25);
+  border-radius: var(--radius-full);
 }
 
 .user-avatar--image {
@@ -439,67 +442,44 @@ const LogoutIcon = () => h('svg', { width: 14, height: 14, viewBox: '0 0 24 24',
 .user-avatar--guest {
   background: var(--color-surface-active);
   color: var(--color-text-muted);
-  box-shadow: none;
-  border: 1px solid var(--color-border);
 }
 
-.user-name {
-  font-size: var(--font-size-sm);
-  font-weight: 600;
-  color: var(--color-text-secondary);
-  max-width: 100px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.user-trigger svg {
-  color: var(--color-text-muted);
-  width: 14px;
-  height: 14px;
-  transition: transform var(--transition-fast);
-}
-
-/* ── Dropdown Menu - Glass Style ── */
+/* Dropdown */
 .user-dropdown {
   position: absolute;
   top: calc(100% + 8px);
   right: 0;
-  min-width: 220px;
+  min-width: 200px;
   padding: 6px;
-  background: var(--glass-background);
-  backdrop-filter: var(--glass-backdrop);
-  -webkit-backdrop-filter: var(--glass-backdrop);
-  border: var(--glass-border);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-xl);
+  box-shadow: var(--shadow-lg);
   z-index: 200;
 }
 
 .dropdown-header {
-  padding: 12px 14px 10px;
+  padding: 10px 12px 8px;
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  gap: 2px;
 }
 
 .dropdown-name {
   font-size: var(--font-size-sm);
-  font-weight: 700;
+  font-weight: 600;
   color: var(--color-text-primary);
 }
 
 .dropdown-email {
   font-size: var(--font-size-xs);
-  color: var(--color-accent);
-  font-weight: 700;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
+  color: var(--color-primary);
+  font-weight: 600;
 }
 
 .dropdown-divider {
   height: 1px;
-  margin: 6px 0;
+  margin: 4px 0;
   background: var(--color-border);
 }
 
@@ -508,29 +488,26 @@ const LogoutIcon = () => h('svg', { width: 14, height: 14, viewBox: '0 0 24 24',
   align-items: center;
   gap: 10px;
   width: 100%;
-  padding: 9px 12px;
+  padding: 8px 12px;
   font-size: var(--font-size-sm);
-  font-weight: 600;
+  font-weight: 500;
   color: var(--color-text-primary);
   background: transparent;
   border: none;
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-sm);
   cursor: pointer;
   text-decoration: none;
   text-align: left;
-  transition: all var(--transition-fast);
+  transition: background var(--transition-fast);
 }
 
 .dropdown-item:hover {
   background: var(--color-surface-hover);
-  color: var(--color-accent);
 }
 
 .dropdown-icon {
   color: var(--color-text-muted);
   flex-shrink: 0;
-  width: 14px;
-  height: 14px;
 }
 
 .dropdown-item.danger {
@@ -545,97 +522,33 @@ const LogoutIcon = () => h('svg', { width: 14, height: 14, viewBox: '0 0 24 24',
   background: var(--color-danger-bg);
 }
 
-/* ── Large Screen ── */
+/* Large Screen */
 @media (min-width: 1920px) {
-  .search-input {
-    width: 320px;
-    height: 36px;
-    font-size: var(--font-size-md);
-  }
-
-  .header-btn {
-    width: 36px;
-    height: 36px;
-  }
-
-  .user-avatar {
-    width: 34px;
-    height: 34px;
-  }
+  .search-input { width: 280px; }
 }
 
 @media (min-width: 2560px) {
-  .search-input {
-    width: 400px;
-    height: 40px;
-  }
-
-  .header-btn {
-    width: 40px;
-    height: 40px;
-  }
-
-  .user-avatar {
-    width: 38px;
-    height: 38px;
-  }
-
-  .user-name {
-    font-size: var(--font-size-md);
-    max-width: 160px;
-  }
-
-  .divider-v {
-    height: 28px;
-  }
+  .search-input { width: 360px; height: 40px; }
+  .header-btn { width: 40px; height: 40px; }
+  .user-avatar { width: 36px; height: 36px; }
 }
 
-/* ── Responsive ── */
+/* Responsive */
 @media (max-width: 1024px) {
-  .search-input {
-    width: 160px;
-  }
+  .search-input { width: 160px; }
+  .nav-tabs { display: none; }
 }
 
 @media (max-width: 768px) {
-  .mobile-menu-btn {
-    display: flex;
-  }
-
-  .search-box {
-    display: none;
-  }
-
-  .user-name {
-    display: none;
-  }
-
-  .header-content {
-    padding: 0 var(--spacing-md);
-  }
-
-  .divider-v {
-    margin: 0 2px;
-  }
+  .mobile-menu-btn { display: flex; }
+  .search-box { display: none; }
+  .nav-tabs { display: none; }
+  .header-content { padding: 0 var(--spacing-md); }
 }
 
 @media (max-width: 480px) {
-  .header-content {
-    padding: 0 var(--spacing-sm);
-    gap: 8px;
-  }
-
-  .header-actions {
-    gap: 0;
-  }
-
-  .header-btn {
-    width: 28px;
-    height: 28px;
-  }
-
-  .breadcrumb-current {
-    font-size: var(--font-size-md);
-  }
+  .header-content { padding: 0 var(--spacing-sm); gap: 8px; }
+  .header-actions { gap: 0; }
+  .header-btn { width: 32px; height: 32px; }
 }
 </style>

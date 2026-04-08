@@ -1,5 +1,5 @@
 <template>
-  <div class="learn-shell">
+  <div class="learn-shell" :class="{ 'learn-shell--zh': isZh }">
     <section class="terminal-hero card">
       <div class="hero-copy">
         <span class="hero-badge">{{ content.badge }}</span>
@@ -90,11 +90,8 @@
                   class="parameter-card"
                 >
                   <h4 class="parameter-name">{{ parameter.name }}</h4>
+                  <p class="parameter-definition">{{ parameter.definition }}</p>
                   <dl class="parameter-facts">
-                    <div class="parameter-fact">
-                      <dt>{{ copy.definition }}</dt>
-                      <dd>{{ parameter.definition }}</dd>
-                    </div>
                     <div class="parameter-fact">
                       <dt>{{ copy.impact }}</dt>
                       <dd>{{ parameter.impact }}</dd>
@@ -103,7 +100,7 @@
                       <dt>{{ copy.pitfall }}</dt>
                       <dd>{{ parameter.pitfall }}</dd>
                     </div>
-                    <div class="parameter-fact">
+                    <div class="parameter-fact parameter-fact--wide">
                       <dt>{{ copy.practice }}</dt>
                       <dd>{{ parameter.practice }}</dd>
                     </div>
@@ -286,15 +283,13 @@ const copy = computed(() =>
   display: inline-flex;
   align-items: center;
   width: fit-content;
-  padding: 6px 10px;
+  padding: 5px 10px;
   border-radius: var(--radius-full);
   border: 1px solid var(--color-primary-border);
   background: var(--color-primary-bg);
   color: var(--color-primary);
-  font-size: clamp(14px, 0.95vw, 15px);
+  font-size: clamp(12px, 0.85vw, 13px);
   font-weight: var(--font-weight-semibold);
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
 }
 
 .hero-title,
@@ -307,8 +302,7 @@ const copy = computed(() =>
 }
 
 .editorial-title {
-  font-family: 'Iowan Old Style', 'Palatino Linotype', Georgia, serif;
-  font-weight: 600;
+  font-weight: 700;
 }
 
 .hero-subtitle,
@@ -322,7 +316,6 @@ const copy = computed(() =>
 .mini-list,
 .parameter-facts dd {
   margin: 0;
-  font-family: 'Noto Serif SC', 'Source Han Serif SC', 'Songti SC', 'STSong', Georgia, serif;
   color: var(--color-text-secondary);
   line-height: 1.55;
   font-size: clamp(14px, 1vw, 16px);
@@ -516,45 +509,70 @@ const copy = computed(() =>
 
 .parameter-groups {
   display: grid;
-  gap: 12px;
+  gap: var(--spacing-lg);
 }
 
 .parameter-group__header {
   display: grid;
   gap: 8px;
-  margin-bottom: 12px;
+  margin-bottom: var(--spacing-md);
+  padding-bottom: var(--spacing-md);
+  border-bottom: 1px solid var(--color-border);
 }
 
 .parameter-list {
   display: grid;
-  gap: 10px;
+  gap: var(--spacing-md);
 }
 
 .parameter-card {
-  padding: 13px 15px;
+  padding: clamp(16px, 1.6vw, 24px);
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-lg);
   background: var(--color-surface);
+  transition: border-color var(--transition-fast);
+}
+
+.parameter-card:hover {
+  border-color: var(--color-border-hover);
 }
 
 .parameter-name {
-  margin-bottom: 10px;
+  margin-bottom: 6px;
+  font-size: clamp(17px, 1.15vw, 20px);
+  font-weight: var(--font-weight-bold);
+  letter-spacing: -0.01em;
+}
+
+.parameter-definition {
+  margin: 0 0 var(--spacing-md);
+  color: var(--color-text-secondary);
+  font-size: clamp(14px, 1vw, 16px);
+  line-height: 1.55;
+  padding-bottom: var(--spacing-md);
+  border-bottom: 1px solid var(--color-border);
 }
 
 .parameter-facts {
   display: grid;
-  gap: 8px;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--spacing-md);
   margin: 0;
 }
 
 .parameter-fact {
   display: grid;
-  gap: 3px;
+  gap: 4px;
+  align-content: start;
+}
+
+.parameter-fact--wide {
+  grid-column: 1 / -1;
 }
 
 .parameter-facts dt {
   color: var(--color-primary);
-  font-size: clamp(12px, 0.88vw, 13px);
+  font-size: clamp(11px, 0.82vw, 12px);
   font-weight: var(--font-weight-semibold);
   letter-spacing: 0.06em;
   text-transform: uppercase;
@@ -606,93 +624,6 @@ const copy = computed(() =>
   border-left: 3px solid var(--color-primary);
 }
 
-:global(:root[data-theme='light']) .learn-shell {
-  gap: 20px;
-}
-
-:global(:root[data-theme='light']) .terminal-hero {
-  background:
-    linear-gradient(180deg, rgba(30, 90, 168, 0.05) 0%, rgba(255, 255, 255, 0.98) 72%);
-  border-color: rgba(30, 90, 168, 0.14);
-  box-shadow: 0 14px 34px rgba(15, 23, 42, 0.06);
-}
-
-:global(:root[data-theme='light']) .learn-section,
-:global(:root[data-theme='light']) .learn-rail {
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.98) 0%, rgba(247, 250, 252, 0.98) 100%);
-  border-color: rgba(30, 90, 168, 0.12);
-  box-shadow: 0 10px 28px rgba(15, 23, 42, 0.05);
-}
-
-:global(:root[data-theme='light']) .summary-card,
-:global(:root[data-theme='light']) .panel-card,
-:global(:root[data-theme='light']) .parameter-group,
-:global(:root[data-theme='light']) .side-panel,
-:global(:root[data-theme='light']) .workflow-item,
-:global(:root[data-theme='light']) .parameter-card,
-:global(:root[data-theme='light']) .syllabus-link {
-  background: #ffffff;
-  border-color: rgba(30, 90, 168, 0.1);
-  box-shadow: 0 6px 20px rgba(15, 23, 42, 0.04);
-}
-
-:global(:root[data-theme='light']) .hero-badge,
-:global(:root[data-theme='light']) .section-eyebrow,
-:global(:root[data-theme='light']) .panel-kicker,
-:global(:root[data-theme='light']) .rail-label {
-  background: rgba(30, 90, 168, 0.09);
-  border-color: rgba(30, 90, 168, 0.18);
-  color: var(--color-primary-dark);
-}
-
-:global(:root[data-theme='light']) .principle-chip,
-:global(:root[data-theme='light']) .panel-tag {
-  background: rgba(248, 250, 252, 0.96);
-  border-color: rgba(30, 90, 168, 0.1);
-  color: #4b5563;
-}
-
-:global(:root[data-theme='light']) .summary-value,
-:global(:root[data-theme='light']) .summary-label,
-:global(:root[data-theme='light']) .panel-title,
-:global(:root[data-theme='light']) .parameter-name,
-:global(:root[data-theme='light']) .hero-title,
-:global(:root[data-theme='light']) .section-title,
-:global(:root[data-theme='light']) .syllabus-link__label {
-  color: #0f172a;
-}
-
-:global(:root[data-theme='light']) .hero-subtitle,
-:global(:root[data-theme='light']) .section-description,
-:global(:root[data-theme='light']) .panel-copy,
-:global(:root[data-theme='light']) .rail-copy,
-:global(:root[data-theme='light']) .summary-detail,
-:global(:root[data-theme='light']) .workflow-checkpoint,
-:global(:root[data-theme='light']) .metric-watch,
-:global(:root[data-theme='light']) .checklist,
-:global(:root[data-theme='light']) .mini-list,
-:global(:root[data-theme='light']) .parameter-facts dd,
-:global(:root[data-theme='light']) .syllabus-link__meta {
-  color: #5b6778;
-}
-
-:global(:root[data-theme='light']) .workflow-index {
-  background: rgba(30, 90, 168, 0.1);
-  color: var(--color-primary-dark);
-}
-
-:global(:root[data-theme='light']) .parameter-facts dt,
-:global(:root[data-theme='light']) .resource-link {
-  color: var(--color-primary-dark);
-}
-
-:global(:root[data-theme='light']) .syllabus-link:hover,
-:global(:root[data-theme='light']) .resource-card:hover {
-  background: rgba(30, 90, 168, 0.06);
-  border-color: rgba(30, 90, 168, 0.22);
-}
-
 @media (max-width: 1200px) {
   .learn-workspace,
   .split-layout {
@@ -720,5 +651,52 @@ const copy = computed(() =>
   .card-grid {
     grid-template-columns: 1fr;
   }
+
+  .parameter-facts {
+    grid-template-columns: 1fr;
+  }
+
+  .parameter-fact--wide {
+    grid-column: auto;
+  }
+}
+
+/* Chinese typography — scoped to zh locale */
+.learn-shell--zh .hero-title,
+.learn-shell--zh .section-title,
+.learn-shell--zh .panel-title,
+.learn-shell--zh .parameter-name,
+.learn-shell--zh .summary-label,
+.learn-shell--zh .hero-badge,
+.learn-shell--zh .section-eyebrow,
+.learn-shell--zh .principle-chip {
+  font-family: var(--font-zh-display);
+}
+
+.learn-shell--zh .hero-subtitle,
+.learn-shell--zh .section-description,
+.learn-shell--zh .panel-copy,
+.learn-shell--zh .rail-copy,
+.learn-shell--zh .summary-detail,
+.learn-shell--zh .parameter-definition,
+.learn-shell--zh .parameter-facts dd,
+.learn-shell--zh .workflow-checkpoint,
+.learn-shell--zh .metric-watch,
+.learn-shell--zh .checklist,
+.learn-shell--zh .mini-list {
+  font-family: var(--font-zh-body);
+}
+
+.learn-shell--zh .syllabus-link__label {
+  font-family: var(--font-zh-display);
+}
+
+.learn-shell--zh .syllabus-link__meta,
+.learn-shell--zh .rail-label {
+  font-family: var(--font-zh-body);
+}
+
+.learn-shell--zh .summary-value {
+  font-family: var(--font-zh-display);
 }
 </style>

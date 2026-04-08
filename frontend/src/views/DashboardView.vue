@@ -22,64 +22,44 @@
       @complete="handleSkipOnboarding"
     />
 
-    <!-- KPI Row - Enterprise Style -->
+    <!-- KPI Row -->
     <div class="kpi-row">
       <div class="kpi-card">
-        <div class="kpi-header">
-          <div class="kpi-label-wrapper">
-            <TrendingIcon class="kpi-icon" />
-            <span class="kpi-label">{{ $t('dashboard.totalReturn') }}</span>
-          </div>
+        <div class="kpi-label">{{ $t('dashboard.totalReturn') }}</div>
+        <div class="kpi-value-row">
+          <span class="kpi-value tnum" :class="kpiReturn >= 0 ? 'positive' : 'negative'">
+            {{ kpiReturn >= 0 ? '+' : '' }}{{ kpiReturn.toFixed(2) }}%
+          </span>
           <span class="kpi-badge" :class="kpiReturn >= 0 ? 'badge-success' : 'badge-danger'">
             {{ kpiReturn >= 0 ? $t('dashboard.profit') : $t('dashboard.loss') }}
           </span>
         </div>
-        <div class="kpi-value tnum" :class="kpiReturn >= 0 ? 'positive' : 'negative'">
-          {{ kpiReturn >= 0 ? '+' : '' }}{{ kpiReturn.toFixed(2) }}%
-        </div>
-        <div class="kpi-footer">
-          <span class="kpi-sub">{{ $t('dashboard.allStrategiesCombined') }}</span>
-        </div>
+        <div class="kpi-sub">{{ $t('dashboard.allStrategiesCombined') }}</div>
       </div>
 
       <div class="kpi-card">
-        <div class="kpi-header">
-          <div class="kpi-label-wrapper">
-            <BotIcon class="kpi-icon" />
-            <span class="kpi-label">{{ $t('dashboard.activeBots') }}</span>
-          </div>
-          <span class="kpi-indicator active" />
+        <div class="kpi-label">{{ $t('dashboard.activeBots') }}</div>
+        <div class="kpi-value-row">
+          <span class="kpi-value tnum">{{ activeBotCount }}</span>
+          <span v-if="activeBotCount > 0" class="kpi-dot active" />
         </div>
-        <div class="kpi-value tnum">{{ activeBotCount }}</div>
-        <div class="kpi-footer">
-          <span class="kpi-sub">{{ $t('dashboard.runningInRealtime') }}</span>
-        </div>
+        <div class="kpi-sub">{{ $t('dashboard.runningInRealtime') }}</div>
       </div>
 
       <div class="kpi-card">
-        <div class="kpi-header">
-          <div class="kpi-label-wrapper">
-            <StrategyIcon class="kpi-icon" />
-            <span class="kpi-label">{{ $t('dashboard.strategies') }}</span>
-          </div>
+        <div class="kpi-label">{{ $t('dashboard.strategies') }}</div>
+        <div class="kpi-value-row">
+          <span class="kpi-value tnum">{{ strategyCount }}</span>
         </div>
-        <div class="kpi-value tnum">{{ strategyCount }}</div>
-        <div class="kpi-footer">
-          <span class="kpi-sub">{{ $t('dashboard.inYourLibrary') }}</span>
-        </div>
+        <div class="kpi-sub">{{ $t('dashboard.inYourLibrary') }}</div>
       </div>
 
       <div class="kpi-card">
-        <div class="kpi-header">
-          <div class="kpi-label-wrapper">
-            <BacktestIcon class="kpi-icon" />
-            <span class="kpi-label">{{ $t('dashboard.backtests') }}</span>
-          </div>
+        <div class="kpi-label">{{ $t('dashboard.backtests') }}</div>
+        <div class="kpi-value-row">
+          <span class="kpi-value tnum">{{ backtestCount }}</span>
         </div>
-        <div class="kpi-value tnum">{{ backtestCount }}</div>
-        <div class="kpi-footer">
-          <span class="kpi-sub">{{ $t('dashboard.completedRuns') }}</span>
-        </div>
+        <div class="kpi-sub">{{ $t('dashboard.completedRuns') }}</div>
       </div>
     </div>
 
@@ -279,69 +259,6 @@ const PlusIcon = () => h('svg', {
   h('path', { d: 'M5 12h14' }),
   h('path', { d: 'M12 5v14' })
 ])
-
-// KPI Icons
-const TrendingIcon = () => h('svg', {
-  width: 16,
-  height: 16,
-  viewBox: '0 0 24 24',
-  fill: 'none',
-  stroke: 'currentColor',
-  'stroke-width': 2,
-  'stroke-linecap': 'round',
-  'stroke-linejoin': 'round'
-}, [
-  h('polyline', { points: '23 6 13.5 15.5 8.5 10.5 1 18' }),
-  h('polyline', { points: '17 6 23 6 23 12' })
-])
-
-const BotIcon = () => h('svg', {
-  width: 16,
-  height: 16,
-  viewBox: '0 0 24 24',
-  fill: 'none',
-  stroke: 'currentColor',
-  'stroke-width': 2,
-  'stroke-linecap': 'round',
-  'stroke-linejoin': 'round'
-}, [
-  h('rect', { x: '3', y: '11', width: '18', height: '10', rx: '2' }),
-  h('circle', { cx: '12', cy: '5', r: '2' }),
-  h('path', { d: 'M12 7v4' }),
-  h('line', { x1: '8', y1: '16', x2: '8', y2: '16' }),
-  h('line', { x1: '16', y1: '16', x2: '16', y2: '16' })
-])
-
-const StrategyIcon = () => h('svg', {
-  width: 16,
-  height: 16,
-  viewBox: '0 0 24 24',
-  fill: 'none',
-  stroke: 'currentColor',
-  'stroke-width': 2,
-  'stroke-linecap': 'round',
-  'stroke-linejoin': 'round'
-}, [
-  h('path', { d: 'M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z' }),
-  h('polyline', { points: '14 2 14 8 20 8' }),
-  h('line', { x1: '16', y1: '13', x2: '8', y2: '13' }),
-  h('line', { x1: '16', y1: '17', x2: '8', y2: '17' }),
-  h('polyline', { points: '10 9 9 9 8 9' })
-])
-
-const BacktestIcon = () => h('svg', {
-  width: 16,
-  height: 16,
-  viewBox: '0 0 24 24',
-  fill: 'none',
-  stroke: 'currentColor',
-  'stroke-width': 2,
-  'stroke-linecap': 'round',
-  'stroke-linejoin': 'round'
-}, [
-  h('circle', { cx: '12', cy: '12', r: '10' }),
-  h('polyline', { points: '12 6 12 12 16 14' })
-])
 </script>
 
 <style scoped>
@@ -350,69 +267,7 @@ const BacktestIcon = () => h('svg', {
   max-width: min(1280px, calc(100% - var(--spacing-lg) * 2));
 }
 
-@media (min-width: 1920px) {
-  .dashboard-view {
-    max-width: min(1760px, 100%);
-  }
-
-  .kpi-row {
-    grid-template-columns: repeat(4, 1fr);
-    gap: var(--grid-gap);
-  }
-
-  .kpi-card {
-    padding: 20px 24px;
-  }
-
-  .kpi-value {
-    font-size: var(--font-size-display);
-  }
-
-  .dashboard-grid {
-    grid-template-columns: 1fr 1fr 380px;
-    gap: var(--grid-gap);
-  }
-}
-
-@media (min-width: 2560px) {
-  .dashboard-view {
-    max-width: min(2400px, 100%);
-  }
-
-  .kpi-row {
-    gap: var(--grid-gap);
-  }
-
-  .kpi-card {
-    padding: 24px 28px;
-  }
-
-  .kpi-value {
-    font-size: var(--font-size-display);
-  }
-
-  .dashboard-grid {
-    grid-template-columns: 1fr 1fr 460px;
-    gap: var(--grid-gap);
-  }
-}
-
-@media (min-width: 3840px) {
-  .dashboard-view {
-    max-width: min(3600px, 100%);
-  }
-
-  .kpi-card {
-    padding: 32px 36px;
-  }
-
-  .dashboard-grid {
-    grid-template-columns: 1fr 1fr 600px;
-    gap: var(--grid-gap);
-  }
-}
-
-/* ── Page Header ── */
+/* Page Header */
 .page-header {
   display: flex;
   align-items: center;
@@ -428,9 +283,8 @@ const BacktestIcon = () => h('svg', {
 
 .page-title {
   font-size: var(--font-size-xxl);
-  font-weight: var(--font-weight-bold);
+  font-weight: 700;
   color: var(--color-text-primary);
-  letter-spacing: var(--letter-spacing-tight);
   margin: 0;
 }
 
@@ -445,7 +299,7 @@ const BacktestIcon = () => h('svg', {
   gap: var(--spacing-sm);
 }
 
-/* ── KPI Row - Enterprise Financial ── */
+/* KPI Row */
 .kpi-row {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
@@ -454,116 +308,60 @@ const BacktestIcon = () => h('svg', {
 }
 
 .kpi-card {
-  position: relative;
-  padding: 16px 20px;
+  padding: 20px;
   background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
-  overflow: hidden;
-  transition: border-color var(--transition-normal);
-}
-
-.kpi-card::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 2px;
-  background: var(--color-border-hover);
-  transition: background var(--transition-normal);
-}
-
-.kpi-card:hover {
-  border-color: var(--color-border-hover);
-}
-
-.kpi-card:first-child::before {
-  background: linear-gradient(90deg, var(--color-primary), var(--color-primary-light));
-}
-
-.kpi-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 8px;
-}
-
-.kpi-label-wrapper {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.kpi-icon {
-  color: var(--color-text-muted);
-  opacity: 0.7;
-  flex-shrink: 0;
 }
 
 .kpi-label {
   font-size: var(--font-size-sm);
-  font-weight: var(--font-weight-semibold);
+  font-weight: 500;
   color: var(--color-text-secondary);
-  letter-spacing: 0.02em;
+  margin-bottom: 8px;
 }
+
+.kpi-value-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 6px;
+}
+
+.kpi-value {
+  font-size: var(--font-size-xxxl);
+  font-weight: 700;
+  color: var(--color-text-primary);
+  line-height: 1.1;
+}
+
+.kpi-value.positive { color: var(--color-positive); }
+.kpi-value.negative { color: var(--color-negative); }
 
 .kpi-badge {
   font-size: 11px;
   padding: 3px 8px;
-  border-radius: var(--radius-md);
-  font-weight: var(--font-weight-semibold);
-  letter-spacing: 0.02em;
-  text-transform: uppercase;
+  border-radius: var(--radius-full);
+  font-weight: 600;
 }
 
-.kpi-indicator {
+.kpi-dot {
   width: 8px;
   height: 8px;
   border-radius: var(--radius-full);
   background: var(--color-text-muted);
 }
 
-.kpi-indicator.active {
+.kpi-dot.active {
   background: var(--color-success);
-  box-shadow: 0 0 0 3px var(--color-success-bg);
-  animation: pulse-dot 2s ease-in-out infinite;
-}
-
-@keyframes pulse-dot {
-  0%, 100% { box-shadow: 0 0 0 3px var(--color-success-bg); }
-  50% { box-shadow: 0 0 0 6px transparent; }
-}
-
-.kpi-value {
-  font-size: var(--font-size-xxxl);
-  font-weight: var(--font-weight-bold);
-  color: var(--color-text-primary);
-  line-height: 1.1;
-  letter-spacing: var(--letter-spacing-tight);
-  margin-bottom: 6px;
-}
-
-.kpi-value.positive {
-  color: var(--color-positive);
-}
-
-.kpi-value.negative {
-  color: var(--color-negative);
-}
-
-.kpi-footer {
-  display: flex;
-  align-items: center;
 }
 
 .kpi-sub {
   font-size: var(--font-size-sm);
-  color: var(--color-text-tertiary);
-  font-weight: var(--font-weight-normal);
+  color: var(--color-text-muted);
 }
 
-/* ── Dashboard Grid ── */
+/* Dashboard Grid */
 .dashboard-grid {
   display: grid;
   grid-template-columns: 1fr 1fr 320px;
@@ -574,17 +372,9 @@ const BacktestIcon = () => h('svg', {
     "recent   forum    sidebar";
 }
 
-.grid-area-backtest {
-  grid-area: backtest;
-}
-
-.grid-area-recent {
-  grid-area: recent;
-}
-
-.grid-area-forum {
-  grid-area: forum;
-}
+.grid-area-backtest { grid-area: backtest; }
+.grid-area-recent { grid-area: recent; }
+.grid-area-forum { grid-area: forum; }
 
 .grid-area-sidebar {
   grid-area: sidebar;
@@ -599,7 +389,21 @@ const BacktestIcon = () => h('svg', {
   height: 100%;
 }
 
-/* ── Responsive ── */
+/* Large screens */
+@media (min-width: 1920px) {
+  .dashboard-view { max-width: min(1760px, 100%); }
+  .dashboard-grid {
+    grid-template-columns: 1fr 1fr 380px;
+    gap: var(--grid-gap);
+  }
+}
+
+@media (min-width: 2560px) {
+  .dashboard-view { max-width: min(2400px, 100%); }
+  .dashboard-grid { grid-template-columns: 1fr 1fr 460px; }
+}
+
+/* Responsive */
 @media (max-width: 1200px) {
   .dashboard-grid {
     grid-template-columns: 1fr 1fr;
@@ -608,29 +412,12 @@ const BacktestIcon = () => h('svg', {
       "recent   forum"
       "sidebar  sidebar";
   }
-
-  .grid-area-sidebar {
-    flex-direction: row;
-  }
-
-  .grid-area-sidebar > * {
-    flex: 1;
-  }
+  .grid-area-sidebar { flex-direction: row; }
+  .grid-area-sidebar > * { flex: 1; }
 }
 
 @media (max-width: 1024px) {
-  .kpi-row {
-    grid-template-columns: repeat(2, 1fr);
-  }
-
-  .kpi-value {
-    font-size: var(--font-size-xxl);
-  }
-
-  .kpi-icon {
-    width: 15px;
-    height: 15px;
-  }
+  .kpi-row { grid-template-columns: repeat(2, 1fr); }
 }
 
 @media (max-width: 768px) {
@@ -639,90 +426,22 @@ const BacktestIcon = () => h('svg', {
     gap: var(--spacing-sm);
     align-items: flex-start;
   }
-
-  .page-title {
-    font-size: var(--font-size-xl);
-  }
-
-  .header-actions {
-    width: 100%;
-  }
-
-  .header-actions .btn {
-    flex: 1;
-  }
-
-  .kpi-row {
-    grid-template-columns: repeat(2, 1fr);
-    gap: var(--spacing-sm);
-  }
-
-  .kpi-card {
-    padding: 12px 14px;
-  }
-
-  .kpi-value {
-    font-size: var(--font-size-xxl);
-  }
-
-  .kpi-icon {
-    width: 15px;
-    height: 15px;
-  }
-
+  .header-actions { width: 100%; }
+  .header-actions .btn { flex: 1; }
+  .kpi-row { grid-template-columns: repeat(2, 1fr); gap: var(--spacing-sm); }
+  .kpi-card { padding: 14px; }
+  .kpi-value { font-size: var(--font-size-xxl); }
   .dashboard-grid {
     grid-template-columns: 1fr;
-    grid-template-areas:
-      "backtest"
-      "recent"
-      "forum"
-      "sidebar";
+    grid-template-areas: "backtest" "recent" "forum" "sidebar";
   }
-
-  .grid-area-sidebar {
-    flex-direction: column;
-  }
+  .grid-area-sidebar { flex-direction: column; }
 }
 
 @media (max-width: 480px) {
-  .dashboard-view {
-    max-width: 100%;
-  }
-
-  .page-header {
-    margin-bottom: var(--spacing-sm);
-  }
-
-  .kpi-row {
-    grid-template-columns: 1fr 1fr;
-    gap: 8px;
-    margin-bottom: var(--spacing-sm);
-  }
-
-  .kpi-card {
-    padding: 10px 12px;
-  }
-
-  .kpi-value {
-    font-size: var(--font-size-xl);
-  }
-
-  .kpi-icon {
-    width: 14px;
-    height: 14px;
-  }
-
-  .kpi-label {
-    font-size: 11px;
-  }
-
-  .kpi-badge {
-    font-size: 10px;
-    padding: 2px 6px;
-  }
-
-  .kpi-sub {
-    font-size: 11px;
-  }
+  .dashboard-view { max-width: 100%; }
+  .kpi-row { gap: 8px; }
+  .kpi-card { padding: 12px; }
+  .kpi-value { font-size: var(--font-size-xl); }
 }
 </style>

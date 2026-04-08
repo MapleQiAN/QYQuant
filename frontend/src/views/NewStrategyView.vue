@@ -282,10 +282,8 @@ const ArrowLeftIcon = () => h('svg', {
 .eyebrow {
   margin: 0 0 6px;
   font-size: var(--font-size-xs);
-  font-weight: 700;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: var(--color-accent);
+  font-weight: 600;
+  color: var(--color-text-muted);
 }
 
 .pill {

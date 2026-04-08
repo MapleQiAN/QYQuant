@@ -92,7 +92,6 @@ async function handleSubmit() {
     <div class="login-card">
       <div class="login-header">
         <h1>{{ t('auth.title') }}</h1>
-        <!-- <p class="subtitle">{{ t('auth.subtitle') }}</p> -->
       </div>
 
       <div class="intent-switch">
@@ -177,12 +176,11 @@ async function handleSubmit() {
 
 .login-card {
   width: 100%;
-  max-width: 440px;
+  max-width: 420px;
   padding: 40px 32px;
-  background: var(--glass-background);
-  border: 1px solid var(--glass-border);
-  border-radius: 24px;
-  box-shadow: var(--shadow-lg);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
 }
 
 .login-header {
@@ -192,41 +190,36 @@ async function handleSubmit() {
 
 .login-header h1 {
   margin: 0;
-  font-size: 24px;
-  font-weight: var(--font-weight-bold);
+  font-size: 22px;
+  font-weight: 700;
   color: var(--color-text-primary);
-}
-
-.subtitle {
-  margin: 6px 0 0;
-  font-size: var(--font-size-sm);
-  color: var(--color-text-muted);
 }
 
 .intent-switch {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 8px;
+  gap: 4px;
   margin-bottom: 20px;
-  padding: 6px;
-  background: var(--color-surface);
+  padding: 4px;
+  background: var(--color-surface-elevated);
   border: 1px solid var(--color-border);
-  border-radius: 16px;
+  border-radius: var(--radius-full);
 }
 
 .intent-btn {
-  height: 40px;
+  height: 38px;
   border: none;
-  border-radius: 12px;
+  border-radius: var(--radius-full);
   background: transparent;
   color: var(--color-text-muted);
   font-size: 14px;
-  font-weight: var(--font-weight-semibold);
+  font-weight: 600;
   cursor: pointer;
+  transition: color var(--transition-fast), background var(--transition-fast);
 }
 
 .intent-btn.active {
-  background: linear-gradient(135deg, var(--color-primary), var(--color-primary-dark));
+  background: var(--color-primary);
   color: #fff;
 }
 
@@ -238,19 +231,24 @@ async function handleSubmit() {
 
 .field-label {
   font-size: var(--font-size-sm);
-  font-weight: var(--font-weight-semibold);
+  font-weight: 600;
   color: var(--color-text-primary);
 }
 
 .field-input {
   height: 44px;
   padding: 0 14px;
-  font-size: 15px;
+  font-size: 14px;
   color: var(--color-text-primary);
-  background: var(--color-surface);
+  background: var(--color-surface-elevated);
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-md);
   outline: none;
+  transition: border-color var(--transition-fast);
+}
+
+.field-input:focus {
+  border-color: var(--color-primary);
 }
 
 .forgot-link {
@@ -270,16 +268,21 @@ async function handleSubmit() {
   height: 44px;
   margin-top: 4px;
   font-size: 15px;
-  font-weight: var(--font-weight-semibold);
+  font-weight: 600;
   color: #fff;
-  background: linear-gradient(135deg, var(--color-primary), var(--color-primary-dark));
+  background: var(--color-primary);
   border: none;
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-full);
   cursor: pointer;
+  transition: opacity var(--transition-fast);
+}
+
+.submit-btn:hover {
+  opacity: 0.9;
 }
 
 .submit-btn:disabled {
-  opacity: 0.6;
+  opacity: 0.5;
   cursor: not-allowed;
 }
 </style>
