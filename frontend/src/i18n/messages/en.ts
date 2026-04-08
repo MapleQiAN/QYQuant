@@ -386,6 +386,7 @@ const en = {
       maxConsecutiveLosses: 'Max Consecutive Losses',
       totalTrades: 'Total Trades'
     },
+    klineTitle: 'K-Line',
     equityCurveTitle: 'Equity Curve',
     equityCurveSubtitle: 'With buy/sell signal markers',
     metricsCount: '{count} metrics',
@@ -424,6 +425,10 @@ const en = {
     upgradeTo: 'Upgrade to {name}',
     unlimitedBacktests: 'Unlimited backtests',
     backtestsPerMonth: '{quota} times / month',
+    promoTag: 'First purchase',
+    trustSecure: 'Secure payment',
+    trustEncrypted: 'Data encrypted',
+    trustFlexible: 'Upgrade anytime',
     features: {
       backtests10: '10 backtests / month',
       backtests50: '50 backtests / month',
@@ -439,6 +444,40 @@ const en = {
       customDataSource: 'Custom data source',
       prioritySupport: 'Priority support',
       advancedApi: 'Advanced API access'
+    },
+    usageDetails: {
+      title: 'Usage Details',
+      used: 'Used',
+      total: 'Total',
+      remaining: 'Remaining',
+      unlimited: 'Unlimited'
+    },
+    currentSubscription: {
+      title: 'Current Subscription',
+      noActive: 'No active subscription',
+      plan: 'Plan',
+      status: 'Status',
+      paymentMethod: 'Payment Method',
+      expiresAt: 'Expires',
+      activeStatus: 'Active',
+      wechat: 'WeChat Pay',
+      alipay: 'Alipay'
+    },
+    orderHistory: {
+      title: 'Order History',
+      noOrders: 'No orders yet',
+      orderId: 'Order ID',
+      plan: 'Plan',
+      amount: 'Amount',
+      method: 'Method',
+      status: 'Status',
+      time: 'Time',
+      statusPending: 'Pending',
+      statusPaid: 'Paid',
+      statusCancelled: 'Cancelled',
+      previousPage: 'Previous',
+      nextPage: 'Next',
+      pageIndicator: 'Page {current} / {total}'
     }
   },
   bots: {
@@ -526,6 +565,22 @@ const en = {
     takeDownSuccess: 'Strategy taken down',
     rejectReport: 'Reject Report',
     rejectReportSuccess: 'Report rejected'
+  },
+  subscription: {
+    navLabel: 'Subscription',
+    title: 'Subscription',
+    subtitle: 'Manage your subscription plan, view usage, and upgrade.',
+    loading: 'Loading subscription info...',
+    loadError: 'Failed to load subscription info',
+    currentPlan: 'Current Plan',
+    currentBadge: 'Current',
+    quotaUsed: 'Monthly Usage',
+    allPlans: 'All Plans',
+    month: 'mo',
+    unlimited: 'Unlimited',
+    timesPerMonth: 'times / month',
+    upgradeTo: 'Upgrade to {name}',
+    alreadyOwned: 'Already owned'
   },
   help: {
     title: 'Help Center',

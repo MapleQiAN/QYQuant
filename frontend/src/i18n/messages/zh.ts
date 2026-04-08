@@ -373,6 +373,7 @@ const zh = {
     guidedSuccessHint: '重点先看累计收益率、最大回撤和夏普比率，理解"收益"和"波动"之间的关系。',
     finishGuidedOnboarding: '完成新手引导',
     viewAllMetrics: '查看所有 11 个指标',
+    klineTitle: 'K线走势',
     equityCurveTitle: '资产曲线',
     equityCurveSubtitle: '含买卖信号标记',
     metricsCount: '{count} 项指标',
@@ -424,6 +425,10 @@ const zh = {
     upgradeTo: '升级到 {name}',
     unlimitedBacktests: '无限回测次数',
     backtestsPerMonth: '{quota} 次 / 月',
+    promoTag: '新用户首充',
+    trustSecure: '安全支付',
+    trustEncrypted: '数据加密',
+    trustFlexible: '随时升降级',
     features: {
       backtests10: '10 次回测 / 月',
       backtests50: '50 次回测 / 月',
@@ -439,6 +444,40 @@ const zh = {
       customDataSource: '自定义数据源',
       prioritySupport: '优先技术支持',
       advancedApi: '高级 API 访问权限'
+    },
+    usageDetails: {
+      title: '用量详情',
+      used: '已使用',
+      total: '总额度',
+      remaining: '剩余',
+      unlimited: '无限'
+    },
+    currentSubscription: {
+      title: '当前订阅',
+      noActive: '暂无活跃订阅',
+      plan: '套餐',
+      status: '状态',
+      paymentMethod: '支付方式',
+      expiresAt: '到期时间',
+      activeStatus: '生效中',
+      wechat: '微信支付',
+      alipay: '支付宝'
+    },
+    orderHistory: {
+      title: '历史订单',
+      noOrders: '暂无订单记录',
+      orderId: '订单号',
+      plan: '套餐',
+      amount: '金额',
+      method: '支付方式',
+      status: '状态',
+      time: '时间',
+      statusPending: '待支付',
+      statusPaid: '已支付',
+      statusCancelled: '已取消',
+      previousPage: '上一页',
+      nextPage: '下一页',
+      pageIndicator: '第 {current} 页 / 共 {total} 页'
     }
   },
   bots: {
@@ -526,6 +565,22 @@ const zh = {
     takeDownSuccess: '已下架相关策略',
     rejectReport: '驳回举报',
     rejectReportSuccess: '已驳回举报'
+  },
+  subscription: {
+    navLabel: '订阅管理',
+    title: '订阅管理',
+    subtitle: '管理你的订阅套餐，查看用量并进行升级。',
+    loading: '正在加载订阅信息...',
+    loadError: '订阅信息加载失败',
+    currentPlan: '当前套餐',
+    currentBadge: '当前',
+    quotaUsed: '本月用量',
+    allPlans: '全部套餐',
+    month: '月',
+    unlimited: '无限回测',
+    timesPerMonth: '次 / 月',
+    upgradeTo: '升级到 {name}',
+    alreadyOwned: '已拥有'
   },
   help: {
     title: '帮助中心',
