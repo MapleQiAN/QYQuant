@@ -246,6 +246,7 @@ def get_backtest_report(job_id):
     try:
         equity_curve = read_json(f"{storage_key}/equity_curve.json")
         trades = read_json(f"{storage_key}/trades.json")
+        kline = read_json(f"{storage_key}/kline.json")
     except FileNotFoundError:
         return error_response("REPORT_NOT_FOUND", "回测报告不存在", 404)
 
@@ -257,6 +258,7 @@ def get_backtest_report(job_id):
             "result_summary": job_record.result_summary or {},
             "equity_curve": equity_curve,
             "trades": trades,
+            "kline": kline,
             "completed_at": format_beijing_iso(job_record.completed_at),
             "disclaimer": REPORT_DISCLAIMER,
         }

@@ -67,6 +67,18 @@
             </StatCard>
           </div>
 
+          <!-- K-line Chart -->
+          <div v-if="report.kline?.length" class="chart-section">
+            <div class="chart-section__header">
+              <div class="chart-section__title-group">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="7" y1="8" x2="7" y2="16"/><line x1="7" y1="16" x2="7.01" y2="16"/><line x1="11" y1="6" x2="11" y2="18"/><line x1="11" y1="6" x2="11.01" y2="6"/><line x1="15" y1="10" x2="15" y2="14"/><line x1="15" y1="14" x2="15.01" y2="14"/></svg>
+                <span class="chart-section__title">{{ $t('backtestReport.klineTitle') }}</span>
+              </div>
+              <span class="chart-section__subtitle">{{ report.params?.symbol || '' }}</span>
+            </div>
+            <BacktestKlineChart class="chart-block" :bars="report.kline" :trades="report.trades || []" :symbol="String(report.params?.symbol || '')" />
+          </div>
+
           <!-- Equity Curve -->
           <div class="chart-section">
             <div class="chart-section__header">
@@ -112,6 +124,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import StatCard from '../components/StatCard.vue'
 import EquityCurveChart from '../components/backtest/EquityCurveChart.vue'
+import BacktestKlineChart from '../components/backtest/BacktestKlineChart.vue'
 import ErrorDisplay from '../components/backtest/ErrorDisplay.vue'
 import DisclaimerFooter from '../components/disclaimer/DisclaimerFooter.vue'
 import MetricTooltip from '../components/help/MetricTooltip.vue'

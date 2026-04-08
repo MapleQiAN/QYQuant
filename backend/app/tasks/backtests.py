@@ -88,6 +88,7 @@ def _run_job(job_id):
         storage_key = build_backtest_storage_key(job.id)
         write_json(f"{storage_key}/equity_curve.json", report["equity_curve"])
         write_json(f"{storage_key}/trades.json", report["trades"])
+        write_json(f"{storage_key}/kline.json", result.get('kline') or [])
     except Exception as exc:
         job.status = BacktestJobStatus.FAILED.value
         _store_structured_error(job, str(exc))

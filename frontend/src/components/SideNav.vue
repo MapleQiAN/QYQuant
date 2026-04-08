@@ -39,6 +39,20 @@
         </Transition>
       </RouterLink>
 
+      <RouterLink
+        to="/pricing"
+        :class="['nav-item', 'sub-item', `sub-item--${planLevel}`, { active: route.path === '/pricing' }]"
+        :title="collapsed ? t('subscription.navLabel') : undefined"
+      >
+        <CrownIcon class="nav-item-icon" />
+        <Transition name="fade">
+          <span v-if="!collapsed" class="sub-item-content">
+            <span class="nav-item-label">{{ t('subscription.navLabel') }}</span>
+            <span class="plan-badge">{{ planDisplayName }}</span>
+          </span>
+        </Transition>
+      </RouterLink>
+
       <button class="collapse-btn" type="button" :aria-label="collapsed ? t('common.expandSidebar') : t('common.collapseSidebar')" @click="$emit('toggle')">
         <ChevronIcon :class="{ 'rotate-180': collapsed }" />
       </button>
@@ -48,7 +62,7 @@
 
 <script setup lang="ts">
 import { h, computed } from 'vue'
-import { RouterLink, useRoute, useRouter } from 'vue-router'
+import { RouterLink, useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { storeToRefs } from 'pinia'
 import { useUserStore } from '../stores/user'
@@ -58,10 +72,15 @@ defineProps<{ collapsed: boolean }>()
 defineEmits<{ toggle: [] }>()
 
 const route = useRoute()
-const router = useRouter()
 const { t } = useI18n()
 const userStore = useUserStore()
 const { profile } = storeToRefs(userStore)
+
+const planLevel = computed(() => profile.value.plan_level || 'free')
+const planDisplayName = computed(() => {
+  const names: Record<string, string> = { free: 'Free', go: 'Go', plus: 'Plus', pro: 'Pro', ultra: 'Ultra' }
+  return names[planLevel.value] || 'Free'
+})
 
 interface NavItem {
   id: string
@@ -157,6 +176,12 @@ function SettingsIcon() {
 function ChevronIcon() {
   return h('svg', { width: 16, height: 16, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', 'stroke-width': 2, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }, [
     h('path', { d: 'M15 18l-6-6 6-6' }),
+  ])
+}
+
+function CrownIcon() {
+  return h('svg', { width: 20, height: 20, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', 'stroke-width': 1.75, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }, [
+    h('path', { d: 'M2 4l3 12h14l3-12-6 7-4-7-4 7-6-7zm3 16h14' }),
   ])
 }
 </script>
@@ -279,6 +304,109 @@ function ChevronIcon() {
   flex-shrink: 0;
 }
 
+/* Subscription nav item */
+.sub-item-content {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  min-width: 0;
+}
+
+.plan-badge {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 7px;
+  border-radius: var(--radius-full);
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1.6;
+  letter-spacing: 0.02em;
+  background: rgba(255, 255, 255, 0.15);
+}
+
+/* Free — muted gray */
+.sub-item--free {
+  background: var(--color-surface-hover);
+  color: var(--color-text-muted);
+  border: 1px solid var(--color-border);
+}
+.sub-item--free .plan-badge {
+  background: rgba(0, 0, 0, 0.06);
+}
+.sub-item--free:hover {
+  background: var(--color-sidebar-hover);
+  color: var(--color-text-secondary);
+}
+
+/* Go — fresh green */
+.sub-item--go {
+  background: #ecfdf5;
+  color: #059669;
+  border: 1px solid #a7f3d0;
+}
+.sub-item--go .plan-badge {
+  background: rgba(5, 150, 105, 0.1);
+}
+.sub-item--go:hover {
+  background: #d1fae5;
+  color: #047857;
+}
+
+/* Plus — primary blue */
+.sub-item--plus {
+  background: var(--color-primary-bg);
+  color: var(--color-primary);
+  border: 1px solid var(--color-primary-border);
+}
+.sub-item--plus .plan-badge {
+  background: rgba(59, 130, 246, 0.12);
+}
+.sub-item--plus:hover {
+  background: color-mix(in srgb, var(--color-primary-bg) 85%, var(--color-primary));
+  color: var(--color-primary);
+}
+
+/* Pro — purple gradient with glow */
+.sub-item--pro {
+  background: linear-gradient(135deg, #f5f3ff, #ede9fe);
+  color: #7c3aed;
+  border: 1px solid #c4b5fd;
+  box-shadow: 0 0 8px rgba(124, 58, 237, 0.08);
+}
+.sub-item--pro .plan-badge {
+  background: rgba(124, 58, 237, 0.12);
+  text-shadow: 0 0 4px rgba(168, 85, 247, 0.2);
+}
+.sub-item--pro:hover {
+  background: linear-gradient(135deg, #ede9fe, #ddd6fe);
+  box-shadow: 0 0 14px rgba(124, 58, 237, 0.15);
+}
+
+/* Ultra — rich gold with shimmer */
+.sub-item--ultra {
+  background: linear-gradient(135deg, #fffbeb, #fef3c7, #fde68a);
+  background-size: 200% 200%;
+  color: #92400e;
+  border: 1px solid #d97706;
+  font-weight: 600;
+  box-shadow: 0 0 12px rgba(245, 158, 11, 0.15);
+  animation: shimmer 3s ease-in-out infinite;
+}
+.sub-item--ultra .plan-badge {
+  background: rgba(217, 119, 6, 0.15);
+  font-weight: 800;
+}
+.sub-item--ultra:hover {
+  box-shadow: 0 0 20px rgba(245, 158, 11, 0.25);
+}
+
+@keyframes shimmer {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+}
+
 .collapse-btn {
   width: 100%;
   height: 36px;
@@ -330,6 +458,10 @@ function ChevronIcon() {
 
 .collapsed .sidebar-footer {
   padding: 8px 6px;
+}
+
+.collapsed .sub-item-content {
+  display: none;
 }
 
 /* Large Screen */

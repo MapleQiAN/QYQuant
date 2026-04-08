@@ -98,6 +98,7 @@ export interface BacktestReportResponse {
   params?: Record<string, unknown>
   result_summary?: BacktestSummary
   equity_curve?: BacktestReportPoint[]
+  kline?: KlineBar[]
   trades?: Trade[]
   error?: StructuredBacktestError
   completed_at?: string | null
