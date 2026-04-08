@@ -41,17 +41,23 @@ function formatTime(value: string | number): string {
   if (epoch === null) return String(value)
   const date = new Date(epoch)
   if (Number.isNaN(date.getTime())) return String(value)
-  return date.toLocaleDateString(undefined, { month: '2-digit', day: '2-digit' })
+  const includeTime =
+    date.getHours() !== 0 ||
+    date.getMinutes() !== 0 ||
+    date.getSeconds() !== 0
+
+  return date.toLocaleString(undefined, includeTime
+    ? { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }
+    : { month: '2-digit', day: '2-digit' })
 }
 
 function buildMarkPoints() {
   return enrichedBars.value.flatMap((bar) => {
     if (!bar.signal) return []
-    const category = formatTime(bar.time)
     const isBuy = bar.signal === 'buy'
     return [{
       name: isBuy ? 'Buy' : 'Sell',
-      coord: [category, isBuy ? bar.low : bar.high],
+      coord: [bar.time, isBuy ? bar.low : bar.high],
       value: isBuy ? 'B' : 'S',
       symbol: 'pin',
       symbolSize: 28,
@@ -66,6 +72,51 @@ function buildMarkPoints() {
       }
     }]
   })
+}
+
+function buildTooltip(params: any[]) {
+  if (!Array.isArray(params) || params.length === 0) {
+    return ''
+  }
+
+  const candle = params.find((item) => item.seriesName === 'K线')
+  const volume = params.find((item) => item.seriesName === '成交量')
+  const maItems = params.filter((item) => String(item.seriesName).startsWith('MA'))
+  const time = formatTime(candle?.axisValue ?? params[0]?.axisValue)
+
+  let ohlc = ''
+  if (candle && Array.isArray(candle.data)) {
+    const [open, close, low, high] = candle.data as number[]
+    ohlc = `
+      <div style="display:grid;grid-template-columns:auto auto;gap:4px 12px;margin-top:8px;">
+        <span style="color:#8888a0;">Open</span><strong>${open.toLocaleString(undefined, { maximumFractionDigits: 4 })}</strong>
+        <span style="color:#8888a0;">High</span><strong>${high.toLocaleString(undefined, { maximumFractionDigits: 4 })}</strong>
+        <span style="color:#8888a0;">Low</span><strong>${low.toLocaleString(undefined, { maximumFractionDigits: 4 })}</strong>
+        <span style="color:#8888a0;">Close</span><strong>${close.toLocaleString(undefined, { maximumFractionDigits: 4 })}</strong>
+      </div>
+    `
+  }
+
+  const movingAverages = maItems
+    .map((item) => `<div style="display:flex;justify-content:space-between;gap:12px;">
+      <span style="color:${item.color};">${item.seriesName}</span>
+      <strong>${Number(item.data).toLocaleString(undefined, { maximumFractionDigits: 4 })}</strong>
+    </div>`)
+    .join('')
+
+  const volumeRow = volume
+    ? `<div style="display:flex;justify-content:space-between;gap:12px;margin-top:8px;">
+      <span style="color:${volume.color};">Volume</span>
+      <strong>${Number(volume.data).toLocaleString(undefined, { maximumFractionDigits: 0 })}</strong>
+    </div>`
+    : ''
+
+  return `<div style="min-width:220px;">
+    <div style="margin-bottom:6px;color:#8888a0;font-size:11px;">${time}</div>
+    ${ohlc}
+    <div style="display:grid;gap:4px;margin-top:8px;">${movingAverages}</div>
+    ${volumeRow}
+  </div>`
 }
 
 function buildOption(): EChartsOption {
@@ -84,7 +135,7 @@ function buildOption(): EChartsOption {
     }
   }
 
-  const categories = enrichedBars.value.map((bar) => formatTime(bar.time))
+  const categories = enrichedBars.value.map((bar) => bar.time)
   const closes = enrichedBars.value.map((bar) => bar.close)
   const ma5 = simpleMovingAverage(closes, 5)
   const ma10 = simpleMovingAverage(closes, 10)
@@ -99,7 +150,11 @@ function buildOption(): EChartsOption {
     },
     tooltip: {
       trigger: 'axis',
-      axisPointer: { type: 'cross' }
+      axisPointer: { type: 'cross' },
+      backgroundColor: 'rgba(12, 12, 29, 0.94)',
+      borderColor: 'rgba(255, 255, 255, 0.08)',
+      textStyle: { color: '#ebebf5' },
+      formatter: (params) => buildTooltip(params as any[])
     },
     axisPointer: {
       link: [{ xAxisIndex: 'all' }]
@@ -115,7 +170,12 @@ function buildOption(): EChartsOption {
         scale: true,
         boundaryGap: false,
         axisLine: { lineStyle: { color: getCssVar('--color-border', '#e2e8f0') } },
-        axisLabel: { color: getCssVar('--color-text-muted', '#94a3b8'), fontSize: 10 },
+        axisLabel: {
+          color: getCssVar('--color-text-muted', '#94a3b8'),
+          fontSize: 10,
+          hideOverlap: true,
+          formatter: (value: string | number) => formatTime(value)
+        },
         min: 'dataMin',
         max: 'dataMax'
       },
@@ -252,20 +312,21 @@ onBeforeUnmount(() => {
 
 <style scoped>
 .kline-chart {
-  border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
-  background: linear-gradient(180deg, rgba(15, 118, 110, 0.03), var(--color-surface));
-  padding: var(--spacing-md);
+  background:
+    radial-gradient(circle at top left, rgba(124, 109, 216, 0.08), transparent 32%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.02), transparent);
+  padding: 0;
 }
 
 .chart-canvas {
   width: 100%;
-  height: 420px;
+  height: 460px;
 }
 
 @media (max-width: 768px) {
   .chart-canvas {
-    height: 340px;
+    height: 360px;
   }
 }
 </style>
