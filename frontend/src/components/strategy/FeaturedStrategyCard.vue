@@ -2,13 +2,13 @@
   <article class="featured-card card">
     <header class="card-head">
       <div>
-        <p class="card-kicker">{{ strategy.category || 'strategy' }}</p>
+        <p class="card-kicker">{{ strategy.category || $t('marketplace.strategyDefault') }}</p>
         <h3 class="card-title">{{ strategy.title }}</h3>
       </div>
       <VerifiedBadge v-if="strategy.isVerified" />
     </header>
 
-    <p class="card-description">{{ strategy.description || 'No description provided.' }}</p>
+    <p class="card-description">{{ strategy.description || $t('marketplace.noDescription') }}</p>
 
     <div class="metric-row">
       <div v-for="metric in metrics" :key="metric.label" class="metric-item">
@@ -25,7 +25,7 @@
           :alt="strategy.author.nickname"
           class="author-avatar"
         />
-        <span class="author-name">{{ strategy.author.nickname || 'Unknown author' }}</span>
+        <span class="author-name">{{ strategy.author.nickname || $t('marketplace.unknownAuthor') }}</span>
       </div>
       <button
         type="button"
@@ -33,7 +33,7 @@
         data-test="featured-cta"
         @click="emit('open', strategy.id)"
       >
-        Try backtest
+        {{ $t('marketplace.tryBacktest') }}
       </button>
     </footer>
   </article>
@@ -41,8 +41,11 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 import type { MarketplaceStrategy } from '../../types/Strategy'
 import VerifiedBadge from './VerifiedBadge.vue'
+
+const { t } = useI18n()
 
 const emit = defineEmits<{
   (event: 'open', strategyId: string): void
@@ -54,15 +57,15 @@ const props = defineProps<{
 
 const metrics = computed(() => [
   {
-    label: 'Annualized',
+    label: t('marketplace.metricAnnualized'),
     value: formatMetric(props.strategy.displayMetrics.annualized_return, true)
   },
   {
-    label: 'Drawdown',
+    label: t('marketplace.metricDrawdown'),
     value: formatMetric(props.strategy.displayMetrics.max_drawdown, true)
   },
   {
-    label: 'Sharpe',
+    label: t('marketplace.metricSharpe'),
     value: formatMetric(props.strategy.displayMetrics.sharpe_ratio, false)
   }
 ])

@@ -3,9 +3,9 @@
     <div class="container">
       <div class="page-header">
         <div class="title-block">
-          <div class="eyebrow">Marketplace strategy</div>
+          <div class="eyebrow">{{ $t('marketplace.detail.eyebrow') }}</div>
           <div class="headline-row">
-            <h1 class="page-title">{{ strategy?.title || 'Strategy detail' }}</h1>
+            <h1 class="page-title">{{ strategy?.title || $t('marketplace.detail.titleFallback') }}</h1>
             <VerifiedBadge v-if="strategy?.isVerified" />
           </div>
           <p v-if="strategy?.description" class="page-subtitle">{{ strategy.description }}</p>
@@ -20,10 +20,10 @@
             :disabled="busy"
             @click="openReportDialog"
           >
-            举报
+            {{ $t('marketplace.reportStrategy') }}
           </button>
           <div v-if="strategy?.alreadyImported" class="import-state" data-test="imported-state">
-            Already in strategy library
+            {{ $t('marketplace.detail.alreadyImported') }}
           </div>
           <button
             v-if="!strategy?.alreadyImported"
@@ -42,7 +42,7 @@
               type="button"
               disabled
             >
-              Already in strategy library
+              {{ $t('marketplace.detail.alreadyImported') }}
             </button>
             <button
               class="btn btn-link direct-backtest-link"
@@ -50,14 +50,14 @@
               type="button"
               @click="goToBacktestConfiguration"
             >
-              Direct backtest
+              {{ $t('marketplace.detail.directBacktest') }}
             </button>
           </template>
         </div>
       </div>
 
       <div v-if="error" class="card feedback error">{{ error }}</div>
-      <div v-else-if="loading && !strategy" class="card feedback">Loading marketplace strategy...</div>
+      <div v-else-if="loading && !strategy" class="card feedback">{{ $t('marketplace.detail.loadingStrategy') }}</div>
 
       <template v-else-if="strategy">
         <div class="meta-strip">
@@ -70,17 +70,17 @@
             />
             <div v-else class="author-avatar placeholder">{{ authorInitial }}</div>
             <div>
-              <div class="meta-label">Author</div>
+              <div class="meta-label">{{ $t('marketplace.detail.authorLabel') }}</div>
               <div class="meta-value">{{ strategy.author.nickname }}</div>
             </div>
           </div>
           <div class="meta-chip">
-            <div class="meta-label">Category</div>
-            <div class="meta-value">{{ strategy.category || 'uncategorized' }}</div>
+            <div class="meta-label">{{ $t('marketplace.detail.categoryLabel') }}</div>
+            <div class="meta-value">{{ strategy.category || $t('marketplace.detail.uncategorized') }}</div>
           </div>
           <div class="meta-chip">
-            <div class="meta-label">Published</div>
-            <div class="meta-value">{{ strategy.createdAt || 'Unknown' }}</div>
+            <div class="meta-label">{{ $t('marketplace.detail.publishedLabel') }}</div>
+            <div class="meta-value">{{ strategy.createdAt || $t('marketplace.detail.unknownDate') }}</div>
           </div>
         </div>
 
@@ -91,8 +91,8 @@
 
           <aside class="metrics-panel">
             <div class="metrics-header">
-              <div class="section-title">Display metrics</div>
-              <p class="section-copy">The publisher-selected snapshot for fast evaluation.</p>
+              <div class="section-title">{{ $t('marketplace.detail.displayMetricsTitle') }}</div>
+              <p class="section-copy">{{ $t('marketplace.detail.displayMetricsHint') }}</p>
             </div>
 
             <div class="metric-grid">
@@ -109,8 +109,8 @@
         </div>
 
         <div class="card detail-panel">
-          <div class="section-title">About this strategy</div>
-          <p class="detail-description">{{ strategy.description || 'No description provided.' }}</p>
+          <div class="section-title">{{ $t('marketplace.detail.aboutTitle') }}</div>
+          <p class="detail-description">{{ strategy.description || $t('marketplace.detail.noDescription') }}</p>
           <div class="tag-row">
             <span v-for="tag in strategy.tags" :key="tag" class="pill">{{ tag }}</span>
           </div>
@@ -118,16 +118,16 @@
 
         <div v-if="reportDialogOpen" class="report-dialog">
           <div class="report-dialog__panel">
-            <h3>举报策略</h3>
-            <p>请填写举报原因，我们会尽快审核处理。</p>
+            <h3>{{ $t('marketplace.detail.reportDialogTitle') }}</h3>
+            <p>{{ $t('marketplace.detail.reportDialogHint') }}</p>
             <textarea
               v-model="reportReason"
               data-test="report-reason"
               rows="4"
-              placeholder="请描述违规内容或误导信息"
+              :placeholder="$t('marketplace.reportReasonPlaceholder')"
             />
             <div class="report-dialog__actions">
-              <button type="button" class="btn btn-link" @click="closeReportDialog">取消</button>
+              <button type="button" class="btn btn-link" @click="closeReportDialog">{{ $t('common.cancel') }}</button>
               <button
                 type="button"
                 class="btn btn-primary"
@@ -135,7 +135,7 @@
                 :disabled="busy"
                 @click="submitReport"
               >
-                提交举报
+                {{ $t('marketplace.reportStrategy') }}
               </button>
             </div>
           </div>
@@ -147,6 +147,7 @@
 
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
 import EquityCurveChart from '../components/backtest/EquityCurveChart.vue'
 import VerifiedBadge from '../components/strategy/VerifiedBadge.vue'
@@ -156,6 +157,7 @@ import { useUserStore } from '../stores/user'
 
 const route = useRoute()
 const router = useRouter()
+const { t } = useI18n()
 const marketplaceStore = useMarketplaceStore()
 const userStore = useUserStore()
 const strategyId = computed(() => String(route.params.strategyId || route.query.strategy_id || ''))
@@ -195,9 +197,9 @@ const canReport = computed(() => Boolean(strategy.value?.canReport))
 
 const ctaLabel = computed(() => {
   if (marketplaceStore.importLoading) {
-    return 'Importing...'
+    return t('marketplace.detail.importing')
   }
-  return 'Free backtest trial'
+  return t('marketplace.detail.freeBacktestTrial')
 })
 
 const authorInitial = computed(() => {
@@ -220,10 +222,10 @@ const chartPoints = computed(() => {
 const metricEntries = computed(() => {
   const metrics = strategy.value?.displayMetrics || {}
   const preferred = [
-    ['totalReturn', 'Total return'],
-    ['maxDrawdown', 'Max drawdown'],
-    ['sharpeRatio', 'Sharpe ratio'],
-    ['winRate', 'Win rate'],
+    ['totalReturn', t('marketplace.detail.metricTotalReturn')],
+    ['maxDrawdown', t('marketplace.detail.metricMaxDrawdown')],
+    ['sharpeRatio', t('marketplace.detail.metricSharpeRatio')],
+    ['winRate', t('marketplace.detail.metricWinRate')],
   ]
   const entries: Array<{ key: string; label: string; value: string }> = []
   const seen = new Set<string>()
@@ -253,7 +255,7 @@ const metricEntries = computed(() => {
 async function handleImport() {
   if (!strategy.value) return
   const result = await marketplaceStore.importStrategy(strategy.value.id)
-  toast.success('策略已导入，即将跳转回测配置')
+  toast.success(t('marketplace.detail.importSuccessToast'))
   await router.push(result.redirectTo || buildBacktestConfigurePath(result.strategyId))
 }
 
@@ -275,13 +277,13 @@ async function submitReport() {
   if (!strategy.value) return
   const reason = reportReason.value.trim()
   if (reason.length < 10 || reason.length > 500) {
-    toast.error('举报原因需为 10 到 500 个字符')
+    toast.error(t('marketplace.detail.reportReasonLengthError'))
     return
   }
 
   try {
     await marketplaceStore.reportStrategy(strategy.value.id, reason)
-    toast.success('举报已提交，我们将尽快处理')
+    toast.success(t('marketplace.detail.reportSuccessToast'))
     closeReportDialog()
   } catch (error) {
     toast.error(getErrorMessage(error))
@@ -297,7 +299,7 @@ function humanizeMetricKey(key: string) {
 
 function formatMetricValue(key: string, value: string | number | boolean | null) {
   if (typeof value === 'boolean') {
-    return value ? 'Yes' : 'No'
+    return value ? t('marketplace.detail.booleanYes') : t('marketplace.detail.booleanNo')
   }
   if (typeof value === 'number') {
     if (key.toLowerCase().includes('rate') || key.toLowerCase().includes('return') || key.toLowerCase().includes('drawdown')) {
@@ -316,7 +318,7 @@ function getErrorMessage(error: unknown): string {
   if (error instanceof Error && error.message) {
     return error.message
   }
-  return '提交失败，请稍后重试'
+  return t('marketplace.detail.reportFailToast')
 }
 </script>
 

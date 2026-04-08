@@ -5,8 +5,8 @@
       <VerifiedBadge v-if="strategy.isVerified" />
     </header>
 
-    <p class="card-description">{{ strategy.description || 'No description provided.' }}</p>
-    <p class="card-category">Category: {{ strategy.category || 'other' }}</p>
+    <p class="card-description">{{ strategy.description || $t('marketplace.noDescription') }}</p>
+    <p class="card-category">{{ $t('marketplace.strategyCategory', { category: strategy.category || $t('marketplace.strategyCategoryDefault') }) }}</p>
 
     <div class="tag-row">
       <span v-for="tag in strategy.tags" :key="tag" class="chip">{{ tag }}</span>
@@ -14,15 +14,15 @@
 
     <dl class="metric-grid">
       <div class="metric-cell">
-        <dt>Annualized</dt>
+        <dt>{{ $t('marketplace.metricAnnualized') }}</dt>
         <dd>{{ formatMetric(strategy.displayMetrics.annualized_return, true) }}</dd>
       </div>
       <div class="metric-cell">
-        <dt>Drawdown</dt>
+        <dt>{{ $t('marketplace.metricDrawdown') }}</dt>
         <dd>{{ formatMetric(strategy.displayMetrics.max_drawdown, true) }}</dd>
       </div>
       <div class="metric-cell">
-        <dt>Sharpe</dt>
+        <dt>{{ $t('marketplace.metricSharpe') }}</dt>
         <dd>{{ formatMetric(strategy.displayMetrics.sharpe_ratio, false) }}</dd>
       </div>
     </dl>
@@ -35,7 +35,7 @@
           :alt="strategy.author.nickname"
           class="author-avatar"
         />
-        <span class="author-name">{{ strategy.author.nickname || 'Unknown author' }}</span>
+        <span class="author-name">{{ strategy.author.nickname || $t('marketplace.unknownAuthor') }}</span>
       </div>
       <button
         type="button"
@@ -43,7 +43,7 @@
         data-test="strategy-cta"
         @click="emit('open', props.strategy.id)"
       >
-        Try backtest
+        {{ $t('marketplace.tryBacktest') }}
       </button>
     </footer>
   </article>
