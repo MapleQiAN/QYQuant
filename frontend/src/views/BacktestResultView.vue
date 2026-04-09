@@ -98,17 +98,132 @@
             </StatCard>
           </div>
 
-          <!-- K-line Chart -->
-          <div v-if="report.kline?.length" class="chart-section">
-            <div class="chart-section__header">
+          <section v-if="report.kline?.length" class="market-stage chart-section chart-section--feature">
+            <div class="chart-section__header chart-section__header--feature">
               <div class="chart-section__title-group">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="7" y1="8" x2="7" y2="16"/><line x1="7" y1="16" x2="7.01" y2="16"/><line x1="11" y1="6" x2="11" y2="18"/><line x1="11" y1="6" x2="11.01" y2="6"/><line x1="15" y1="10" x2="15" y2="14"/><line x1="15" y1="14" x2="15.01" y2="14"/></svg>
-                <span class="chart-section__title">{{ $t('backtestReport.klineTitle') }}</span>
+                <div>
+                  <span class="chart-section__title">{{ $t('backtestReport.klineTitle') }}</span>
+                  <p class="chart-section__lead">{{ $t('backtestReport.chartDeskSubtitle') }}</p>
+                </div>
               </div>
               <span class="chart-section__subtitle">{{ symbolLabel }}</span>
             </div>
-            <BacktestKlineChart class="chart-block" :bars="report.kline" :trades="report.trades || []" :symbol="symbolLabel" />
-          </div>
+
+            <div class="market-stage__body">
+              <div class="market-stage__primary">
+                <BacktestKlineChart
+                  class="chart-block"
+                  :bars="report.kline"
+                  :trades="report.trades || []"
+                  :symbol="symbolLabel"
+                  @hover-change="handleKlineHover"
+                />
+              </div>
+
+              <aside class="market-stage__rail">
+                <section class="signal-panel">
+                  <div class="signal-panel__header">
+                    <span class="analysis-panel__eyebrow">{{ $t('backtestReport.tradeSignalsTitle') }}</span>
+                    <h3 class="signal-panel__title">{{ $t('backtestReport.tradeSignalsTitle') }}</h3>
+                    <p class="signal-panel__subtitle">{{ $t('backtestReport.tradeSignalsSubtitle') }}</p>
+                  </div>
+
+                  <div class="signal-stats">
+                    <article class="signal-stat">
+                      <span class="signal-stat__label">{{ $t('backtestReport.totalSignals') }}</span>
+                      <strong class="signal-stat__value">{{ totalSignalCount }}</strong>
+                    </article>
+                    <article class="signal-stat">
+                      <span class="signal-stat__label">{{ $t('backtestReport.signalBalance') }}</span>
+                      <strong class="signal-stat__value">{{ buySignals }} / {{ sellSignals }}</strong>
+                    </article>
+                    <article class="signal-stat">
+                      <span class="signal-stat__label">{{ $t('backtestReport.signalDensity') }}</span>
+                      <strong class="signal-stat__value">{{ signalDensityLabel }}</strong>
+                    </article>
+                  </div>
+
+                  <div v-if="latestTradeMarker" class="signal-latest">
+                    <div class="signal-latest__header">
+                      <span class="signal-latest__label">{{ $t('backtestReport.latestSignal') }}</span>
+                      <span :class="['signal-latest__side', toneClass(latestTradeMarker.side === 'buy' ? 'positive' : 'negative')]">
+                        {{ latestTradeMarker.side === 'buy' ? $t('kline.buySignal') : $t('kline.sellSignal') }}
+                      </span>
+                    </div>
+                    <strong class="signal-latest__value">{{ formatPlain(latestTradeMarker.price, 4) }}</strong>
+                    <span class="signal-latest__meta">{{ formatDateTime(latestTradeMarker.timestamp) }}</span>
+                  </div>
+                </section>
+
+                <section class="signal-panel">
+                  <div class="signal-panel__header">
+                    <span class="analysis-panel__eyebrow">{{ $t('backtestReport.hoverInspectorTitle') }}</span>
+                    <h3 class="signal-panel__title">{{ $t('backtestReport.hoverInspectorTitle') }}</h3>
+                    <p class="signal-panel__subtitle">{{ $t('backtestReport.hoverInspectorSubtitle') }}</p>
+                  </div>
+
+                  <div v-if="hoveredKlineSnapshot" class="hover-card">
+                    <div class="hover-card__headline">
+                      <strong>{{ hoveredKlineSnapshot.formattedTime }}</strong>
+                      <span :class="['hover-card__change', toneClass(toneFromSignedValue(hoveredKlineSnapshot.priceChange))]">
+                        {{ formatPercent(hoveredKlineSnapshot.priceChange, 2, true) }}
+                      </span>
+                    </div>
+
+                    <div class="hover-grid">
+                      <div class="hover-grid__item">
+                        <span>{{ $t('backtestReport.openLabel') }}</span>
+                        <strong>{{ formatPlain(hoveredKlineSnapshot.open, 4) }}</strong>
+                      </div>
+                      <div class="hover-grid__item">
+                        <span>{{ $t('backtestReport.highLabel') }}</span>
+                        <strong>{{ formatPlain(hoveredKlineSnapshot.high, 4) }}</strong>
+                      </div>
+                      <div class="hover-grid__item">
+                        <span>{{ $t('backtestReport.lowLabel') }}</span>
+                        <strong>{{ formatPlain(hoveredKlineSnapshot.low, 4) }}</strong>
+                      </div>
+                      <div class="hover-grid__item">
+                        <span>{{ $t('backtestReport.closeLabel') }}</span>
+                        <strong>{{ formatPlain(hoveredKlineSnapshot.close, 4) }}</strong>
+                      </div>
+                      <div class="hover-grid__item">
+                        <span>{{ $t('backtestReport.volumeLabel') }}</span>
+                        <strong>{{ formatInteger(hoveredKlineSnapshot.volume) }}</strong>
+                      </div>
+                      <div class="hover-grid__item">
+                        <span>{{ $t('backtestReport.totalSignals') }}</span>
+                        <strong>{{ hoveredKlineSnapshot.signalCount }}</strong>
+                      </div>
+                    </div>
+
+                    <div v-if="hoveredKlineSnapshot.signals.length" class="hover-signals">
+                      <article v-for="signal in hoveredKlineSnapshot.signals" :key="signal.id" class="hover-signal">
+                        <div class="hover-signal__top">
+                          <span :class="['hover-signal__side', toneClass(signal.side === 'buy' ? 'positive' : 'negative')]">
+                            {{ signal.side === 'buy' ? $t('kline.buySignal') : $t('kline.sellSignal') }}
+                          </span>
+                          <span class="hover-signal__time">{{ formatDateTime(signal.timestamp) }}</span>
+                        </div>
+                        <div class="hover-signal__grid">
+                          <span>{{ $t('backtestReport.tradePriceLabel') }}</span>
+                          <strong>{{ formatPlain(signal.price, 4) }}</strong>
+                          <span>{{ $t('backtestReport.tradeQuantityLabel') }}</span>
+                          <strong>{{ formatPlain(signal.quantity, 4) }}</strong>
+                          <span v-if="typeof signal.pnl === 'number'">{{ $t('backtestReport.tradePnlLabel') }}</span>
+                          <strong v-if="typeof signal.pnl === 'number'">{{ formatPlain(signal.pnl, 2) }}</strong>
+                        </div>
+                      </article>
+                    </div>
+                    <p v-else class="hover-empty">{{ $t('backtestReport.hoverNoSignals') }}</p>
+                  </div>
+
+                  <p v-else class="hover-empty">{{ $t('backtestReport.hoverEmpty') }}</p>
+                </section>
+              </aside>
+            </div>
+          </section>
 
           <!-- Equity Curve -->
           <div class="chart-section">
@@ -182,7 +297,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import StatCard from '../components/StatCard.vue'
@@ -192,9 +307,23 @@ import ErrorDisplay from '../components/backtest/ErrorDisplay.vue'
 import DisclaimerFooter from '../components/disclaimer/DisclaimerFooter.vue'
 import MetricTooltip from '../components/help/MetricTooltip.vue'
 import { useUserStore } from '../stores'
+import { mapTradesToMarkers, toEpochMs, type TradeMarker } from '../lib/chartIndicators'
 import { useBacktestsStore } from '../stores/backtests'
 
 type Tone = 'positive' | 'negative' | 'warning' | 'neutral'
+
+interface HoveredKlineSnapshot {
+  time: string | number
+  formattedTime: string
+  open: number
+  high: number
+  low: number
+  close: number
+  volume: number
+  priceChange: number
+  signalCount: number
+  signals: TradeMarker[]
+}
 
 const { t } = useI18n()
 
@@ -262,7 +391,8 @@ function formatRangeDate(value: string | number | undefined | null) {
   if (value === undefined || value === null || value === '') {
     return '--'
   }
-  const date = new Date(value)
+  const epoch = typeof value === 'number' || typeof value === 'string' ? toEpochMs(value) : null
+  const date = new Date(epoch ?? value)
   if (Number.isNaN(date.getTime())) {
     return String(value)
   }
@@ -273,11 +403,12 @@ function formatRangeDate(value: string | number | undefined | null) {
   })
 }
 
-function formatDateTime(value: string | undefined | null) {
-  if (!value) {
+function formatDateTime(value: string | number | undefined | null) {
+  if (value === undefined || value === null || value === '') {
     return t('backtestReport.noCompletedAt')
   }
-  const date = new Date(value)
+  const epoch = typeof value === 'number' || typeof value === 'string' ? toEpochMs(value) : null
+  const date = new Date(epoch ?? value)
   if (Number.isNaN(date.getTime())) {
     return t('backtestReport.noCompletedAt')
   }
@@ -303,9 +434,12 @@ function formatMetric(value: number | undefined | null, digits = 2, suffix = '')
 
 const points = computed(() => report.value?.equity_curve ?? [])
 const trades = computed(() => report.value?.trades ?? [])
+const klineBars = computed(() => report.value?.kline ?? [])
+const tradeMarkers = computed(() => mapTradesToMarkers(klineBars.value, trades.value))
 const reportParams = computed<Record<string, unknown>>(() => report.value?.params ?? {})
 const firstPoint = computed(() => points.value[0] ?? null)
 const lastPoint = computed(() => points.value[points.value.length - 1] ?? null)
+const hoveredKlineSnapshot = ref<HoveredKlineSnapshot | null>(null)
 
 const strategyReturn = computed(() => {
   const direct = numberOrNull(summary.value.totalReturn)
@@ -362,16 +496,24 @@ const timeRangeLabel = computed(() => {
 })
 
 const durationDays = computed(() => {
-  const start = firstPoint.value ? new Date(firstPoint.value.timestamp).getTime() : NaN
-  const end = lastPoint.value ? new Date(lastPoint.value.timestamp).getTime() : NaN
+  const start = firstPoint.value ? (toEpochMs(firstPoint.value.timestamp) ?? NaN) : NaN
+  const end = lastPoint.value ? (toEpochMs(lastPoint.value.timestamp) ?? NaN) : NaN
   if (Number.isNaN(start) || Number.isNaN(end) || end < start) {
     return null
   }
   return Math.max(1, Math.round((end - start) / 86400000))
 })
 
-const buySignals = computed(() => trades.value.filter((trade) => trade.side === 'buy').length)
-const sellSignals = computed(() => trades.value.filter((trade) => trade.side === 'sell').length)
+const buySignals = computed(() => tradeMarkers.value.filter((trade) => trade.side === 'buy').length)
+const sellSignals = computed(() => tradeMarkers.value.filter((trade) => trade.side === 'sell').length)
+const totalSignalCount = computed(() => tradeMarkers.value.length)
+const latestTradeMarker = computed(() => tradeMarkers.value[tradeMarkers.value.length - 1] ?? null)
+const signalDensityLabel = computed(() => {
+  if (!klineBars.value.length) {
+    return '--'
+  }
+  return `${formatPlain((tradeMarkers.value.length / klineBars.value.length) * 100, 1)} / 100`
+})
 
 const qualityScore = computed(() => {
   const sharpe = numberOrNull(summary.value.sharpeRatio) ?? 0
@@ -661,6 +803,10 @@ async function finishGuidedOnboarding() {
   await userStore.markOnboardingCompleted(true)
   userStore.finishGuidedBacktest()
   await router.push({ name: 'dashboard' })
+}
+
+function handleKlineHover(payload: HoveredKlineSnapshot | null) {
+  hoveredKlineSnapshot.value = payload
 }
 
 onMounted(() => {
@@ -971,6 +1117,10 @@ onMounted(() => {
   background: var(--color-surface-elevated);
 }
 
+.chart-section__header--feature {
+  align-items: flex-start;
+}
+
 .chart-section__title-group {
   display: flex;
   align-items: center;
@@ -989,8 +1139,151 @@ onMounted(() => {
   color: var(--color-text-muted);
 }
 
+.chart-section__lead {
+  margin: 4px 0 0;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
+}
+
 .chart-block {
   padding: var(--spacing-sm);
+}
+
+.market-stage__body {
+  display: grid;
+  grid-template-columns: minmax(0, 1.55fr) minmax(280px, 0.9fr);
+  gap: var(--spacing-lg);
+  padding: var(--spacing-sm) var(--spacing-md) var(--spacing-md);
+}
+
+.market-stage__primary {
+  min-width: 0;
+}
+
+.market-stage__rail {
+  display: grid;
+  gap: var(--spacing-md);
+}
+
+.signal-panel {
+  display: grid;
+  gap: var(--spacing-md);
+  padding: 18px;
+  border: 1px solid var(--color-border);
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.signal-panel__header {
+  display: grid;
+  gap: 6px;
+}
+
+.signal-panel__title {
+  margin: 0;
+  font-size: var(--font-size-lg);
+  color: var(--color-text-primary);
+}
+
+.signal-panel__subtitle,
+.hover-empty {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
+}
+
+.signal-stats,
+.hover-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.signal-stat,
+.hover-grid__item {
+  display: grid;
+  gap: 6px;
+  padding: 12px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--color-border-light);
+}
+
+.signal-stat__label,
+.hover-grid__item span,
+.signal-latest__label,
+.hover-signal__grid span,
+.hover-signal__time {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-xs);
+}
+
+.signal-stat__value,
+.hover-grid__item strong {
+  color: var(--color-text-primary);
+  font-size: var(--font-size-lg);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.signal-latest,
+.hover-card {
+  display: grid;
+  gap: 10px;
+  padding: 14px;
+  border-radius: 18px;
+  background:
+    radial-gradient(circle at top right, rgba(54, 214, 182, 0.12), transparent 40%),
+    rgba(6, 12, 24, 0.34);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.signal-latest__header,
+.hover-card__headline,
+.hover-signal__top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.signal-latest__side,
+.hover-signal__side {
+  font-size: var(--font-size-xs);
+  font-weight: 700;
+}
+
+.signal-latest__value {
+  color: var(--color-text-primary);
+  font-size: var(--font-size-xxl);
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.signal-latest__meta,
+.hover-card__change {
+  font-size: var(--font-size-sm);
+}
+
+.hover-signals {
+  display: grid;
+  gap: 10px;
+}
+
+.hover-signal {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  border-radius: 16px;
+  border: 1px solid var(--color-border-light);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.hover-signal__grid {
+  display: grid;
+  grid-template-columns: auto auto;
+  gap: 4px 12px;
+  align-items: center;
 }
 
 .analysis-grid {
@@ -1233,12 +1526,18 @@ onMounted(() => {
 
   .report-summary__hero,
   .analysis-grid,
+  .market-stage__body,
   .metrics-board__header,
   .metrics-board__grid {
     grid-template-columns: 1fr;
   }
 
   .summary-facts {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .signal-stats,
+  .hover-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
@@ -1266,6 +1565,11 @@ onMounted(() => {
   }
 
   .summary-facts {
+    grid-template-columns: 1fr;
+  }
+
+  .signal-stats,
+  .hover-grid {
     grid-template-columns: 1fr;
   }
 

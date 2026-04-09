@@ -426,7 +426,25 @@ const en = {
     equityCurveSubtitle: 'With buy/sell signal markers',
     metricsCount: '{count} metrics',
     backtestCompleted: 'Backtest completed',
-    reportReady: 'Results are ready. Click to view full report.'
+    reportReady: 'Results are ready. Click to view full report.',
+    chartDeskSubtitle: 'Read candles, trade markers, and hover details in one workspace.',
+    tradeSignalsTitle: 'Signal Overview',
+    tradeSignalsSubtitle: 'Trade markers are pinned to the candle at the exact fill price.',
+    totalSignals: 'Total Signals',
+    signalDensity: 'Signals / 100 bars',
+    latestSignal: 'Latest Signal',
+    hoverInspectorTitle: 'Hover Inspector',
+    hoverInspectorSubtitle: 'Move across the chart to inspect the active candle and trade markers.',
+    hoverEmpty: 'Hover over the K-line to inspect the candle and related signals.',
+    hoverNoSignals: 'No trade signals on this candle.',
+    openLabel: 'Open',
+    highLabel: 'High',
+    lowLabel: 'Low',
+    closeLabel: 'Close',
+    volumeLabel: 'Volume',
+    tradePriceLabel: 'Price',
+    tradeQuantityLabel: 'Quantity',
+    tradePnlLabel: 'PnL'
   },
   strategyDetail: {
     title: 'Strategy Parameters',
@@ -497,6 +515,10 @@ const en = {
       activeStatus: 'Active',
       wechat: 'WeChat Pay',
       alipay: 'Alipay'
+    },
+    plusRec: {
+      title: 'Recommended: Upgrade to Plus',
+      description: 'Unlock 200 monthly backtests, advanced parameters, and performance analytics for your daily quant research.'
     },
     orderHistory: {
       title: 'Order History',
