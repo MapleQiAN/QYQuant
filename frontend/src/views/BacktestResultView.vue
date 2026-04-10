@@ -120,108 +120,108 @@
                   @hover-change="handleKlineHover"
                 />
               </div>
+            </div>
 
-              <aside class="market-stage__rail">
-                <section class="signal-panel">
-                  <div class="signal-panel__header">
-                    <span class="analysis-panel__eyebrow">{{ $t('backtestReport.tradeSignalsTitle') }}</span>
-                    <h3 class="signal-panel__title">{{ $t('backtestReport.tradeSignalsTitle') }}</h3>
-                    <p class="signal-panel__subtitle">{{ $t('backtestReport.tradeSignalsSubtitle') }}</p>
+            <div class="market-stage__secondary">
+              <section class="signal-panel">
+                <div class="signal-panel__header">
+                  <span class="analysis-panel__eyebrow">{{ $t('backtestReport.tradeSignalsTitle') }}</span>
+                  <h3 class="signal-panel__title">{{ $t('backtestReport.tradeSignalsTitle') }}</h3>
+                  <p class="signal-panel__subtitle">{{ $t('backtestReport.tradeSignalsSubtitle') }}</p>
+                </div>
+
+                <div class="signal-stats">
+                  <article class="signal-stat">
+                    <span class="signal-stat__label">{{ $t('backtestReport.totalSignals') }}</span>
+                    <strong class="signal-stat__value">{{ totalSignalCount }}</strong>
+                  </article>
+                  <article class="signal-stat">
+                    <span class="signal-stat__label">{{ $t('backtestReport.signalBalance') }}</span>
+                    <strong class="signal-stat__value">{{ buySignals }} / {{ sellSignals }}</strong>
+                  </article>
+                  <article class="signal-stat">
+                    <span class="signal-stat__label">{{ $t('backtestReport.signalDensity') }}</span>
+                    <strong class="signal-stat__value">{{ signalDensityLabel }}</strong>
+                  </article>
+                </div>
+
+                <div v-if="latestTradeMarker" class="signal-latest">
+                  <div class="signal-latest__header">
+                    <span class="signal-latest__label">{{ $t('backtestReport.latestSignal') }}</span>
+                    <span :class="['signal-latest__side', toneClass(latestTradeMarker.side === 'buy' ? 'positive' : 'negative')]">
+                      {{ latestTradeMarker.side === 'buy' ? $t('kline.buySignal') : $t('kline.sellSignal') }}
+                    </span>
+                  </div>
+                  <strong class="signal-latest__value">{{ formatPlain(latestTradeMarker.price, 4) }}</strong>
+                  <span class="signal-latest__meta">{{ formatDateTime(latestTradeMarker.timestamp) }}</span>
+                </div>
+              </section>
+
+              <section class="signal-panel">
+                <div class="signal-panel__header">
+                  <span class="analysis-panel__eyebrow">{{ $t('backtestReport.hoverInspectorTitle') }}</span>
+                  <h3 class="signal-panel__title">{{ $t('backtestReport.hoverInspectorTitle') }}</h3>
+                  <p class="signal-panel__subtitle">{{ $t('backtestReport.hoverInspectorSubtitle') }}</p>
+                </div>
+
+                <div v-if="hoveredKlineSnapshot" class="hover-card">
+                  <div class="hover-card__headline">
+                    <strong>{{ hoveredKlineSnapshot.formattedTime }}</strong>
+                    <span :class="['hover-card__change', toneClass(toneFromSignedValue(hoveredKlineSnapshot.priceChange))]">
+                      {{ formatPercent(hoveredKlineSnapshot.priceChange, 2, true) }}
+                    </span>
                   </div>
 
-                  <div class="signal-stats">
-                    <article class="signal-stat">
-                      <span class="signal-stat__label">{{ $t('backtestReport.totalSignals') }}</span>
-                      <strong class="signal-stat__value">{{ totalSignalCount }}</strong>
+                  <div class="hover-grid">
+                    <div class="hover-grid__item">
+                      <span>{{ $t('backtestReport.openLabel') }}</span>
+                      <strong>{{ formatPlain(hoveredKlineSnapshot.open, 4) }}</strong>
+                    </div>
+                    <div class="hover-grid__item">
+                      <span>{{ $t('backtestReport.highLabel') }}</span>
+                      <strong>{{ formatPlain(hoveredKlineSnapshot.high, 4) }}</strong>
+                    </div>
+                    <div class="hover-grid__item">
+                      <span>{{ $t('backtestReport.lowLabel') }}</span>
+                      <strong>{{ formatPlain(hoveredKlineSnapshot.low, 4) }}</strong>
+                    </div>
+                    <div class="hover-grid__item">
+                      <span>{{ $t('backtestReport.closeLabel') }}</span>
+                      <strong>{{ formatPlain(hoveredKlineSnapshot.close, 4) }}</strong>
+                    </div>
+                    <div class="hover-grid__item">
+                      <span>{{ $t('backtestReport.volumeLabel') }}</span>
+                      <strong>{{ formatInteger(hoveredKlineSnapshot.volume) }}</strong>
+                    </div>
+                    <div class="hover-grid__item">
+                      <span>{{ $t('backtestReport.totalSignals') }}</span>
+                      <strong>{{ hoveredKlineSnapshot.signalCount }}</strong>
+                    </div>
+                  </div>
+
+                  <div v-if="hoveredKlineSnapshot.signals.length" class="hover-signals">
+                    <article v-for="signal in hoveredKlineSnapshot.signals" :key="signal.id" class="hover-signal">
+                      <div class="hover-signal__top">
+                        <span :class="['hover-signal__side', toneClass(signal.side === 'buy' ? 'positive' : 'negative')]">
+                          {{ signal.side === 'buy' ? $t('kline.buySignal') : $t('kline.sellSignal') }}
+                        </span>
+                        <span class="hover-signal__time">{{ formatDateTime(signal.timestamp) }}</span>
+                      </div>
+                      <div class="hover-signal__grid">
+                        <span>{{ $t('backtestReport.tradePriceLabel') }}</span>
+                        <strong>{{ formatPlain(signal.price, 4) }}</strong>
+                        <span>{{ $t('backtestReport.tradeQuantityLabel') }}</span>
+                        <strong>{{ formatPlain(signal.quantity, 4) }}</strong>
+                        <span v-if="typeof signal.pnl === 'number'">{{ $t('backtestReport.tradePnlLabel') }}</span>
+                        <strong v-if="typeof signal.pnl === 'number'">{{ formatPlain(signal.pnl, 2) }}</strong>
+                      </div>
                     </article>
-                    <article class="signal-stat">
-                      <span class="signal-stat__label">{{ $t('backtestReport.signalBalance') }}</span>
-                      <strong class="signal-stat__value">{{ buySignals }} / {{ sellSignals }}</strong>
-                    </article>
-                    <article class="signal-stat">
-                      <span class="signal-stat__label">{{ $t('backtestReport.signalDensity') }}</span>
-                      <strong class="signal-stat__value">{{ signalDensityLabel }}</strong>
-                    </article>
                   </div>
+                  <p v-else class="hover-empty">{{ $t('backtestReport.hoverNoSignals') }}</p>
+                </div>
 
-                  <div v-if="latestTradeMarker" class="signal-latest">
-                    <div class="signal-latest__header">
-                      <span class="signal-latest__label">{{ $t('backtestReport.latestSignal') }}</span>
-                      <span :class="['signal-latest__side', toneClass(latestTradeMarker.side === 'buy' ? 'positive' : 'negative')]">
-                        {{ latestTradeMarker.side === 'buy' ? $t('kline.buySignal') : $t('kline.sellSignal') }}
-                      </span>
-                    </div>
-                    <strong class="signal-latest__value">{{ formatPlain(latestTradeMarker.price, 4) }}</strong>
-                    <span class="signal-latest__meta">{{ formatDateTime(latestTradeMarker.timestamp) }}</span>
-                  </div>
-                </section>
-
-                <section class="signal-panel">
-                  <div class="signal-panel__header">
-                    <span class="analysis-panel__eyebrow">{{ $t('backtestReport.hoverInspectorTitle') }}</span>
-                    <h3 class="signal-panel__title">{{ $t('backtestReport.hoverInspectorTitle') }}</h3>
-                    <p class="signal-panel__subtitle">{{ $t('backtestReport.hoverInspectorSubtitle') }}</p>
-                  </div>
-
-                  <div v-if="hoveredKlineSnapshot" class="hover-card">
-                    <div class="hover-card__headline">
-                      <strong>{{ hoveredKlineSnapshot.formattedTime }}</strong>
-                      <span :class="['hover-card__change', toneClass(toneFromSignedValue(hoveredKlineSnapshot.priceChange))]">
-                        {{ formatPercent(hoveredKlineSnapshot.priceChange, 2, true) }}
-                      </span>
-                    </div>
-
-                    <div class="hover-grid">
-                      <div class="hover-grid__item">
-                        <span>{{ $t('backtestReport.openLabel') }}</span>
-                        <strong>{{ formatPlain(hoveredKlineSnapshot.open, 4) }}</strong>
-                      </div>
-                      <div class="hover-grid__item">
-                        <span>{{ $t('backtestReport.highLabel') }}</span>
-                        <strong>{{ formatPlain(hoveredKlineSnapshot.high, 4) }}</strong>
-                      </div>
-                      <div class="hover-grid__item">
-                        <span>{{ $t('backtestReport.lowLabel') }}</span>
-                        <strong>{{ formatPlain(hoveredKlineSnapshot.low, 4) }}</strong>
-                      </div>
-                      <div class="hover-grid__item">
-                        <span>{{ $t('backtestReport.closeLabel') }}</span>
-                        <strong>{{ formatPlain(hoveredKlineSnapshot.close, 4) }}</strong>
-                      </div>
-                      <div class="hover-grid__item">
-                        <span>{{ $t('backtestReport.volumeLabel') }}</span>
-                        <strong>{{ formatInteger(hoveredKlineSnapshot.volume) }}</strong>
-                      </div>
-                      <div class="hover-grid__item">
-                        <span>{{ $t('backtestReport.totalSignals') }}</span>
-                        <strong>{{ hoveredKlineSnapshot.signalCount }}</strong>
-                      </div>
-                    </div>
-
-                    <div v-if="hoveredKlineSnapshot.signals.length" class="hover-signals">
-                      <article v-for="signal in hoveredKlineSnapshot.signals" :key="signal.id" class="hover-signal">
-                        <div class="hover-signal__top">
-                          <span :class="['hover-signal__side', toneClass(signal.side === 'buy' ? 'positive' : 'negative')]">
-                            {{ signal.side === 'buy' ? $t('kline.buySignal') : $t('kline.sellSignal') }}
-                          </span>
-                          <span class="hover-signal__time">{{ formatDateTime(signal.timestamp) }}</span>
-                        </div>
-                        <div class="hover-signal__grid">
-                          <span>{{ $t('backtestReport.tradePriceLabel') }}</span>
-                          <strong>{{ formatPlain(signal.price, 4) }}</strong>
-                          <span>{{ $t('backtestReport.tradeQuantityLabel') }}</span>
-                          <strong>{{ formatPlain(signal.quantity, 4) }}</strong>
-                          <span v-if="typeof signal.pnl === 'number'">{{ $t('backtestReport.tradePnlLabel') }}</span>
-                          <strong v-if="typeof signal.pnl === 'number'">{{ formatPlain(signal.pnl, 2) }}</strong>
-                        </div>
-                      </article>
-                    </div>
-                    <p v-else class="hover-empty">{{ $t('backtestReport.hoverNoSignals') }}</p>
-                  </div>
-
-                  <p v-else class="hover-empty">{{ $t('backtestReport.hoverEmpty') }}</p>
-                </section>
-              </aside>
+                <p v-else class="hover-empty">{{ $t('backtestReport.hoverEmpty') }}</p>
+              </section>
             </div>
           </section>
 
@@ -1150,19 +1150,18 @@ onMounted(() => {
 }
 
 .market-stage__body {
-  display: grid;
-  grid-template-columns: minmax(0, 1.55fr) minmax(280px, 0.9fr);
-  gap: var(--spacing-lg);
-  padding: var(--spacing-sm) var(--spacing-md) var(--spacing-md);
+  padding: var(--spacing-sm) var(--spacing-md);
 }
 
 .market-stage__primary {
   min-width: 0;
 }
 
-.market-stage__rail {
+.market-stage__secondary {
   display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: var(--spacing-md);
+  padding: 0 var(--spacing-md) var(--spacing-md);
 }
 
 .signal-panel {
@@ -1526,9 +1525,12 @@ onMounted(() => {
 
   .report-summary__hero,
   .analysis-grid,
-  .market-stage__body,
   .metrics-board__header,
   .metrics-board__grid {
+    grid-template-columns: 1fr;
+  }
+
+  .market-stage__secondary {
     grid-template-columns: 1fr;
   }
 

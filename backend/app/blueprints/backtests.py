@@ -85,6 +85,7 @@ def _build_v1_job_params(payload):
     symbols = payload.get("symbols") or []
     parameters = payload.get("parameters") or {}
     return {
+        "name": payload.get("name"),
         "symbol": symbols[0] if symbols else None,
         "symbols": symbols,
         "start_date": payload.get("start_date"),
@@ -94,6 +95,44 @@ def _build_v1_job_params(payload):
         "strategy_id": payload.get("strategy_id"),
         "strategy_params": parameters,
         "parameters": parameters,
+    }
+
+
+def _derive_backtest_name(job_record, strategy_name=None):
+    params = job_record.params or {}
+    if params.get("name"):
+        return params["name"]
+
+    symbol = params.get("symbol")
+    start_date = params.get("start_date")
+    end_date = params.get("end_date")
+
+    segments = [segment for segment in [strategy_name, symbol] if segment]
+    if start_date and end_date:
+        segments.append(f"{start_date} ~ {end_date}")
+
+    if segments:
+        return " / ".join(str(segment) for segment in segments)
+    return job_record.id
+
+
+def _serialize_history_item(job_record, strategy_name=None):
+    params = job_record.params or {}
+    return {
+        "job_id": job_record.id,
+        "name": _derive_backtest_name(job_record, strategy_name),
+        "strategy_id": job_record.strategy_id,
+        "strategy_name": strategy_name,
+        "symbol": params.get("symbol") or (params.get("symbols") or [None])[0],
+        "status": job_record.status,
+        "created_at": format_beijing_iso(job_record.created_at),
+        "started_at": format_beijing_iso(job_record.started_at),
+        "completed_at": format_beijing_iso(job_record.completed_at),
+        "result_summary": job_record.result_summary,
+        "has_report": job_record.status in {
+            BacktestJobStatus.COMPLETED.value,
+            BacktestJobStatus.FAILED.value,
+        },
     }
 
 
@@ -220,6 +259,35 @@ def get_job_status(job_id):
     if job_record is None or job_record.user_id != user_id:
         return error_response("JOB_NOT_FOUND", "回测任务不存在", 404)
     return ok(_serialize_job_status(job_record))
+
+
+@bp.get("/v1/backtest/history")
+@jwt_required()
+def get_backtest_history():
+    user_id = get_jwt_identity()
+    limit = request.args.get("limit", default=50, type=int) or 50
+    limit = max(1, min(limit, 200))
+
+    jobs = (
+        BacktestJob.query.filter_by(user_id=user_id)
+        .order_by(BacktestJob.created_at.desc())
+        .limit(limit)
+        .all()
+    )
+
+    strategy_ids = {job.strategy_id for job in jobs if job.strategy_id}
+    strategy_names = {}
+    if strategy_ids:
+        strategy_names = {
+            strategy.id: strategy.name
+            for strategy in Strategy.query.filter(Strategy.id.in_(strategy_ids)).all()
+        }
+
+    items = [
+        _serialize_history_item(job, strategy_names.get(job.strategy_id))
+        for job in jobs
+    ]
+    return ok({"items": items})
 
 
 @bp.get("/v1/backtest/<job_id>/report")

@@ -12,6 +12,64 @@
         <p v-else-if="loadError" class="message error">{{ loadError }}</p>
       </template>
 
+      <!-- Subscription overview (for subscribed users, shown above plans) -->
+      <div v-if="isLoggedIn && !loading && !loadError && currentPlanLevel !== 'free'" class="sub-overview">
+        <div class="sub-overview__plan">
+          <div class="sub-overview__badge" :class="'sub-overview__badge--' + currentPlanLevel">
+            {{ getPlanName(currentPlanLevel) }}
+          </div>
+          <div class="sub-overview__meta">
+            <span class="sub-overview__status">
+              <svg width="8" height="8" viewBox="0 0 8 8" fill="none"><circle cx="4" cy="4" r="4" fill="currentColor"/></svg>
+              {{ t('pricing.currentSubscription.activeStatus') }}
+            </span>
+            <span v-if="subscription?.ends_at" class="sub-overview__expire">
+              {{ t('pricing.currentSubscription.expiresAt') }} {{ formatDate(subscription.ends_at) }}
+            </span>
+            <span v-if="subscription?.payment_provider" class="sub-overview__provider">
+              {{ formatProvider(subscription.payment_provider) }}
+            </span>
+          </div>
+        </div>
+        <div class="sub-overview__usage">
+          <div v-if="quota" class="sub-overview__usage-inner">
+            <div class="sub-overview__usage-header">
+              <span class="sub-overview__usage-label">{{ t('pricing.usageDetails.title') }}</span>
+              <div class="sub-overview__usage-nums">
+                <span class="tnum">{{ quota.used_count }}</span>
+                <span>/</span>
+                <span class="tnum">{{ quota.plan_limit === 'unlimited' ? t('pricing.usageDetails.unlimited') : quota.plan_limit }}</span>
+              </div>
+            </div>
+            <div v-if="quota.plan_limit !== 'unlimited'" class="sub-overview__bar">
+              <div class="sub-overview__bar-fill" :style="{ width: usagePercentage + '%' }" />
+            </div>
+            <div class="sub-overview__usage-footer">
+              {{ t('pricing.usageDetails.remaining') }}:
+              {{ quota.remaining === 'unlimited' ? t('pricing.usageDetails.unlimited') : quota.remaining }}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Plus recommendation (for Free/Go users) -->
+      <div v-if="isLoggedIn && !loading && !loadError && shouldRecommendPlus" class="plus-rec">
+        <div class="plus-rec__icon">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+            <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z" fill="url(#plus-star)"/>
+            <defs><linearGradient id="plus-star" x1="2" y1="2" x2="22" y2="22"><stop stop-color="#9585e6"/><stop offset="1" stop-color="#7c6dd8"/></linearGradient></defs>
+          </svg>
+        </div>
+        <div class="plus-rec__text">
+          <h3 class="plus-rec__title">{{ t('pricing.plusRec.title') }}</h3>
+          <p class="plus-rec__desc">{{ t('pricing.plusRec.description') }}</p>
+        </div>
+        <button class="plus-rec__cta" type="button" @click="goToCheckout('plus')">
+          {{ t('pricing.upgradeTo', { name: 'Plus' }) }}
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M6 3l5 5-5 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+      </div>
+
       <div v-if="!loading && (isLoggedIn ? !loadError : true)" class="pricing-grid">
         <article
           v-for="plan in PLANS"
@@ -21,10 +79,15 @@
             'pricing-card--current': currentPlanLevel === plan.level,
             'pricing-card--lower-tier': isLoggedIn && isPlanTierLowerThanCurrent(plan.level) && currentPlanLevel !== plan.level,
             'pricing-card--featured': plan.featured && shouldShowFeatured,
+            'pricing-card--ultra': plan.level === 'ultra',
           }"
         >
           <!-- Badge row -->
           <div class="pricing-card__badges">
+            <span v-if="plan.level === 'ultra'" class="badge badge--ultra-vip">
+              <svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor"><path d="M8 1l2.2 4.5L15 6.3l-3.5 3.4.8 4.8L8 12.2 3.7 14.5l.8-4.8L1 6.3l4.8-.8L8 1z"/></svg>
+              VIP
+            </span>
             <span v-if="plan.featured && shouldShowFeatured" class="badge badge--featured">{{ t('pricing.featured') }}</span>
             <span v-if="currentPlanLevel === plan.level" class="badge badge--current">{{ t('pricing.currentPlan') }}</span>
           </div>
@@ -122,55 +185,8 @@
         </div>
       </div>
 
-      <!-- Logged-in panels -->
+      <!-- Order history -->
       <template v-if="isLoggedIn && !loading">
-        <div class="pricing-panels">
-          <!-- Usage details panel -->
-          <div class="pricing-panel">
-            <h3 class="pricing-panel__title">{{ t('pricing.usageDetails.title') }}</h3>
-            <div v-if="quota" class="usage-stats">
-              <div class="usage-stats__numbers">
-                <span class="usage-stats__used">{{ quota.used_count }}</span>
-                <span class="usage-stats__separator">/</span>
-                <span class="usage-stats__total">{{ quota.plan_limit === 'unlimited' ? t('pricing.usageDetails.unlimited') : quota.plan_limit }}</span>
-              </div>
-              <div v-if="quota.plan_limit !== 'unlimited'" class="usage-bar">
-                <div class="usage-bar__fill" :style="{ width: usagePercentage + '%' }" />
-              </div>
-              <p class="usage-stats__remaining">
-                {{ t('pricing.usageDetails.remaining') }}:
-                {{ quota.remaining === 'unlimited' ? t('pricing.usageDetails.unlimited') : quota.remaining }}
-              </p>
-            </div>
-            <p v-else class="panel-empty">{{ t('common.noData') }}</p>
-          </div>
-
-          <!-- Current subscription panel -->
-          <div class="pricing-panel">
-            <h3 class="pricing-panel__title">{{ t('pricing.currentSubscription.title') }}</h3>
-            <div v-if="subscription" class="sub-details">
-              <div class="sub-detail">
-                <span class="sub-detail__label">{{ t('pricing.currentSubscription.plan') }}</span>
-                <span class="sub-detail__value">{{ subscriptionPlanName }}</span>
-              </div>
-              <div class="sub-detail">
-                <span class="sub-detail__label">{{ t('pricing.currentSubscription.status') }}</span>
-                <span class="sub-detail__value sub-detail__value--active">{{ t('pricing.currentSubscription.activeStatus') }}</span>
-              </div>
-              <div class="sub-detail">
-                <span class="sub-detail__label">{{ t('pricing.currentSubscription.paymentMethod') }}</span>
-                <span class="sub-detail__value">{{ formatProvider(subscription.payment_provider) }}</span>
-              </div>
-              <div v-if="subscription.ends_at" class="sub-detail">
-                <span class="sub-detail__label">{{ t('pricing.currentSubscription.expiresAt') }}</span>
-                <span class="sub-detail__value">{{ formatDate(subscription.ends_at) }}</span>
-              </div>
-            </div>
-            <p v-else class="panel-empty">{{ t('pricing.currentSubscription.noActive') }}</p>
-          </div>
-        </div>
-
-        <!-- Order history -->
         <div class="pricing-orders">
           <h3 class="pricing-orders__title">{{ t('pricing.orderHistory.title') }}</h3>
           <div v-if="orders.length > 0" class="orders-table-wrap">
@@ -303,11 +319,6 @@ const usagePercentage = computed(() => {
   return Math.min(Math.round((quota.value.used_count / limit) * 100), 100)
 })
 
-const subscriptionPlanName = computed(() => {
-  if (!subscription.value) return ''
-  return PLANS.find(p => p.level === subscription.value!.plan_level)?.name ?? subscription.value.plan_level
-})
-
 const totalPages = computed(() => Math.max(1, Math.ceil(ordersTotal.value / ordersPerPage.value)))
 
 function getPlanName(planLevel: string): string {
@@ -321,6 +332,11 @@ function isPlanTierLowerThanCurrent(planLevel: string): boolean {
 }
 
 const shouldShowFeatured = computed(() => {
+  const currentTier = PLAN_TIER_ORDER[currentPlanLevel.value] ?? 0
+  return currentTier < PLAN_TIER_ORDER['plus']
+})
+
+const shouldRecommendPlus = computed(() => {
   const currentTier = PLAN_TIER_ORDER[currentPlanLevel.value] ?? 0
   return currentTier < PLAN_TIER_ORDER['plus']
 })
@@ -398,7 +414,191 @@ onMounted(async () => {
   line-height: 1.6;
 }
 
-/* Grid */
+/* ── Subscription overview (above grid) ── */
+.sub-overview {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: var(--spacing-xl);
+  align-items: center;
+  padding: var(--spacing-lg) var(--spacing-xl);
+  margin-bottom: var(--spacing-lg);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  border: 1px solid var(--color-primary-border);
+  box-shadow: 0 0 0 1px var(--color-primary-border), var(--shadow-sm);
+}
+
+.sub-overview__badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 8px 20px;
+  border-radius: var(--radius-full);
+  font-size: var(--font-size-xl);
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.sub-overview__badge--go {
+  background: rgba(54, 214, 182, 0.12);
+  color: #36d6b6;
+}
+
+.sub-overview__badge--plus {
+  background: var(--color-primary-bg);
+  color: var(--color-primary);
+}
+
+.sub-overview__badge--pro {
+  background: rgba(240, 180, 41, 0.12);
+  color: #f0b429;
+}
+
+.sub-overview__badge--ultra {
+  background: linear-gradient(135deg, rgba(255, 215, 0, 0.15), rgba(218, 165, 32, 0.15));
+  color: #ffd700;
+  text-shadow: 0 0 20px rgba(255, 215, 0, 0.3);
+}
+
+.sub-overview__meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--spacing-md);
+  margin-top: var(--spacing-xs);
+}
+
+.sub-overview__status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--color-success);
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+}
+
+.sub-overview__expire,
+.sub-overview__provider {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-xs);
+}
+
+.sub-overview__usage-inner {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+}
+
+.sub-overview__usage-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.sub-overview__usage-label {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+}
+
+.sub-overview__usage-nums {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  color: var(--color-text-primary);
+  font-size: var(--font-size-base);
+  font-weight: 600;
+}
+
+.sub-overview__bar {
+  height: 6px;
+  border-radius: var(--radius-full);
+  background: var(--color-border);
+  overflow: hidden;
+}
+
+.sub-overview__bar-fill {
+  height: 100%;
+  border-radius: var(--radius-full);
+  background: linear-gradient(90deg, var(--color-primary), var(--color-primary-light));
+  transition: width var(--transition-fast);
+}
+
+.sub-overview__usage-footer {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-xs);
+}
+
+/* ── Plus recommendation banner ── */
+.plus-rec {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-lg);
+  padding: var(--spacing-lg) var(--spacing-xl);
+  margin-bottom: var(--spacing-lg);
+  border-radius: var(--radius-lg);
+  background: linear-gradient(135deg, rgba(124, 109, 216, 0.06), rgba(124, 109, 216, 0.12));
+  border: 1px solid var(--color-primary-border);
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.plus-rec:hover {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 1px var(--color-primary-border), 0 4px 16px -4px rgba(124, 109, 216, 0.2);
+}
+
+.plus-rec__icon {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-md);
+  background: var(--color-primary-bg);
+}
+
+.plus-rec__text {
+  flex: 1;
+  min-width: 0;
+}
+
+.plus-rec__title {
+  margin: 0 0 2px;
+  font-size: var(--font-size-lg);
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.plus-rec__desc {
+  margin: 0;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  line-height: 1.5;
+}
+
+.plus-rec__cta {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 20px;
+  border-radius: var(--radius-full);
+  background: var(--color-primary);
+  border: none;
+  color: #fff;
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity var(--transition-fast), transform var(--transition-fast);
+  white-space: nowrap;
+}
+
+.plus-rec__cta:hover {
+  opacity: 0.9;
+  transform: translateX(2px);
+}
+
+/* ── Grid ── */
 .pricing-grid {
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
@@ -406,7 +606,7 @@ onMounted(async () => {
   align-items: start;
 }
 
-/* Card */
+/* ── Card base ── */
 .pricing-card {
   display: flex;
   flex-direction: column;
@@ -415,25 +615,158 @@ onMounted(async () => {
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
   background: var(--color-surface);
+  transition: transform var(--transition-fast), box-shadow var(--transition-fast), border-color var(--transition-fast);
+  position: relative;
+}
+
+.pricing-card:hover:not(.pricing-card--lower-tier):not(.pricing-card--ultra) {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
 }
 
 .pricing-card--current {
   border-color: var(--color-primary-border);
+  box-shadow: 0 0 0 1px var(--color-primary-border);
 }
 
 .pricing-card--lower-tier {
-  opacity: 0.55;
+  opacity: 0.45;
 }
 
 .pricing-card--featured {
   border-color: var(--color-primary);
+  box-shadow: 0 0 0 1px rgba(124, 109, 216, 0.15), 0 8px 32px -8px rgba(124, 109, 216, 0.2);
+  transform: scale(1.03);
 }
 
-/* Badges */
+.pricing-card--featured:hover {
+  transform: scale(1.03) translateY(-2px);
+  box-shadow: 0 0 0 1px rgba(124, 109, 216, 0.25), 0 12px 40px -8px rgba(124, 109, 216, 0.25);
+}
+
+/* ── Ultra card — luxurious gold gradient ── */
+.pricing-card--ultra {
+  border: none;
+  background: linear-gradient(
+    170deg,
+    #2a2210 0%,
+    #3d3218 20%,
+    #4a3c1c 40%,
+    #3d3218 60%,
+    #2a2210 80%,
+    #1e1a0c 100%
+  );
+  box-shadow:
+    0 0 60px -12px rgba(255, 215, 0, 0.2),
+    0 0 30px -6px rgba(218, 165, 32, 0.12),
+    inset 0 1px 0 rgba(255, 215, 0, 0.15);
+  overflow: hidden;
+}
+
+.pricing-card--ultra::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 2px;
+  background: linear-gradient(
+    135deg,
+    #ffd700 0%, #ffec80 12%, #daa520 25%,
+    #ffd700 37%, #ffec80 50%, #b8860b 62%,
+    #ffd700 75%, #daa520 87%, #ffec80 100%
+  );
+  background-size: 400% 400%;
+  animation: ultraGoldShimmer 5s ease-in-out infinite;
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.pricing-card--ultra::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background:
+    radial-gradient(ellipse at 25% 15%, rgba(255, 236, 128, 0.1) 0%, transparent 50%),
+    radial-gradient(ellipse at 75% 85%, rgba(255, 215, 0, 0.06) 0%, transparent 50%);
+  pointer-events: none;
+  z-index: 1;
+}
+
+@keyframes ultraGoldShimmer {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+}
+
+.pricing-card--ultra .pricing-card__name {
+  color: #ffd700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  font-size: var(--font-size-lg);
+  text-shadow: 0 0 20px rgba(255, 215, 0, 0.3);
+}
+
+.pricing-card--ultra .pricing-card__price,
+.pricing-card--ultra .pricing-card__currency {
+  background: linear-gradient(135deg, #ffd700 0%, #fff1a8 40%, #daa520 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.pricing-card--ultra .pricing-card__price {
+  font-size: 2.2rem;
+}
+
+.pricing-card--ultra .pricing-card__quota {
+  color: #f0c850;
+  text-shadow: 0 0 12px rgba(255, 215, 0, 0.2);
+}
+
+.pricing-card--ultra .pricing-card__description {
+  color: rgba(255, 235, 200, 0.65);
+}
+
+.pricing-card--ultra .pricing-card__divider {
+  background: linear-gradient(90deg, transparent, rgba(255, 215, 0, 0.35), rgba(255, 236, 128, 0.2), transparent);
+  height: 1px;
+}
+
+.pricing-card--ultra .feature-icon--check {
+  color: #f0c850;
+}
+
+.pricing-card--ultra .feature-text {
+  color: rgba(255, 240, 210, 0.8);
+}
+
+.pricing-card--ultra .feature-item--disabled .feature-text {
+  color: rgba(180, 160, 120, 0.35);
+}
+
+.pricing-card--ultra .feature-icon--cross {
+  color: rgba(180, 160, 120, 0.25);
+}
+
+.pricing-card--ultra .feature-item--disabled .feature-text {
+  color: rgba(255, 255, 255, 0.2);
+}
+
+.pricing-card--ultra .feature-icon--cross {
+  color: rgba(255, 255, 255, 0.15);
+}
+
+/* ── Badges ── */
 .pricing-card__badges {
   display: flex;
   gap: var(--spacing-xs);
   min-height: 22px;
+  position: relative;
+  z-index: 2;
 }
 
 .badge {
@@ -457,11 +790,21 @@ onMounted(async () => {
   color: var(--color-primary);
 }
 
-/* Header */
+.badge--ultra-vip {
+  background: linear-gradient(135deg, rgba(255, 215, 0, 0.25), rgba(240, 200, 80, 0.2));
+  color: #ffd700;
+  border: 1px solid rgba(255, 215, 0, 0.4);
+  letter-spacing: 0.08em;
+  text-shadow: 0 0 10px rgba(255, 215, 0, 0.3);
+}
+
+/* ── Header ── */
 .pricing-card__header {
   display: flex;
   flex-direction: column;
   gap: 4px;
+  position: relative;
+  z-index: 2;
 }
 
 .pricing-card__name {
@@ -502,7 +845,7 @@ onMounted(async () => {
   display: inline-block;
   padding: 1px 8px;
   border-radius: var(--radius-full);
-  background: var(--color-danger);
+  background: linear-gradient(135deg, #f06868, #e04848);
   color: #fff;
   font-size: 11px;
   font-weight: 600;
@@ -517,26 +860,32 @@ onMounted(async () => {
   opacity: 0.7;
 }
 
-/* Quota */
+/* ── Quota ── */
 .pricing-card__quota {
   color: var(--color-primary);
   font-size: var(--font-size-sm);
   font-weight: 600;
+  position: relative;
+  z-index: 2;
 }
 
-/* Description */
+/* ── Description ── */
 .pricing-card__description {
   margin: 0;
   color: var(--color-text-muted);
   font-size: var(--font-size-sm);
   line-height: 1.55;
   min-height: 36px;
+  position: relative;
+  z-index: 2;
 }
 
-/* CTA */
+/* ── CTA ── */
 .pricing-card__actions {
   display: flex;
   flex-direction: column;
+  position: relative;
+  z-index: 2;
 }
 
 .btn-upgrade {
@@ -552,12 +901,13 @@ onMounted(async () => {
   font-size: var(--font-size-sm);
   font-weight: 600;
   cursor: pointer;
-  transition: background var(--transition-fast), border-color var(--transition-fast);
+  transition: background var(--transition-fast), border-color var(--transition-fast), transform var(--transition-fast);
 }
 
 .btn-upgrade:hover {
   background: var(--color-surface-hover);
   border-color: var(--color-border-hover);
+  transform: translateY(-1px);
 }
 
 .btn-upgrade--featured {
@@ -570,6 +920,20 @@ onMounted(async () => {
   opacity: 0.9;
   background: var(--color-primary);
   border-color: var(--color-primary);
+}
+
+.pricing-card--ultra .btn-upgrade {
+  background: linear-gradient(135deg, #ffd700 0%, #f0c850 50%, #daa520 100%);
+  border-color: transparent;
+  color: #1a1408;
+  font-weight: 700;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.2);
+  box-shadow: 0 2px 12px -2px rgba(255, 215, 0, 0.3);
+}
+
+.pricing-card--ultra .btn-upgrade:hover {
+  box-shadow: 0 4px 24px -4px rgba(255, 215, 0, 0.5);
+  transform: translateY(-1px);
 }
 
 .btn-disabled {
@@ -593,13 +957,15 @@ onMounted(async () => {
   background: var(--color-primary-bg);
 }
 
-/* Divider */
+/* ── Divider ── */
 .pricing-card__divider {
   height: 1px;
   background: var(--color-border);
+  position: relative;
+  z-index: 2;
 }
 
-/* Features */
+/* ── Features ── */
 .feature-list {
   list-style: none;
   margin: 0;
@@ -607,6 +973,8 @@ onMounted(async () => {
   display: flex;
   flex-direction: column;
   gap: 9px;
+  position: relative;
+  z-index: 2;
 }
 
 .feature-item {
@@ -638,7 +1006,7 @@ onMounted(async () => {
   color: var(--color-text-muted);
 }
 
-/* Trust strip */
+/* ── Trust strip ── */
 .pricing-trust {
   display: flex;
   align-items: center;
@@ -662,113 +1030,7 @@ onMounted(async () => {
   color: var(--color-text-muted);
 }
 
-/* Panels (usage + subscription) */
-.pricing-panels {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: var(--spacing-md);
-  margin-top: var(--spacing-xl);
-}
-
-.pricing-panel {
-  padding: var(--spacing-lg);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
-  background: var(--color-surface);
-}
-
-.pricing-panel__title {
-  margin: 0 0 var(--spacing-md);
-  color: var(--color-text-primary);
-  font-size: var(--font-size-base);
-  font-weight: 600;
-}
-
-.panel-empty {
-  margin: 0;
-  color: var(--color-text-muted);
-  font-size: var(--font-size-sm);
-}
-
-/* Usage stats */
-.usage-stats {
-  display: flex;
-  flex-direction: column;
-  gap: var(--spacing-sm);
-}
-
-.usage-stats__numbers {
-  display: flex;
-  align-items: baseline;
-  gap: 4px;
-}
-
-.usage-stats__used {
-  color: var(--color-text-primary);
-  font-size: 1.75rem;
-  font-weight: 700;
-  line-height: 1;
-}
-
-.usage-stats__separator {
-  color: var(--color-text-muted);
-  font-size: var(--font-size-base);
-}
-
-.usage-stats__total {
-  color: var(--color-text-secondary);
-  font-size: var(--font-size-base);
-}
-
-.usage-bar {
-  height: 8px;
-  border-radius: var(--radius-full);
-  background: var(--color-border);
-  overflow: hidden;
-}
-
-.usage-bar__fill {
-  height: 100%;
-  border-radius: var(--radius-full);
-  background: var(--color-primary);
-  transition: width var(--transition-fast);
-}
-
-.usage-stats__remaining {
-  margin: 0;
-  color: var(--color-text-muted);
-  font-size: var(--font-size-sm);
-}
-
-/* Subscription details */
-.sub-details {
-  display: flex;
-  flex-direction: column;
-  gap: var(--spacing-sm);
-}
-
-.sub-detail {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.sub-detail__label {
-  color: var(--color-text-muted);
-  font-size: var(--font-size-sm);
-}
-
-.sub-detail__value {
-  color: var(--color-text-primary);
-  font-size: var(--font-size-sm);
-  font-weight: 500;
-}
-
-.sub-detail__value--active {
-  color: var(--color-success);
-}
-
-/* Orders */
+/* ── Orders ── */
 .pricing-orders {
   margin-top: var(--spacing-xl);
 }
@@ -875,7 +1137,7 @@ onMounted(async () => {
   cursor: default;
 }
 
-/* Messages */
+/* ── Messages ── */
 .message {
   margin: 0 0 var(--spacing-md);
   color: var(--color-text-muted);
@@ -886,7 +1148,7 @@ onMounted(async () => {
   color: var(--color-danger);
 }
 
-/* Responsive */
+/* ── Responsive ── */
 @media (max-width: 1400px) {
   .pricing-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 }
@@ -894,7 +1156,9 @@ onMounted(async () => {
 @media (max-width: 900px) {
   .pricing-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .pricing-trust { flex-wrap: wrap; gap: var(--spacing-md); }
-  .pricing-panels { grid-template-columns: 1fr; }
+  .sub-overview { grid-template-columns: 1fr; }
+  .plus-rec { flex-direction: column; text-align: center; }
+  .plus-rec__text { text-align: center; }
   .orders-table { font-size: 12px; }
   .orders-table th,
   .orders-table td { padding: var(--spacing-xs) var(--spacing-sm); }
@@ -904,5 +1168,7 @@ onMounted(async () => {
   .pricing-hero { text-align: left; }
   .pricing-grid { grid-template-columns: 1fr; }
   .pricing-trust { flex-direction: column; align-items: flex-start; }
+  .pricing-card--featured { transform: none; }
+  .pricing-card--featured:hover { transform: translateY(-2px); }
 }
 </style>

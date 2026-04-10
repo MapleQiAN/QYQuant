@@ -352,6 +352,8 @@ const en = {
     bars: 'Bars',
     startDate: 'Start Date',
     endDate: 'End Date',
+    backtestName: 'Backtest Name',
+    backtestNameHelp: 'Add a custom name so you can find this run later in history.',
     strategyRuntime: 'Strategy Runtime',
     loadingParameters: 'Loading strategy parameters...',
     noCustomParameters: 'No custom parameters',
@@ -362,7 +364,15 @@ const en = {
     currentState: 'Current State',
     fillFormHint: 'Fill form and submit a backtest task.',
     jobId: 'Job ID',
-    openReport: 'Open Report'
+    openReport: 'Open Report',
+    historyTitle: 'Backtest History',
+    historySubtitle: 'Review recent runs and reopen saved reports.',
+    historySearchPlaceholder: 'Search by name, strategy, symbol, or job ID',
+    historyLoading: 'Loading backtest history...',
+    historyEmpty: 'No backtest history yet.',
+    historyNoMatch: 'No matching backtests found.',
+    historyTotalReturn: 'Total Return',
+    unknownStrategy: 'Unknown strategy'
   },
   backtestReport: {
     eyebrow: 'Backtest Report',

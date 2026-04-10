@@ -228,6 +228,49 @@ def test_submit_backtest_creates_pending_job_and_returns_job_id(monkeypatch, cli
     assert queued["kwargs"]["queue"] == "backtest"
 
 
+def test_submit_backtest_persists_custom_name(monkeypatch, client, app):
+    from app.extensions import db
+    from app.models import BacktestJob, Strategy, UserQuota
+
+    token, user_id = _login_user(client, phone="13800138014", nickname="NamedSubmitter")
+
+    with app.app_context():
+        strategy = Strategy(
+            id="named-strategy",
+            name="Named Strategy",
+            symbol="BTCUSDT",
+            status="draft",
+            owner_id=user_id,
+        )
+        db.session.add(strategy)
+        quota = db.session.get(UserQuota, user_id)
+        quota.plan_level = "free"
+        quota.used_count = 0
+        db.session.commit()
+
+    monkeypatch.setattr("app.blueprints.backtests.run_backtest_task.apply_async", lambda *args, **kwargs: None)
+
+    response = client.post(
+        "/api/v1/backtest/",
+        headers=_auth_headers(token),
+        json={
+            "strategy_id": "named-strategy",
+            "symbols": ["BTCUSDT"],
+            "start_date": "2024-01-01",
+            "end_date": "2024-01-31",
+            "name": "Trend Follow Jan Run",
+        },
+    )
+
+    assert response.status_code == 200
+    job_id = response.json["data"]["job_id"]
+
+    with app.app_context():
+        job = db.session.get(BacktestJob, job_id)
+        assert job is not None
+        assert job.params["name"] == "Trend Follow Jan Run"
+
+
 def test_submit_backtest_returns_429_when_quota_exceeded(monkeypatch, client, app):
     from app.extensions import db
     from app.models import Strategy, UserQuota
@@ -360,6 +403,98 @@ def test_get_backtest_status_returns_structured_error_for_failed_job(client, app
     assert data["error"]["type"] == "NameError"
     assert data["error"]["line"] == 15
     assert data["error"]["message"] == "Undefined variable 'sma_period'"
+
+
+def test_get_backtest_history_returns_named_jobs_for_owner(client, app):
+    from datetime import datetime, timedelta, timezone
+
+    from app.extensions import db
+    from app.models import BacktestJob, BacktestJobStatus, Strategy
+
+    token, user_id = _login_user(client, phone="13800138015", nickname="HistoryOwner")
+    _, other_user_id = _login_user(client, phone="13800138016", nickname="HistoryOther")
+    base_time = datetime(2026, 4, 8, 10, 0, tzinfo=timezone.utc)
+
+    with app.app_context():
+        db.session.add_all(
+            [
+                Strategy(
+                    id="history-strategy-a",
+                    name="Trend Alpha",
+                    symbol="BTCUSDT",
+                    status="draft",
+                    owner_id=user_id,
+                ),
+                Strategy(
+                    id="history-strategy-b",
+                    name="Mean Reversion",
+                    symbol="ETHUSDT",
+                    status="draft",
+                    owner_id=user_id,
+                ),
+                Strategy(
+                    id="history-hidden-strategy",
+                    name="Hidden Strategy",
+                    symbol="SOLUSDT",
+                    status="draft",
+                    owner_id=other_user_id,
+                ),
+            ]
+        )
+        db.session.flush()
+        db.session.add_all(
+            [
+                BacktestJob(
+                    user_id=user_id,
+                    strategy_id="history-strategy-a",
+                    status=BacktestJobStatus.COMPLETED.value,
+                    params={
+                        "name": "Alpha Breakout April",
+                        "symbol": "BTCUSDT",
+                        "start_date": "2024-04-01",
+                        "end_date": "2024-04-30",
+                    },
+                    result_summary={"totalReturn": 12.4},
+                    created_at=base_time,
+                ),
+                BacktestJob(
+                    user_id=user_id,
+                    strategy_id="history-strategy-b",
+                    status=BacktestJobStatus.FAILED.value,
+                    params={
+                        "name": "ETH Mean Reversion Retry",
+                        "symbol": "ETHUSDT",
+                        "start_date": "2024-03-01",
+                        "end_date": "2024-03-31",
+                    },
+                    error_message="strategy_timeout",
+                    created_at=base_time + timedelta(minutes=10),
+                ),
+                BacktestJob(
+                    user_id=other_user_id,
+                    strategy_id="history-hidden-strategy",
+                    status=BacktestJobStatus.COMPLETED.value,
+                    params={"name": "Should Not Be Visible", "symbol": "SOLUSDT"},
+                    created_at=base_time + timedelta(minutes=20),
+                ),
+            ]
+        )
+        db.session.commit()
+
+    response = client.get("/api/v1/backtest/history", headers=_auth_headers(token))
+
+    assert response.status_code == 200
+    items = response.json["data"]["items"]
+    assert len(items) == 2
+    assert [item["name"] for item in items] == [
+        "ETH Mean Reversion Retry",
+        "Alpha Breakout April",
+    ]
+    assert items[0]["strategy_name"] == "Mean Reversion"
+    assert items[0]["symbol"] == "ETHUSDT"
+    assert items[0]["status"] == "failed"
+    assert items[0]["has_report"] is True
+    assert items[1]["result_summary"]["totalReturn"] == 12.4
 
 
 def test_get_backtest_quota_returns_plan_snapshot(client, app):

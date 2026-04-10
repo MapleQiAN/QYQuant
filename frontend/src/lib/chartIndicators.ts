@@ -1,6 +1,23 @@
 import type { KlineBar } from '../types/KlineBar'
 import type { Trade } from '../types/Trade'
 
+export interface TradeMarker {
+  id: string
+  symbol: string
+  side: Trade['side']
+  price: number
+  quantity: number
+  pnl?: number
+  timestamp: string | number
+  epochMs: number
+  barIndex: number
+  barTime: string | number
+}
+
+export interface EnrichedKlineBar extends KlineBar {
+  signals?: TradeMarker[]
+}
+
 export function toEpochMs(value: string | number): number | null {
   if (typeof value === 'number' && Number.isFinite(value)) {
     if (value > 1e12) return value
@@ -47,26 +64,68 @@ export function simpleMovingAverage(values: number[], period: number): Array<num
   return result
 }
 
-export function mapTradeSignalsToBars(bars: KlineBar[], trades: Trade[]): KlineBar[] {
-  if (!bars.length || !trades.length) return bars
+function findTradeBarIndex(barTimes: Array<number | null>, tradeTime: number): number {
+  let targetIndex = barTimes.findIndex((barTime) => barTime === tradeTime)
+  if (targetIndex !== -1) {
+    return targetIndex
+  }
 
-  const withSignal = bars.map((bar) => ({ ...bar }))
+  targetIndex = barTimes.reduce((latestIndex, barTime, index) => {
+    if (barTime === null || barTime > tradeTime) return latestIndex
+    return barTime >= (barTimes[latestIndex] ?? -Infinity) ? index : latestIndex
+  }, -1)
+
+  return targetIndex
+}
+
+export function mapTradesToMarkers(bars: KlineBar[], trades: Trade[]): TradeMarker[] {
+  if (!bars.length || !trades.length) return []
+
   const barTimes = bars.map((bar) => toEpochMs(bar.time))
 
-  for (const trade of trades) {
+  return trades.flatMap((trade, index) => {
     const tradeTime = toEpochMs(trade.timestamp)
-    if (tradeTime === null) continue
-
-    let targetIndex = barTimes.findIndex((barTime) => barTime === tradeTime)
-    if (targetIndex === -1) {
-      targetIndex = barTimes.reduce((latestIndex, barTime, index) => {
-        if (barTime === null || barTime > tradeTime) return latestIndex
-        return barTime >= (barTimes[latestIndex] ?? -Infinity) ? index : latestIndex
-      }, -1)
+    if (tradeTime === null) {
+      return []
     }
 
-    if (targetIndex >= 0) {
-      withSignal[targetIndex].signal = trade.side
+    const barIndex = findTradeBarIndex(barTimes, tradeTime)
+    if (barIndex < 0) {
+      return []
+    }
+
+    const bar = bars[barIndex]
+    if (!bar) {
+      return []
+    }
+
+    return [{
+      id: trade.id ?? `${trade.side}-${tradeTime}-${index}`,
+      symbol: trade.symbol,
+      side: trade.side,
+      price: trade.price,
+      quantity: trade.quantity,
+      pnl: trade.pnl,
+      timestamp: trade.timestamp,
+      epochMs: tradeTime,
+      barIndex,
+      barTime: bar.time,
+    }]
+  })
+}
+
+export function mapTradeSignalsToBars(bars: KlineBar[], trades: Trade[]): EnrichedKlineBar[] {
+  if (!bars.length) return []
+  if (!trades.length) return bars.map((bar) => ({ ...bar }))
+
+  const withSignal = bars.map((bar) => ({ ...bar })) as EnrichedKlineBar[]
+  const markers = mapTradesToMarkers(bars, trades)
+
+  for (const marker of markers) {
+    const targetBar = withSignal[marker.barIndex]
+    if (targetBar) {
+      targetBar.signals = [...(targetBar.signals ?? []), marker]
+      targetBar.signal = marker.side
     }
   }
 

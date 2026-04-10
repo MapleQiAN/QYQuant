@@ -352,6 +352,8 @@ function buildOption(): EChartsOption {
       {
         name: candleSeriesName.value,
         type: 'candlestick',
+        barMinWidth: 2,
+        barMaxWidth: 18,
         data: enrichedBars.value.map((bar) => [bar.open, bar.close, bar.low, bar.high]),
         itemStyle: {
           color: upColor(),

@@ -1,5 +1,6 @@
 import { createHttpClient } from './http'
 import type {
+  BacktestHistoryResponse,
   BacktestReportResponse,
   BacktestStatusResponse,
   BacktestJobResponse,
@@ -39,6 +40,10 @@ export function submitBacktest(payload: SubmitBacktestPayload): Promise<RunBackt
 
 export function fetchBacktestStatus(jobId: string): Promise<BacktestStatusResponse> {
   return client.request({ method: 'get', url: `/v1/backtest/${jobId}` })
+}
+
+export function fetchBacktestHistory(limit = 50): Promise<BacktestHistoryResponse> {
+  return client.request({ method: 'get', url: '/v1/backtest/history', params: { limit } })
 }
 
 const STATUS_ERROR_MESSAGES: Record<string, string> = {

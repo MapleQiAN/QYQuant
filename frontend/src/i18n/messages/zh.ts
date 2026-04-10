@@ -352,6 +352,8 @@ const zh = {
     bars: 'K线数量',
     startDate: '开始日期',
     endDate: '结束日期',
+    backtestName: '回测名称',
+    backtestNameHelp: '给这次回测起个名字，后续可以在历史里更快查找。',
     strategyRuntime: '策略运行时',
     loadingParameters: '加载策略参数中...',
     noCustomParameters: '无自定义参数',
@@ -362,7 +364,15 @@ const zh = {
     currentState: '当前状态',
     fillFormHint: '填写表单并提交回测任务',
     jobId: '任务 ID',
-    openReport: '查看报告'
+    openReport: '查看报告',
+    historyTitle: '回测历史',
+    historySubtitle: '查看最近回测记录，并重新打开历史报告。',
+    historySearchPlaceholder: '按名称、策略、交易对或任务 ID 搜索',
+    historyLoading: '加载回测历史中...',
+    historyEmpty: '还没有回测历史。',
+    historyNoMatch: '没有找到匹配的回测记录。',
+    historyTotalReturn: '总收益率',
+    unknownStrategy: '未知策略'
   },
   backtestReport: {
     eyebrow: '回测报告',
