@@ -67,6 +67,25 @@
             </StatCard>
           </div>
 
+          <!-- K-line Chart -->
+          <div v-if="hasKlineData" class="chart-section">
+            <div class="chart-section__header">
+              <div class="chart-section__title-group">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="4" height="16"/><rect x="10" y="8" width="4" height="8"/><rect x="18" y="2" width="4" height="12"/></svg>
+                <span class="chart-section__title">{{ $t('backtestReport.klineTitle') }}</span>
+              </div>
+              <span class="chart-section__subtitle">{{ $t('backtestReport.klineSubtitle') }}</span>
+            </div>
+            <div class="chart-block">
+              <KlinePlaceholder
+                :data="report.kline || []"
+                :trades="report.trades || []"
+                :symbol="report.symbol || 'BTCUSDT'"
+                :timeframe="report.interval || '1d'"
+              />
+            </div>
+          </div>
+
           <!-- Equity Curve -->
           <div class="chart-section">
             <div class="chart-section__header">
@@ -78,6 +97,21 @@
             </div>
             <EquityCurveChart class="chart-block" :points="report.equity_curve || []" :trades="report.trades || []" />
           </div>
+
+          <!-- Drawdown Chart -->
+          <div v-if="hasDrawdownData" class="chart-section">
+            <div class="chart-section__header">
+              <div class="chart-section__title-group">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 18 13.5 8.5 8.5 13.5 1 6"/><polyline points="17 18 23 18 23 12"/></svg>
+                <span class="chart-section__title">{{ $t('backtestReport.drawdownTitle') }}</span>
+              </div>
+              <span class="chart-section__subtitle">{{ $t('backtestReport.drawdownSubtitle') }}</span>
+            </div>
+            <DrawdownChart :points="report.equity_curve || []" />
+          </div>
+
+          <!-- Trade List -->
+          <TradeTable :trades="report.trades || []" />
 
           <!-- Detailed Metrics -->
           <details class="details-card">
@@ -112,6 +146,9 @@ import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import StatCard from '../components/StatCard.vue'
 import EquityCurveChart from '../components/backtest/EquityCurveChart.vue'
+import DrawdownChart from '../components/backtest/DrawdownChart.vue'
+import TradeTable from '../components/backtest/TradeTable.vue'
+import KlinePlaceholder from '../components/KlinePlaceholder.vue'
 import ErrorDisplay from '../components/backtest/ErrorDisplay.vue'
 import DisclaimerFooter from '../components/disclaimer/DisclaimerFooter.vue'
 import MetricTooltip from '../components/help/MetricTooltip.vue'
@@ -129,6 +166,11 @@ const isGuidedMode = route.query.guided === 'true'
 
 const report = computed(() => store.report)
 const summary = computed(() => report.value?.result_summary ?? {})
+
+const hasKlineData = computed(() => (report.value?.kline?.length ?? 0) > 0)
+const hasDrawdownData = computed(() =>
+  (report.value?.equity_curve ?? []).some((p) => p.drawdown !== undefined)
+)
 
 function formatMetric(value: number | undefined, digits = 2, suffix = '') {
   if (value === undefined || value === null || Number.isNaN(value)) {
@@ -148,13 +190,13 @@ const coreMetrics = computed(() => ([
     showDisclaimer: true
   },
   {
-    label: t('backtestReport.metrics.annualizedReturn'),
-    metricKey: 'annualized_return',
-    value: formatMetric(summary.value.annualizedReturn, 2),
+    label: t('backtestReport.metrics.winRate'),
+    metricKey: 'win_rate',
+    value: formatMetric(summary.value.winRate, 2),
     suffix: '%',
     variant: 'info' as const,
-    showSign: true,
-    showDisclaimer: true
+    showSign: false,
+    showDisclaimer: false
   },
   {
     label: t('backtestReport.metrics.maxDrawdown'),
@@ -177,17 +219,15 @@ const coreMetrics = computed(() => ([
 
 const detailedMetrics = computed(() =>
   [
-    [t('backtestReport.metrics.totalReturn'), 'total_return', formatMetric(summary.value.totalReturn, 2, '%')],
     [t('backtestReport.metrics.annualizedReturn'), 'annualized_return', formatMetric(summary.value.annualizedReturn, 2, '%')],
-    [t('backtestReport.metrics.maxDrawdown'), 'max_drawdown', formatMetric(summary.value.maxDrawdown, 2, '%')],
-    [t('backtestReport.metrics.sharpeRatio'), 'sharpe_ratio', formatMetric(summary.value.sharpeRatio, 2)],
     [t('backtestReport.metrics.volatility'), 'volatility', formatMetric(summary.value.volatility, 2, '%')],
     [t('backtestReport.metrics.sortinoRatio'), 'sortino_ratio', formatMetric(summary.value.sortinoRatio, 2)],
     [t('backtestReport.metrics.calmarRatio'), 'calmar_ratio', formatMetric(summary.value.calmarRatio, 2)],
-    [t('backtestReport.metrics.winRate'), 'win_rate', formatMetric(summary.value.winRate, 2, '%')],
     [t('backtestReport.metrics.profitLossRatio'), 'profit_loss_ratio', formatMetric(summary.value.profitLossRatio, 2)],
     [t('backtestReport.metrics.maxConsecutiveLosses'), 'max_consecutive_losses', formatMetric(summary.value.maxConsecutiveLosses, 0)],
-    [t('backtestReport.metrics.totalTrades'), 'total_trades', formatMetric(summary.value.totalTrades, 0)]
+    [t('backtestReport.metrics.totalTrades'), 'total_trades', formatMetric(summary.value.totalTrades, 0)],
+    [t('backtestReport.metrics.alpha'), 'alpha', formatMetric(summary.value.alpha, 2)],
+    [t('backtestReport.metrics.beta'), 'beta', formatMetric(summary.value.beta, 2)]
   ].map(([label, metricKey, value]) => ({ label, metricKey, value }))
 )
 

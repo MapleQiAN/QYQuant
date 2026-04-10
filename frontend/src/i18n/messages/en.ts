@@ -372,7 +372,7 @@ const en = {
     guidedSuccessTitle: 'You completed your first quantitative backtest.',
     guidedSuccessHint: 'Focus on total return, max drawdown, and Sharpe ratio to understand the relationship between "return" and "volatility".',
     finishGuidedOnboarding: 'Finish guided onboarding',
-    viewAllMetrics: 'View all 11 metrics',
+    viewAllMetrics: 'View all detailed metrics',
     metrics: {
       totalReturn: 'Total Return',
       annualizedReturn: 'Annualized Return',
@@ -384,10 +384,16 @@ const en = {
       winRate: 'Win Rate',
       profitLossRatio: 'Profit/Loss Ratio',
       maxConsecutiveLosses: 'Max Consecutive Losses',
-      totalTrades: 'Total Trades'
+      totalTrades: 'Total Trades',
+      alpha: 'Alpha',
+      beta: 'Beta'
     },
     equityCurveTitle: 'Equity Curve',
-    equityCurveSubtitle: 'With buy/sell signal markers',
+    equityCurveSubtitle: 'Strategy vs benchmark with buy/sell signal markers',
+    klineTitle: 'Price Chart',
+    klineSubtitle: 'Candlestick chart with trade signal markers',
+    drawdownTitle: 'Drawdown',
+    drawdownSubtitle: 'Max drawdown depth over time',
     metricsCount: '{count} metrics',
     backtestCompleted: 'Backtest completed',
     reportReady: 'Results are ready. Click to view full report.'
@@ -476,9 +482,28 @@ const en = {
     processing: 'Processing...'
   },
   equityChart: {
+    title: 'Equity Curve',
+    caption: 'Supports zoom, hover values and buy/sell markers',
     noData: 'No equity curve data',
     strategyEquity: 'Strategy Equity',
     benchmark: 'Benchmark'
+  },
+  drawdownChart: {
+    noData: 'No drawdown data',
+    drawdown: 'Drawdown'
+  },
+  tradeTable: {
+    title: 'Trade List',
+    count: '{count} trades',
+    noTrades: 'No trade records',
+    time: 'Time',
+    side: 'Side',
+    symbol: 'Symbol',
+    price: 'Price',
+    quantity: 'Quantity',
+    pnl: 'PnL',
+    buy: 'BUY',
+    sell: 'SELL'
   },
   admin: {
     title: 'Admin Dashboard',

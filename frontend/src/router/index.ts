@@ -30,6 +30,26 @@ import ReportManagementView from '../views/admin/ReportManagement.vue'
 import StrategyReviewView from '../views/admin/StrategyReview.vue'
 import UserManagementView from '../views/admin/UserManagement.vue'
 
+const enableFrontendTestAccount = true
+const frontendTestAccount = {
+  token: 'frontend-test-token',
+  profile: {
+    id: 'frontend-test-user',
+    nickname: '前端测试账号',
+    avatar_url: '',
+    bio: '仅用于前端联调测试',
+    role: 'admin',
+    plan_level: 'pro',
+    is_banned: false,
+    onboarding_completed: true,
+    sim_disclaimer_accepted: true,
+    phone: '13800000000',
+    email: 'frontend-test@qyquant.local',
+    created_at: '2026-01-01T00:00:00Z',
+    updated_at: '2026-01-01T00:00:00Z',
+  },
+}
+
 const router = createRouter({
   history: createWebHistory(),
   scrollBehavior(to) {
@@ -77,13 +97,37 @@ const router = createRouter({
 
 const publicRoutes = new Set(['login', 'forgot-password', 'reset-password'])
 
+function applyFrontendTestAccount(userStore: ReturnType<typeof useUserStore>) {
+  if (typeof window === 'undefined' || !enableFrontendTestAccount) {
+    return false
+  }
+
+  const currentToken = window.localStorage.getItem('qyquant-token')
+  if (currentToken && currentToken !== frontendTestAccount.token) {
+    return false
+  }
+
+  window.localStorage.setItem('qyquant-token', frontendTestAccount.token)
+  userStore.applyRemoteProfile(frontendTestAccount.profile)
+  userStore.profileLoaded = true
+  userStore.profileLoading = false
+  return true
+}
+
 router.beforeEach(async (to) => {
   const userStore = useUserStore(pinia)
   const isPublic = publicRoutes.has(to.name as string)
 
+  if (!isPublic && !userStore.token) {
+    applyFrontendTestAccount(userStore)
+  }
+
   // Load profile if token exists but profile not yet loaded
   if (userStore.token && !userStore.profileLoaded && !userStore.profileLoading) {
-    await userStore.loadProfile()
+    const hasAppliedFrontendTestAccount = applyFrontendTestAccount(userStore)
+    if (!hasAppliedFrontendTestAccount) {
+      await userStore.loadProfile()
+    }
   }
 
   // Redirect logged-in users away from auth pages

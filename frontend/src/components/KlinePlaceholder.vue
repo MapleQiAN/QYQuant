@@ -101,14 +101,16 @@ const buildMarkPoints = () => {
       value: isBuy ? 'B' : 'S',
       symbol: 'pin',
       symbolSize: 28,
-      symbolOffset: [0, isBuy ? 16 : -16],
-      itemStyle: { color: isBuy ? upColor() : downColor() },
+      symbolRotate: isBuy ? 180 : 0,
+      symbolOffset: [0, isBuy ? -16 : 16],
+      itemStyle: { color: isBuy ? '#16a34a' : '#dc2626' },
       label: {
         show: true,
         formatter: isBuy ? 'B' : 'S',
         color: '#ffffff',
         fontWeight: 700,
-        fontSize: 10
+        fontSize: 10,
+        offset: isBuy ? [0, 4] : [0, -2]
       },
       barIndex: index
     }]

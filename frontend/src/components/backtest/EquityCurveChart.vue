@@ -2,8 +2,8 @@
   <div class="equity-chart">
     <div class="chart-meta">
       <div>
-        <h3 class="chart-title">Equity Curve</h3>
-        <p class="chart-caption">支持缩放、悬停查看数值与买卖点标注</p>
+        <h3 class="chart-title">{{ $t('equityChart.title') }}</h3>
+        <p class="chart-caption">{{ $t('equityChart.caption') }}</p>
       </div>
     </div>
     <div ref="chartRef" class="chart-canvas"></div>
@@ -12,6 +12,7 @@
 
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 import * as echarts from 'echarts'
 import type { ECharts, EChartsOption } from 'echarts'
 import type { BacktestReportPoint } from '../../types/Backtest'
@@ -24,30 +25,55 @@ const props = withDefaults(defineProps<{
   trades: () => []
 })
 
+const { t, locale } = useI18n()
 const chartRef = ref<HTMLDivElement | null>(null)
 const chart = ref<ECharts | null>(null)
 let resizeObserver: ResizeObserver | null = null
 
 const tradeMarkers = computed(() => {
-  const pointMap = new Map(props.points.map((point) => [point.timestamp, point.equity]))
+  if (!props.points.length) return []
+
+  const sortedPoints = [...props.points].sort((a, b) => a.timestamp - b.timestamp)
+  const timestamps = sortedPoints.map((p) => p.timestamp)
+
+  function findNearestEquity(ts: number): number {
+    let lo = 0
+    let hi = timestamps.length - 1
+    while (lo < hi) {
+      const mid = (lo + hi) >> 1
+      if (timestamps[mid] < ts) lo = mid + 1
+      else hi = mid
+    }
+    if (lo === 0) return sortedPoints[0].equity
+    const prev = timestamps[lo - 1]
+    const curr = timestamps[lo]
+    return (ts - prev <= curr - ts)
+      ? sortedPoints[lo - 1].equity
+      : sortedPoints[lo].equity
+  }
+
   return (props.trades || []).map((trade) => {
     const timestamp = Number(trade.timestamp)
+    const isBuy = trade.side === 'buy'
+    const equity = findNearestEquity(timestamp)
     return {
-      name: trade.side === 'buy' ? 'Buy' : 'Sell',
-      coord: [timestamp, pointMap.get(timestamp) ?? props.points[0]?.equity ?? 0],
-      value: trade.side === 'buy' ? 'B' : 'S',
+      name: isBuy ? 'Buy' : 'Sell',
+      coord: [timestamp, equity],
+      value: isBuy ? 'B' : 'S',
       symbol: 'pin',
       symbolSize: 28,
-      symbolOffset: [0, trade.side === 'buy' ? 16 : -16],
+      symbolRotate: isBuy ? 180 : 0,
+      symbolOffset: [0, isBuy ? -16 : 16],
       itemStyle: {
-        color: trade.side === 'buy' ? '#16a34a' : '#dc2626'
+        color: isBuy ? '#16a34a' : '#dc2626'
       },
       label: {
         show: true,
         color: '#ffffff',
-        formatter: trade.side === 'buy' ? 'B' : 'S',
+        formatter: isBuy ? 'B' : 'S',
         fontWeight: 700,
-        fontSize: 10
+        fontSize: 10,
+        offset: isBuy ? [0, 4] : [0, -2]
       }
     }
   })
@@ -57,7 +83,7 @@ function buildOption(): EChartsOption {
   if (!props.points.length) {
     return {
       title: {
-        text: '暂无权益曲线数据',
+        text: t('equityChart.noData'),
         left: 'center',
         top: 'middle',
         textStyle: {
@@ -77,7 +103,7 @@ function buildOption(): EChartsOption {
     },
     legend: {
       top: 8,
-      data: ['策略权益', '基准走势']
+      data: [t('equityChart.strategyEquity'), t('equityChart.benchmark')]
     },
     grid: {
       left: '5%',
@@ -108,7 +134,7 @@ function buildOption(): EChartsOption {
     ],
     series: [
       {
-        name: '策略权益',
+        name: t('equityChart.strategyEquity'),
         type: 'line',
         smooth: true,
         showSymbol: false,
@@ -125,7 +151,7 @@ function buildOption(): EChartsOption {
         }
       },
       {
-        name: '基准走势',
+        name: t('equityChart.benchmark'),
         type: 'line',
         smooth: true,
         showSymbol: false,
@@ -156,7 +182,7 @@ onMounted(() => {
   }
 })
 
-watch(() => [props.points, props.trades], () => {
+watch(() => [props.points, props.trades, locale.value], () => {
   renderChart()
 }, { deep: true })
 

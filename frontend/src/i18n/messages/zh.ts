@@ -372,9 +372,13 @@ const zh = {
     guidedSuccessTitle: '你完成了第一次量化回测。',
     guidedSuccessHint: '重点先看累计收益率、最大回撤和夏普比率，理解"收益"和"波动"之间的关系。',
     finishGuidedOnboarding: '完成新手引导',
-    viewAllMetrics: '查看所有 11 个指标',
+    viewAllMetrics: '查看所有详细指标',
     equityCurveTitle: '资产曲线',
-    equityCurveSubtitle: '含买卖信号标记',
+    equityCurveSubtitle: '策略 vs 基准，含买卖信号标记',
+    klineTitle: 'K线图',
+    klineSubtitle: '含买卖信号标记的K线走势',
+    drawdownTitle: '回撤曲线',
+    drawdownSubtitle: '最大回撤深度随时间变化',
     metricsCount: '{count} 项指标',
     backtestCompleted: '回测完成',
     reportReady: '结果已就绪，点击查看完整报告',
@@ -389,7 +393,9 @@ const zh = {
       winRate: '胜率',
       profitLossRatio: '盈亏比',
       maxConsecutiveLosses: '最大连续亏损次数',
-      totalTrades: '总交易次数'
+      totalTrades: '总交易次数',
+      alpha: 'Alpha',
+      beta: 'Beta'
     }
   },
   strategyDetail: {
@@ -476,9 +482,28 @@ const zh = {
     processing: '处理中...'
   },
   equityChart: {
+    title: '资产曲线',
+    caption: '支持缩放、悬停查看数值与买卖点标注',
     noData: '暂无权益曲线数据',
     strategyEquity: '策略权益',
     benchmark: '基准走势'
+  },
+  drawdownChart: {
+    noData: '暂无回撤数据',
+    drawdown: '回撤'
+  },
+  tradeTable: {
+    title: '交易明细',
+    count: '{count} 笔交易',
+    noTrades: '暂无交易记录',
+    time: '时间',
+    side: '方向',
+    symbol: '交易对',
+    price: '价格',
+    quantity: '数量',
+    pnl: '盈亏',
+    buy: '买入',
+    sell: '卖出'
   },
   admin: {
     title: '管理后台',
