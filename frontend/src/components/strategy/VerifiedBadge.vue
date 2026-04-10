@@ -1,6 +1,6 @@
 <template>
   <span class="verified-badge" data-test="verified-badge">
-    Verified
+    {{ $t('marketplace.verifiedBadge') }}
   </span>
 </template>
 

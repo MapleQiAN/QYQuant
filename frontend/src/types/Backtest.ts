@@ -71,6 +71,7 @@ export interface SubmitBacktestPayload {
   symbols: string[]
   start_date: string
   end_date: string
+  name?: string
   parameters?: Record<string, unknown>
 }
 
@@ -98,6 +99,7 @@ export interface BacktestReportResponse {
   params?: Record<string, unknown>
   result_summary?: BacktestSummary
   equity_curve?: BacktestReportPoint[]
+  kline?: KlineBar[]
   trades?: Trade[]
   kline?: KlineBar[]
   symbol?: string
@@ -105,6 +107,24 @@ export interface BacktestReportResponse {
   error?: StructuredBacktestError
   completed_at?: string | null
   disclaimer?: string
+}
+
+export interface BacktestHistoryItem {
+  job_id: string
+  name: string
+  strategy_id?: string | null
+  strategy_name?: string | null
+  symbol?: string | null
+  status: 'pending' | 'running' | 'completed' | 'failed' | 'timeout'
+  created_at?: string | null
+  started_at?: string | null
+  completed_at?: string | null
+  result_summary?: BacktestSummary | null
+  has_report: boolean
+}
+
+export interface BacktestHistoryResponse {
+  items: BacktestHistoryItem[]
 }
 
 export interface SupportedPackagesResponse {

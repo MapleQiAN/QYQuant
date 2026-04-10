@@ -3,8 +3,8 @@
     <div class="container">
       <header class="page-header">
         <div>
-          <h1 class="page-title">Marketplace</h1>
-          <p class="page-subtitle">Discover public strategies curated by the community and editorial picks.</p>
+          <h1 class="page-title">{{ $t('marketplace.pageTitle') }}</h1>
+          <p class="page-subtitle">{{ $t('marketplace.pageSubtitle') }}</p>
         </div>
       </header>
 
@@ -16,7 +16,7 @@
             data-test="marketplace-search-input"
             class="search-input"
             type="search"
-            placeholder="Search strategy name, category, or tags"
+            :placeholder="$t('marketplace.searchPlaceholder')"
           />
         </label>
         <div class="chip-row">
@@ -26,7 +26,7 @@
             :class="{ active: !hasActiveFilters }"
             @click="clearAllFilters"
           >
-            All
+            {{ $t('marketplace.allCategories') }}
           </button>
           <button
             v-for="chip in filterChips"
@@ -47,7 +47,7 @@
         data-test="featured-section"
       >
         <div class="section-title-row">
-          <h2 class="section-title">Featured Picks</h2>
+          <h2 class="section-title">{{ $t('marketplace.featuredPicks') }}</h2>
         </div>
         <div class="featured-strip">
           <FeaturedStrategyCard
@@ -64,18 +64,18 @@
 
       <section class="grid-section">
         <div class="section-title-row">
-          <h2 class="section-title">All Strategies</h2>
-          <span class="section-meta">{{ store.total }} results</span>
+          <h2 class="section-title">{{ $t('marketplace.allStrategies') }}</h2>
+          <span class="section-meta">{{ $t('marketplace.resultsCount', { count: store.total }) }}</span>
         </div>
 
-        <div v-if="store.loading" class="empty-state">Loading marketplace strategies...</div>
+        <div v-if="store.loading" class="empty-state">{{ $t('marketplace.loading') }}</div>
         <p v-else-if="store.error" class="message error">{{ store.error }}</p>
         <div
           v-else-if="store.strategies.length === 0"
           class="empty-state"
           data-test="marketplace-empty"
         >
-          <p>{{ hasActiveFilters ? 'No strategies match the current search and filters.' : 'No public strategies yet.' }}</p>
+          <p>{{ hasActiveFilters ? $t('marketplace.noMatch') : $t('marketplace.noPublic') }}</p>
           <button
             v-if="hasActiveFilters"
             data-test="marketplace-clear-filters"
@@ -83,7 +83,7 @@
             class="btn btn-secondary"
             @click="clearAllFilters"
           >
-            Clear filters
+            {{ $t('marketplace.clearFilters') }}
           </button>
         </div>
         <div v-else class="strategy-grid" data-test="marketplace-grid">
@@ -102,16 +102,16 @@
             :disabled="store.page <= 1 || store.loading"
             @click="changePage(store.page - 1)"
           >
-            Previous
+            {{ $t('marketplace.previous') }}
           </button>
-          <span>Page {{ store.page }} / {{ totalPages }}</span>
+          <span>{{ $t('marketplace.pageIndicator', { current: store.page, total: totalPages }) }}</span>
           <button
             type="button"
             class="btn btn-secondary"
             :disabled="store.page >= totalPages || store.loading"
             @click="changePage(store.page + 1)"
           >
-            Next
+            {{ $t('marketplace.nextPage') }}
           </button>
         </div>
       </section>
@@ -121,6 +121,7 @@
 
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import FeaturedStrategyCard from '../components/strategy/FeaturedStrategyCard.vue'
 import StrategyCard from '../components/strategy/StrategyCard.vue'
@@ -128,6 +129,7 @@ import { useMarketplaceStore } from '../stores'
 
 const router = useRouter()
 const store = useMarketplaceStore()
+const { t } = useI18n()
 const searchInput = ref(store.filters.q)
 let searchTimer: number | undefined
 
@@ -144,43 +146,43 @@ const hasActiveFilters = computed(
 const filterChips = computed(() => [
   {
     key: 'trend-following',
-    label: 'Trend Following',
+    label: t('marketplace.filterTrendFollowing'),
     active: store.filters.category === 'trend-following',
     onClick: () => toggleCategory('trend-following')
   },
   {
     key: 'mean-reversion',
-    label: 'Mean Reversion',
+    label: t('marketplace.filterMeanReversion'),
     active: store.filters.category === 'mean-reversion',
     onClick: () => toggleCategory('mean-reversion')
   },
   {
     key: 'momentum',
-    label: 'Momentum',
+    label: t('marketplace.filterMomentum'),
     active: store.filters.category === 'momentum',
     onClick: () => toggleCategory('momentum')
   },
   {
     key: 'multi-indicator',
-    label: 'Multi Indicator',
+    label: t('marketplace.filterMultiIndicator'),
     active: store.filters.category === 'multi-indicator',
     onClick: () => toggleCategory('multi-indicator')
   },
   {
     key: 'annual-return',
-    label: 'Annual > 20%',
+    label: t('marketplace.filterAnnualReturn'),
     active: store.filters.annualReturnGte === 20,
     onClick: () => toggleMetric('annualReturnGte', 20)
   },
   {
     key: 'drawdown',
-    label: 'Drawdown < 10%',
+    label: t('marketplace.filterDrawdown'),
     active: store.filters.maxDrawdownLte === 10,
     onClick: () => toggleMetric('maxDrawdownLte', 10)
   },
   {
     key: 'verified',
-    label: 'Platform Verified',
+    label: t('marketplace.filterVerified'),
     active: store.filters.verified,
     onClick: () => toggleVerified()
   }

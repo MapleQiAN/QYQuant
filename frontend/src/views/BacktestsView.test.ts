@@ -7,6 +7,7 @@ const {
   fetchRecentMock,
   fetchRuntimeDescriptorMock,
   fetchMyQuotaMock,
+  fetchBacktestHistoryMock,
   fetchBacktestStatusMock,
   submitBacktestMock,
 } = vi.hoisted(() => ({
@@ -14,6 +15,7 @@ const {
   fetchRecentMock: vi.fn(),
   fetchRuntimeDescriptorMock: vi.fn(),
   fetchMyQuotaMock: vi.fn(),
+  fetchBacktestHistoryMock: vi.fn(),
   fetchBacktestStatusMock: vi.fn(),
   submitBacktestMock: vi.fn(),
 }))
@@ -37,6 +39,7 @@ vi.mock('../api/backtests', async () => {
   const actual = await vi.importActual<typeof import('../api/backtests')>('../api/backtests')
   return {
     ...actual,
+    fetchBacktestHistory: fetchBacktestHistoryMock,
     fetchBacktestStatus: fetchBacktestStatusMock,
     submitBacktest: submitBacktestMock,
   }
@@ -48,6 +51,7 @@ describe('BacktestsView', () => {
     fetchRecentMock.mockReset()
     fetchRuntimeDescriptorMock.mockReset()
     fetchMyQuotaMock.mockReset()
+    fetchBacktestHistoryMock.mockReset()
     fetchBacktestStatusMock.mockReset()
     submitBacktestMock.mockReset()
 
@@ -64,6 +68,30 @@ describe('BacktestsView', () => {
       plan_limit: 10,
       remaining: 7,
       reset_at: '2026-04-01T00:00:00+08:00',
+    })
+    fetchBacktestHistoryMock.mockResolvedValue({
+      items: [
+        {
+          job_id: 'job-history-1',
+          name: 'Alpha Breakout April',
+          status: 'completed',
+          symbol: 'BTCUSDT',
+          strategy_name: 'Alpha',
+          created_at: '2026-04-08T10:00:00+08:00',
+          completed_at: '2026-04-08T10:05:00+08:00',
+          has_report: true,
+        },
+        {
+          job_id: 'job-history-2',
+          name: 'ETH Mean Reversion Retry',
+          status: 'failed',
+          symbol: 'ETHUSDT',
+          strategy_name: 'Mean Reversion',
+          created_at: '2026-04-07T09:00:00+08:00',
+          completed_at: '2026-04-07T09:02:00+08:00',
+          has_report: true,
+        },
+      ],
     })
     fetchBacktestStatusMock.mockResolvedValue({ status: 'completed' })
     submitBacktestMock.mockResolvedValue({ job_id: 'job-1' })
@@ -141,5 +169,54 @@ describe('BacktestsView', () => {
 
     expect(submitBacktestMock).toHaveBeenCalled()
     expect(wrapper.text()).toContain("Backtest failed: Undefined variable 'sma_period' (line 15)")
+  })
+
+  it('submits custom backtest names and opens the finished report', async () => {
+    const wrapper = mount(BacktestsView, {
+      global: {
+        mocks: {
+          $t: (key: string) => key,
+        },
+      },
+    })
+
+    await flushPromises()
+    await wrapper.get('input[data-test="backtest-name-input"]').setValue('Momentum Sprint')
+    await wrapper.get('.btn-run').trigger('click')
+    await flushPromises()
+
+    expect(submitBacktestMock).toHaveBeenCalledWith({
+      strategy_id: 'strategy-1',
+      symbols: ['BTCUSDT'],
+      start_date: expect.any(String),
+      end_date: expect.any(String),
+      name: 'Momentum Sprint',
+    })
+    expect(pushMock).toHaveBeenCalledWith({ name: 'backtest-report', params: { jobId: 'job-1' } })
+  })
+
+  it('shows backtest history, filters by name, and opens reports from history', async () => {
+    const wrapper = mount(BacktestsView, {
+      global: {
+        mocks: {
+          $t: (key: string) => key,
+        },
+      },
+    })
+
+    await flushPromises()
+
+    expect(fetchBacktestHistoryMock).toHaveBeenCalled()
+    expect(wrapper.text()).toContain('Alpha Breakout April')
+    expect(wrapper.text()).toContain('ETH Mean Reversion Retry')
+
+    await wrapper.get('input[data-test="backtest-history-search"]').setValue('ETH')
+
+    expect(wrapper.text()).not.toContain('Alpha Breakout April')
+    expect(wrapper.text()).toContain('ETH Mean Reversion Retry')
+
+    await wrapper.get('[data-test="history-open-report-job-history-2"]').trigger('click')
+
+    expect(pushMock).toHaveBeenCalledWith({ name: 'backtest-report', params: { jobId: 'job-history-2' } })
   })
 })

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { KlineBar } from '../types/KlineBar'
 import type { Trade } from '../types/Trade'
-import { mapTradeSignalsToBars, simpleMovingAverage } from './chartIndicators'
+import { mapTradeSignalsToBars, mapTradesToMarkers, simpleMovingAverage } from './chartIndicators'
 
 describe('chartIndicators', () => {
   it('calculates SMA with null warm-up values', () => {
@@ -20,6 +20,33 @@ describe('chartIndicators', () => {
       { id: 't2', symbol: 'XAUUSD', side: 'sell', price: 12.1, quantity: 1, timestamp: '2023-11-14T22:15:20.000Z' }
     ]
 
-    expect(mapTradeSignalsToBars(bars, trades).map((bar) => bar.signal)).toEqual(['buy', undefined, 'sell'])
+    const mapped = mapTradeSignalsToBars(bars, trades)
+
+    expect(mapped.map((bar) => bar.signal)).toEqual(['buy', undefined, 'sell'])
+    expect(mapped[0]?.signals?.map((signal) => signal.price)).toEqual([10.2])
+    expect(mapped[2]?.signals?.map((signal) => signal.price)).toEqual([12.1])
+  })
+
+  it('keeps multiple trade markers on the same bar and preserves exact trade prices', () => {
+    const bars: KlineBar[] = [
+      { time: 1700000000000, open: 10, high: 11, low: 9, close: 10, volume: 100 },
+      { time: 1700000060000, open: 10, high: 12, low: 10, close: 11, volume: 130 },
+      { time: 1700000120000, open: 11, high: 13, low: 10, close: 12, volume: 120 }
+    ]
+    const trades: Trade[] = [
+      { id: 'buy-1', symbol: 'XAUUSD', side: 'buy', price: 10.55, quantity: 1, timestamp: '2023-11-14T22:14:10.000Z' },
+      { id: 'sell-1', symbol: 'XAUUSD', side: 'sell', price: 10.95, quantity: 1, timestamp: '2023-11-14T22:14:45.000Z', pnl: 4.2 }
+    ]
+
+    const markers = mapTradesToMarkers(bars, trades)
+    const enrichedBars = mapTradeSignalsToBars(bars, trades)
+
+    expect(markers).toEqual([
+      expect.objectContaining({ id: 'buy-1', barIndex: 0, price: 10.55, side: 'buy' }),
+      expect.objectContaining({ id: 'sell-1', barIndex: 0, price: 10.95, side: 'sell', pnl: 4.2 }),
+    ])
+    expect(enrichedBars[0]?.signals?.map((signal) => signal.id)).toEqual(['buy-1', 'sell-1'])
+    expect(enrichedBars[0]?.signals?.map((signal) => signal.price)).toEqual([10.55, 10.95])
+    expect(enrichedBars[0]?.signal).toBe('sell')
   })
 })

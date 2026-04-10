@@ -8,11 +8,11 @@ import { fetchProfile, updateOnboardingCompleted } from '../api/users'
 
 const defaultUser: User = {
   id: undefined,
-  name: 'Quant Pro',
-  avatar: 'Q',
-  level: 'Pro',
-  notifications: 3,
-  nickname: 'Quant Pro',
+  name: '',
+  avatar: '',
+  level: '',
+  notifications: 0,
+  nickname: '',
   avatar_url: '',
   bio: '',
   role: 'user',

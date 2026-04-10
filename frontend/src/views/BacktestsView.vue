@@ -52,6 +52,18 @@
               </select>
             </label>
             <div v-if="strategiesError" class="message error">{{ strategiesError }}</div>
+
+            <label class="field">
+              <span class="field-label">{{ $t('backtests.backtestName') }}</span>
+              <input
+                v-model.trim="runForm.name"
+                data-test="backtest-name-input"
+                class="field-input"
+                type="text"
+                :placeholder="suggestedBacktestName"
+              />
+              <span class="field-help">{{ $t('backtests.backtestNameHelp') }}</span>
+            </label>
           </div>
 
           <div class="form-divider"></div>
@@ -226,6 +238,62 @@
           </div>
         </div>
       </div>
+
+      <section class="card history-panel">
+        <div class="panel-header">
+          <span class="panel-header__icon">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v5h5"/><path d="M3.05 13A9 9 0 1 0 6 5.3L3 8"/></svg>
+          </span>
+          <div class="history-panel__header-copy">
+            <h3 class="panel-title">{{ $t('backtests.historyTitle') }}</h3>
+            <p class="history-panel__subtitle">{{ $t('backtests.historySubtitle') }}</p>
+          </div>
+        </div>
+
+        <div class="history-panel__toolbar">
+          <input
+            v-model.trim="historySearch"
+            data-test="backtest-history-search"
+            class="field-input history-panel__search"
+            type="text"
+            :placeholder="$t('backtests.historySearchPlaceholder')"
+          />
+        </div>
+
+        <div v-if="historyLoading" class="history-panel__empty">{{ $t('backtests.historyLoading') }}</div>
+        <div v-else-if="historyError" class="history-panel__empty message error">{{ historyError }}</div>
+        <div v-else-if="filteredHistory.length === 0" class="history-panel__empty">
+          {{ historySearch ? $t('backtests.historyNoMatch') : $t('backtests.historyEmpty') }}
+        </div>
+        <div v-else class="history-list">
+          <article v-for="item in filteredHistory" :key="item.job_id" class="history-item">
+            <div class="history-item__main">
+              <div class="history-item__top">
+                <strong class="history-item__name">{{ item.name }}</strong>
+                <span :class="['history-item__status', `history-item__status--${item.status}`]">{{ item.status }}</span>
+              </div>
+              <div class="history-item__meta">
+                <span>{{ item.strategy_name || $t('backtests.unknownStrategy') }}</span>
+                <span>{{ item.symbol || '--' }}</span>
+                <span>{{ formatHistoryDate(item.created_at) }}</span>
+              </div>
+              <div v-if="item.result_summary?.totalReturn !== undefined" class="history-item__summary">
+                {{ $t('backtests.historyTotalReturn') }}: {{ formatHistoryPercent(item.result_summary.totalReturn) }}
+              </div>
+            </div>
+
+            <button
+              v-if="item.has_report"
+              :data-test="`history-open-report-${item.job_id}`"
+              class="btn btn-report history-item__action"
+              type="button"
+              @click="openReport(item.job_id)"
+            >
+              {{ $t('backtests.openReport') }}
+            </button>
+          </article>
+        </div>
+      </section>
     </div>
   </section>
 </template>
@@ -234,9 +302,9 @@
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { fetchRecent, fetchRuntimeDescriptor } from '../api/strategies'
-import { fetchBacktestStatus, getBacktestFailureMessage, submitBacktest } from '../api/backtests'
+import { fetchBacktestHistory, fetchBacktestStatus, getBacktestFailureMessage, submitBacktest } from '../api/backtests'
 import { fetchMyQuota, type UserQuotaResponse } from '../api/users'
-import type { SubmitBacktestPayload } from '../types/Backtest'
+import type { BacktestHistoryItem, SubmitBacktestPayload } from '../types/Backtest'
 import type { Strategy, StrategyParameter, StrategyRuntimeDescriptor } from '../types/Strategy'
 
 const strategies = ref<Strategy[]>([])
@@ -246,6 +314,10 @@ const quotaError = ref('')
 const runtimeDescriptor = ref<StrategyRuntimeDescriptor | null>(null)
 const runtimeLoading = ref(false)
 const runtimeError = ref('')
+const historyItems = ref<BacktestHistoryItem[]>([])
+const historyLoading = ref(false)
+const historyError = ref('')
+const historySearch = ref('')
 const router = useRouter()
 
 function formatDateInput(date: Date) {
@@ -264,6 +336,7 @@ function defaultEndDate() {
 
 const runForm = reactive({
   strategyId: '',
+  name: '',
   symbol: 'BTCUSDT',
   interval: '1m',
   limit: 120,
@@ -280,6 +353,33 @@ const runState = reactive({
 })
 
 const paramValues = reactive<Record<string, any>>({})
+
+const selectedStrategy = computed(() => {
+  return strategies.value.find((item) => item.id === runForm.strategyId) || null
+})
+
+const suggestedBacktestName = computed(() => {
+  const segments = [
+    selectedStrategy.value?.name || undefined,
+    runForm.symbol || undefined,
+    runForm.startDate && runForm.endDate ? `${runForm.startDate} ~ ${runForm.endDate}` : undefined,
+  ].filter(Boolean)
+
+  return segments.join(' / ') || 'My backtest'
+})
+
+const filteredHistory = computed(() => {
+  const keyword = historySearch.value.trim().toLowerCase()
+  if (!keyword) {
+    return historyItems.value
+  }
+
+  return historyItems.value.filter((item) => {
+    return [item.name, item.strategy_name, item.symbol, item.job_id]
+      .filter(Boolean)
+      .some((value) => String(value).toLowerCase().includes(keyword))
+  })
+})
 
 function defaultParamValue(param: StrategyParameter): unknown {
   if (param.default !== undefined) {
@@ -339,6 +439,19 @@ async function loadQuota() {
   }
 }
 
+async function loadHistory() {
+  historyLoading.value = true
+  historyError.value = ''
+  try {
+    const response = await fetchBacktestHistory()
+    historyItems.value = response.items
+  } catch (error: any) {
+    historyError.value = error?.message || 'Failed to load backtest history'
+  } finally {
+    historyLoading.value = false
+  }
+}
+
 async function loadRuntime(strategyId: string) {
   runtimeDescriptor.value = null
   runtimeError.value = ''
@@ -388,6 +501,10 @@ function buildStrategyParams(parameters: StrategyParameter[]): Record<string, un
   return result
 }
 
+function buildBacktestName() {
+  return runForm.name.trim() || suggestedBacktestName.value
+}
+
 function sleep(ms: number) {
   return new Promise((resolve) => {
     setTimeout(resolve, ms)
@@ -417,6 +534,25 @@ function goToPricing() {
   void router.push('/pricing')
 }
 
+function formatHistoryDate(value?: string | null) {
+  if (!value) {
+    return '--'
+  }
+  const parsed = new Date(value)
+  if (Number.isNaN(parsed.getTime())) {
+    return value
+  }
+  return parsed.toLocaleString()
+}
+
+function formatHistoryPercent(value?: number | null) {
+  if (value === undefined || value === null || Number.isNaN(value)) {
+    return '--'
+  }
+  const prefix = value > 0 ? '+' : ''
+  return `${prefix}${value.toFixed(2)}%`
+}
+
 const isQuotaExhausted = computed(() => {
   if (!quota.value) {
     return false
@@ -441,6 +577,7 @@ async function handleRun() {
       symbols: [runForm.symbol],
       start_date: runForm.startDate,
       end_date: runForm.endDate,
+      name: buildBacktestName(),
     }
 
     if (runtimeDescriptor.value) {
@@ -458,6 +595,9 @@ async function handleRun() {
   } catch (error: any) {
     runState.error = error?.message || 'Failed to run backtest'
   } finally {
+    if (runState.jobId) {
+      await loadHistory()
+    }
     runState.running = false
   }
 }
@@ -472,6 +612,7 @@ watch(
 onMounted(() => {
   void loadStrategies()
   void loadQuota()
+  void loadHistory()
 })
 </script>
 
@@ -622,6 +763,117 @@ onMounted(() => {
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: var(--spacing-lg);
   align-items: start;
+}
+
+.history-panel {
+  margin-top: var(--spacing-lg);
+  padding: 0;
+  overflow: hidden;
+}
+
+.history-panel__header-copy {
+  display: grid;
+  gap: 2px;
+}
+
+.history-panel__subtitle {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+}
+
+.history-panel__toolbar {
+  padding: var(--spacing-md) var(--spacing-lg);
+  border-bottom: 1px solid var(--color-border-light);
+}
+
+.history-panel__search {
+  max-width: 360px;
+}
+
+.history-panel__empty {
+  padding: var(--spacing-lg);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+}
+
+.history-list {
+  display: grid;
+}
+
+.history-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-md);
+  padding: var(--spacing-md) var(--spacing-lg);
+  border-top: 1px solid var(--color-border-light);
+}
+
+.history-item:first-child {
+  border-top: none;
+}
+
+.history-item__main {
+  min-width: 0;
+  display: grid;
+  gap: 6px;
+}
+
+.history-item__top {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.history-item__name {
+  color: var(--color-text-primary);
+  font-size: var(--font-size-md);
+}
+
+.history-item__status {
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  border: 1px solid var(--color-border);
+}
+
+.history-item__status--completed {
+  color: var(--color-success);
+  border-color: rgba(16, 185, 129, 0.3);
+  background: rgba(16, 185, 129, 0.08);
+}
+
+.history-item__status--failed,
+.history-item__status--timeout {
+  color: var(--color-danger);
+  border-color: rgba(255, 59, 59, 0.25);
+  background: rgba(255, 59, 59, 0.08);
+}
+
+.history-item__status--pending,
+.history-item__status--running {
+  color: var(--color-warning);
+  border-color: rgba(245, 158, 11, 0.25);
+  background: rgba(245, 158, 11, 0.08);
+}
+
+.history-item__meta,
+.history-item__summary {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-xs);
+}
+
+.history-item__action {
+  flex-shrink: 0;
 }
 
 /* ── Panel Cards ── */
@@ -1075,6 +1327,11 @@ onMounted(() => {
   .quota-widget {
     width: 100%;
     min-width: unset;
+  }
+
+  .history-item {
+    flex-direction: column;
+    align-items: flex-start;
   }
 }
 </style>

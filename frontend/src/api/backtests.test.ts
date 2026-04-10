@@ -73,6 +73,17 @@ describe('backtests api', () => {
     expect(requestMock).toHaveBeenCalledWith({ method: 'get', url: '/v1/backtest/job-id' })
   })
 
+  it('fetches v1 backtest history', async () => {
+    const data = await backtests.fetchBacktestHistory(25)
+
+    expect(data).toEqual({ ok: true })
+    expect(requestMock).toHaveBeenCalledWith({
+      method: 'get',
+      url: '/v1/backtest/history',
+      params: { limit: 25 }
+    })
+  })
+
   it('fetches v1 backtest report', async () => {
     const data = await backtests.fetchBacktestReport('job-id')
 

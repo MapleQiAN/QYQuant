@@ -9,7 +9,7 @@ from ..models import AuditLog, PaymentOrder, Subscription, User
 from ..quota import ensure_user_quota, serialize_plan_limit
 from ..services.notifications import create_notification
 from ..utils.response import error_response, ok
-from ..utils.time import next_month_start_beijing, now_utc
+from ..utils.time import format_beijing_iso, next_month_start_beijing, now_utc
 
 
 bp = Blueprint('payments', __name__, url_prefix='/api/v1/payments')
@@ -61,6 +61,60 @@ def _generate_pay_url(provider, plan_level, amount):
     if current_app.config.get("PAYMENT_SANDBOX", True):
         return f"https://pay.mock.example.com/{provider}/{plan_level}?amount={amount}"
     raise NotImplementedError("Production payment integration is not available in story 8.2")
+
+
+@bp.get('/me/subscription')
+@jwt_required()
+def get_my_subscription():
+    user, error = _get_user_or_404(get_jwt_identity())
+    if error:
+        return error
+    sub = (
+        Subscription.query
+        .filter_by(user_id=user.id, status='active')
+        .order_by(Subscription.starts_at.desc())
+        .first()
+    )
+    if sub is None:
+        return ok(None)
+    return ok({
+        "id": sub.id,
+        "plan_level": sub.plan_level,
+        "status": sub.status,
+        "payment_provider": sub.payment_provider,
+        "starts_at": format_beijing_iso(sub.starts_at),
+        "ends_at": format_beijing_iso(sub.ends_at),
+        "created_at": format_beijing_iso(sub.created_at),
+    })
+
+
+@bp.get('/me/orders')
+@jwt_required()
+def get_my_orders():
+    user, error = _get_user_or_404(get_jwt_identity())
+    if error:
+        return error
+    page = max(request.args.get('page', 1, type=int), 1)
+    per_page = min(max(request.args.get('per_page', 10, type=int), 1), 50)
+    pagination = (
+        PaymentOrder.query
+        .filter_by(user_id=user.id)
+        .order_by(PaymentOrder.created_at.desc())
+        .paginate(page=page, per_page=per_page, error_out=False)
+    )
+    items = [{
+        "order_id": o.id,
+        "plan_level": o.plan_level,
+        "amount": float(o.amount),
+        "provider": o.provider,
+        "status": o.status,
+        "created_at": format_beijing_iso(o.created_at),
+    } for o in pagination.items]
+    return ok(items, meta={
+        "total": pagination.total,
+        "page": pagination.page,
+        "per_page": pagination.per_page,
+    })
 
 
 @bp.post('/orders')

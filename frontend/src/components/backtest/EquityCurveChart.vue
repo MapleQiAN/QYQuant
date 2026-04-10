@@ -30,6 +30,25 @@ const chartRef = ref<HTMLDivElement | null>(null)
 const chart = ref<ECharts | null>(null)
 let resizeObserver: ResizeObserver | null = null
 
+function findNearestPoint(timestamp: number) {
+  if (!props.points.length) {
+    return null
+  }
+
+  let nearest = props.points[0]
+  let smallestGap = Math.abs(props.points[0].timestamp - timestamp)
+
+  for (const point of props.points) {
+    const gap = Math.abs(point.timestamp - timestamp)
+    if (gap < smallestGap) {
+      nearest = point
+      smallestGap = gap
+    }
+  }
+
+  return nearest
+}
+
 const tradeMarkers = computed(() => {
   if (!props.points.length) return []
 
@@ -79,6 +98,87 @@ const tradeMarkers = computed(() => {
   })
 })
 
+const hasDrawdown = computed(() =>
+  props.points.some((point) => point.drawdown !== undefined && point.drawdown !== null)
+)
+
+function formatAxisTime(value: string | number) {
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) {
+    return String(value)
+  }
+  return date.toLocaleString(undefined, {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+  })
+}
+
+function formatTooltipValue(value: unknown) {
+  const numeric = Number(value)
+  if (!Number.isFinite(numeric)) {
+    return '--'
+  }
+  return numeric.toLocaleString(undefined, { maximumFractionDigits: 2 })
+}
+
+function buildTooltip(params: any[]) {
+  if (!Array.isArray(params) || params.length === 0) {
+    return ''
+  }
+
+  const axisValue = params[0]?.axisValue
+  const currentPoint = findNearestPoint(Number(axisValue))
+  const first = props.points[0]
+  const strategyReturn =
+    first && currentPoint && first.equity
+      ? ((currentPoint.equity - first.equity) / first.equity) * 100
+      : null
+  const benchmarkReturn =
+    first && currentPoint && first.benchmark_equity
+      ? ((currentPoint.benchmark_equity - first.benchmark_equity) / first.benchmark_equity) * 100
+      : null
+  const items = params
+    .filter((item) => Array.isArray(item.data))
+    .map((item) => {
+      const rawValue = Array.isArray(item.data) ? item.data[item.data.length - 1] : item.data
+      return `<div style="display:flex;justify-content:space-between;gap:12px;">
+        <span style="color:${item.color};">${item.seriesName}</span>
+        <strong style="color:#ebebf5;">${formatTooltipValue(rawValue)}</strong>
+      </div>`
+    })
+    .join('')
+
+  const contextRows = [
+    strategyReturn === null
+      ? ''
+      : `<div style="display:flex;justify-content:space-between;gap:12px;">
+          <span style="color:#8888a0;">Strategy Return</span>
+          <strong style="color:#ebebf5;">${strategyReturn.toFixed(2)}%</strong>
+        </div>`,
+    benchmarkReturn === null
+      ? ''
+      : `<div style="display:flex;justify-content:space-between;gap:12px;">
+          <span style="color:#8888a0;">Benchmark Return</span>
+          <strong style="color:#ebebf5;">${benchmarkReturn.toFixed(2)}%</strong>
+        </div>`,
+    currentPoint?.drawdown === undefined || currentPoint?.drawdown === null
+      ? ''
+      : `<div style="display:flex;justify-content:space-between;gap:12px;">
+          <span style="color:#8888a0;">Drawdown</span>
+          <strong style="color:#ebebf5;">${Number(currentPoint.drawdown).toFixed(2)}%</strong>
+        </div>`
+  ].filter(Boolean).join('')
+
+  return `<div style="min-width:190px;">
+    <div style="margin-bottom:8px;color:#8888a0;font-size:11px;">${formatAxisTime(axisValue)}</div>
+    ${items}
+    ${contextRows ? `<div style="display:grid;gap:4px;margin-top:8px;">${contextRows}</div>` : ''}
+  </div>`
+}
+
 function buildOption(): EChartsOption {
   if (!props.points.length) {
     return {
@@ -126,10 +226,12 @@ function buildOption(): EChartsOption {
       },
       {
         type: 'slider',
+        xAxisIndex: [0, 1],
         start: 0,
         end: 100,
-        bottom: 10,
-        height: 18
+        bottom: 4,
+        height: 16,
+        borderColor: 'transparent'
       }
     ],
     series: [
@@ -196,40 +298,21 @@ onBeforeUnmount(() => {
 
 <style scoped>
 .equity-chart {
-  border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
-  background: linear-gradient(180deg, rgba(15, 118, 110, 0.05), var(--color-surface));
-  padding: var(--spacing-md);
-}
-
-.chart-meta {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: var(--spacing-md);
-  margin-bottom: var(--spacing-sm);
-}
-
-.chart-title {
-  margin: 0;
-  font-size: var(--font-size-lg);
-  color: var(--color-text-primary);
-}
-
-.chart-caption {
-  margin: 4px 0 0;
-  font-size: var(--font-size-sm);
-  color: var(--color-text-muted);
+  background:
+    radial-gradient(circle at top left, rgba(54, 214, 182, 0.08), transparent 30%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.02), transparent);
+  padding: 0;
 }
 
 .chart-canvas {
   width: 100%;
-  height: 420px;
+  height: 520px;
 }
 
 @media (max-width: 768px) {
   .chart-canvas {
-    height: 340px;
+    height: 400px;
   }
 }
 </style>

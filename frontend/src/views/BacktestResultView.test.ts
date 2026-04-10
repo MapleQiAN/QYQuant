@@ -24,6 +24,10 @@ const storeState = {
     equity_curve: [
       { timestamp: 1700000000000, equity: 100000, benchmark_equity: 100000 }
     ],
+    kline: [
+      { time: 1700000000000, open: 100, high: 110, low: 95, close: 108, volume: 1000 },
+      { time: 1700003600000, open: 108, high: 112, low: 104, close: 106, volume: 1200 }
+    ],
     trades: [
       { symbol: 'BTCUSDT', side: 'buy', price: 100, quantity: 1, timestamp: 1700000000000 }
     ],
@@ -96,6 +100,12 @@ vi.mock('../components/backtest/EquityCurveChart.vue', () => ({
   },
 }))
 
+vi.mock('../components/backtest/BacktestKlineChart.vue', () => ({
+  default: {
+    template: '<div data-test="backtest-kline-chart" />',
+  },
+}))
+
 vi.mock('../stores/backtests', () => ({
   useBacktestsStore: () => ({
     ...storeState,
@@ -126,6 +136,10 @@ describe('BacktestResultView', () => {
       },
       equity_curve: [
         { timestamp: 1700000000000, equity: 100000, benchmark_equity: 100000 }
+      ],
+      kline: [
+        { time: 1700000000000, open: 100, high: 110, low: 95, close: 108, volume: 1000 },
+        { time: 1700003600000, open: 108, high: 112, low: 104, close: 106, volume: 1200 }
       ],
       trades: [
         { symbol: 'BTCUSDT', side: 'buy', price: 100, quantity: 1, timestamp: 1700000000000 }
@@ -176,5 +190,14 @@ describe('BacktestResultView', () => {
     expect(wrapper.text()).toContain("sma_period = ctx.params.get('sma_period', 20)")
     expect(wrapper.text()).toContain('pandas')
     expect(loadSupportedPackagesMock).toHaveBeenCalled()
+  })
+
+  it('renders signal overview panels below the kline chart', () => {
+    const wrapper = mount(BacktestResultView)
+
+    expect(wrapper.get('[data-test="backtest-kline-chart"]').exists()).toBe(true)
+    expect(wrapper.find('.market-stage__rail').exists()).toBe(false)
+    expect(wrapper.find('.market-stage__secondary').exists()).toBe(true)
+    expect(wrapper.findAll('.market-stage__secondary .signal-panel')).toHaveLength(2)
   })
 })

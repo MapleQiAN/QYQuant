@@ -1,7 +1,7 @@
 import os
 from datetime import date, datetime, time, timedelta, timezone
 
-from ..marketdata import BinanceClient, FreeGoldClient
+from ..marketdata import BinanceClient, FreeGoldClient, SinaGoldClient
 from ..providers import AkShareClient
 from ..services import MarketDataService
 
@@ -67,6 +67,26 @@ class FreeGoldProvider:
     def get_latest_price(self, symbol):
         if symbol and not _is_gold_symbol(symbol):
             raise ValueError(f"FreeGold provider only supports XAUUSD (got {symbol})")
+        return self.client.get_latest_price(symbol, use_cache=True)
+
+
+class SinaGoldProvider:
+    def __init__(self, client=None, default_interval=None):
+        self.client = client or SinaGoldClient()
+        self.default_interval = default_interval or os.getenv('SINA_GOLD_INTERVAL', '1d')
+
+    def get_bars(self, symbol, limit=200, interval=None, start_time=None, end_time=None):
+        interval = interval or self.default_interval
+        return self.client.get_klines(
+            symbol,
+            interval=interval,
+            limit=limit,
+            start_time=start_time,
+            end_time=end_time,
+            use_cache=True,
+        )
+
+    def get_latest_price(self, symbol):
         return self.client.get_latest_price(symbol, use_cache=True)
 
 
@@ -189,7 +209,7 @@ class AkShareBacktestProvider:
 
 class AutoProvider:
     def __init__(self, gold_provider=None, binance_provider=None):
-        self.gold_provider = gold_provider or FreeGoldProvider()
+        self.gold_provider = gold_provider or SinaGoldProvider()
         self.binance_provider = binance_provider or BinanceProvider()
 
     def _select(self, symbol):
@@ -210,16 +230,18 @@ class AutoProvider:
         return self._select(symbol).get_latest_price(symbol)
 
 
-_CANONICAL_PROVIDERS = {'mock', 'auto', 'freegold', 'binance', 'joinquant', 'akshare'}
+_CANONICAL_PROVIDERS = {'mock', 'auto', 'freegold', 'sinagold', 'binance', 'joinquant', 'akshare'}
 _PROVIDER_ALIASES = {
     'mock': 'mock',
     'demo': 'mock',
     'auto': 'auto',
     'hybrid': 'auto',
     'mixed': 'auto',
-    'gold': 'freegold',
-    'xau': 'freegold',
+    'gold': 'sinagold',
+    'xau': 'sinagold',
     'freegold': 'freegold',
+    'sinagold': 'sinagold',
+    'sina': 'sinagold',
     'binance': 'binance',
     'live': 'binance',
     'real': 'binance',
@@ -257,7 +279,7 @@ def resolve_data_source(provider_override=None, symbol=None):
     if provider not in _CANONICAL_PROVIDERS:
         provider = _default_provider_name()
     if provider == 'auto':
-        return 'freegold' if _is_gold_symbol(symbol) else 'binance'
+        return 'sinagold' if _is_gold_symbol(symbol) else 'binance'
     return provider
 
 
@@ -272,6 +294,8 @@ def get_backtest_provider(provider_override=None):
         return AutoProvider()
     if provider == 'freegold':
         return FreeGoldProvider()
+    if provider == 'sinagold':
+        return SinaGoldProvider()
     if provider == 'binance':
         return BinanceProvider()
     if provider == 'joinquant':

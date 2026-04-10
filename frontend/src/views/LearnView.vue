@@ -55,7 +55,7 @@
             <p class="section-description">{{ section.description }}</p>
           </div>
 
-          <div v-if="section.kind === 'map'" class="card-grid">
+          <div v-if="section.kind === 'map'" class="card-grid card-grid--map">
             <article v-for="card in section.cards" :key="card.title" class="panel-card">
               <h3 class="panel-title">{{ card.title }}</h3>
               <p class="panel-copy">{{ card.text }}</p>
@@ -111,7 +111,7 @@
           </div>
 
           <div v-else-if="section.kind === 'metrics'" class="split-layout">
-            <div class="card-grid">
+            <div class="card-grid card-grid--metrics">
               <article v-for="metric in section.metrics" :key="metric.title" class="panel-card">
                 <span class="panel-kicker">{{ metric.formula }}</span>
                 <h3 class="panel-title">{{ metric.title }}</h3>
@@ -129,7 +129,7 @@
           </div>
 
           <div v-else-if="section.kind === 'ai'" class="split-layout">
-            <div class="card-grid">
+            <div class="card-grid card-grid--ai">
               <article v-for="module in section.modules" :key="module.title" class="panel-card">
                 <h3 class="panel-title">{{ module.title }}</h3>
                 <p class="panel-copy">{{ module.text }}</p>
@@ -158,7 +158,7 @@
             </aside>
           </div>
 
-          <div v-else-if="section.kind === 'roadmap'" class="card-grid">
+          <div v-else-if="section.kind === 'roadmap'" class="card-grid card-grid--roadmap">
             <article v-for="phase in section.roadmap" :key="phase.window" class="panel-card roadmap-card">
               <span class="panel-kicker">{{ phase.window }}</span>
               <h3 class="panel-title">{{ phase.focus }}</h3>
@@ -167,7 +167,7 @@
           </div>
 
           <div v-else-if="section.kind === 'resources'" class="split-layout">
-            <div class="card-grid">
+            <div class="card-grid card-grid--resources">
               <a
                 v-for="resource in section.resources"
                 :key="resource.href"
@@ -325,7 +325,16 @@ const copy = computed(() =>
 .card-grid {
   display: grid;
   gap: var(--spacing-md);
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  align-items: stretch;
+  grid-auto-rows: 1fr;
+}
+
+.hero-summary-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.card-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
 .summary-card,
@@ -336,6 +345,10 @@ const copy = computed(() =>
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
   background: var(--color-surface-elevated);
+  display: grid;
+  align-content: start;
+  gap: 12px;
+  min-height: 100%;
 }
 
 .summary-value {
@@ -378,8 +391,8 @@ const copy = computed(() =>
 
 .learn-workspace {
   display: grid;
-  grid-template-columns: minmax(240px, 280px) minmax(0, 1fr);
-  gap: var(--spacing-lg);
+  grid-template-columns: minmax(232px, 264px) minmax(0, 1fr);
+  gap: clamp(18px, 2vw, 28px);
   align-items: start;
 }
 
@@ -435,12 +448,15 @@ const copy = computed(() =>
 
 .learn-section {
   padding: clamp(20px, 2.2vw, 30px);
+  display: grid;
+  gap: clamp(18px, 1.8vw, 24px);
 }
 
 .section-header-block {
   display: grid;
   gap: 10px;
-  margin-bottom: var(--spacing-md);
+  padding-bottom: var(--spacing-md);
+  border-bottom: 1px solid var(--color-border);
 }
 
 .section-description {
@@ -463,7 +479,8 @@ const copy = computed(() =>
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
-  margin-top: 14px;
+  margin-top: auto;
+  padding-top: 4px;
 }
 
 .workflow-list {
@@ -523,6 +540,8 @@ const copy = computed(() =>
 .parameter-list {
   display: grid;
   gap: var(--spacing-md);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: stretch;
 }
 
 .parameter-card {
@@ -580,14 +599,24 @@ const copy = computed(() =>
 
 .split-layout {
   display: grid;
-  gap: var(--spacing-md);
-  grid-template-columns: minmax(0, 1.45fr) minmax(240px, 0.8fr);
+  gap: var(--spacing-lg);
+  grid-template-columns: minmax(0, 1.6fr) minmax(260px, 0.9fr);
   align-items: start;
 }
 
 .side-panel {
-  position: sticky;
-  top: calc(var(--nav-height) + var(--spacing-lg));
+  position: static;
+}
+
+.card-grid--map,
+.card-grid--roadmap {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.card-grid--metrics,
+.card-grid--ai,
+.card-grid--resources {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
 .checklist,
@@ -624,15 +653,31 @@ const copy = computed(() =>
   border-left: 3px solid var(--color-primary);
 }
 
+@media (max-width: 1360px) {
+  .hero-summary-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 1440px) {
+  .card-grid--map,
+  .card-grid--roadmap {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
 @media (max-width: 1200px) {
   .learn-workspace,
   .split-layout {
     grid-template-columns: 1fr;
   }
 
-  .learn-rail,
-  .side-panel {
+  .learn-rail {
     position: static;
+  }
+
+  .parameter-list {
+    grid-template-columns: 1fr;
   }
 }
 
@@ -648,7 +693,8 @@ const copy = computed(() =>
   }
 
   .hero-summary-grid,
-  .card-grid {
+  .card-grid,
+  .parameter-list {
     grid-template-columns: 1fr;
   }
 
