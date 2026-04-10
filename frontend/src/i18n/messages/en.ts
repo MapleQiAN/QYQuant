@@ -488,6 +488,7 @@ const en = {
     upgradeTo: 'Upgrade to {name}',
     unlimitedBacktests: 'Unlimited backtests',
     backtestsPerMonth: '{quota} times / month',
+    botSlots: '{count} bot slots',
     promoTag: 'First purchase',
     trustSecure: 'Secure payment',
     trustEncrypted: 'Data encrypted',
@@ -513,7 +514,12 @@ const en = {
       used: 'Used',
       total: 'Total',
       remaining: 'Remaining',
-      unlimited: 'Unlimited'
+      unlimited: 'Unlimited',
+      botRemaining: 'Bots remaining',
+      backtestRemaining: 'Backtests remaining',
+      planExpiry: 'Current plan expiry',
+      activeBotsMeta: '{active} active / {total} total',
+      backtestsUsedMeta: '{used} used / {total} total'
     },
     currentSubscription: {
       title: 'Current Subscription',
@@ -523,6 +529,9 @@ const en = {
       paymentMethod: 'Payment Method',
       expiresAt: 'Expires',
       activeStatus: 'Active',
+      freeStatus: 'Free plan',
+      freePlanExpiry: 'No paid plan yet',
+      noExpiry: 'No expiry',
       wechat: 'WeChat Pay',
       alipay: 'Alipay'
     },

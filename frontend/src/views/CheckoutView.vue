@@ -25,12 +25,12 @@
 
             <div class="plan-summary__header">
               <p class="plan-summary__label">{{ plan.name }}</p>
-              <div v-if="firstPurchaseEligible && plan.promoPrice != null" class="plan-summary__promo-tag">新用户首充优惠</div>
+              <div v-if="shouldShowPromoPrice" class="plan-summary__promo-tag">新用户首充优惠</div>
               <div class="plan-summary__price-row">
                 <span class="plan-summary__currency">¥</span>
                 <span class="plan-summary__price">{{ displayPrice }}</span>
                 <span class="plan-summary__unit">/ 月</span>
-                <span v-if="firstPurchaseEligible && plan.promoPrice != null" class="plan-summary__original-price">¥{{ plan.price }}</span>
+                <span v-if="shouldShowPromoPrice" class="plan-summary__original-price">¥{{ plan.price }}</span>
               </div>
             </div>
 
@@ -192,9 +192,15 @@ const shouldShowFeatured = computed(() => {
   return currentTier < PLAN_TIER_ORDER['plus']
 })
 
+const shouldShowPromoPrice = computed(() => {
+  if (!plan.value || plan.value.promoPrice == null) return false
+  if (!isLoggedIn.value) return true
+  return firstPurchaseEligible.value && currentPlanLevel.value === 'free'
+})
+
 const displayPrice = computed(() => {
   if (!plan.value) return 0
-  return firstPurchaseEligible.value && plan.value.promoPrice != null
+  return shouldShowPromoPrice.value
     ? plan.value.promoPrice
     : plan.value.price
 })

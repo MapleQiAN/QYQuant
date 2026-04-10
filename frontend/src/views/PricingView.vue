@@ -12,8 +12,7 @@
         <p v-else-if="loadError" class="message error">{{ loadError }}</p>
       </template>
 
-      <!-- Subscription overview (for subscribed users, shown above plans) -->
-      <div v-if="isLoggedIn && !loading && !loadError && currentPlanLevel !== 'free'" class="sub-overview">
+      <div v-if="isLoggedIn && !loading && !loadError && quota" class="sub-overview">
         <div class="sub-overview__plan">
           <div class="sub-overview__badge" :class="'sub-overview__badge--' + currentPlanLevel">
             {{ getPlanName(currentPlanLevel) }}
@@ -21,10 +20,7 @@
           <div class="sub-overview__meta">
             <span class="sub-overview__status">
               <svg width="8" height="8" viewBox="0 0 8 8" fill="none"><circle cx="4" cy="4" r="4" fill="currentColor"/></svg>
-              {{ t('pricing.currentSubscription.activeStatus') }}
-            </span>
-            <span v-if="subscription?.ends_at" class="sub-overview__expire">
-              {{ t('pricing.currentSubscription.expiresAt') }} {{ formatDate(subscription.ends_at) }}
+              {{ currentPlanStatusLabel }}
             </span>
             <span v-if="subscription?.payment_provider" class="sub-overview__provider">
               {{ formatProvider(subscription.payment_provider) }}
@@ -32,21 +28,27 @@
           </div>
         </div>
         <div class="sub-overview__usage">
-          <div v-if="quota" class="sub-overview__usage-inner">
-            <div class="sub-overview__usage-header">
-              <span class="sub-overview__usage-label">{{ t('pricing.usageDetails.title') }}</span>
-              <div class="sub-overview__usage-nums">
-                <span class="tnum">{{ quota.used_count }}</span>
-                <span>/</span>
-                <span class="tnum">{{ quota.plan_limit === 'unlimited' ? t('pricing.usageDetails.unlimited') : quota.plan_limit }}</span>
+          <div class="sub-overview__usage-inner">
+            <div class="sub-overview__usage-title">{{ t('pricing.usageDetails.title') }}</div>
+            <div class="sub-overview__stats">
+              <div class="usage-stat">
+                <span class="usage-stat__label">{{ t('pricing.usageDetails.botRemaining') }}</span>
+                <strong class="usage-stat__value tnum" data-test="usage-bot-remaining">{{ remainingBotSlots }}</strong>
+                <span class="usage-stat__meta">{{ t('pricing.usageDetails.activeBotsMeta', { active: activeBotCount, total: currentBotLimit }) }}</span>
+              </div>
+              <div class="usage-stat">
+                <span class="usage-stat__label">{{ t('pricing.usageDetails.backtestRemaining') }}</span>
+                <strong class="usage-stat__value tnum" data-test="usage-backtest-remaining">{{ backtestRemainingLabel }}</strong>
+                <span class="usage-stat__meta">{{ t('pricing.usageDetails.backtestsUsedMeta', { used: quota.used_count, total: backtestTotalLabel }) }}</span>
+              </div>
+              <div class="usage-stat">
+                <span class="usage-stat__label">{{ t('pricing.usageDetails.planExpiry') }}</span>
+                <strong class="usage-stat__value" data-test="usage-plan-expiry">{{ currentPlanExpiryLabel }}</strong>
+                <span class="usage-stat__meta">{{ subscription?.payment_provider ? formatProvider(subscription.payment_provider) : currentPlanStatusLabel }}</span>
               </div>
             </div>
             <div v-if="quota.plan_limit !== 'unlimited'" class="sub-overview__bar">
               <div class="sub-overview__bar-fill" :style="{ width: usagePercentage + '%' }" />
-            </div>
-            <div class="sub-overview__usage-footer">
-              {{ t('pricing.usageDetails.remaining') }}:
-              {{ quota.remaining === 'unlimited' ? t('pricing.usageDetails.unlimited') : quota.remaining }}
             </div>
           </div>
         </div>
@@ -80,6 +82,7 @@
             'pricing-card--lower-tier': isLoggedIn && isPlanTierLowerThanCurrent(plan.level) && currentPlanLevel !== plan.level,
             'pricing-card--featured': plan.featured && shouldShowFeatured,
             'pricing-card--ultra': plan.level === 'ultra',
+            'pricing-card--ultra-light': plan.level === 'ultra' && isLightTheme,
           }"
         >
           <!-- Badge row -->
@@ -95,18 +98,20 @@
           <!-- Plan name & price -->
           <div class="pricing-card__header">
             <p class="pricing-card__name">{{ plan.name }}</p>
-            <div v-if="firstPurchaseEligible && plan.promoPrice != null" class="pricing-card__promo-tag">{{ t('pricing.promoTag') }}</div>
+            <div v-if="shouldShowPromo(plan)" class="pricing-card__promo-tag">{{ t('pricing.promoTag') }}</div>
             <div class="pricing-card__price-row">
               <span class="pricing-card__currency">&yen;</span>
-              <span class="pricing-card__price tnum">{{ firstPurchaseEligible && plan.promoPrice != null ? plan.promoPrice : plan.price }}</span>
+              <span class="pricing-card__price tnum">{{ shouldShowPromo(plan) ? plan.promoPrice : plan.price }}</span>
               <span class="pricing-card__unit">{{ t('common.perMonthUnit') }}</span>
-              <span v-if="firstPurchaseEligible && plan.promoPrice != null" class="pricing-card__original-price tnum">&yen;{{ plan.price }}</span>
+              <span v-if="shouldShowPromo(plan)" class="pricing-card__original-price tnum">&yen;{{ plan.price }}</span>
             </div>
           </div>
 
-          <!-- Quota -->
-          <div class="pricing-card__quota">
-            {{ plan.quota === null ? t('pricing.unlimitedBacktests') : t('pricing.backtestsPerMonth', { quota: plan.quota }) }}
+          <div class="pricing-card__quota-stack">
+            <div class="pricing-card__quota">
+              {{ plan.quota === null ? t('pricing.unlimitedBacktests') : t('pricing.backtestsPerMonth', { quota: plan.quota }) }}
+            </div>
+            <div class="pricing-card__capacity">{{ t('pricing.botSlots', { count: plan.botLimit }) }}</div>
           </div>
 
           <p class="pricing-card__description">{{ plan.description }}</p>
@@ -246,11 +251,13 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import type { OrderItem, PlanLevel, SubscriptionResponse } from '../api/payments'
 import { fetchMyOrders, fetchMySubscription } from '../api/payments'
+import { getSimBots } from '../api/simulation'
+import type { SimulationBot } from '../types/Simulation'
 import type { UserQuotaResponse } from '../api/users'
 import { fetchMyQuota } from '../api/users'
 import { PLANS, PLAN_TIER_ORDER } from '../data/plans'
@@ -265,10 +272,13 @@ const currentPlanLevel = ref<PlanLevel>('free')
 const firstPurchaseEligible = ref(true)
 const quota = ref<UserQuotaResponse | null>(null)
 const subscription = ref<SubscriptionResponse | null>(null)
+const simBots = ref<SimulationBot[]>([])
 const orders = ref<OrderItem[]>([])
 const ordersCurrentPage = ref(1)
 const ordersTotal = ref(0)
 const ordersPerPage = ref(10)
+const themeMode = ref<'dark' | 'light'>('dark')
+let themeObserver: MutationObserver | null = null
 
 async function loadQuota() {
   loading.value = true
@@ -312,6 +322,14 @@ async function loadOrders(page = 1) {
   }
 }
 
+async function loadSimBots() {
+  try {
+    simBots.value = await getSimBots()
+  } catch {
+    simBots.value = []
+  }
+}
+
 const usagePercentage = computed(() => {
   if (!quota.value || quota.value.plan_limit === 'unlimited') return 0
   const limit = quota.value.plan_limit as number
@@ -320,9 +338,39 @@ const usagePercentage = computed(() => {
 })
 
 const totalPages = computed(() => Math.max(1, Math.ceil(ordersTotal.value / ordersPerPage.value)))
+const currentPlan = computed(() => PLANS.find((plan) => plan.level === currentPlanLevel.value) ?? PLANS[0])
+const currentBotLimit = computed(() => currentPlan.value.botLimit)
+const activeBotCount = computed(() => simBots.value.filter((bot) => bot.status === 'active').length)
+const remainingBotSlots = computed(() => Math.max(0, currentBotLimit.value - activeBotCount.value))
+const backtestTotalLabel = computed(() =>
+  quota.value?.plan_limit === 'unlimited' ? t('pricing.usageDetails.unlimited') : String(quota.value?.plan_limit ?? 0)
+)
+const backtestRemainingLabel = computed(() =>
+  quota.value?.remaining === 'unlimited' ? t('pricing.usageDetails.unlimited') : String(quota.value?.remaining ?? 0)
+)
+const currentPlanStatusLabel = computed(() =>
+  currentPlanLevel.value === 'free'
+    ? t('pricing.currentSubscription.freeStatus')
+    : t('pricing.currentSubscription.activeStatus')
+)
+const currentPlanExpiryLabel = computed(() => {
+  if (subscription.value?.ends_at) {
+    return formatDate(subscription.value.ends_at)
+  }
+  if (currentPlanLevel.value === 'free') {
+    return t('pricing.currentSubscription.freePlanExpiry')
+  }
+  return t('pricing.currentSubscription.noExpiry')
+})
+const isLightTheme = computed(() => themeMode.value === 'light')
 
 function getPlanName(planLevel: string): string {
   return PLANS.find(p => p.level === planLevel)?.name ?? planLevel
+}
+
+function syncThemeMode() {
+  if (typeof document === 'undefined') return
+  themeMode.value = document.documentElement.dataset.theme === 'light' ? 'light' : 'dark'
 }
 
 function isPlanTierLowerThanCurrent(planLevel: string): boolean {
@@ -340,6 +388,12 @@ const shouldRecommendPlus = computed(() => {
   const currentTier = PLAN_TIER_ORDER[currentPlanLevel.value] ?? 0
   return currentTier < PLAN_TIER_ORDER['plus']
 })
+
+function shouldShowPromo(plan: { promoPrice?: number }) {
+  if (plan.promoPrice == null) return false
+  if (!isLoggedIn.value) return true
+  return firstPurchaseEligible.value && currentPlanLevel.value === 'free'
+}
 
 function goToCheckout(planLevel: string) {
   router.push({ name: 'checkout', query: { plan: planLevel } })
@@ -375,10 +429,22 @@ function formatDate(dateStr: string | null): string {
 }
 
 onMounted(async () => {
+  syncThemeMode()
+  if (typeof MutationObserver !== 'undefined' && typeof document !== 'undefined') {
+    themeObserver = new MutationObserver(syncThemeMode)
+    themeObserver.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ['data-theme'],
+    })
+  }
   await loadQuota()
   if (isLoggedIn.value && !loadError.value) {
-    await Promise.all([loadSubscription(), loadOrders(1)])
+    await Promise.all([loadSubscription(), loadOrders(1), loadSimBots()])
   }
+})
+
+onBeforeUnmount(() => {
+  themeObserver?.disconnect()
 })
 </script>
 
@@ -476,7 +542,6 @@ onMounted(async () => {
   font-weight: 500;
 }
 
-.sub-overview__expire,
 .sub-overview__provider {
   color: var(--color-text-muted);
   font-size: var(--font-size-xs);
@@ -488,25 +553,46 @@ onMounted(async () => {
   gap: var(--spacing-sm);
 }
 
-.sub-overview__usage-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.sub-overview__usage-label {
+.sub-overview__usage-title {
   color: var(--color-text-muted);
   font-size: var(--font-size-sm);
   font-weight: 500;
 }
 
-.sub-overview__usage-nums {
+.sub-overview__stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--spacing-sm);
+}
+
+.usage-stat {
   display: flex;
-  align-items: baseline;
-  gap: 4px;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+  padding: 14px 16px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-elevated);
+}
+
+.usage-stat__label {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-xs);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.usage-stat__value {
   color: var(--color-text-primary);
-  font-size: var(--font-size-base);
-  font-weight: 600;
+  font-size: var(--font-size-xl);
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.usage-stat__meta {
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-xs);
 }
 
 .sub-overview__bar {
@@ -521,11 +607,6 @@ onMounted(async () => {
   border-radius: var(--radius-full);
   background: linear-gradient(90deg, var(--color-primary), var(--color-primary-light));
   transition: width var(--transition-fast);
-}
-
-.sub-overview__usage-footer {
-  color: var(--color-text-muted);
-  font-size: var(--font-size-xs);
 }
 
 /* ── Plus recommendation banner ── */
@@ -727,6 +808,10 @@ onMounted(async () => {
   text-shadow: 0 0 12px rgba(255, 215, 0, 0.2);
 }
 
+.pricing-card--ultra .pricing-card__capacity {
+  color: rgba(255, 240, 210, 0.7);
+}
+
 .pricing-card--ultra .pricing-card__description {
   color: rgba(255, 235, 200, 0.65);
 }
@@ -758,6 +843,39 @@ onMounted(async () => {
 
 .pricing-card--ultra .feature-icon--cross {
   color: rgba(255, 255, 255, 0.15);
+}
+
+:root[data-theme="light"] .pricing-card--ultra-light {
+  background: linear-gradient(
+    160deg,
+    #fffdf6 0%,
+    #fbf3d6 22%,
+    #f6e7b8 48%,
+    #efe1af 72%,
+    #fff7dc 100%
+  );
+  box-shadow:
+    0 16px 36px -22px rgba(176, 131, 24, 0.45),
+    0 0 0 1px rgba(218, 165, 32, 0.18),
+    inset 0 1px 0 rgba(255, 255, 255, 0.72);
+}
+
+:root[data-theme="light"] .pricing-card--ultra-light .pricing-card__name {
+  color: #8a5c00;
+  text-shadow: none;
+}
+
+:root[data-theme="light"] .pricing-card--ultra-light .pricing-card__description {
+  color: rgba(79, 60, 18, 0.76);
+}
+
+:root[data-theme="light"] .pricing-card--ultra-light .feature-text {
+  color: rgba(79, 60, 18, 0.82);
+}
+
+:root[data-theme="light"] .pricing-card--ultra-light .feature-item--disabled .feature-text,
+:root[data-theme="light"] .pricing-card--ultra-light .feature-icon--cross {
+  color: rgba(125, 102, 43, 0.38);
 }
 
 /* ── Badges ── */
@@ -860,13 +978,24 @@ onMounted(async () => {
   opacity: 0.7;
 }
 
-/* ── Quota ── */
+.pricing-card__quota-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  position: relative;
+  z-index: 2;
+}
+
 .pricing-card__quota {
   color: var(--color-primary);
   font-size: var(--font-size-sm);
   font-weight: 600;
-  position: relative;
-  z-index: 2;
+}
+
+.pricing-card__capacity {
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-xs);
+  letter-spacing: 0.02em;
 }
 
 /* ── Description ── */
@@ -1157,6 +1286,7 @@ onMounted(async () => {
   .pricing-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .pricing-trust { flex-wrap: wrap; gap: var(--spacing-md); }
   .sub-overview { grid-template-columns: 1fr; }
+  .sub-overview__stats { grid-template-columns: 1fr; }
   .plus-rec { flex-direction: column; text-align: center; }
   .plus-rec__text { text-align: center; }
   .orders-table { font-size: 12px; }

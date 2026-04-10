@@ -17,6 +17,7 @@ export interface Plan {
   price: number
   promoPrice?: number
   quota: number | null
+  botLimit: number
   description: string
   featured?: boolean
   features: PlanFeature[]
@@ -28,6 +29,7 @@ export const PLANS: Plan[] = [
     name: 'Free',
     price: 0,
     quota: 10,
+    botLimit: 1,
     description: '适合零基础入门，体验平台基础功能。',
     features: [
       { text: '10 次回测 / 月', included: true },
@@ -46,6 +48,7 @@ export const PLANS: Plan[] = [
     price: 49,
     promoPrice: 29,
     quota: 50,
+    botLimit: 1,
     description: '适合初学量化，开始系统性回测研究。',
     features: [
       { text: '50 次回测 / 月', included: true },
@@ -64,6 +67,7 @@ export const PLANS: Plan[] = [
     price: 199,
     promoPrice: 99,
     quota: 200,
+    botLimit: 2,
     description: '适合个人量化爱好者，开展日常回测研究。',
     featured: true,
     features: [
@@ -83,6 +87,7 @@ export const PLANS: Plan[] = [
     price: 499,
     promoPrice: 259,
     quota: 500,
+    botLimit: 3,
     description: '适合中频研究和更稳定的策略迭代工作。',
     features: [
       { text: '500 次回测 / 月', included: true },
@@ -101,6 +106,7 @@ export const PLANS: Plan[] = [
     price: 999,
     promoPrice: 599,
     quota: null,
+    botLimit: 5,
     description: '不限回测次数，适合高频研究与团队协作。',
     features: [
       { text: '无限回测次数', included: true },

@@ -488,6 +488,7 @@ const zh = {
     upgradeTo: '升级到 {name}',
     unlimitedBacktests: '无限回测次数',
     backtestsPerMonth: '{quota} 次 / 月',
+    botSlots: '{count} 个机器人槽位',
     promoTag: '新用户首充',
     trustSecure: '安全支付',
     trustEncrypted: '数据加密',
@@ -513,7 +514,12 @@ const zh = {
       used: '已使用',
       total: '总额度',
       remaining: '剩余',
-      unlimited: '无限'
+      unlimited: '无限',
+      botRemaining: '机器人剩余可用',
+      backtestRemaining: '回测剩余可用',
+      planExpiry: '当前套餐截止时间',
+      activeBotsMeta: '已启用 {active} / 共 {total}',
+      backtestsUsedMeta: '已使用 {used} / 共 {total}'
     },
     currentSubscription: {
       title: '当前订阅',
@@ -523,6 +529,9 @@ const zh = {
       paymentMethod: '支付方式',
       expiresAt: '到期时间',
       activeStatus: '生效中',
+      freeStatus: '免费版',
+      freePlanExpiry: '未开通会员',
+      noExpiry: '长期有效',
       wechat: '微信支付',
       alipay: '支付宝'
     },
