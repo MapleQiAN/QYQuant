@@ -714,8 +714,8 @@ onMounted(() => {
   align-content: start;
   padding: 18px;
   border-radius: 20px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  background: rgba(8, 9, 23, 0.34);
+  border: 1px solid var(--color-border);
+  background: var(--color-surface-elevated);
   backdrop-filter: blur(12px);
 }
 
