@@ -1,15 +1,15 @@
 <template>
   <div class="notification-panel">
     <div class="notification-panel__header">
-      <h3>通知中心</h3>
-      <span class="notification-panel__meta">{{ notificationStore.unreadCount }} 未读</span>
+      <h3>{{ t('notifications.title') }}</h3>
+      <span class="notification-panel__meta">{{ t('notifications.unreadCount', { count: notificationStore.unreadCount }) }}</span>
     </div>
 
     <div v-if="notificationStore.isLoading" class="notification-panel__state">
-      加载中...
+      {{ t('common.loading') }}
     </div>
     <div v-else-if="notificationStore.notifications.length === 0" class="notification-panel__state">
-      暂无通知
+      {{ t('notifications.empty') }}
     </div>
     <ul v-else class="notification-panel__list">
       <li
@@ -22,7 +22,7 @@
             <span class="notification-panel__title">{{ notification.title }}</span>
             <span v-if="!notification.is_read" class="notification-panel__dot" />
           </span>
-          <span class="notification-panel__content">{{ notification.content || '无内容摘要' }}</span>
+          <span class="notification-panel__content">{{ notification.content || t('notifications.noContent') }}</span>
           <span class="notification-panel__time">{{ notification.created_at || '' }}</span>
         </button>
       </li>
@@ -32,8 +32,10 @@
 
 <script setup lang="ts">
 import { onMounted } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useNotificationStore } from '../stores/useNotificationStore'
 
+const { t } = useI18n()
 const notificationStore = useNotificationStore()
 
 onMounted(() => {

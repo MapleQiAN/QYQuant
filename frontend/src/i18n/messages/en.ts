@@ -511,6 +511,13 @@ const en = {
       prioritySupport: 'Priority support',
       advancedApi: 'Advanced API access'
     },
+    planDescriptions: {
+      free: 'Best for first-time users who want to explore the platform basics.',
+      go: 'Best for beginners starting structured backtest research.',
+      plus: 'Best for solo quant builders doing regular backtest work.',
+      pro: 'Best for mid-frequency research and steadier strategy iteration.',
+      ultra: 'Unlimited backtests for higher-frequency research and team workflows.'
+    },
     usageDetails: {
       title: 'Usage Details',
       used: 'Used',
@@ -922,6 +929,9 @@ const en = {
     registrationTimeUnknown: 'Registration time unknown'
   },
   notifications: {
+    title: 'Notifications',
+    unreadCount: '{count} unread',
+    empty: 'No notifications yet',
     noContent: 'No content summary',
     typeReview: 'Review approved'
   },
@@ -936,13 +946,27 @@ const en = {
     loadBotsFailed: 'Failed to load bot list'
   },
   checkout: {
+    backToPlans: 'Back to plans',
+    unknownPlan: 'Unknown plan. Please go back and choose again.',
+    featuredPlan: 'Recommended plan',
+    firstPurchasePromo: 'New user first-purchase offer',
+    selectPaymentMethod: 'Choose a payment method',
+    upgradePrefix: 'Upgrade to',
+    upgradeSuffix: 'plan, ¥{price} / month',
+    loginRequired: 'Please log in before proceeding with payment.',
     wechatPay: 'WeChat Pay',
+    wechatPayDescription: 'Scan the code or use the WeChat app to complete payment',
     alipay: 'Alipay',
+    alipayDescription: 'Jump to the Alipay app or webpage to complete payment',
     qrCode: 'QR Code',
     amount: 'Amount',
     confirmPayment: 'Confirm Payment',
     confirmAndPay: 'Confirm and Pay',
     wechatPayQrCode: 'WeChat Pay QR Code',
+    openPaymentLink: 'Open the payment link in your browser',
+    autoActivateHint: 'Return to this page after payment. Your plan will activate automatically.',
+    createOrderPending: 'Creating your order, please wait...',
+    createOrderFailed: 'Failed to create payment order. Please try again later.',
     paymentProcessing: 'Payment processing...'
   },
   disclaimer: {

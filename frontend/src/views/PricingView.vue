@@ -67,14 +67,14 @@
           <p class="plus-rec__desc">{{ t('pricing.plusRec.description') }}</p>
         </div>
         <button class="plus-rec__cta" type="button" @click="goToCheckout('plus')">
-          {{ t('pricing.upgradeTo', { name: 'Plus' }) }}
+          {{ t('pricing.upgradeTo', { name: plusPlanName }) }}
           <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M6 3l5 5-5 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
         </button>
       </div>
 
       <div v-if="!loading && (isLoggedIn ? !loadError : true)" class="pricing-grid">
         <article
-          v-for="plan in PLANS"
+          v-for="plan in plans"
           :key="plan.level"
           class="pricing-card"
           :class="{
@@ -260,10 +260,11 @@ import { getSimBots } from '../api/simulation'
 import type { SimulationBot } from '../types/Simulation'
 import type { UserQuotaResponse } from '../api/users'
 import { fetchMyQuota } from '../api/users'
-import { PLANS, PLAN_TIER_ORDER } from '../data/plans'
+import { buildPlans, PLAN_TIER_ORDER } from '../data/plans'
 
 const { t } = useI18n()
 const router = useRouter()
+const plans = computed(() => buildPlans(t))
 
 const loading = ref(true)
 const loadError = ref('')
@@ -338,7 +339,8 @@ const usagePercentage = computed(() => {
 })
 
 const totalPages = computed(() => Math.max(1, Math.ceil(ordersTotal.value / ordersPerPage.value)))
-const currentPlan = computed(() => PLANS.find((plan) => plan.level === currentPlanLevel.value) ?? PLANS[0])
+const currentPlan = computed(() => plans.value.find((plan) => plan.level === currentPlanLevel.value) ?? plans.value[0])
+const plusPlanName = computed(() => plans.value.find((plan) => plan.level === 'plus')?.name ?? 'Plus')
 const currentBotLimit = computed(() => currentPlan.value.botLimit)
 const activeBotCount = computed(() => simBots.value.filter((bot) => bot.status === 'active').length)
 const remainingBotSlots = computed(() => Math.max(0, currentBotLimit.value - activeBotCount.value))
@@ -365,7 +367,7 @@ const currentPlanExpiryLabel = computed(() => {
 const isLightTheme = computed(() => themeMode.value === 'light')
 
 function getPlanName(planLevel: string): string {
-  return PLANS.find(p => p.level === planLevel)?.name ?? planLevel
+  return plans.value.find((plan) => plan.level === planLevel)?.name ?? planLevel
 }
 
 function syncThemeMode() {

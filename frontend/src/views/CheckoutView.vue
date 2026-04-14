@@ -6,14 +6,14 @@
         <svg viewBox="0 0 16 16" fill="none" aria-hidden="true">
           <path d="M10 3L5 8l5 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
         </svg>
-        返回套餐列表
+        {{ t('checkout.backToPlans') }}
       </button>
 
       <!-- Unknown plan guard -->
       <div v-if="!plan" class="unknown-plan">
-        <p class="unknown-plan__text">未知套餐，请返回重新选择。</p>
+        <p class="unknown-plan__text">{{ t('checkout.unknownPlan') }}</p>
         <button class="btn btn-primary" type="button" @click="router.push({ name: 'pricing' })">
-          返回套餐列表
+          {{ t('checkout.backToPlans') }}
         </button>
       </div>
 
@@ -21,15 +21,15 @@
         <div class="checkout-layout">
           <!-- ── Left: Plan summary ── -->
           <aside class="plan-summary">
-            <div class="plan-summary__badge" v-if="plan.featured && shouldShowFeatured">推荐套餐</div>
+            <div class="plan-summary__badge" v-if="plan.featured && shouldShowFeatured">{{ t('checkout.featuredPlan') }}</div>
 
             <div class="plan-summary__header">
               <p class="plan-summary__label">{{ plan.name }}</p>
-              <div v-if="shouldShowPromoPrice" class="plan-summary__promo-tag">新用户首充优惠</div>
+              <div v-if="shouldShowPromoPrice" class="plan-summary__promo-tag">{{ t('checkout.firstPurchasePromo') }}</div>
               <div class="plan-summary__price-row">
                 <span class="plan-summary__currency">¥</span>
                 <span class="plan-summary__price">{{ displayPrice }}</span>
-                <span class="plan-summary__unit">/ 月</span>
+                <span class="plan-summary__unit">{{ t('common.perMonthUnit') }}</span>
                 <span v-if="shouldShowPromoPrice" class="plan-summary__original-price">¥{{ plan.price }}</span>
               </div>
             </div>
@@ -41,7 +41,7 @@
                 <circle cx="8" cy="8" r="6.5" stroke="currentColor" stroke-width="1.25"/>
                 <path d="M8 5v3.5l2 1" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"/>
               </svg>
-              {{ plan.quota === null ? '无限回测次数' : `${plan.quota} 次 / 月` }}
+              {{ planQuotaLabel }}
             </div>
 
             <div class="plan-summary__divider" aria-hidden="true"></div>
@@ -71,14 +71,18 @@
 
           <!-- ── Right: Payment section ── -->
           <main class="payment-section">
-            <h1 class="payment-section__title">选择支付方式</h1>
-            <p class="payment-section__subtitle">升级到 <strong>{{ plan.name }}</strong> 套餐，¥{{ displayPrice }} / 月</p>
+            <h1 class="payment-section__title">{{ t('checkout.selectPaymentMethod') }}</h1>
+            <p class="payment-section__subtitle">
+              {{ t('checkout.upgradePrefix') }}
+              <strong>{{ plan.name }}</strong>
+              {{ t('checkout.upgradeSuffix', { price: displayPrice }) }}
+            </p>
 
             <div v-if="!isLoggedIn" class="auth-hint">
               <svg viewBox="0 0 20 20" fill="currentColor" class="auth-hint__icon" aria-hidden="true">
                 <path fill-rule="evenodd" d="M18 10a8 8 0 1 1-16 0 8 8 0 0 1 16 0zm-7-4a1 1 0 1 1-2 0 1 1 0 0 1 2 0zM9 9a1 1 0 0 0 0 2v3a1 1 0 0 0 1 1h1a1 1 0 1 0 0-2v-3a1 1 0 0 0-1-1H9z" clip-rule="evenodd"/>
               </svg>
-              请先登录后再进行支付。
+              {{ t('checkout.loginRequired') }}
             </div>
 
             <!-- Payment method cards -->
@@ -100,8 +104,8 @@
                   </svg>
                 </div>
                 <div class="payment-method-card__info">
-                  <p class="payment-method-card__name">微信支付</p>
-                  <p class="payment-method-card__desc">扫码或使用微信 App 完成支付</p>
+                  <p class="payment-method-card__name">{{ t('checkout.wechatPay') }}</p>
+                  <p class="payment-method-card__desc">{{ t('checkout.wechatPayDescription') }}</p>
                 </div>
                 <svg class="payment-method-card__arrow" viewBox="0 0 16 16" fill="none" aria-hidden="true">
                   <path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
@@ -123,8 +127,8 @@
                   </svg>
                 </div>
                 <div class="payment-method-card__info">
-                  <p class="payment-method-card__name">支付宝</p>
-                  <p class="payment-method-card__desc">跳转支付宝 App 或网页完成支付</p>
+                  <p class="payment-method-card__name">{{ t('checkout.alipay') }}</p>
+                  <p class="payment-method-card__desc">{{ t('checkout.alipayDescription') }}</p>
                 </div>
                 <svg class="payment-method-card__arrow" viewBox="0 0 16 16" fill="none" aria-hidden="true">
                   <path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
@@ -135,16 +139,16 @@
             <!-- Loading overlay -->
             <div v-if="submitting" class="processing-hint" role="status" aria-live="polite">
               <span class="spinner" aria-hidden="true"></span>
-              正在创建订单，请稍候…
+              {{ t('checkout.createOrderPending') }}
             </div>
 
             <!-- Error -->
             <p v-if="actionError" class="action-error" role="alert">{{ actionError }}</p>
 
             <!-- WeChat QR modal -->
-            <div v-if="wechatPayUrl" class="qr-overlay" role="dialog" aria-modal="true" aria-label="微信支付二维码">
+            <div v-if="wechatPayUrl" class="qr-overlay" role="dialog" aria-modal="true" :aria-label="t('checkout.wechatPayQrCode')">
               <div class="qr-card">
-                <button class="qr-card__close" type="button" aria-label="关闭" @click="wechatPayUrl = ''">
+                <button class="qr-card__close" type="button" :aria-label="t('common.close')" @click="wechatPayUrl = ''">
                   <svg viewBox="0 0 16 16" fill="none">
                     <path d="M3 3l10 10M13 3L3 13" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
                   </svg>
@@ -154,13 +158,13 @@
                     <path fill-rule="evenodd" d="M4.5 9a7.5 7.5 0 1 1 15 0c0 4.142-3.358 7.5-7.5 7.5a8 8 0 0 1-2.046-.265l-2.165 1.444a.5.5 0 0 1-.77-.427l.144-2.574A7.5 7.5 0 0 1 4.5 9z" fill="#07C160"/>
                   </svg>
                 </div>
-                <h2 class="qr-card__title">微信扫码支付</h2>
-                <p class="qr-card__amount">¥{{ displayPrice }} / 月</p>
-                <img class="qr-card__img" :src="wechatPayUrl" alt="微信支付二维码" />
+                <h2 class="qr-card__title">{{ t('checkout.wechatPayQrCode') }}</h2>
+                <p class="qr-card__amount">¥{{ displayPrice }} {{ t('common.perMonthUnit') }}</p>
+                <img class="qr-card__img" :src="wechatPayUrl" :alt="t('checkout.wechatPayQrCode')" />
                 <a class="qr-card__link" :href="wechatPayUrl" target="_blank" rel="noopener">
-                  在浏览器中打开支付链接
+                  {{ t('checkout.openPaymentLink') }}
                 </a>
-                <p class="qr-card__hint">支付完成后请返回此页面，套餐将自动激活。</p>
+                <p class="qr-card__hint">{{ t('checkout.autoActivateHint') }}</p>
               </div>
             </div>
           </main>
@@ -172,16 +176,19 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
 import { createPaymentOrder, type PaymentProvider } from '../api/payments'
 import { fetchMyQuota } from '../api/users'
-import { PLANS, PLAN_TIER_ORDER } from '../data/plans'
+import { buildPlans, PLAN_TIER_ORDER } from '../data/plans'
 
+const { t } = useI18n()
 const router = useRouter()
 const route = useRoute()
 
+const plans = computed(() => buildPlans(t))
 const planLevel = computed(() => (route.query.plan as string) || '')
-const plan = computed(() => PLANS.find((p) => p.level === planLevel.value) ?? null)
+const plan = computed(() => plans.value.find((p) => p.level === planLevel.value) ?? null)
 
 const isLoggedIn = computed(() => !!localStorage.getItem('qyquant-token'))
 const firstPurchaseEligible = ref(true)
@@ -203,6 +210,13 @@ const displayPrice = computed(() => {
   return shouldShowPromoPrice.value
     ? plan.value.promoPrice
     : plan.value.price
+})
+
+const planQuotaLabel = computed(() => {
+  if (!plan.value) return ''
+  return plan.value.quota === null
+    ? t('pricing.unlimitedBacktests')
+    : t('pricing.backtestsPerMonth', { quota: plan.value.quota })
 })
 
 onMounted(async () => {
@@ -239,7 +253,7 @@ async function handlePay(provider: PaymentProvider) {
       wechatPayUrl.value = order.pay_url
     }
   } catch (error: any) {
-    actionError.value = error?.message || '支付订单创建失败，请稍后重试'
+    actionError.value = error?.message || t('checkout.createOrderFailed')
   } finally {
     submitting.value = false
   }

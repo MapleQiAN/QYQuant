@@ -1,4 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router'
+import { i18n } from '../i18n'
 import { toast } from '../lib/toast'
 import { pinia } from '../stores/pinia'
 import { useUserStore } from '../stores/user'
@@ -29,26 +30,6 @@ import DataSourceHealthView from '../views/admin/DataSourceHealth.vue'
 import ReportManagementView from '../views/admin/ReportManagement.vue'
 import StrategyReviewView from '../views/admin/StrategyReview.vue'
 import UserManagementView from '../views/admin/UserManagement.vue'
-
-const enableFrontendTestAccount = true
-const frontendTestAccount = {
-  token: 'frontend-test-token',
-  profile: {
-    id: 'frontend-test-user',
-    nickname: '前端测试账号',
-    avatar_url: '',
-    bio: '仅用于前端联调测试',
-    role: 'admin',
-    plan_level: 'pro',
-    is_banned: false,
-    onboarding_completed: true,
-    sim_disclaimer_accepted: true,
-    phone: '13800000000',
-    email: 'frontend-test@qyquant.local',
-    created_at: '2026-01-01T00:00:00Z',
-    updated_at: '2026-01-01T00:00:00Z',
-  },
-}
 
 const router = createRouter({
   history: createWebHistory(),
@@ -97,52 +78,55 @@ const router = createRouter({
 
 const publicRoutes = new Set(['login', 'forgot-password', 'reset-password'])
 
-function applyFrontendTestAccount(userStore: ReturnType<typeof useUserStore>) {
-  if (typeof window === 'undefined' || !enableFrontendTestAccount) {
-    return false
-  }
+// --------------------------------------------------
+// [TODO: REMOVE] /admin 测试登录方案 - 之后删除此段
+// --------------------------------------------------
+let testBypass = false
+// --------------------------------------------------
 
-  const currentToken = window.localStorage.getItem('qyquant-token')
-  if (currentToken && currentToken !== frontendTestAccount.token) {
-    return false
+async function waitForProfileToSettle(userStore: ReturnType<typeof useUserStore>) {
+  while (userStore.token && userStore.profileLoading && !userStore.profileLoaded) {
+    await new Promise((resolve) => setTimeout(resolve, 0))
   }
-
-  window.localStorage.setItem('qyquant-token', frontendTestAccount.token)
-  userStore.applyRemoteProfile(frontendTestAccount.profile)
-  userStore.profileLoaded = true
-  userStore.profileLoading = false
-  return true
 }
 
 router.beforeEach(async (to) => {
   const userStore = useUserStore(pinia)
   const isPublic = publicRoutes.has(to.name as string)
 
-  if (!isPublic && !userStore.token) {
-    applyFrontendTestAccount(userStore)
-  }
-
-  // Load profile if token exists but profile not yet loaded
-  if (userStore.token && !userStore.profileLoaded && !userStore.profileLoading) {
-    const hasAppliedFrontendTestAccount = applyFrontendTestAccount(userStore)
-    if (!hasAppliedFrontendTestAccount) {
+  // Load profile if token exists but profile not yet loaded.
+  if (userStore.token) {
+    if (!userStore.profileLoaded && !userStore.profileLoading) {
       await userStore.loadProfile()
     }
+
+    await waitForProfileToSettle(userStore)
   }
 
-  // Redirect logged-in users away from auth pages
+  // Redirect logged-in users away from auth pages.
   if (isPublic && userStore.token) {
     return { path: '/' }
   }
 
-  // Redirect unauthenticated users to login (except public pages)
+  // --------------------------------------------------
+  // [TODO: REMOVE] /admin 测试登录方案 - 之后删除此段
+  // --------------------------------------------------
+  if (to.path.startsWith('/admin')) {
+    testBypass = true
+  }
+  if (testBypass) {
+    return true
+  }
+  // --------------------------------------------------
+
+  // Redirect unauthenticated users to login (except public pages).
   if (!isPublic && !userStore.token) {
     return { name: 'login', query: { redirect: to.fullPath } }
   }
 
-  // Admin-only check
+  // Admin-only check.
   if (to.meta.requiresAdmin && userStore.profile.role !== 'admin') {
-    toast.error('无权限')
+    toast.error(i18n.global.t('errors.noPermission'))
     return { path: '/' }
   }
 

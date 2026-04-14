@@ -514,6 +514,13 @@ const zh = {
       prioritySupport: '优先技术支持',
       advancedApi: '高级 API 访问权限'
     },
+    planDescriptions: {
+      free: '适合零基础入门，体验平台基础功能。',
+      go: '适合初学量化，开始系统性回测研究。',
+      plus: '适合个人量化爱好者，开展日常回测研究。',
+      pro: '适合中频研究和更稳定的策略迭代工作。',
+      ultra: '不限回测次数，适合高频研究与团队协作。'
+    },
     usageDetails: {
       title: '用量详情',
       used: '已使用',
@@ -925,6 +932,9 @@ const zh = {
     registrationTimeUnknown: '注册时间未知'
   },
   notifications: {
+    title: '通知中心',
+    unreadCount: '{count} 未读',
+    empty: '暂无通知',
     noContent: '无内容摘要',
     typeReview: '审核通过'
   },
@@ -939,13 +949,27 @@ const zh = {
     loadBotsFailed: '加载机器人列表失败'
   },
   checkout: {
+    backToPlans: '返回套餐列表',
+    unknownPlan: '未知套餐，请返回重新选择。',
+    featuredPlan: '推荐套餐',
+    firstPurchasePromo: '新用户首充优惠',
+    selectPaymentMethod: '选择支付方式',
+    upgradePrefix: '升级到',
+    upgradeSuffix: '套餐，¥{price} / 月',
+    loginRequired: '请先登录后再进行支付。',
     wechatPay: '微信支付',
+    wechatPayDescription: '扫码或使用微信 App 完成支付',
     alipay: '支付宝',
+    alipayDescription: '跳转支付宝 App 或网页完成支付',
     qrCode: '二维码',
     amount: '金额',
     confirmPayment: '确认支付',
     confirmAndPay: '确认并前往支付',
     wechatPayQrCode: '微信支付二维码',
+    openPaymentLink: '在浏览器中打开支付链接',
+    autoActivateHint: '支付完成后请返回此页面，套餐将自动激活。',
+    createOrderPending: '正在创建订单，请稍候…',
+    createOrderFailed: '支付订单创建失败，请稍后重试',
     paymentProcessing: '支付处理中...'
   },
   disclaimer: {

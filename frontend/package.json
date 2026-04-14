@@ -8,6 +8,7 @@
     "build": "vue-tsc && vite build",
     "build:docker": "vite build",
     "preview": "vite preview",
+    "check:i18n-encoding": "node scripts/check-i18n-encoding.mjs",
     "test": "vitest run"
   },
   "dependencies": {

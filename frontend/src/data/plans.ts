@@ -23,23 +23,42 @@ export interface Plan {
   features: PlanFeature[]
 }
 
-export const PLANS: Plan[] = [
+interface PlanFeatureDef {
+  textKey: string
+  included: boolean
+}
+
+interface PlanDef {
+  level: string
+  name: string
+  price: number
+  promoPrice?: number
+  quota: number | null
+  botLimit: number
+  descriptionKey: string
+  featured?: boolean
+  features: PlanFeatureDef[]
+}
+
+type Translate = (key: string, params?: Record<string, unknown>) => string
+
+const PLAN_DEFS: PlanDef[] = [
   {
     level: 'free',
     name: 'Free',
     price: 0,
     quota: 10,
     botLimit: 1,
-    description: '适合零基础入门，体验平台基础功能。',
+    descriptionKey: 'pricing.planDescriptions.free',
     features: [
-      { text: '10 次回测 / 月', included: true },
-      { text: '基础策略库访问', included: true },
-      { text: '基础绩效指标', included: true },
-      { text: '策略结果导出', included: false },
-      { text: '高级回测参数配置', included: false },
-      { text: '自定义数据源', included: false },
-      { text: '优先技术支持', included: false },
-      { text: '高级 API 访问权限', included: false },
+      { textKey: 'pricing.features.backtests10', included: true },
+      { textKey: 'pricing.features.basicLibrary', included: true },
+      { textKey: 'pricing.features.basicMetrics', included: true },
+      { textKey: 'pricing.features.exportResults', included: false },
+      { textKey: 'pricing.features.advancedParams', included: false },
+      { textKey: 'pricing.features.customDataSource', included: false },
+      { textKey: 'pricing.features.prioritySupport', included: false },
+      { textKey: 'pricing.features.advancedApi', included: false },
     ],
   },
   {
@@ -49,16 +68,16 @@ export const PLANS: Plan[] = [
     promoPrice: 29,
     quota: 50,
     botLimit: 1,
-    description: '适合初学量化，开始系统性回测研究。',
+    descriptionKey: 'pricing.planDescriptions.go',
     features: [
-      { text: '50 次回测 / 月', included: true },
-      { text: '基础策略库访问', included: true },
-      { text: '基础绩效指标', included: true },
-      { text: '策略结果导出', included: true },
-      { text: '高级回测参数配置', included: false },
-      { text: '自定义数据源', included: false },
-      { text: '优先技术支持', included: false },
-      { text: '高级 API 访问权限', included: false },
+      { textKey: 'pricing.features.backtests50', included: true },
+      { textKey: 'pricing.features.basicLibrary', included: true },
+      { textKey: 'pricing.features.basicMetrics', included: true },
+      { textKey: 'pricing.features.exportResults', included: true },
+      { textKey: 'pricing.features.advancedParams', included: false },
+      { textKey: 'pricing.features.customDataSource', included: false },
+      { textKey: 'pricing.features.prioritySupport', included: false },
+      { textKey: 'pricing.features.advancedApi', included: false },
     ],
   },
   {
@@ -68,17 +87,17 @@ export const PLANS: Plan[] = [
     promoPrice: 99,
     quota: 200,
     botLimit: 2,
-    description: '适合个人量化爱好者，开展日常回测研究。',
+    descriptionKey: 'pricing.planDescriptions.plus',
     featured: true,
     features: [
-      { text: '200 次回测 / 月', included: true },
-      { text: '基础策略库访问', included: true },
-      { text: '高级绩效指标分析', included: true },
-      { text: '策略结果导出', included: true },
-      { text: '高级回测参数配置', included: true },
-      { text: '自定义数据源', included: false },
-      { text: '优先技术支持', included: false },
-      { text: '高级 API 访问权限', included: false },
+      { textKey: 'pricing.features.backtests200', included: true },
+      { textKey: 'pricing.features.basicLibrary', included: true },
+      { textKey: 'pricing.features.advancedMetrics', included: true },
+      { textKey: 'pricing.features.exportResults', included: true },
+      { textKey: 'pricing.features.advancedParams', included: true },
+      { textKey: 'pricing.features.customDataSource', included: false },
+      { textKey: 'pricing.features.prioritySupport', included: false },
+      { textKey: 'pricing.features.advancedApi', included: false },
     ],
   },
   {
@@ -88,16 +107,16 @@ export const PLANS: Plan[] = [
     promoPrice: 259,
     quota: 500,
     botLimit: 3,
-    description: '适合中频研究和更稳定的策略迭代工作。',
+    descriptionKey: 'pricing.planDescriptions.pro',
     features: [
-      { text: '500 次回测 / 月', included: true },
-      { text: '完整策略库访问', included: true },
-      { text: '高级绩效指标分析', included: true },
-      { text: '策略结果导出', included: true },
-      { text: '高级回测参数配置', included: true },
-      { text: '自定义数据源', included: true },
-      { text: '优先技术支持', included: false },
-      { text: '高级 API 访问权限', included: false },
+      { textKey: 'pricing.features.backtests500', included: true },
+      { textKey: 'pricing.features.fullLibrary', included: true },
+      { textKey: 'pricing.features.advancedMetrics', included: true },
+      { textKey: 'pricing.features.exportResults', included: true },
+      { textKey: 'pricing.features.advancedParams', included: true },
+      { textKey: 'pricing.features.customDataSource', included: true },
+      { textKey: 'pricing.features.prioritySupport', included: false },
+      { textKey: 'pricing.features.advancedApi', included: false },
     ],
   },
   {
@@ -107,16 +126,33 @@ export const PLANS: Plan[] = [
     promoPrice: 599,
     quota: null,
     botLimit: 5,
-    description: '不限回测次数，适合高频研究与团队协作。',
+    descriptionKey: 'pricing.planDescriptions.ultra',
     features: [
-      { text: '无限回测次数', included: true },
-      { text: '完整策略库访问', included: true },
-      { text: '高级绩效指标分析', included: true },
-      { text: '策略结果导出', included: true },
-      { text: '高级回测参数配置', included: true },
-      { text: '自定义数据源', included: true },
-      { text: '优先技术支持', included: true },
-      { text: '高级 API 访问权限', included: true },
+      { textKey: 'pricing.unlimitedBacktests', included: true },
+      { textKey: 'pricing.features.fullLibrary', included: true },
+      { textKey: 'pricing.features.advancedMetrics', included: true },
+      { textKey: 'pricing.features.exportResults', included: true },
+      { textKey: 'pricing.features.advancedParams', included: true },
+      { textKey: 'pricing.features.customDataSource', included: true },
+      { textKey: 'pricing.features.prioritySupport', included: true },
+      { textKey: 'pricing.features.advancedApi', included: true },
     ],
   },
 ]
+
+export function buildPlans(t: Translate): Plan[] {
+  return PLAN_DEFS.map((plan) => ({
+    level: plan.level,
+    name: plan.name,
+    price: plan.price,
+    promoPrice: plan.promoPrice,
+    quota: plan.quota,
+    botLimit: plan.botLimit,
+    description: t(plan.descriptionKey),
+    featured: plan.featured,
+    features: plan.features.map((feature) => ({
+      text: t(feature.textKey),
+      included: feature.included,
+    })),
+  }))
+}

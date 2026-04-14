@@ -1,6 +1,5 @@
 // @vitest-environment jsdom
 import { beforeEach, describe, it, expect, vi } from 'vitest'
-import { setActivePinia } from 'pinia'
 import { toast } from '../lib/toast'
 import { pinia } from '../stores/pinia'
 
@@ -35,9 +34,10 @@ import { useUserStore } from '../stores'
 
 describe('router', () => {
   beforeEach(async () => {
-    ;(pinia as any)._s.clear()
-    setActivePinia(pinia)
+    useUserStore(pinia).$dispose()
+    useUserStore(pinia)
     localStorage.clear()
+    vi.restoreAllMocks()
     vi.stubGlobal('scrollTo', vi.fn())
     vi.spyOn(toast, 'error').mockImplementation(() => undefined)
     await router.push('/')
@@ -75,16 +75,6 @@ describe('router', () => {
 
     expect(hasImport).toBe(true)
     expect(hasImportConfirm).toBe(true)
-  })
-
-  it('contains strategy import routes', () => {
-    const hasStrategyImport = router.getRoutes().some((route) => route.path === '/strategies/import')
-    const hasStrategyImportConfirm = router.getRoutes().some(
-      (route) => route.path === '/strategies/import/confirm'
-    )
-
-    expect(hasStrategyImport).toBe(true)
-    expect(hasStrategyImportConfirm).toBe(true)
   })
 
   it('contains marketplace route', () => {
@@ -166,26 +156,84 @@ describe('router', () => {
     expect(userManagementRoute?.meta.requiresAdmin).toBe(true)
   })
 
+  it('does not inject the frontend test account on protected routes', async () => {
+    const userStore = useUserStore(pinia)
+
+    expect(userStore.profile.role).toBe('user')
+    expect(userStore.profileLoaded).toBe(false)
+    expect(localStorage.getItem('qyquant-token')).toBeNull()
+
+    await router.push('/settings')
+
+    expect(localStorage.getItem('qyquant-token')).toBeNull()
+    expect(userStore.profile.role).toBe('user')
+    expect(userStore.profileLoaded).toBe(false)
+    expect(router.currentRoute.value.name).toBe('login')
+    expect(router.currentRoute.value.query.redirect).toBe('/settings')
+  })
+
+  it('redirects unauthenticated users to login from protected routes', async () => {
+    await router.push('/backtests')
+
+    expect(router.currentRoute.value.name).toBe('login')
+    expect(router.currentRoute.value.query.redirect).toBe('/backtests')
+  })
+
   it('redirects non-admin users away from admin route', async () => {
-    const userStore = useUserStore()
+    localStorage.setItem('qyquant-token', 'test-token')
+    useUserStore(pinia).$dispose()
+    const userStore = useUserStore(pinia)
     userStore.profile.role = 'user'
     userStore.profileLoaded = true
-    localStorage.setItem('qyquant-token', 'test-token')
 
     await router.push('/admin')
 
     expect(router.currentRoute.value.path).toBe('/')
-    expect(toast.error).toHaveBeenCalledWith('无权限')
+    expect(toast.error).toHaveBeenCalled()
   })
 
   it('allows admin users to visit admin route', async () => {
-    const userStore = useUserStore()
+    localStorage.setItem('qyquant-token', 'test-token')
+    useUserStore(pinia).$dispose()
+    const userStore = useUserStore(pinia)
     userStore.profile.role = 'admin'
     userStore.profileLoaded = true
-    localStorage.setItem('qyquant-token', 'test-token')
 
     await router.push('/admin')
 
     expect(router.currentRoute.value.path).toBe('/admin')
+  })
+
+  it('requires a real admin profile for admin routes', async () => {
+    localStorage.setItem('qyquant-token', 'real-token')
+    useUserStore(pinia).$dispose()
+    const userStore = useUserStore(pinia)
+    userStore.profile.role = 'user'
+    userStore.profileLoaded = true
+
+    await router.push('/admin/reports')
+
+    expect(router.currentRoute.value.path).toBe('/')
+    expect(toast.error).toHaveBeenCalled()
+  })
+
+  it('waits for profile loading to settle before checking admin access', async () => {
+    localStorage.setItem('qyquant-token', 'real-token')
+    useUserStore(pinia).$dispose()
+    const userStore = useUserStore(pinia)
+    userStore.profileLoading = true
+    userStore.profileLoaded = false
+
+    const finishLoading = setTimeout(() => {
+      userStore.profile.role = 'admin'
+      userStore.profileLoaded = true
+      userStore.profileLoading = false
+    }, 0)
+
+    await router.push('/admin')
+    clearTimeout(finishLoading)
+
+    expect(router.currentRoute.value.path).toBe('/admin')
+    expect(toast.error).not.toHaveBeenCalled()
   })
 })

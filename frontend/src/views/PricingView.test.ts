@@ -172,4 +172,12 @@ describe('PricingView', () => {
 
     expect(wrapper.findAll('.pricing-card--ultra-light')).toHaveLength(1)
   })
+
+  it('renders localized plan descriptions from i18n-backed plan data', async () => {
+    const wrapper = mountView()
+    await flushPromises()
+
+    expect(wrapper.text()).toContain('适合零基础入门')
+    expect(wrapper.text()).not.toContain('閫傚悎')
+  })
 })
