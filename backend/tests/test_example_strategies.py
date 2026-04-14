@@ -32,3 +32,37 @@ def test_gold_sma_cross_example_generates_trades():
     )
 
     assert [trade["side"] for trade in result["trades"]] == ["buy", "sell"]
+
+
+def test_qysp_event_v1_strategy_supports_parameters_bardata_and_returned_orders():
+    source = """
+from qysp import BarData, Order, StrategyContext
+
+
+def on_bar(ctx: StrategyContext, data: BarData) -> list[Order]:
+    window = int(ctx.parameters.get("window", 20))
+    if window == 5 and data.close > data.open:
+        return [ctx.buy(data.symbol, quantity=2)]
+    return []
+"""
+
+    result = run_strategy_inline(
+        symbol="XAUUSD",
+        source=source,
+        callable_name="on_bar",
+        bars=[
+            {"time": 1, "open": 100, "high": 102, "low": 99, "close": 101, "volume": 10},
+        ],
+        params={"window": 5},
+    )
+
+    assert result["trades"] == [
+        {
+            "symbol": "XAUUSD",
+            "side": "buy",
+            "price": 101.0,
+            "quantity": 2.0,
+            "timestamp": 1,
+            "pnl": None,
+        }
+    ]

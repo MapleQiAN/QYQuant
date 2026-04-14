@@ -15,7 +15,7 @@ NameError: name 'sma_period' is not defined
     assert error["line"] == 15
     assert "sma_period" in error["message"]
     assert "变量" in error["suggestion"]
-    assert "ctx.params" in error["example_code"]
+    assert "ctx.parameters" in error["example_code"]
 
 
 def test_parse_import_error_sanitizes_internal_paths():

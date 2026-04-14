@@ -264,6 +264,13 @@ class TestValidateIntegrity:
         with pytest.raises(ValidationError, match="missing required keys"):
             validate_integrity(qys)
 
+    def test_repo_gold_step_by_step_package_is_valid(self):
+        """仓库内置 GoldStepByStep.qys 应通过完整性校验。"""
+        package_path = Path(__file__).parents[3] / "backend" / "strategy_store" / "GoldStepByStep.qys"
+        if not package_path.exists():
+            pytest.skip("GoldStepByStep package not found")
+        assert validate_integrity(package_path) is True
+
 
 # ---------------------------------------------------------------------------
 # 统一入口测试

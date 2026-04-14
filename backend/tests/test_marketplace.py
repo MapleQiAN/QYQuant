@@ -812,7 +812,7 @@ def test_marketplace_onboarding_tag_auto_seeds_strategy_when_package_exists(clie
         assert seeded.title == "Gold Step-By-Step"
         assert any(str(tag).strip().lower() == "onboarding" for tag in (seeded.tags or []))
         assert db.session.get(File, "onboarding-gold-step-file") is not None
-        assert StrategyVersion.query.filter_by(strategy_id="onboarding-gold-step", version="0.1.0").count() == 1
+        assert StrategyVersion.query.filter_by(strategy_id="onboarding-gold-step", version="1.0.0").count() == 1
 
 
 def test_get_marketplace_strategy_detail_returns_public_fields_and_hides_code(client, app, tmp_path):
