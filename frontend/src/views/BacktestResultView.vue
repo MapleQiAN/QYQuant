@@ -1,5 +1,5 @@
 <template>
-  <section class="view">
+  <section ref="exportRoot" class="view">
     <div class="container">
       <div class="page-header">
         <div class="header-left">
@@ -12,6 +12,14 @@
           </div>
           <h1 class="page-title">{{ $t('backtestReport.title') }}</h1>
           <p class="page-subtitle">{{ $t('backtestReport.subtitle', { jobId }) }}</p>
+        </div>
+        <div v-if="report && report.status !== 'failed'" class="header-actions" data-export-ignore="true">
+          <button class="btn btn-secondary" type="button" data-test="export-html" @click="exportReportAsHtml">
+            {{ $t('backtestReport.exportHtml') }}
+          </button>
+          <button class="btn btn-primary" type="button" data-test="export-pdf" @click="exportReportAsPdf">
+            {{ $t('backtestReport.exportPdf') }}
+          </button>
         </div>
       </div>
 
@@ -107,13 +115,14 @@
               </div>
               <span class="chart-section__subtitle">{{ $t('backtestReport.klineSubtitle') }}</span>
             </div>
-            <div class="chart-block">
+            <div class="chart-block chart-block--stacked">
               <KlinePlaceholder
                 :data="report.kline || []"
                 :trades="report.trades || []"
                 :symbol="report.symbol || 'BTCUSDT'"
                 :timeframe="report.interval || '1d'"
               />
+              <TradeSignalList :signals="tradeMarkers" />
             </div>
           </div>
 
@@ -179,6 +188,7 @@ import { useI18n } from 'vue-i18n'
 import StatCard from '../components/StatCard.vue'
 import EquityCurveChart from '../components/backtest/EquityCurveChart.vue'
 import DrawdownChart from '../components/backtest/DrawdownChart.vue'
+import TradeSignalList from '../components/backtest/TradeSignalList.vue'
 import TradeTable from '../components/backtest/TradeTable.vue'
 import KlinePlaceholder from '../components/KlinePlaceholder.vue'
 import ErrorDisplay from '../components/backtest/ErrorDisplay.vue'
@@ -186,6 +196,10 @@ import DisclaimerFooter from '../components/disclaimer/DisclaimerFooter.vue'
 import MetricTooltip from '../components/help/MetricTooltip.vue'
 import { useUserStore } from '../stores'
 import { mapTradesToMarkers, toEpochMs, type TradeMarker } from '../lib/chartIndicators'
+import {
+  downloadBacktestReportAsHtml,
+  printBacktestReportAsPdf,
+} from '../lib/backtestReportExport'
 import { useBacktestsStore } from '../stores/backtests'
 
 type Tone = 'positive' | 'negative' | 'warning' | 'neutral'
@@ -211,6 +225,7 @@ const store = useBacktestsStore()
 const userStore = useUserStore()
 const jobId = String(route.params.jobId || '')
 const isGuidedMode = route.query.guided === 'true'
+const exportRoot = ref<HTMLElement | null>(null)
 
 const report = computed(() => store.report)
 const summary = computed(() => report.value?.result_summary ?? {})
@@ -564,6 +579,32 @@ async function finishGuidedOnboarding() {
   await router.push({ name: 'dashboard' })
 }
 
+function exportReportAsHtml() {
+  if (!report.value || !exportRoot.value) {
+    return
+  }
+  downloadBacktestReportAsHtml(exportRoot.value, {
+    jobId,
+    title: t('backtestReport.title'),
+    filename: `backtest-report-${jobId}.html`,
+  })
+}
+
+async function exportReportAsPdf() {
+  if (!report.value || !exportRoot.value) {
+    return
+  }
+  try {
+    await printBacktestReportAsPdf(exportRoot.value, {
+      jobId,
+      title: t('backtestReport.title'),
+      filename: `backtest-report-${jobId}.pdf`,
+    })
+  } catch (error) {
+    console.error('Failed to export backtest PDF', error)
+  }
+}
+
 function handleKlineHover(payload: HoveredKlineSnapshot | null) {
   hoveredKlineSnapshot.value = payload
 }
@@ -591,7 +632,25 @@ onMounted(() => {
 
 /* ── Page Header ── */
 .page-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--spacing-md);
+  flex-wrap: wrap;
   margin-bottom: var(--spacing-xl);
+}
+
+.header-left {
+  flex: 1;
+  min-width: 0;
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  flex-wrap: wrap;
+  flex-shrink: 0;
 }
 
 .header-badges {
@@ -871,6 +930,8 @@ onMounted(() => {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--spacing-sm);
   padding: var(--spacing-md) var(--spacing-lg);
   border-bottom: 1px solid var(--color-border-light);
   background: var(--color-surface-elevated);
@@ -906,6 +967,11 @@ onMounted(() => {
 
 .chart-block {
   padding: var(--spacing-sm);
+}
+
+.chart-block--stacked {
+  display: grid;
+  gap: var(--spacing-md);
 }
 
 .market-stage__body {
@@ -1278,6 +1344,10 @@ onMounted(() => {
 
 /* ── Responsive ── */
 @media (max-width: 900px) {
+  .page-header {
+    flex-direction: column;
+  }
+
   .metrics-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }

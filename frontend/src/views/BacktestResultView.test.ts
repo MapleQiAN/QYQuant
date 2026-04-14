@@ -4,6 +4,8 @@ import BacktestResultView from './BacktestResultView.vue'
 
 const loadReportMock = vi.fn()
 const loadSupportedPackagesMock = vi.fn()
+const downloadBacktestReportAsHtmlMock = vi.fn()
+const printBacktestReportAsPdfMock = vi.fn()
 const storeState = {
   report: {
     job_id: 'job-1',
@@ -100,9 +102,21 @@ vi.mock('../components/backtest/EquityCurveChart.vue', () => ({
   },
 }))
 
-vi.mock('../components/backtest/BacktestKlineChart.vue', () => ({
+vi.mock('../components/KlinePlaceholder.vue', () => ({
   default: {
-    template: '<div data-test="backtest-kline-chart" />',
+    template: '<div data-test="kline-placeholder" />',
+  },
+}))
+
+vi.mock('../components/backtest/TradeSignalList.vue', () => ({
+  default: {
+    template: '<div data-test="trade-signal-list" />',
+  },
+}))
+
+vi.mock('../components/backtest/TradeTable.vue', () => ({
+  default: {
+    template: '<div data-test="trade-table" />',
   },
 }))
 
@@ -114,10 +128,17 @@ vi.mock('../stores/backtests', () => ({
   })
 }))
 
+vi.mock('../lib/backtestReportExport', () => ({
+  downloadBacktestReportAsHtml: downloadBacktestReportAsHtmlMock,
+  printBacktestReportAsPdf: printBacktestReportAsPdfMock,
+}))
+
 describe('BacktestResultView', () => {
   beforeEach(() => {
     loadReportMock.mockClear()
     loadSupportedPackagesMock.mockClear()
+    downloadBacktestReportAsHtmlMock.mockClear()
+    printBacktestReportAsPdfMock.mockClear()
     storeState.report = {
       job_id: 'job-1',
       status: 'completed',
@@ -192,12 +213,39 @@ describe('BacktestResultView', () => {
     expect(loadSupportedPackagesMock).toHaveBeenCalled()
   })
 
-  it('renders signal overview panels below the kline chart', () => {
+  it('renders kline chart with trade signal list and trade table', () => {
     const wrapper = mount(BacktestResultView)
 
-    expect(wrapper.get('[data-test="backtest-kline-chart"]').exists()).toBe(true)
-    expect(wrapper.find('.market-stage__rail').exists()).toBe(false)
-    expect(wrapper.find('.market-stage__secondary').exists()).toBe(true)
-    expect(wrapper.findAll('.market-stage__secondary .signal-panel')).toHaveLength(2)
+    expect(wrapper.get('[data-test="kline-placeholder"]').exists()).toBe(true)
+    expect(wrapper.get('[data-test="trade-signal-list"]').exists()).toBe(true)
+    expect(wrapper.get('[data-test="trade-table"]').exists()).toBe(true)
+  })
+
+  it('exports the report as html', async () => {
+    const wrapper = mount(BacktestResultView)
+
+    await wrapper.get('[data-test="export-html"]').trigger('click')
+
+    expect(downloadBacktestReportAsHtmlMock).toHaveBeenCalledTimes(1)
+    expect(downloadBacktestReportAsHtmlMock).toHaveBeenCalledWith(
+      expect.any(HTMLElement),
+      expect.objectContaining({
+        jobId: 'job-1',
+      }),
+    )
+  })
+
+  it('downloads the report as pdf', async () => {
+    const wrapper = mount(BacktestResultView)
+
+    await wrapper.get('[data-test="export-pdf"]').trigger('click')
+
+    expect(printBacktestReportAsPdfMock).toHaveBeenCalledTimes(1)
+    expect(printBacktestReportAsPdfMock).toHaveBeenCalledWith(
+      expect.any(HTMLElement),
+      expect.objectContaining({
+        jobId: 'job-1',
+      }),
+    )
   })
 })

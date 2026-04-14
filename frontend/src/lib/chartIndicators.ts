@@ -14,6 +14,11 @@ export interface TradeMarker {
   barTime: string | number
 }
 
+export interface PositionedTradeMarker extends TradeMarker {
+  stackIndex: number
+  symbolOffset: [number, number]
+}
+
 export interface EnrichedKlineBar extends KlineBar {
   signals?: TradeMarker[]
 }
@@ -25,7 +30,7 @@ export function toEpochMs(value: string | number): number | null {
     return null
   }
 
-  const trimmed = value.trim()
+  const trimmed = String(value).trim()
   if (!trimmed) return null
 
   if (/^\d+$/.test(trimmed)) {
@@ -70,10 +75,16 @@ function findTradeBarIndex(barTimes: Array<number | null>, tradeTime: number): n
     return targetIndex
   }
 
-  targetIndex = barTimes.reduce((latestIndex, barTime, index) => {
-    if (barTime === null || barTime > tradeTime) return latestIndex
-    return barTime >= (barTimes[latestIndex] ?? -Infinity) ? index : latestIndex
-  }, -1)
+  let latestBarTime = -Infinity
+  for (let index = 0; index < barTimes.length; index += 1) {
+    const barTime = barTimes[index]
+    if (barTime === null || barTime > tradeTime || barTime < latestBarTime) {
+      continue
+    }
+
+    latestBarTime = barTime
+    targetIndex = index
+  }
 
   return targetIndex
 }
@@ -110,6 +121,42 @@ export function mapTradesToMarkers(bars: KlineBar[], trades: Trade[]): TradeMark
       epochMs: tradeTime,
       barIndex,
       barTime: bar.time,
+    }]
+  })
+}
+
+export function buildPositionedTradeMarkers(
+  bars: KlineBar[],
+  trades: Trade[],
+  baseOffset = 18,
+  stackStep = 14,
+): PositionedTradeMarker[] {
+  const markers = mapTradesToMarkers(bars, trades)
+  if (!markers.length) {
+    return []
+  }
+
+  const stackMap = new Map<string, number>()
+
+  return markers.flatMap((marker) => {
+    const bar = bars[marker.barIndex]
+    if (!bar) {
+      return []
+    }
+
+    const stackKey = `${marker.barIndex}:${marker.side}`
+    const stackIndex = stackMap.get(stackKey) ?? 0
+    stackMap.set(stackKey, stackIndex + 1)
+    const offsetDistance = baseOffset + stackIndex * stackStep
+    const symbolOffset: [number, number] =
+      marker.side === 'buy'
+        ? [0, offsetDistance]
+        : [0, -offsetDistance]
+
+    return [{
+      ...marker,
+      stackIndex,
+      symbolOffset,
     }]
   })
 }

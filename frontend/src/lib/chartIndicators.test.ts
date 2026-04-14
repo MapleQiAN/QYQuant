@@ -1,7 +1,12 @@
 import { describe, expect, it } from 'vitest'
 import type { KlineBar } from '../types/KlineBar'
 import type { Trade } from '../types/Trade'
-import { mapTradeSignalsToBars, mapTradesToMarkers, simpleMovingAverage } from './chartIndicators'
+import {
+  buildPositionedTradeMarkers,
+  mapTradeSignalsToBars,
+  mapTradesToMarkers,
+  simpleMovingAverage,
+} from './chartIndicators'
 
 describe('chartIndicators', () => {
   it('calculates SMA with null warm-up values', () => {
@@ -48,5 +53,36 @@ describe('chartIndicators', () => {
     expect(enrichedBars[0]?.signals?.map((signal) => signal.id)).toEqual(['buy-1', 'sell-1'])
     expect(enrichedBars[0]?.signals?.map((signal) => signal.price)).toEqual([10.55, 10.95])
     expect(enrichedBars[0]?.signal).toBe('sell')
+  })
+
+  it('keeps trade markers anchored to fill price and stacks them with pixel offsets', () => {
+    const bars: KlineBar[] = [
+      { time: 1700000000000, open: 10, high: 12, low: 9, close: 11, volume: 100 },
+      { time: 1700000060000, open: 11, high: 13, low: 10, close: 12, volume: 130 },
+    ]
+    const trades: Trade[] = [
+      { id: 'buy-1', symbol: 'XAUUSD', side: 'buy', price: 9.3, quantity: 1, timestamp: 1700000000000 },
+      { id: 'buy-2', symbol: 'XAUUSD', side: 'buy', price: 9.1, quantity: 1, timestamp: 1700000010000 },
+      { id: 'sell-1', symbol: 'XAUUSD', side: 'sell', price: 12.2, quantity: 1, timestamp: 1700000015000 },
+      { id: 'sell-2', symbol: 'XAUUSD', side: 'sell', price: 12.4, quantity: 1, timestamp: 1700000020000 },
+    ]
+
+    const markers = buildPositionedTradeMarkers(bars, trades)
+    const buyMarkers = markers.filter((marker) => marker.side === 'buy')
+    const sellMarkers = markers.filter((marker) => marker.side === 'sell')
+
+    expect(markers).toHaveLength(4)
+    expect(buyMarkers[0]).toEqual(expect.objectContaining({ id: 'buy-1', stackIndex: 0 }))
+    expect(buyMarkers[1]).toEqual(expect.objectContaining({ id: 'buy-2', stackIndex: 1 }))
+    expect(sellMarkers[0]).toEqual(expect.objectContaining({ id: 'sell-1', stackIndex: 0 }))
+    expect(sellMarkers[1]).toEqual(expect.objectContaining({ id: 'sell-2', stackIndex: 1 }))
+    expect(buyMarkers[0]?.price).toBe(9.3)
+    expect(buyMarkers[1]?.price).toBe(9.1)
+    expect(sellMarkers[0]?.price).toBe(12.2)
+    expect(sellMarkers[1]?.price).toBe(12.4)
+    expect(buyMarkers[0]?.symbolOffset).toEqual([0, 18])
+    expect(buyMarkers[1]?.symbolOffset).toEqual([0, 32])
+    expect(sellMarkers[0]?.symbolOffset).toEqual([0, -18])
+    expect(sellMarkers[1]?.symbolOffset).toEqual([0, -32])
   })
 })

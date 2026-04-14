@@ -26,7 +26,7 @@ import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import * as echarts from 'echarts'
 import type { ECharts as EChartsInstance, EChartsOption } from 'echarts'
-import { mapTradeSignalsToBars, simpleMovingAverage, toEpochMs } from '../lib/chartIndicators'
+import { buildPositionedTradeMarkers, mapTradeSignalsToBars, simpleMovingAverage, toEpochMs } from '../lib/chartIndicators'
 import type { KlineBar } from '../types/KlineBar'
 import type { Trade } from '../types/Trade'
 
@@ -64,6 +64,7 @@ const timeframes = computed(() => ([
 ]))
 
 const bars = computed(() => mapTradeSignalsToBars(props.data, props.trades))
+const tradeMarkers = computed(() => buildPositionedTradeMarkers(props.data, props.trades))
 
 const upColor = () => getCssVar('--color-up', '#ef4444')
 const downColor = () => getCssVar('--color-down', '#10b981')
@@ -90,31 +91,48 @@ const getCssVar = (name: string, fallback: string) => {
   return value || fallback
 }
 
-const buildMarkPoints = () => {
-  return bars.value.flatMap((bar, index) => {
-    if (!bar.signal) return []
-    const category = formatTime(bar.time, props.timeframe)
-    const isBuy = bar.signal === 'buy'
-    return [{
-      name: isBuy ? t('kline.buySignal') : t('kline.sellSignal'),
-      coord: [category, isBuy ? bar.low : bar.high],
-      value: isBuy ? 'B' : 'S',
-      symbol: 'pin',
-      symbolSize: 28,
-      symbolRotate: isBuy ? 180 : 0,
-      symbolOffset: [0, isBuy ? -16 : 16],
-      itemStyle: { color: isBuy ? '#16a34a' : '#dc2626' },
-      label: {
-        show: true,
-        formatter: isBuy ? 'B' : 'S',
-        color: '#ffffff',
-        fontWeight: 700,
-        fontSize: 10,
-        offset: isBuy ? [0, 4] : [0, -2]
-      },
-      barIndex: index
-    }]
-  })
+const buildSignalSeries = (side: Trade['side']) => {
+  const isBuy = side === 'buy'
+  const name = isBuy ? t('kline.buySignal') : t('kline.sellSignal')
+  const accent = isBuy ? '#16a34a' : '#dc2626'
+
+  return tradeMarkers.value
+    .filter((marker) => marker.side === side)
+    .flatMap((marker) => {
+      const bar = bars.value[marker.barIndex]
+      if (!bar) {
+        return []
+      }
+
+      const anchorPrice = isBuy ? bar.low : bar.high
+
+      return [{
+        name,
+        // Use barIndex for category-axis lookup; raw barTime breaks scatter on numeric categories.
+        value: [marker.barIndex, anchorPrice],
+        marker,
+        symbol: 'triangle',
+        symbolOffset: marker.symbolOffset,
+        symbolRotate: isBuy ? 180 : 0,
+        symbolSize: 14,
+        itemStyle: {
+          color: accent,
+          borderColor: '#0f172a',
+          borderWidth: 1.5,
+          shadowBlur: 8,
+          shadowColor: isBuy ? 'rgba(22, 163, 74, 0.24)' : 'rgba(220, 38, 38, 0.24)',
+        },
+        label: {
+          show: true,
+          formatter: isBuy ? 'B' : 'S',
+          position: isBuy ? 'bottom' as const : 'top' as const,
+          distance: 3,
+          color: accent,
+          fontWeight: 700,
+          fontSize: 10,
+        },
+      }]
+    })
 }
 
 const buildOption = (): EChartsOption => {
@@ -133,17 +151,19 @@ const buildOption = (): EChartsOption => {
     }
   }
 
-  const categories = bars.value.map((bar) => formatTime(bar.time, props.timeframe))
+  const categories = bars.value.map((bar) => bar.time)
   const closes = bars.value.map((bar) => bar.close)
   const ma5 = simpleMovingAverage(closes, 5)
   const ma10 = simpleMovingAverage(closes, 10)
   const ma20 = simpleMovingAverage(closes, 20)
+  const buySignals = buildSignalSeries('buy')
+  const sellSignals = buildSignalSeries('sell')
 
   return {
     animation: false,
     legend: {
       top: 4,
-      data: [t('kline.candles'), 'MA5', 'MA10', 'MA20', t('kline.volume')],
+      data: [t('kline.candles'), 'MA5', 'MA10', 'MA20', t('kline.volume'), t('kline.buySignal'), t('kline.sellSignal')],
       textStyle: { color: getCssVar('--color-text-secondary', '#64748b') }
     },
     tooltip: {
@@ -161,10 +181,12 @@ const buildOption = (): EChartsOption => {
       {
         type: 'category',
         data: categories,
-        scale: true,
         boundaryGap: false,
         axisLine: { lineStyle: { color: getCssVar('--color-border', '#e2e8f0') } },
-        axisLabel: { color: getCssVar('--color-text-muted', '#94a3b8') },
+        axisLabel: {
+          color: getCssVar('--color-text-muted', '#94a3b8'),
+          formatter: (value: string | number) => formatTime(value, props.timeframe),
+        },
         min: 'dataMin',
         max: 'dataMax'
       },
@@ -174,7 +196,10 @@ const buildOption = (): EChartsOption => {
         data: categories,
         boundaryGap: false,
         axisLine: { lineStyle: { color: getCssVar('--color-border', '#e2e8f0') } },
-        axisLabel: { color: getCssVar('--color-text-muted', '#94a3b8') }
+        axisLabel: {
+          color: getCssVar('--color-text-muted', '#94a3b8'),
+          formatter: (value: string | number) => formatTime(value, props.timeframe),
+        }
       }
     ],
     yAxis: [
@@ -223,9 +248,6 @@ const buildOption = (): EChartsOption => {
           color0: downColor(),
           borderColor: upColor(),
           borderColor0: downColor()
-        },
-        markPoint: {
-          data: buildMarkPoints()
         }
       },
       {
@@ -265,6 +287,18 @@ const buildOption = (): EChartsOption => {
             return bar.close >= bar.open ? upColor() : downColor()
           }
         }
+      },
+      {
+        name: t('kline.buySignal'),
+        type: 'scatter',
+        data: buySignals as any,
+        z: 6,
+      },
+      {
+        name: t('kline.sellSignal'),
+        type: 'scatter',
+        data: sellSignals as any,
+        z: 6,
       }
     ]
   }

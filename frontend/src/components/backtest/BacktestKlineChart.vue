@@ -105,7 +105,8 @@ function buildScatterSeries(side: Trade['side']) {
       .filter((signal) => signal.side === side)
       .map((signal) => ({
         name,
-        value: [signal.barTime, signal.price],
+        // Keep markers visually attached to the candle instead of letting outlier fill prices distort the axis.
+        value: [signal.barTime, isBuy ? bar.low : bar.high],
         marker: signal,
         symbol,
         symbolSize: 14,
