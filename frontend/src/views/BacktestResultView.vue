@@ -220,11 +220,64 @@ const hasDrawdownData = computed(() =>
   (report.value?.equity_curve ?? []).some((p) => p.drawdown !== undefined)
 )
 
-function formatMetric(value: number | undefined, digits = 2, suffix = '') {
+function formatMetric(value: number | undefined | null, digits = 2, suffix = '') {
   if (value === undefined || value === null || Number.isNaN(value)) {
     return '--'
   }
   return `${Number(value).toFixed(digits)}${suffix}`
+}
+
+function numberOrNull(value: unknown): number | null {
+  if (value === undefined || value === null || value === '') return null
+  const n = Number(value)
+  return Number.isFinite(n) ? n : null
+}
+
+function clamp(value: number, min: number, max: number): number {
+  return Math.min(Math.max(value, min), max)
+}
+
+function formatDateTime(value: string | number | undefined | null): string {
+  if (!value) return '--'
+  const d = new Date(value)
+  if (Number.isNaN(d.getTime())) return '--'
+  return d.toLocaleString()
+}
+
+function formatRangeDate(value: string | number | null | undefined): string {
+  if (!value) return '--'
+  const d = new Date(value)
+  if (Number.isNaN(d.getTime())) return '--'
+  return d.toLocaleDateString()
+}
+
+function formatPercent(value: number | null | undefined, digits = 2, showSign = false): string {
+  if (value === null || value === undefined || Number.isNaN(value)) return '--'
+  const n = Number(value)
+  const sign = showSign && n > 0 ? '+' : ''
+  return `${sign}${n.toFixed(digits)}%`
+}
+
+function formatPlain(value: number | null | undefined, digits = 2): string {
+  if (value === null || value === undefined || Number.isNaN(value)) return '--'
+  return Number(value).toFixed(digits)
+}
+
+function formatInteger(value: number | null | undefined): string {
+  if (value === null || value === undefined || Number.isNaN(value)) return '--'
+  return Math.round(Number(value)).toString()
+}
+
+function toneClass(tone: Tone): string {
+  return `tone-${tone}`
+}
+
+function toneFromSignedValue(value: number | null | undefined, invert = false): Tone {
+  if (value === null || value === undefined) return 'neutral'
+  const v = invert ? -value : value
+  if (v > 0) return 'positive'
+  if (v < 0) return 'negative'
+  return 'neutral'
 }
 
 const points = computed(() => report.value?.equity_curve ?? [])
