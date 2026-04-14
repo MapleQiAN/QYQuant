@@ -26,10 +26,20 @@ def _auth_headers(token):
     return {"Authorization": f"Bearer {token}"}
 
 
+def _create_pending_order(client, token, plan_level="plus", provider="wechat"):
+    response = client.post(
+        "/api/v1/payments/orders",
+        headers=_auth_headers(token),
+        json={"plan_level": plan_level, "provider": provider},
+    )
+    assert response.status_code == 201
+    return response.json["data"]["order_id"]
+
+
 def test_create_payment_order_requires_auth(client):
     response = client.post(
         "/api/v1/payments/orders",
-        json={"plan_level": "lite", "provider": "wechat"},
+        json={"plan_level": "plus", "provider": "wechat"},
     )
 
     assert response.status_code == 401
@@ -42,13 +52,13 @@ def test_create_payment_order_returns_pending_order_payload(client):
     response = client.post(
         "/api/v1/payments/orders",
         headers=_auth_headers(token),
-        json={"plan_level": "lite", "provider": "wechat"},
+        json={"plan_level": "plus", "provider": "wechat"},
     )
 
     assert response.status_code == 201
     data = response.json["data"]
-    assert data["plan_level"] == "lite"
-    assert data["amount"] == 200
+    assert data["plan_level"] == "plus"
+    assert data["amount"] == 99
     assert data["provider"] == "wechat"
     assert data["order_id"]
     assert data["pay_url"].startswith("https://")
@@ -65,8 +75,8 @@ def test_create_payment_order_rejects_legacy_plan_names(client):
 
     assert response.status_code == 400
     assert response.json["error"]["code"] == "INVALID_PLAN"
-    assert "lite" in response.json["error"]["message"]
-    assert "expert" in response.json["error"]["message"]
+    assert "go" in response.json["error"]["message"]
+    assert "ultra" in response.json["error"]["message"]
 
 
 def test_create_payment_order_rejects_free_plan(client):
@@ -95,7 +105,7 @@ def test_create_payment_order_rejects_invalid_provider(client):
     assert response.json["error"]["code"] == "INVALID_PROVIDER"
 
 
-def test_create_payment_order_is_idempotent_for_same_plan_level(client):
+def test_create_payment_order_is_idempotent_for_same_plan_and_provider(client):
     token, _ = _login_user(client, phone="13800138204", nickname="IdempotentPayUser")
 
     first = client.post(
@@ -115,13 +125,34 @@ def test_create_payment_order_is_idempotent_for_same_plan_level(client):
     assert second.json["data"]["plan_level"] == "pro"
 
 
+def test_create_payment_order_separates_pending_orders_by_provider(client):
+    token, _ = _login_user(client, phone="13800138205", nickname="ProviderScopedPending")
+
+    wechat = client.post(
+        "/api/v1/payments/orders",
+        headers=_auth_headers(token),
+        json={"plan_level": "plus", "provider": "wechat"},
+    )
+    alipay = client.post(
+        "/api/v1/payments/orders",
+        headers=_auth_headers(token),
+        json={"plan_level": "plus", "provider": "alipay"},
+    )
+
+    assert wechat.status_code == 201
+    assert alipay.status_code == 201
+    assert wechat.json["data"]["order_id"] != alipay.json["data"]["order_id"]
+    assert wechat.json["data"]["provider"] == "wechat"
+    assert alipay.json["data"]["provider"] == "alipay"
+
+
 def test_create_payment_order_keeps_current_user_scope(client, app):
-    token, user_id = _login_user(client, phone="13800138205", nickname="ScopedPayUser")
+    token, user_id = _login_user(client, phone="13800138206", nickname="ScopedPayUser")
 
     response = client.post(
         "/api/v1/payments/orders",
         headers=_auth_headers(token),
-        json={"plan_level": "expert", "provider": "alipay"},
+        json={"plan_level": "ultra", "provider": "alipay"},
     )
 
     assert response.status_code == 201
@@ -131,243 +162,280 @@ def test_create_payment_order_keeps_current_user_scope(client, app):
         assert user.plan_level == "free"
 
 
-# ── Story 8.3: Webhook 回调处理 ──────────────────────────────────────────────
-
-def _create_pending_order(client, token, plan_level='lite', provider='wechat'):
-    """辅助：创建一个 pending 订单，返回 order_id"""
-    resp = client.post(
-        '/api/v1/payments/orders',
-        headers=_auth_headers(token),
-        json={'plan_level': plan_level, 'provider': provider},
-    )
-    assert resp.status_code == 201
-    return resp.json['data']['order_id']
-
-
 def test_wechat_webhook_activates_subscription(client, app):
-    """微信回调成功：订单变为 paid，用户 plan_level 升级，存在 subscription 记录"""
-    token, user_id = _login_user(client, phone='13800138210', nickname='WxWebhookUser')
-    order_id = _create_pending_order(client, token, plan_level='lite', provider='wechat')
+    token, user_id = _login_user(client, phone="13800138210", nickname="WxWebhookUser")
+    order_id = _create_pending_order(client, token, plan_level="plus", provider="wechat")
 
-    resp = client.post(
-        '/api/v1/payments/webhook/wechat',
-        json={'order_id': order_id, 'transaction_id': 'wx_tx_001'},
+    response = client.post(
+        "/api/v1/payments/webhook/wechat",
+        json={"order_id": order_id, "transaction_id": "wx_tx_001"},
     )
 
-    assert resp.status_code == 200
-    assert resp.json['data']['message'] == 'ok'
+    assert response.status_code == 200
+    assert response.json["data"]["message"] == "ok"
 
     with app.app_context():
-        from app.models import PaymentOrder, Subscription, User
         from app.extensions import db
-        order = db.session.get(PaymentOrder, order_id)
-        assert order.status == 'paid'
-        assert order.provider_order_id == 'wx_tx_001'
+        from app.models import PaymentOrder, Subscription, User
 
-        sub = Subscription.query.filter_by(user_id=user_id).first()
-        assert sub is not None
-        assert sub.plan_level == 'lite'
-        assert sub.status == 'active'
+        order = db.session.get(PaymentOrder, order_id)
+        assert order.status == "paid"
+        assert order.provider_order_id == "wx_tx_001"
+
+        subscription = Subscription.query.filter_by(user_id=user_id).one()
+        assert subscription.plan_level == "plus"
+        assert subscription.status == "active"
 
         user = db.session.get(User, user_id)
-        assert user.plan_level == 'lite'
+        assert user.plan_level == "plus"
 
 
-def test_wechat_webhook_idempotent(client, app):
-    """重复回调不重复激活：第二次回调直接返回 200，不创建第二个 subscription"""
-    token, user_id = _login_user(client, phone='13800138211', nickname='WxIdempUser')
-    order_id = _create_pending_order(client, token, plan_level='pro', provider='wechat')
+def test_wechat_webhook_is_idempotent(client, app):
+    token, user_id = _login_user(client, phone="13800138211", nickname="WxIdempUser")
+    order_id = _create_pending_order(client, token, plan_level="pro", provider="wechat")
 
-    resp1 = client.post('/api/v1/payments/webhook/wechat', json={'order_id': order_id})
-    assert resp1.status_code == 200
+    first = client.post("/api/v1/payments/webhook/wechat", json={"order_id": order_id})
+    second = client.post("/api/v1/payments/webhook/wechat", json={"order_id": order_id})
 
-    resp2 = client.post('/api/v1/payments/webhook/wechat', json={'order_id': order_id})
-    assert resp2.status_code == 200
+    assert first.status_code == 200
+    assert second.status_code == 200
 
     with app.app_context():
         from app.models import Subscription
-        count = Subscription.query.filter_by(user_id=user_id).count()
-        assert count == 1
+
+        assert Subscription.query.filter_by(user_id=user_id).count() == 1
 
 
-def test_wechat_webhook_invalid_order_id(client):
-    """不存在的 order_id 返回 400"""
-    resp = client.post(
-        '/api/v1/payments/webhook/wechat',
-        json={'order_id': 'nonexistent-order-id'},
+def test_wechat_webhook_rejects_invalid_order_id(client):
+    response = client.post(
+        "/api/v1/payments/webhook/wechat",
+        json={"order_id": "nonexistent-order-id"},
     )
-    assert resp.status_code == 400
-    assert resp.json['error']['code'] == 'INVALID_CALLBACK'
+
+    assert response.status_code == 400
+    assert response.json["error"]["code"] == "INVALID_CALLBACK"
 
 
-def test_wechat_webhook_missing_order_id(client):
-    """缺少 order_id 返回 400"""
-    resp = client.post('/api/v1/payments/webhook/wechat', json={})
-    assert resp.status_code == 400
+def test_wechat_webhook_requires_order_id(client):
+    response = client.post("/api/v1/payments/webhook/wechat", json={})
+
+    assert response.status_code == 400
+    assert response.json["error"]["code"] == "INVALID_CALLBACK"
+
+
+def test_wechat_webhook_rejects_provider_mismatch(client, app):
+    token, _ = _login_user(client, phone="13800138212", nickname="WrongProviderWebhookUser")
+    order_id = _create_pending_order(client, token, plan_level="plus", provider="alipay")
+
+    response = client.post(
+        "/api/v1/payments/webhook/wechat",
+        json={"order_id": order_id, "transaction_id": "wx_tx_wrong"},
+    )
+
+    assert response.status_code == 400
+    assert response.json["error"]["code"] == "INVALID_CALLBACK"
+
+    with app.app_context():
+        from app.extensions import db
+        from app.models import PaymentOrder
+
+        order = db.session.get(PaymentOrder, order_id)
+        assert order.status == "pending"
+        assert order.provider_order_id is None
 
 
 def test_alipay_webhook_activates_subscription(client, app):
-    """支付宝回调成功：响应纯文本 'success'，用户套餐升级"""
-    token, user_id = _login_user(client, phone='13800138212', nickname='AliWebhookUser')
-    order_id = _create_pending_order(client, token, plan_level='expert', provider='alipay')
+    token, user_id = _login_user(client, phone="13800138213", nickname="AliWebhookUser")
+    order_id = _create_pending_order(client, token, plan_level="ultra", provider="alipay")
 
-    resp = client.post(
-        '/api/v1/payments/webhook/alipay',
-        json={'order_id': order_id, 'trade_no': 'ali_tx_001'},
+    response = client.post(
+        "/api/v1/payments/webhook/alipay",
+        json={"order_id": order_id, "trade_no": "ali_tx_001"},
     )
 
-    assert resp.status_code == 200
-    assert resp.data == b'success'
+    assert response.status_code == 200
+    assert response.data == b"success"
 
     with app.app_context():
-        from app.models import User
         from app.extensions import db
+        from app.models import PaymentOrder, User
+
+        order = db.session.get(PaymentOrder, order_id)
+        assert order.provider_order_id == "ali_tx_001"
+
         user = db.session.get(User, user_id)
-        assert user.plan_level == 'expert'
+        assert user.plan_level == "ultra"
 
 
-def test_alipay_webhook_idempotent(client, app):
-    """支付宝重复回调：第二次直接返回 success，不重复激活"""
-    token, user_id = _login_user(client, phone='13800138213', nickname='AliIdempUser')
-    order_id = _create_pending_order(client, token, plan_level='lite', provider='alipay')
+def test_alipay_webhook_is_idempotent(client, app):
+    token, user_id = _login_user(client, phone="13800138214", nickname="AliIdempUser")
+    order_id = _create_pending_order(client, token, plan_level="plus", provider="alipay")
 
-    resp1 = client.post('/api/v1/payments/webhook/alipay', json={'order_id': order_id})
-    resp2 = client.post('/api/v1/payments/webhook/alipay', json={'order_id': order_id})
+    first = client.post("/api/v1/payments/webhook/alipay", json={"order_id": order_id})
+    second = client.post("/api/v1/payments/webhook/alipay", json={"order_id": order_id})
 
-    assert resp1.status_code == 200
-    assert resp2.status_code == 200
-    assert resp2.data == b'success'
+    assert first.status_code == 200
+    assert second.status_code == 200
+    assert second.data == b"success"
 
     with app.app_context():
         from app.models import Subscription
-        count = Subscription.query.filter_by(user_id=user_id).count()
-        assert count == 1
+
+        assert Subscription.query.filter_by(user_id=user_id).count() == 1
+
+
+def test_webhook_rejects_duplicate_provider_order_id(client, app):
+    token, _ = _login_user(client, phone="13800138215", nickname="DuplicateProviderOrderUser")
+    first_order_id = _create_pending_order(client, token, plan_level="plus", provider="wechat")
+    second_order_id = _create_pending_order(client, token, plan_level="pro", provider="wechat")
+
+    first = client.post(
+        "/api/v1/payments/webhook/wechat",
+        json={"order_id": first_order_id, "transaction_id": "wx_tx_dup"},
+    )
+    second = client.post(
+        "/api/v1/payments/webhook/wechat",
+        json={"order_id": second_order_id, "transaction_id": "wx_tx_dup"},
+    )
+
+    assert first.status_code == 200
+    assert second.status_code == 400
+
+    with app.app_context():
+        from app.extensions import db
+        from app.models import PaymentOrder
+
+        second_order = db.session.get(PaymentOrder, second_order_id)
+        assert second_order.status == "pending"
+        assert second_order.provider_order_id is None
 
 
 def test_webhook_sends_notification(client, app):
-    """回调激活后发送站内通知"""
-    token, user_id = _login_user(client, phone='13800138214', nickname='NotifTestUser')
-    order_id = _create_pending_order(client, token, plan_level='lite', provider='wechat')
+    token, user_id = _login_user(client, phone="13800138216", nickname="NotifTestUser")
+    order_id = _create_pending_order(client, token, plan_level="plus", provider="wechat")
 
-    client.post('/api/v1/payments/webhook/wechat', json={'order_id': order_id})
-
-    with app.app_context():
-        from app.models import Notification
-        notif = Notification.query.filter_by(
-            user_id=user_id, type='subscription_activated'
-        ).first()
-        assert notif is not None
-        assert 'lite' in notif.content
-        assert '200' in notif.content
-
-
-def test_webhook_expert_notification_shows_unlimited(client, app):
-    """expert 套餐通知文本应显示"无限次"而非 unlimited"""
-    token, user_id = _login_user(client, phone='13800138216', nickname='ExpertNotifUser')
-    order_id = _create_pending_order(client, token, plan_level='expert', provider='wechat')
-
-    client.post('/api/v1/payments/webhook/wechat', json={'order_id': order_id})
+    client.post("/api/v1/payments/webhook/wechat", json={"order_id": order_id})
 
     with app.app_context():
         from app.models import Notification
-        notif = Notification.query.filter_by(
-            user_id=user_id, type='subscription_activated'
+
+        notification = Notification.query.filter_by(
+            user_id=user_id, type="subscription_activated"
         ).first()
-        assert notif is not None
-        assert '无限次' in notif.content
-        assert 'unlimited' not in notif.content
+        assert notification is not None
+        assert "plus" in notification.content
+        assert "200" in notification.content
+
+
+def test_ultra_notification_does_not_show_unlimited_literal(client, app):
+    token, user_id = _login_user(client, phone="13800138217", nickname="UltraNotifUser")
+    order_id = _create_pending_order(client, token, plan_level="ultra", provider="wechat")
+
+    client.post("/api/v1/payments/webhook/wechat", json={"order_id": order_id})
+
+    with app.app_context():
+        from app.models import Notification
+
+        notification = Notification.query.filter_by(
+            user_id=user_id, type="subscription_activated"
+        ).first()
+        assert notification is not None
+        assert "无限次" in notification.content
+        assert "unlimited" not in notification.content
 
 
 def test_wechat_webhook_rejects_non_sandbox(client, app):
-    """非沙箱模式下微信 Webhook 拒绝所有请求"""
-    app.config['PAYMENT_SANDBOX'] = False
-    token, user_id = _login_user(client, phone='13800138217', nickname='NonSandboxWx')
-    app.config['PAYMENT_SANDBOX'] = True
-    order_id = _create_pending_order(client, token, plan_level='lite', provider='wechat')
+    app.config["PAYMENT_SANDBOX"] = False
+    token, _ = _login_user(client, phone="13800138218", nickname="NonSandboxWx")
+    app.config["PAYMENT_SANDBOX"] = True
+    order_id = _create_pending_order(client, token, plan_level="plus", provider="wechat")
 
-    app.config['PAYMENT_SANDBOX'] = False
-    resp = client.post('/api/v1/payments/webhook/wechat', json={'order_id': order_id})
-    app.config['PAYMENT_SANDBOX'] = True
+    app.config["PAYMENT_SANDBOX"] = False
+    response = client.post("/api/v1/payments/webhook/wechat", json={"order_id": order_id})
+    app.config["PAYMENT_SANDBOX"] = True
 
-    assert resp.status_code == 400
+    assert response.status_code == 400
 
     with app.app_context():
-        from app.models import PaymentOrder
         from app.extensions import db
+        from app.models import PaymentOrder
+
         order = db.session.get(PaymentOrder, order_id)
-        assert order.status == 'pending'
+        assert order.status == "pending"
 
 
 def test_alipay_webhook_rejects_non_sandbox(client, app):
-    """非沙箱模式下支付宝 Webhook 拒绝所有请求"""
-    app.config['PAYMENT_SANDBOX'] = False
-    token, user_id = _login_user(client, phone='13800138218', nickname='NonSandboxAli')
-    app.config['PAYMENT_SANDBOX'] = True
-    order_id = _create_pending_order(client, token, plan_level='lite', provider='alipay')
+    app.config["PAYMENT_SANDBOX"] = False
+    token, _ = _login_user(client, phone="13800138219", nickname="NonSandboxAli")
+    app.config["PAYMENT_SANDBOX"] = True
+    order_id = _create_pending_order(client, token, plan_level="plus", provider="alipay")
 
-    app.config['PAYMENT_SANDBOX'] = False
-    resp = client.post('/api/v1/payments/webhook/alipay', json={'order_id': order_id})
-    app.config['PAYMENT_SANDBOX'] = True
+    app.config["PAYMENT_SANDBOX"] = False
+    response = client.post("/api/v1/payments/webhook/alipay", json={"order_id": order_id})
+    app.config["PAYMENT_SANDBOX"] = True
 
-    assert resp.status_code == 400
-    assert resp.data == b'fail'
+    assert response.status_code == 400
+    assert response.data == b"fail"
 
     with app.app_context():
-        from app.models import PaymentOrder
         from app.extensions import db
+        from app.models import PaymentOrder
+
         order = db.session.get(PaymentOrder, order_id)
-        assert order.status == 'pending'
+        assert order.status == "pending"
 
 
 def test_alipay_webhook_captures_provider_order_id(client, app):
-    """支付宝 JSON 模式下 trade_no 应被正确记录为 provider_order_id"""
-    token, user_id = _login_user(client, phone='13800138219', nickname='AliTradeNoUser')
-    order_id = _create_pending_order(client, token, plan_level='pro', provider='alipay')
+    token, _ = _login_user(client, phone="13800138220", nickname="AliTradeNoUser")
+    order_id = _create_pending_order(client, token, plan_level="pro", provider="alipay")
 
-    resp = client.post(
-        '/api/v1/payments/webhook/alipay',
-        json={'order_id': order_id, 'trade_no': 'ali_tx_002'},
+    response = client.post(
+        "/api/v1/payments/webhook/alipay",
+        json={"order_id": order_id, "trade_no": "ali_tx_002"},
     )
-    assert resp.status_code == 200
+
+    assert response.status_code == 200
 
     with app.app_context():
-        from app.models import PaymentOrder
         from app.extensions import db
+        from app.models import PaymentOrder
+
         order = db.session.get(PaymentOrder, order_id)
-        assert order.provider_order_id == 'ali_tx_002'
+        assert order.provider_order_id == "ali_tx_002"
 
 
 def test_webhook_writes_audit_log(client, app):
-    """回调激活后写入审计日志"""
-    token, user_id = _login_user(client, phone='13800138215', nickname='AuditTestUser')
-    order_id = _create_pending_order(client, token, plan_level='pro', provider='wechat')
+    token, user_id = _login_user(client, phone="13800138221", nickname="AuditTestUser")
+    order_id = _create_pending_order(client, token, plan_level="pro", provider="wechat")
 
-    client.post('/api/v1/payments/webhook/wechat', json={'order_id': order_id})
+    client.post("/api/v1/payments/webhook/wechat", json={"order_id": order_id})
 
     with app.app_context():
         from app.models import AuditLog
+
         log = AuditLog.query.filter_by(
-            action='subscription_activated', target_id=user_id
+            action="subscription_activated", target_id=user_id
         ).first()
         assert log is not None
-        assert log.details['plan_level'] == 'pro'
+        assert log.details["plan_level"] == "pro"
 
 
 def test_webhook_sets_quota_reset_at_to_next_month_first_day(client, app):
-    token, user_id = _login_user(client, phone='13800138220', nickname='QuotaResetAtUser')
-    order_id = _create_pending_order(client, token, plan_level='lite', provider='wechat')
+    token, user_id = _login_user(client, phone="13800138222", nickname="QuotaResetAtUser")
+    order_id = _create_pending_order(client, token, plan_level="plus", provider="wechat")
 
-    client.post('/api/v1/payments/webhook/wechat', json={'order_id': order_id})
+    client.post("/api/v1/payments/webhook/wechat", json={"order_id": order_id})
 
     with app.app_context():
         from datetime import timedelta, timezone
+
         from app.models import UserQuota
 
         quota = UserQuota.query.filter_by(user_id=user_id).one()
         beijing_tz = timezone(timedelta(hours=8))
         reset_at = quota.reset_at.astimezone(beijing_tz)
 
-        assert quota.plan_level == 'lite'
+        assert quota.plan_level == "plus"
         assert reset_at.day == 1
         assert reset_at.hour == 0
         assert reset_at.minute == 0
