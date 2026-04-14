@@ -458,7 +458,7 @@ def test_get_backtest_status_returns_structured_error_for_failed_job(client, app
         "line": 15,
         "message": "Undefined variable 'sma_period'",
         "suggestion": "Define sma_period before using it.",
-        "example_code": "sma_period = ctx.params.get('sma_period', 20)",
+        "example_code": "sma_period = ctx.parameters.get('sma_period', 20)",
         "raw_error": "NameError: name 'sma_period' is not defined",
     }
 
@@ -1226,7 +1226,7 @@ def test_get_backtest_report_returns_structured_error_for_failed_job(client, app
         "line": 15,
         "message": "未定义的变量 'sma_period'",
         "suggestion": "请检查变量名是否正确，或确认是否已在策略参数中定义该参数",
-        "example_code": "sma_period = ctx.params.get('sma_period', 20)",
+        "example_code": "sma_period = ctx.parameters.get('sma_period', 20)",
         "raw_error": "NameError: name 'sma_period' is not defined",
     }
 
@@ -1260,7 +1260,65 @@ def test_get_backtest_report_returns_structured_error_for_failed_job(client, app
     assert data["error"]["type"] == "NameError"
     assert data["error"]["line"] == 15
     assert "sma_period" in data["error"]["message"]
-    assert "ctx.params" in data["error"]["example_code"]
+    assert "ctx.parameters" in data["error"]["example_code"]
+
+
+def test_export_backtest_report_pdf_returns_attachment_for_owner(client, app, tmp_path, monkeypatch):
+    from app.extensions import db
+    from app.models import BacktestJob, BacktestJobStatus, Strategy
+
+    token, user_id = _login_user(client, phone="13800138041", nickname="PdfOwner")
+
+    with app.app_context():
+        db.session.add(
+            Strategy(
+                id="pdf-export-strategy",
+                name="PDF Export Strategy",
+                symbol="BTCUSDT",
+                status="draft",
+                owner_id=user_id,
+            )
+        )
+        job = BacktestJob(
+            user_id=user_id,
+            strategy_id="pdf-export-strategy",
+            status=BacktestJobStatus.COMPLETED.value,
+            params={"symbol": "BTCUSDT"},
+            result_summary={"totalReturn": 8.6},
+        )
+        db.session.add(job)
+        db.session.commit()
+        job_id = job.id
+
+    pdf_path = tmp_path / "report.pdf"
+    pdf_path.write_bytes(b"%PDF-1.4\n% mock pdf\n")
+
+    captured = {}
+
+    def _fake_render(job_id_arg, html, filename=None):
+        captured["job_id"] = job_id_arg
+        captured["html"] = html
+        captured["filename"] = filename
+        return pdf_path
+
+    monkeypatch.setattr("app.blueprints.backtests.render_backtest_report_pdf", _fake_render)
+
+    response = client.post(
+        f"/api/v1/backtest/{job_id}/export/pdf",
+        headers=_auth_headers(token),
+        json={
+            "html": "<html><body><div>Visible backtest report</div></body></html>",
+            "filename": "backtest-report-job-1.pdf",
+        },
+    )
+
+    assert response.status_code == 200
+    assert response.mimetype == "application/pdf"
+    assert "attachment;" in response.headers["Content-Disposition"]
+    assert "backtest-report-job-1.pdf" in response.headers["Content-Disposition"]
+    assert response.data.startswith(b"%PDF-1.4")
+    assert captured["job_id"] == job_id
+    assert "Visible backtest report" in captured["html"]
 
 
 def test_get_supported_packages_returns_whitelist(client):

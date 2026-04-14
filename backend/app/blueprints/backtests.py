@@ -1,5 +1,7 @@
+import shutil
+
 from celery.result import AsyncResult
-from flask import request
+from flask import after_this_request, request, send_file
 from flask_jwt_extended import get_jwt_identity, jwt_required
 from flask_smorest import Blueprint
 
@@ -8,6 +10,7 @@ from ..celery_app import celery_app
 from ..extensions import db
 from ..models import BacktestJob, BacktestJobStatus, Strategy
 from ..quota import ensure_user_quota, has_remaining_quota, reserve_backtest_quota, serialize_plan_limit
+from ..services.backtest_report_export import render_backtest_report_pdf
 from ..services.error_parser import load_execution_error
 from ..services.supported_packages import get_supported_packages
 from ..strategy_runtime import StrategyRuntimeError, as_response, preflight_strategy
@@ -343,6 +346,42 @@ def get_backtest_report(job_id):
             "completed_at": format_beijing_iso(job_record.completed_at),
             "disclaimer": REPORT_DISCLAIMER,
         }
+    )
+
+
+@bp.post("/v1/backtest/<job_id>/export/pdf")
+@jwt_required()
+def export_backtest_report_pdf(job_id):
+    user_id = get_jwt_identity()
+    job_record = db.session.get(BacktestJob, job_id)
+    if job_record is None or job_record.user_id != user_id:
+        return error_response("JOB_NOT_FOUND", "回测任务不存在", 404)
+    if job_record.status != BacktestJobStatus.COMPLETED.value:
+        return error_response("REPORT_NOT_READY", "回测报告尚未生成", 409)
+
+    payload = request.get_json() or {}
+    html = payload.get("html")
+    filename = payload.get("filename") or f"backtest-report-{job_id}.pdf"
+    filename = str(filename).replace("\\", "/").split("/")[-1] or f"backtest-report-{job_id}.pdf"
+
+    if not isinstance(html, str) or not html.strip():
+        return error_response("VALIDATION_ERROR", "html is required", 422)
+
+    try:
+        pdf_path = render_backtest_report_pdf(job_id, html, filename=filename)
+    except RuntimeError:
+        return error_response("EXPORT_FAILED", "PDF 导出失败", 500)
+
+    @after_this_request
+    def _cleanup(response):
+        shutil.rmtree(str(pdf_path.parent), ignore_errors=True)
+        return response
+
+    return send_file(
+        pdf_path,
+        mimetype="application/pdf",
+        as_attachment=True,
+        download_name=filename,
     )
 
 
