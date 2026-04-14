@@ -28,7 +28,10 @@
       "Bash(find:*)",
       "Bash(python -m json.tool)",
       "Bash(python3 -c \"import sys; sys.path.insert\\(0, ''.''\\); from app.blueprints import auth\")",
-      "Bash(xargs grep:*)"
+      "Bash(xargs grep:*)",
+      "Bash(rtk git:*)",
+      "Bash(git add:*)",
+      "Bash(git commit -m ':*)"
     ]
   }
 }
