@@ -7,7 +7,7 @@ from ..backtest.engine import run_backtest
 from ..celery_app import celery_app
 from ..extensions import db
 from ..models import BacktestJob, BacktestJobStatus
-from ..quota import consume_quota
+from ..quota import consume_backtest_quota, release_backtest_quota, reserve_backtest_quota
 from ..services.error_parser import dump_execution_error
 from ..services.metrics import build_backtest_report
 from ..strategy_runtime import StrategyRuntimeError
@@ -27,7 +27,7 @@ def _run_job(job_id):
         return {"status": "missing"}
 
     params = dict(job.params or {})
-    if job.user_id and not consume_quota(job.user_id):
+    if job.user_id and not reserve_backtest_quota(job.user_id, job.id):
         job.status = BacktestJobStatus.FAILED.value
         job.completed_at = now_utc()
         job.error_message = "quota_exceeded"
@@ -51,11 +51,13 @@ def _run_job(job_id):
             strategy_version=params.get('strategy_version'),
             strategy_params=params.get('strategy_params'),
             data_source=params.get('data_source'),
+            user_id=job.user_id,
         )
     except SoftTimeLimitExceeded:
         job.status = BacktestJobStatus.TIMEOUT.value
         job.error_message = 'soft_time_limit_exceeded'
         job.completed_at = now_utc()
+        release_backtest_quota(job.id)
         db.session.commit()
         return {"status": job.status}
     except StrategyRuntimeError as exc:
@@ -67,12 +69,14 @@ def _run_job(job_id):
             raw_error = (exc.details or {}).get("reason") or exc.message
             _store_structured_error(job, raw_error)
         job.completed_at = now_utc()
+        release_backtest_quota(job.id)
         db.session.commit()
         return {"status": job.status}
     except Exception as exc:
         job.status = BacktestJobStatus.FAILED.value
         _store_structured_error(job, str(exc))
         job.completed_at = now_utc()
+        release_backtest_quota(job.id)
         db.session.commit()
         return {"status": job.status}
 
@@ -93,9 +97,11 @@ def _run_job(job_id):
         job.status = BacktestJobStatus.FAILED.value
         _store_structured_error(job, str(exc))
         job.completed_at = now_utc()
+        release_backtest_quota(job.id)
         db.session.commit()
         return {"status": job.status}
 
+    consume_backtest_quota(job.id)
     job.status = BacktestJobStatus.COMPLETED.value
     job.result_storage_key = storage_key
     job.result_summary = report["result_summary"]

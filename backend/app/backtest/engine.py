@@ -76,6 +76,7 @@ def run_backtest(
     strategy_version=None,
     strategy_params=None,
     data_source=None,
+    user_id=None,
 ):
     provider = get_backtest_provider(data_source)
     kline = provider.get_bars(
@@ -88,7 +89,12 @@ def run_backtest(
 
     runtime = None
     if strategy_id:
-        loaded_strategy, validated_params = preflight_strategy(strategy_id, strategy_version, strategy_params)
+        loaded_strategy, validated_params = preflight_strategy(
+            strategy_id,
+            strategy_version,
+            strategy_params,
+            user_id=user_id,
+        )
         strategy_result = execute_backtest_strategy(symbol, kline, loaded_strategy, validated_params)
         trades = strategy_result.get('trades') or []
         runtime = strategy_result.get('runtime')

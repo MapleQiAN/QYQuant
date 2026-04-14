@@ -276,6 +276,20 @@ class UserQuota(db.Model):
     reset_at = db.Column(db.DateTime(timezone=True), nullable=True)
 
 
+class BacktestQuotaLedger(db.Model):
+    __tablename__ = 'backtest_quota_ledger'
+    __table_args__ = (
+        db.Index('ix_backtest_quota_ledger_user_id_status', 'user_id', 'status'),
+    )
+
+    job_id = db.Column(db.String, db.ForeignKey('backtest_jobs.id'), primary_key=True)
+    user_id = db.Column(db.String, db.ForeignKey('users.id'), nullable=False)
+    status = db.Column(db.String(20), nullable=False, default='reserved')
+    created_at = db.Column(db.DateTime(timezone=True), nullable=False, default=now_utc)
+    updated_at = db.Column(db.DateTime(timezone=True), nullable=False, default=now_utc, onupdate=now_utc)
+    finalized_at = db.Column(db.DateTime(timezone=True), nullable=True)
+
+
 class MarketDataCache(db.Model):
     __tablename__ = 'market_data_cache'
     __table_args__ = (

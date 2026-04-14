@@ -7,7 +7,7 @@ from ..backtest.engine import run_backtest
 from ..celery_app import celery_app
 from ..extensions import db
 from ..models import BacktestJob, BacktestJobStatus, Strategy
-from ..quota import ensure_user_quota, has_remaining_quota, serialize_plan_limit
+from ..quota import ensure_user_quota, has_remaining_quota, reserve_backtest_quota, serialize_plan_limit
 from ..services.error_parser import load_execution_error
 from ..services.supported_packages import get_supported_packages
 from ..strategy_runtime import StrategyRuntimeError, as_response, preflight_strategy
@@ -24,9 +24,11 @@ _EAGER_BACKTEST_RESULTS = {}
 bp = Blueprint("backtests", __name__, url_prefix="/api")
 
 
-def _build_legacy_job_data(job_id):
+def _build_legacy_job_data(job_id, user_id):
     job_record = db.session.get(BacktestJob, job_id)
     if job_record is None:
+        return None
+    if job_record.user_id != user_id:
         return None
 
     data = {
@@ -137,7 +139,9 @@ def _serialize_history_item(job_record, strategy_name=None):
 
 
 @bp.post("/backtests/run")
+@jwt_required()
 def run():
+    user_id = get_jwt_identity()
     payload = request.get_json() or {}
     symbol = payload.get("symbol", "BTCUSDT")
     interval = payload.get("interval")
@@ -156,12 +160,14 @@ def run():
 
     if strategy_id:
         try:
-            preflight_strategy(strategy_id, strategy_version, strategy_params)
+            preflight_strategy(strategy_id, strategy_version, strategy_params, user_id=user_id)
         except StrategyRuntimeError as exc:
+            if exc.message == "strategy_not_found":
+                return error_response("STRATEGY_NOT_FOUND", "策略不存在或无权访问", 404)
             return as_response(exc), 400
 
     job_record = BacktestJob(
-        user_id=payload.get("userId", payload.get("user_id")),
+        user_id=user_id,
         strategy_id=strategy_id,
         params={
             "symbol": symbol,
@@ -186,17 +192,21 @@ def run():
 
 
 @bp.get("/backtests/job/<job_id>")
+@jwt_required()
 def job(job_id):
-    data = _build_legacy_job_data(job_id)
+    user_id = get_jwt_identity()
+    data = _build_legacy_job_data(job_id, user_id)
     if data is None:
         return {"code": 40400, "message": "job_not_found", "details": None}, 404
     return ok(data)
 
 
 @bp.get("/backtests/latest")
+@jwt_required()
 def latest():
     import json
 
+    user_id = get_jwt_identity()
     symbol = request.args.get("symbol", "BTCUSDT")
     interval = request.args.get("interval")
     data_source = request.args.get("dataSource", request.args.get("data_source", request.args.get("provider")))
@@ -229,8 +239,11 @@ def latest():
             strategy_version=strategy_version,
             strategy_params=strategy_params,
             data_source=data_source,
+            user_id=user_id,
         )
     except StrategyRuntimeError as exc:
+        if exc.message == "strategy_not_found":
+            return error_response("STRATEGY_NOT_FOUND", "策略不存在或无权访问", 404)
         return as_response(exc), 400
     return ok(result)
 
@@ -372,6 +385,12 @@ def submit_backtest():
         params=_build_v1_job_params(payload),
     )
     db.session.add(job_record)
+    db.session.flush()
+
+    if not reserve_backtest_quota(user_id, job_record.id):
+        db.session.rollback()
+        return error_response("QUOTA_EXCEEDED", "Quota exhausted, upgrade required", 429)
+
     db.session.commit()
 
     run_backtest_task.apply_async(args=[job_record.id], task_id=job_record.id, queue="backtest")

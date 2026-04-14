@@ -26,7 +26,7 @@ def _auth_headers(token):
     return {"Authorization": f"Bearer {token}"}
 
 
-def _seed_runtime_strategy(app, tmp_path, strategy_id='sandbox-strategy', version='1.0.0'):
+def _seed_runtime_strategy(app, tmp_path, strategy_id='sandbox-strategy', version='1.0.0', owner_id=None):
     import json
     import zipfile
     from pathlib import Path
@@ -61,6 +61,7 @@ class Strategy:
             name='Sandbox Runtime Strategy',
             symbol='BTCUSDT',
             status='draft',
+            owner_id=owner_id,
             returns=0,
             win_rate=0,
             max_drawdown=0,
@@ -94,11 +95,95 @@ class Strategy:
     return strategy_id, version
 
 
+def test_legacy_backtest_run_requires_auth(client):
+    response = client.post('/api/backtests/run', json={"symbol": "BTCUSDT"})
+
+    assert response.status_code == 401
+    assert response.json["error"]["code"] == "UNAUTHORIZED"
+
+
+def test_legacy_backtest_latest_requires_auth(client):
+    response = client.get('/api/backtests/latest?symbol=BTCUSDT&limit=10')
+
+    assert response.status_code == 401
+    assert response.json["error"]["code"] == "UNAUTHORIZED"
+
+
+def test_legacy_backtest_job_requires_auth(client):
+    from app.extensions import db
+    from app.models import BacktestJob
+
+    token, user_id = _login_user(client, phone="13800138033", nickname="LegacyJobOwner")
+
+    with client.application.app_context():
+        job = BacktestJob(user_id=user_id, params={"symbol": "BTCUSDT"})
+        db.session.add(job)
+        db.session.commit()
+        job_id = job.id
+
+    response = client.get(f"/api/backtests/job/{job_id}")
+
+    assert token
+    assert response.status_code == 401
+    assert response.json["error"]["code"] == "UNAUTHORIZED"
+
+
+def test_legacy_backtest_job_hides_other_users(client, app):
+    from app.extensions import db
+    from app.models import BacktestJob
+
+    owner_token, owner_id = _login_user(client, phone="13800138034", nickname="LegacyOwner")
+    reader_token, reader_id = _login_user(client, phone="13800138035", nickname="LegacyReader")
+
+    with app.app_context():
+        job = BacktestJob(user_id=owner_id, params={"symbol": "BTCUSDT"})
+        db.session.add(job)
+        db.session.commit()
+        job_id = job.id
+
+    response = client.get(f"/api/backtests/job/{job_id}", headers=_auth_headers(reader_token))
+
+    assert owner_token != reader_token
+    assert owner_id != reader_id
+    assert response.status_code == 404
+
+
+def test_legacy_backtest_run_ignores_payload_user_id(monkeypatch, client, app):
+    from app.extensions import db
+    from app.models import BacktestJob
+
+    token, user_id = _login_user(client, phone="13800138017", nickname="LegacyRunner")
+    _, other_user_id = _login_user(client, phone="13800138018", nickname="SpoofTarget")
+
+    monkeypatch.setattr("app.tasks.backtests.run_backtest", lambda *args, **kwargs: {"summary": {"totalReturn": 1}})
+
+    response = client.post(
+        '/api/backtests/run',
+        headers=_auth_headers(token),
+        json={"symbol": "BTCUSDT", "user_id": other_user_id, "userId": other_user_id},
+    )
+
+    assert response.status_code == 200
+    job_id = response.json["data"]["job_id"]
+    assert other_user_id != user_id
+
+    with app.app_context():
+        job = db.session.get(BacktestJob, job_id)
+        assert job is not None
+        assert job.user_id == user_id
+
+
 def test_backtest_run_persists_completed_job_and_query_reads_database(client, app):
     from app.extensions import db
     from app.models import BacktestJob
 
-    resp = client.post('/api/backtests/run', json={"symbol": "BTCUSDT", "limit": 20})
+    token, _ = _login_user(client, phone="13800138021", nickname="LegacyPersist")
+
+    resp = client.post(
+        '/api/backtests/run',
+        headers=_auth_headers(token),
+        json={"symbol": "BTCUSDT", "limit": 20},
+    )
 
     assert resp.status_code == 200
     job_id = resp.json['data']['job_id']
@@ -110,7 +195,7 @@ def test_backtest_run_persists_completed_job_and_query_reads_database(client, ap
         assert job.params['symbol'] == 'BTCUSDT'
         assert job.result_summary is not None
 
-    status = client.get(f'/api/backtests/job/{job_id}')
+    status = client.get(f'/api/backtests/job/{job_id}', headers=_auth_headers(token))
     assert status.status_code == 200
     assert status.json['data']['job_id'] == job_id
     assert status.json['data']['status'] == 'completed'
@@ -121,12 +206,14 @@ def test_backtest_run_marks_failed_jobs(monkeypatch, client, app):
     from app.extensions import db
     from app.models import BacktestJob
 
+    token, _ = _login_user(client, phone="13800138022", nickname="LegacyFailure")
+
     def _raise_failure(*args, **kwargs):
         raise RuntimeError('boom')
 
     monkeypatch.setattr('app.tasks.backtests.run_backtest', _raise_failure)
 
-    resp = client.post('/api/backtests/run', json={"symbol": "BTCUSDT"})
+    resp = client.post('/api/backtests/run', headers=_auth_headers(token), json={"symbol": "BTCUSDT"})
     assert resp.status_code == 200
     job_id = resp.json['data']['job_id']
 
@@ -140,12 +227,14 @@ def test_backtest_run_marks_timeout_jobs(monkeypatch, client, app):
     from app.extensions import db
     from app.models import BacktestJob
 
+    token, _ = _login_user(client, phone="13800138023", nickname="LegacyTimeout")
+
     def _raise_timeout(*args, **kwargs):
         raise SoftTimeLimitExceeded()
 
     monkeypatch.setattr('app.tasks.backtests.run_backtest', _raise_timeout)
 
-    resp = client.post('/api/backtests/run', json={"symbol": "BTCUSDT"})
+    resp = client.post('/api/backtests/run', headers=_auth_headers(token), json={"symbol": "BTCUSDT"})
     assert resp.status_code == 200
     job_id = resp.json['data']['job_id']
 
@@ -523,7 +612,7 @@ def test_get_backtest_quota_returns_plan_snapshot(client, app):
 
 def test_worker_deducts_quota_when_job_starts(monkeypatch, app):
     from app.extensions import db
-    from app.models import BacktestJob, Strategy, User, UserQuota
+    from app.models import BacktestJob, BacktestQuotaLedger, Strategy, User, UserQuota
     from app.tasks.backtests import _run_job
 
     with app.app_context():
@@ -555,14 +644,18 @@ def test_worker_deducts_quota_when_job_starts(monkeypatch, app):
         lambda *args, **kwargs: {"summary": {"totalReturn": 1}},
     )
 
-    result = _run_job(job_id)
+    with app.app_context():
+        result = _run_job(job_id)
 
     assert result["summary"]["totalReturn"] == 1
 
     with app.app_context():
         quota = db.session.get(UserQuota, user_id)
+        ledger = db.session.get(BacktestQuotaLedger, job_id)
         job = db.session.get(BacktestJob, job_id)
         assert quota.used_count == 1
+        assert ledger is not None
+        assert ledger.status == "consumed"
         assert job.status == "completed"
 
 
@@ -603,7 +696,8 @@ def test_worker_marks_job_failed_when_quota_is_exhausted(monkeypatch, app):
 
     monkeypatch.setattr("app.tasks.backtests.run_backtest", _fake_run_backtest)
 
-    result = _run_job(job_id)
+    with app.app_context():
+        result = _run_job(job_id)
 
     assert result["status"] == "failed"
     assert called["value"] is False
@@ -617,10 +711,158 @@ def test_worker_marks_job_failed_when_quota_is_exhausted(monkeypatch, app):
         assert job.error_message
 
 
+def test_submit_backtest_reserves_quota_by_job_id(monkeypatch, client, app):
+    from app.extensions import db
+    from app.models import BacktestJob, BacktestQuotaLedger, Strategy, UserQuota
+
+    token, user_id = _login_user(client, phone="13800138028", nickname="ReservedQuotaUser")
+
+    with app.app_context():
+        db.session.add(
+            Strategy(
+                id="reserved-quota-strategy",
+                name="Reserved Quota Strategy",
+                symbol="BTCUSDT",
+                status="draft",
+                owner_id=user_id,
+            )
+        )
+        quota = db.session.get(UserQuota, user_id)
+        quota.plan_level = "free"
+        quota.used_count = 0
+        db.session.commit()
+
+    monkeypatch.setattr("app.blueprints.backtests.run_backtest_task.apply_async", lambda *args, **kwargs: None)
+
+    response = client.post(
+        "/api/v1/backtest/",
+        headers=_auth_headers(token),
+        json={
+            "strategy_id": "reserved-quota-strategy",
+            "symbols": ["BTCUSDT"],
+            "start_date": "2024-01-01",
+            "end_date": "2024-01-31",
+        },
+    )
+
+    assert response.status_code == 200
+    job_id = response.json["data"]["job_id"]
+
+    with app.app_context():
+        quota = db.session.get(UserQuota, user_id)
+        ledger = db.session.get(BacktestQuotaLedger, job_id)
+        job = db.session.get(BacktestJob, job_id)
+        assert quota.used_count == 1
+        assert ledger is not None
+        assert ledger.status == "reserved"
+        assert job.status == "pending"
+
+
+def test_worker_releases_quota_when_report_write_fails(monkeypatch, app):
+    from app.extensions import db
+    from app.models import BacktestJob, BacktestQuotaLedger, Strategy, User, UserQuota
+    from app.tasks.backtests import _run_job
+
+    with app.app_context():
+        user = User(phone="13800138029", nickname="ReleaseQuotaUser")
+        db.session.add(user)
+        db.session.flush()
+        db.session.add(
+            Strategy(
+                id="release-quota-strategy",
+                name="Release Quota Strategy",
+                symbol="BTCUSDT",
+                status="draft",
+                owner_id=user.id,
+            )
+        )
+        db.session.add(UserQuota(user_id=user.id, plan_level="free", used_count=0))
+        job = BacktestJob(
+            user_id=user.id,
+            strategy_id="release-quota-strategy",
+            params={"symbol": "BTCUSDT"},
+        )
+        db.session.add(job)
+        db.session.commit()
+        job_id = job.id
+        user_id = user.id
+
+    monkeypatch.setattr(
+        "app.tasks.backtests.run_backtest",
+        lambda *args, **kwargs: {"summary": {"totalReturn": 1}, "kline": [], "trades": []},
+    )
+    monkeypatch.setattr("app.tasks.backtests.write_json", lambda *args, **kwargs: (_ for _ in ()).throw(RuntimeError("disk full")))
+
+    with app.app_context():
+        result = _run_job(job_id)
+
+    assert result["status"] == "failed"
+
+    with app.app_context():
+        quota = db.session.get(UserQuota, user_id)
+        ledger = db.session.get(BacktestQuotaLedger, job_id)
+        job = db.session.get(BacktestJob, job_id)
+        assert quota.used_count == 0
+        assert ledger is not None
+        assert ledger.status == "released"
+        assert job.status == "failed"
+        assert "disk full" in job.error_message
+
+
+def test_worker_duplicate_execution_does_not_double_charge_quota(monkeypatch, app):
+    from app.extensions import db
+    from app.models import BacktestJob, BacktestQuotaLedger, Strategy, User, UserQuota
+    from app.tasks.backtests import _run_job
+
+    with app.app_context():
+        user = User(phone="13800138030", nickname="DuplicateChargeUser")
+        db.session.add(user)
+        db.session.flush()
+        db.session.add(
+            Strategy(
+                id="duplicate-charge-strategy",
+                name="Duplicate Charge Strategy",
+                symbol="BTCUSDT",
+                status="draft",
+                owner_id=user.id,
+            )
+        )
+        db.session.add(UserQuota(user_id=user.id, plan_level="free", used_count=0))
+        job = BacktestJob(
+            user_id=user.id,
+            strategy_id="duplicate-charge-strategy",
+            params={"symbol": "BTCUSDT"},
+        )
+        db.session.add(job)
+        db.session.commit()
+        job_id = job.id
+        user_id = user.id
+
+    monkeypatch.setattr(
+        "app.tasks.backtests.run_backtest",
+        lambda *args, **kwargs: {"summary": {"totalReturn": 1}, "kline": [], "trades": []},
+    )
+
+    with app.app_context():
+        first = _run_job(job_id)
+        second = _run_job(job_id)
+
+    assert first["summary"]["totalReturn"] == 1
+    assert second["summary"]["totalReturn"] == 1
+
+    with app.app_context():
+        quota = db.session.get(UserQuota, user_id)
+        ledger = db.session.get(BacktestQuotaLedger, job_id)
+        assert quota.used_count == 1
+        assert ledger is not None
+        assert ledger.status == "consumed"
+
+
 def test_failed_job_does_not_block_later_job(monkeypatch, client, app):
     from app.extensions import db
     from app.models import BacktestJob
 
+    token, _ = _login_user(client, phone="13800138024", nickname="LegacyRetry")
     call_count = {'count': 0}
 
     def _flaky(symbol, **kwargs):
@@ -636,8 +878,8 @@ def test_failed_job_does_not_block_later_job(monkeypatch, client, app):
 
     monkeypatch.setattr('app.tasks.backtests.run_backtest', _flaky)
 
-    first = client.post('/api/backtests/run', json={"symbol": "BTCUSDT"})
-    second = client.post('/api/backtests/run', json={"symbol": "ETHUSDT"})
+    first = client.post('/api/backtests/run', headers=_auth_headers(token), json={"symbol": "BTCUSDT"})
+    second = client.post('/api/backtests/run', headers=_auth_headers(token), json={"symbol": "ETHUSDT"})
 
     with app.app_context():
         failed = db.session.get(BacktestJob, first.json['data']['job_id'])
@@ -647,7 +889,9 @@ def test_failed_job_does_not_block_later_job(monkeypatch, client, app):
 
 
 def test_backtest_latest_remains_synchronous_debug_endpoint(client):
-    resp = client.get('/api/backtests/latest?symbol=BTCUSDT&limit=10')
+    token, _ = _login_user(client, phone="13800138025", nickname="LegacyLatest")
+
+    resp = client.get('/api/backtests/latest?symbol=BTCUSDT&limit=10', headers=_auth_headers(token))
 
     assert resp.status_code == 200
     assert resp.json['data']['summary'] is not None
@@ -655,7 +899,8 @@ def test_backtest_latest_remains_synchronous_debug_endpoint(client):
 
 
 def test_backtest_run_executes_strategy_via_sandbox(monkeypatch, client, app, tmp_path):
-    strategy_id, version = _seed_runtime_strategy(app, tmp_path)
+    token, user_id = _login_user(client, phone="13800138026", nickname="SandboxRunner")
+    strategy_id, version = _seed_runtime_strategy(app, tmp_path, owner_id=user_id)
 
     monkeypatch.setattr(
         'app.services.sandbox.execute_strategy',
@@ -669,6 +914,7 @@ def test_backtest_run_executes_strategy_via_sandbox(monkeypatch, client, app, tm
 
     response = client.post(
         '/api/backtests/run',
+        headers=_auth_headers(token),
         json={
             "symbol": "BTCUSDT",
             "strategyId": strategy_id,
@@ -680,7 +926,7 @@ def test_backtest_run_executes_strategy_via_sandbox(monkeypatch, client, app, tm
     assert response.status_code == 200
     job_id = response.json['data']['job_id']
 
-    status = client.get(f'/api/backtests/job/{job_id}')
+    status = client.get(f'/api/backtests/job/{job_id}', headers=_auth_headers(token))
     assert status.status_code == 200
     assert status.json['data']['status'] == 'completed'
     assert status.json['data']['result']['runtime']['logs'] == ['sandbox-ok']
@@ -692,7 +938,8 @@ def test_backtest_run_marks_strategy_timeout_jobs(monkeypatch, client, app, tmp_
     from app.models import BacktestJob
     from app.strategy_runtime.errors import StrategyRuntimeError
 
-    strategy_id, version = _seed_runtime_strategy(app, tmp_path, strategy_id='timeout-strategy')
+    token, user_id = _login_user(client, phone="13800138027", nickname="SandboxTimeout")
+    strategy_id, version = _seed_runtime_strategy(app, tmp_path, strategy_id='timeout-strategy', owner_id=user_id)
 
     def _raise_timeout(*args, **kwargs):
         raise StrategyRuntimeError('strategy_timeout')
@@ -701,6 +948,7 @@ def test_backtest_run_marks_strategy_timeout_jobs(monkeypatch, client, app, tmp_
 
     response = client.post(
         '/api/backtests/run',
+        headers=_auth_headers(token),
         json={
             "symbol": "BTCUSDT",
             "strategyId": strategy_id,
@@ -834,7 +1082,8 @@ def test_worker_generates_report_summary_and_storage_artifacts(monkeypatch, app,
 
     monkeypatch.setattr("app.tasks.backtests.run_backtest", lambda *args, **kwargs: _build_report_fixture())
 
-    _run_job(job_id)
+    with app.app_context():
+        _run_job(job_id)
 
     with app.app_context():
         job = db.session.get(BacktestJob, job_id)
@@ -901,6 +1150,13 @@ def test_get_backtest_report_returns_saved_artifacts_for_owner(client, app, tmp_
     (storage_root / "trades.json").write_text(
         json.dumps(
             [{"symbol": "BTCUSDT", "side": "buy", "price": 100.0, "quantity": 1.0, "timestamp": 1700000000000}],
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
+    (storage_root / "kline.json").write_text(
+        json.dumps(
+            [{"time": 1700000000000, "open": 100.0, "high": 101.0, "low": 99.0, "close": 100.0, "volume": 1000}],
             ensure_ascii=False,
         ),
         encoding="utf-8",
@@ -1044,7 +1300,9 @@ NameError: name 'missing_factor' is not defined
 
     monkeypatch.setattr("app.tasks.backtests.run_backtest", _raise_runtime_error)
 
-    response = client.post("/api/backtests/run", json={"symbol": "BTCUSDT"})
+    token, _ = _login_user(client, phone="13800138028", nickname="LegacyStructuredError")
+
+    response = client.post("/api/backtests/run", headers=_auth_headers(token), json={"symbol": "BTCUSDT"})
     assert response.status_code == 200
     job_id = response.json["data"]["job_id"]
 

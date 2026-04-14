@@ -1,7 +1,8 @@
 import math
 
 from .extensions import db
-from .models import UserQuota
+from .models import BacktestQuotaLedger, UserQuota
+from .utils.time import now_utc
 
 
 PLAN_LIMITS = {
@@ -84,3 +85,69 @@ def consume_quota(user_id):
         )
     )
     return updated == 1
+
+
+def reserve_backtest_quota(user_id, job_id):
+    quota = ensure_user_quota(user_id)
+    ledger = db.session.get(BacktestQuotaLedger, job_id)
+    if ledger is not None:
+        return ledger.status in {'reserved', 'consumed'}
+
+    limit = get_plan_limit(quota.plan_level)
+    if math.isinf(limit):
+        UserQuota.query.filter_by(user_id=user_id).update(
+            {UserQuota.used_count: UserQuota.used_count + 1},
+            synchronize_session=False,
+        )
+        db.session.add(BacktestQuotaLedger(job_id=job_id, user_id=user_id, status='reserved'))
+        db.session.flush()
+        return True
+
+    updated = (
+        UserQuota.query.filter(
+            UserQuota.user_id == user_id,
+            UserQuota.used_count < int(limit),
+        ).update(
+            {UserQuota.used_count: UserQuota.used_count + 1},
+            synchronize_session=False,
+        )
+    )
+    if updated != 1:
+        return False
+
+    db.session.add(BacktestQuotaLedger(job_id=job_id, user_id=user_id, status='reserved'))
+    db.session.flush()
+    return True
+
+
+def consume_backtest_quota(job_id):
+    ledger = db.session.get(BacktestQuotaLedger, job_id)
+    if ledger is None:
+        return False
+    if ledger.status == 'consumed':
+        return True
+    if ledger.status != 'reserved':
+        return False
+    ledger.status = 'consumed'
+    ledger.finalized_at = now_utc()
+    db.session.flush()
+    return True
+
+
+def release_backtest_quota(job_id):
+    ledger = db.session.get(BacktestQuotaLedger, job_id)
+    if ledger is None:
+        return False
+    if ledger.status == 'released':
+        return True
+    if ledger.status != 'reserved':
+        return False
+
+    quota = db.session.get(UserQuota, ledger.user_id)
+    if quota is not None and quota.used_count > 0:
+        quota.used_count -= 1
+
+    ledger.status = 'released'
+    ledger.finalized_at = now_utc()
+    db.session.flush()
+    return True
