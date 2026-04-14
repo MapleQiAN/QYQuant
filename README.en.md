@@ -3,16 +3,18 @@
 
   <h1>QYQuant</h1>
 
-  <p><strong>An integrated quant trading workspace for strategy packaging, runtime validation, market data access, and asynchronous backtesting</strong></p>
+  <p><strong>A quant platform workspace for strategy packaging, market data access, asynchronous backtesting, and productized operations</strong></p>
 
   <p>
     <a href="./README.md">中文</a>
     ·
-    <a href="#quick-start">Quick Start</a>
+    <a href="#executive-summary">Executive Summary</a>
     ·
-    <a href="#core-capabilities">Highlights</a>
+    <a href="#capability-matrix">Capability Matrix</a>
     ·
     <a href="#system-architecture">Architecture</a>
+    ·
+    <a href="#deployment-models">Deployment</a>
   </p>
 
   <p>
@@ -27,98 +29,116 @@
   </p>
 </div>
 
-> QYQuant currently behaves more like the kernel of a growing quant platform: the strategy workspace, backtest pipeline, market data flows, and product shell are already in place, while managed execution and richer strategy marketplace features are still evolving.
+## Executive Summary
 
-## Overview
+QYQuant is a full-stack quant platform workspace. Its goal is not to provide only a backtest page or a strategy uploader, but to establish a productizable operating model for quant teams:
 
-QYQuant is a full-stack workspace for quant strategy development and operations. The repository focuses on 4 practical goals:
+- turn strategies into standardized, packageable, validatable assets
+- support both fast synchronous backtests and queued asynchronous jobs
+- abstract market data behind switchable providers and cache-aware routing
+- expose the platform through a product shell that includes strategy library, marketplace, pricing, forum, bots, and admin surfaces
 
-- standardize how strategies are packaged, imported, validated, and reused
-- support both synchronous and queued backtesting workflows
-- keep market data access extensible across multiple providers and cache flows
-- provide a product-ready shell with dashboard, backtests, bots, forum, and settings pages
+In practical terms, the repository already contains a meaningful platform core plus a product shell. It is suitable as the foundation for an internal quant platform, a strategy operations console, or an early-stage quant SaaS product.
 
-## Core Capabilities
+## Target Use Cases
 
-| Area | What exists today | Notes |
+QYQuant is currently best aligned with:
+
+- quant research teams that need a standardized strategy packaging and execution flow
+- product teams turning research workflows into a customer-facing console
+- platform teams that need async execution, governance, review, and quota control
+- integration teams that need a unified connector layer for data providers and accounts
+
+Its value is strongest when the goal is to unify research, operations, marketplace, and admin capabilities in a single platform rather than to optimize a single script workflow.
+
+## Capability Matrix
+
+| Domain | What exists today | Platform value |
 | --- | --- | --- |
-| Strategy workflow | Create strategies and import `.qys` / `.zip` packages | Imports validate `QYStrategy` manifests, entrypoints, and integrity declarations |
-| Runtime validation | Preflight checks, parameter descriptors, runtime metadata | Designed to support future managed execution flows |
-| Backtesting | `latest` synchronous backtests plus Celery job-based async backtests | Works for both dashboard previews and queued jobs |
-| Market data | `auto` / Binance / FreeGold / JoinQuant-backed cache flow | Keeps room for multiple asset classes and provider strategies |
-| Product console | Dashboard, Backtests, Bots, Forum, Settings | Provides a real multi-page product shell rather than isolated demos |
-| Authentication | SMS-code login, JWT access token, refresh token | Development mode supports a fixed verification code |
-| Internationalization | Chinese and English UI support | The Chinese project homepage lives in [README.md](./README.md) |
+| Strategy protocol | `.qys` / `.zip` import, manifest validation, entrypoint detection, integrity checks | Converts strategies from loose code into governed assets |
+| Strategy workflow | Strategy creation, parameter handling, presets, runtime metadata | Lowers reuse and onboarding cost for strategy delivery |
+| Backtesting | `latest` sync backtests, Celery async jobs, report export | Supports both fast debugging and production-style queued execution |
+| Market data | `auto`, `sinagold`, `binance`, `freegold`, `joinquant`, `akshare` | Allows routing across providers, markets, and network environments |
+| Marketplace | Listing, detail, import, publish request, reporting | Creates the base loop for strategy distribution and moderation |
+| Monetization | Pricing, checkout, payment orders, subscription state, quota management | Supports product packaging and service-tier monetization |
+| Integrations | Provider catalog, account connection, credential validation, account and positions lookup | Establishes a unified integration surface for brokers and providers |
+| Governance | Admin console, data-source health, queue monitoring, strategy review, report handling, user bans, audit logs | Gives operators the controls expected from a platform |
+| Authentication | SMS-code login, email registration/login, password reset, JWT access and refresh flows | Provides the baseline access-control layer for product access |
+| Internationalization | Chinese and English UI plus bilingual README | Supports multi-language collaboration and presentation |
 
-## Product Direction
+## Current State
 
-QYQuant is not intended to stay a single-purpose tool. The broader direction is a quant platform with 3 layers:
+QYQuant is beyond a demo, but it should still be treated as a platform core moving toward production, not as a fully signed-off enterprise product.
 
-| Layer | Goal | Current status |
-| --- | --- | --- |
-| Tooling | Strategy packaging, development, backtesting, metrics | Foundation exists now |
-| Platform | Bot execution, quota system, account and runtime management | Partially implemented |
-| Community | Strategy sharing, forum interactions, strategy distribution | Forum scaffold exists, marketplace ideas remain ahead |
-
-That is why this README separates what is already implemented from what the product is clearly aiming toward.
+| Dimension | Assessment |
+| --- | --- |
+| Product completeness | Multi-page product shell and core business flows already exist |
+| Platform depth | Data, jobs, moderation, quota, subscription, and notification primitives are present |
+| Extensibility | High; module boundaries and workspace layout are suitable for team customization |
+| Direct production readiness | Requires production hardening before real enterprise rollout |
 
 ## System Architecture
 
-The diagram below reflects the flows that already exist in this repository today: a Vue 3 workspace talks to the Flask API for auth, strategy library, backtests, bots, and forum features; strategy packages are validated by `qysp` before entering storage; and backtests can run either synchronously for fast debugging or asynchronously through Celery + Redis, with market data routed to Binance, FreeGold, or the JoinQuant-backed cache path.
+QYQuant uses a decoupled frontend, API, and async execution model. The Vue 3 frontend acts as the unified workspace, Flask exposes application APIs, Celery + Redis runs queued backtests, `qysp` standardizes strategy packaging, and provider routing abstracts market data sources.
 
 ```mermaid
 flowchart LR
-    user["User / Browser"]
-    cli["qys CLI / .qys Package"]
+    user["User / Operator / Admin"]
+    cli["qys CLI / Strategy Package"]
 
-    subgraph frontend["Frontend · Vue 3"]
-        web["Dashboard / Strategies / Backtests / Bots / Forum / Settings"]
-        client["Router + Stores + API Client"]
+    subgraph experience["Experience Layer · Vue 3"]
+        web["Dashboard / Learn / Strategies / Marketplace / Backtests / Bots / Forum / Pricing / Settings / Admin"]
+        client["Router / Stores / API Client"]
     end
 
-    subgraph backend["Backend · Flask API"]
+    subgraph api["Application Layer · Flask"]
         auth["Auth / Users"]
-        strategies["Strategies Import / Runtime Metadata"]
-        backtests["Backtests API"]
-        community["Bots / Forum / Files"]
+        strategy["Strategies / Runtime Metadata / Presets"]
+        market["Marketplace / Payments / Integrations"]
+        execution["Backtests / Simulation / Bots"]
+        governance["Admin / Forum / Files / Notifications"]
     end
 
     subgraph runtime["Execution Layer"]
-        validator["qysp Validator<br/>schema + integrity"]
+        validator["qysp Validator"]
         engine["Backtest Engine"]
-        strategyRuntime["Strategy Runtime<br/>preflight + execute"]
-        worker["Celery Worker<br/>backtest queue"]
-        market["Provider Router / MarketDataService"]
+        runtimeSvc["Strategy Runtime"]
+        worker["Celery Worker"]
+        providerRouter["Provider Router / MarketDataService"]
         report["Metrics / Report Builder"]
     end
 
-    subgraph infra["Data & Infrastructure"]
+    subgraph data["Data Layer"]
         pg[("PostgreSQL")]
         redis[("Redis")]
-        storage[("Local Storage<br/>strategies / backtest artifacts")]
-        binance["Binance API"]
-        freegold["FreeGold API"]
-        joinquant["JoinQuant API"]
+        storage[("Local Storage")]
+        sinagold["SinaGold"]
+        binance["Binance"]
+        freegold["FreeGold"]
+        joinquant["JoinQuant"]
+        akshare["AkShare"]
     end
 
     user --> web --> client
     client --> auth
-    client --> strategies
-    client --> backtests
-    client --> community
+    client --> strategy
+    client --> market
+    client --> execution
+    client --> governance
 
     cli --> validator
-    strategies --> validator
-    strategies --> storage
-    strategies --> pg
+    strategy --> validator
+    strategy --> storage
+    strategy --> pg
 
     auth --> pg
     auth --> redis
-    community --> pg
+    market --> pg
+    governance --> pg
 
-    backtests -->|"GET /api/backtests/latest"| engine
-    backtests -->|"POST /api/v1/backtest"| worker
-    backtests --> pg
+    execution -->|"sync latest"| engine
+    execution -->|"async job"| worker
+    execution --> pg
 
     worker <--> redis
     worker --> engine
@@ -126,61 +146,49 @@ flowchart LR
     worker --> storage
     worker --> pg
 
-    engine --> strategyRuntime
-    engine --> market
-    strategyRuntime <--> storage
-    strategyRuntime <--> pg
+    engine --> runtimeSvc
+    engine --> providerRouter
+    runtimeSvc <--> storage
+    runtimeSvc <--> pg
 
-    market --> binance
-    market --> freegold
-    market --> joinquant
-    market <--> pg
+    providerRouter --> sinagold
+    providerRouter --> binance
+    providerRouter --> freegold
+    providerRouter --> joinquant
+    providerRouter --> akshare
+    providerRouter <--> pg
 ```
 
-## Quick Start
+## Workspace Map
 
-You can run QYQuant in two ways:
+| Area | Main paths | Purpose |
+| --- | --- | --- |
+| Frontend | `frontend/src/views`, `frontend/src/router`, `frontend/src/stores` | Product workspace, navigation, state, and API client layer |
+| Backend API | `backend/app/blueprints` | Business entrypoints for auth, strategies, marketplace, backtests, payments, integrations, admin, and community features |
+| Execution and runtime | `backend/app/backtest`, `backend/app/tasks`, `backend/app/strategy_runtime` | Backtest engine, async jobs, strategy runtime |
+| Data access | `backend/app/marketdata`, `backend/app/providers`, `backend/app/services` | Data-provider wrappers and service abstractions |
+| Platform core | `backend/app/models.py`, `backend/app/quota.py`, `backend/app/extensions.py` | Data model, quotas, and infrastructure bootstrap |
+| Strategy protocol | `packages/qysp` | `qys` CLI, templates, packaging, migration, validation |
+| Docs and specs | `docs`, `openspec` | Documentation, examples, and evolving specifications |
 
-- Docker one-click deployment: build the full stack with frontend, backend, PostgreSQL, Redis, and Celery.
-- Developer deployment: run PostgreSQL and Redis locally, then start backend, worker, and frontend separately for iterative development.
+## Deployment Models
 
-### Option A: Docker one-click deployment
+QYQuant supports two practical deployment modes:
+
+- integrated container deployment for demos, testing, and quick environment setup
+- developer mode deployment for local iteration and modular team workflows
+
+### Option A: Integrated Docker deployment
 
 Requirements:
 
 - Docker Engine / Docker Desktop
 - Docker Compose v2
 
-1. Clone the repository.
-
 ```bash
 git clone https://github.com/MapleQiAN/QYQuant.git
 cd QYQuant
-```
-
-2. Create a deployment env file.
-
-```bash
 cp .env.example .env
-```
-
-Review these values before exposing the stack outside your machine:
-
-```env
-POSTGRES_PASSWORD=qyquant_password
-REDIS_PASSWORD=redis_password
-SECRET_KEY=change-this-secret-key-in-production
-JWT_SECRET=change-this-jwt-secret-in-production
-FERNET_KEY=change-this-fernet-key-in-production
-FRONTEND_PORT=58888
-BACKEND_PORT=59999
-CORS_ORIGINS=http://localhost:58888
-AUTH_FIXED_SMS_CODE=123456
-```
-
-3. Build and start the full stack.
-
-```bash
 docker compose up -d --build
 ```
 
@@ -200,7 +208,7 @@ Default endpoints:
 - API: [http://127.0.0.1:59999](http://127.0.0.1:59999)
 - Swagger UI: [http://127.0.0.1:59999/api/docs](http://127.0.0.1:59999/api/docs)
 
-Useful operations:
+Useful commands:
 
 ```bash
 docker compose ps
@@ -210,7 +218,7 @@ docker compose logs -f celery-worker
 docker compose down
 ```
 
-### Option B: Developer deployment
+### Option B: Developer mode deployment
 
 Requirements:
 
@@ -222,96 +230,28 @@ Requirements:
 | Redis | 7+ |
 | uv | 0.4+ |
 
-1. Clone the repository.
-
 ```bash
 git clone https://github.com/MapleQiAN/QYQuant.git
 cd QYQuant
-```
-
-2. Create a development env file.
-
-```bash
 cp .env.example .env.development
-```
-
-The defaults in `.env.example` already match the root Compose dependency stack:
-
-```env
-DATABASE_URL=postgresql://qyquant:qyquant_password@localhost:5432/qyquant
-REDIS_URL=redis://:redis_password@localhost:6379/0
-CELERY_BROKER_URL=redis://:redis_password@localhost:6379/1
-CELERY_RESULT_BACKEND=redis://:redis_password@localhost:6379/1
-SECRET_KEY=change-this-secret-key-in-production
-JWT_SECRET=change-this-jwt-secret-in-production
-FERNET_KEY=change-this-fernet-key-in-production
-CORS_ORIGINS=http://localhost:58888
-AUTH_FIXED_SMS_CODE=123456
-```
-
-If you want JoinQuant-backed data, also set:
-
-```env
-JQDATA_USERNAME=your-account
-JQDATA_PASSWORD=your-password
-```
-
-3. Prepare PostgreSQL and Redis.
-
-Choose either approach:
-
-- Native local services: run PostgreSQL 15+ and Redis 7+ directly on your machine and make sure they match the connection strings in `.env.development`.
-- Docker dependencies only: if you do not want to install them locally, start just the database and cache services:
-
-```bash
-docker compose up -d postgres redis
-```
-
-If you use native local services, at minimum these connections must work:
-
-```env
-DATABASE_URL=postgresql://qyquant:qyquant_password@localhost:5432/qyquant
-REDIS_URL=redis://:redis_password@localhost:6379/0
-CELERY_BROKER_URL=redis://:redis_password@localhost:6379/1
-CELERY_RESULT_BACKEND=redis://:redis_password@localhost:6379/1
-```
-
-4. Install Python dependencies.
-
-```bash
 uv sync --dev
-```
-
-5. Initialize the database.
-
-```bash
 uv run --package qyquant-backend flask --app app db upgrade
-```
-
-6. Start the backend.
-
-```bash
 uv run --package qyquant-backend flask --app app run --debug --port 59999
 ```
 
-After that:
-
-- API: [http://127.0.0.1:59999](http://127.0.0.1:59999)
-- Swagger UI: [http://127.0.0.1:59999/api/docs](http://127.0.0.1:59999/api/docs)
-
-7. Start the Celery worker.
+Run the worker in another terminal:
 
 ```bash
 uv run --package qyquant-backend celery -A app.celery_app worker --loglevel=info
 ```
 
-If you also need scheduled jobs:
+If scheduled jobs are needed:
 
 ```bash
 uv run --package qyquant-backend celery -A app.celery_app beat --loglevel=info
 ```
 
-8. Start the frontend.
+Start the frontend:
 
 ```bash
 cd frontend
@@ -319,25 +259,38 @@ npm install
 npm run dev
 ```
 
-Default address:
+If you only want infra dependencies through Docker:
 
-- Web: [http://127.0.0.1:58888](http://127.0.0.1:58888)
+```bash
+docker compose up -d postgres redis
+```
 
-> The Vite dev server proxies `/api` to `http://127.0.0.1:59999`.
+## Operations and Configuration
 
-## Developer Notes
+See [.env.example](./.env.example) for the full configuration surface. The most important groups are:
 
-### Authentication flow
+| Category | Key variables |
+| --- | --- |
+| App security | `SECRET_KEY`, `JWT_SECRET`, `FERNET_KEY`, `CORS_ORIGINS` |
+| Database and cache | `DATABASE_URL`, `REDIS_URL`, `CELERY_BROKER_URL`, `CELERY_RESULT_BACKEND` |
+| Backtests and data | `BACKTEST_DATA_PROVIDER`, `BACKTEST_INTERVAL`, `SINA_GOLD_*`, `BINANCE_*`, `FREEGOLD_*`, `JQDATA_*` |
+| Async execution | `CELERYD_CONCURRENCY`, `CELERY_TASK_SOFT_TIME_LIMIT`, `CELERY_TASK_TIME_LIMIT` |
+| Auth controls | `AUTH_FIXED_SMS_CODE`, `AUTH_SMS_CODE_TTL`, `AUTH_SMS_THROTTLE_SECONDS`, `AUTH_SMS_MAX_FAILURES`, `AUTH_SMS_LOCK_SECONDS` |
+| Monetization | `PAYMENT_SANDBOX` |
 
-This repository no longer uses the old default admin account described by earlier versions of the README. The current login flow is:
+## Market Data and Backtest Providers
 
-1. `POST /api/v1/auth/send-code`
-2. `POST /api/v1/auth/login`
-3. Use the returned `access_token` in the frontend
+| Provider | Best for | Default interval | Notes |
+| --- | --- | --- | --- |
+| `auto` | Default mode | gold `1d` / others `1m` | Gold-like symbols route to `sinagold`, others to `binance` |
+| `sinagold` | Gold market data | `1d` | Better aligned with China-based network environments |
+| `binance` | Crypto assets | `1m` | Supports cached klines and latest-price lookups |
+| `freegold` | Gold market data | `1d` | Only supports gold-related symbols |
+| `joinquant` | China-market daily research | `1d` | Requires JoinQuant credentials |
+| `akshare` | China-localized market data | `1d` | Supports daily, weekly, and monthly history |
+| `mock` | Test mode | `1m` | Intended for test suites and fake-data flows |
 
-When `AUTH_FIXED_SMS_CODE` is configured, local integration becomes much easier.
-
-### Key API routes
+## Platform API Surface
 
 | Module | Key routes |
 | --- | --- |
@@ -346,54 +299,37 @@ When `AUTH_FIXED_SMS_CODE` is configured, local integration becomes much easier.
 | Users | `GET /api/v1/users/me`, `PATCH /api/v1/users/me`, `DELETE /api/v1/users/me` |
 | Strategies | `POST /api/strategies`, `POST /api/strategies/import`, `GET /api/strategies/recent`, `GET /api/strategies/<strategy_id>/runtime` |
 | Backtests | `POST /api/backtests/run`, `GET /api/backtests/job/<job_id>`, `GET /api/backtests/latest`, `GET /api/v1/backtest/quota`, `GET /api/v1/backtest/<job_id>`, `POST /api/v1/backtest/` |
+| Marketplace | `GET /api/v1/marketplace/strategies`, `GET /api/v1/marketplace/strategies/<strategy_id>`, `POST /api/v1/marketplace/strategies`, `POST /api/v1/marketplace/strategies/<strategy_id>/import` |
+| Payments | `GET /api/v1/payments/me/subscription`, `GET /api/v1/payments/me/orders`, `POST /api/v1/payments/orders` |
+| Integrations | `GET /api/v1/integrations/providers`, `GET /api/v1/integrations`, `POST /api/v1/integrations`, `POST /api/v1/integrations/<integration_id>/validate` |
 | Bots | `GET /api/bots/recent`, `POST /api/bots`, `PATCH /api/bots/<bot_id>/status`, `GET /api/bots/<bot_id>/performance` |
 | Forum | `GET /api/forum/hot`, `POST /api/forum/posts` |
+| Admin | `/api/v1/admin/*` for review, moderation, queue monitoring, data-source health, user management, and audit access |
 
-### Strategy package format
+Swagger UI:
 
-When importing a strategy package, the backend validates:
+- [http://127.0.0.1:59999/api/docs](http://127.0.0.1:59999/api/docs)
 
-- `strategy.json` must exist
-- `schemaVersion` must be `1.0`
-- `kind` must be `QYStrategy`
-- `runtime.name` and `runtime.version` must exist
-- `entrypoint.path` and `entrypoint.callable` must exist
-- if `integrity.files` is declared, file size and hash values are verified
+## `qys` CLI
 
-The repository also ships `packages/qysp`, which exposes the `qys` CLI after installation.
+`packages/qysp` provides the strategy protocol CLI for initializing, validating, packaging, and migrating strategy assets.
 
-## Project Structure
+Common commands:
 
-```text
-QYQuant/
-|- frontend/               # Vue 3 frontend
-|- backend/                # Flask API, backtests, tasks, runtime
-|- packages/qysp/          # Strategy package tooling and CLI
-|- docs/                   # Project docs
-|- .gitnexus/              # GitNexus index metadata
-|- .env.example            # Environment template
-|- docker-compose.yml      # Containerized dependencies and deployment orchestration
+- `qys init <name> --template trend-following|mean-reversion|momentum|multi-indicator`
+- `qys validate <path>`
+- `qys build <source_dir> -o <output.qys>`
+- `qys migrate <path>`
+- `qys import <path>`
+- `qys backtest <path>` as a reserved stub
+
+Help:
+
+```bash
+uv run qys --help
 ```
 
-## Roadmap
-
-### Already in the repository
-
-- [x] Strategy creation and package import
-- [x] Backtest job pipeline
-- [x] Multi-page product console
-- [x] Basic bot and forum APIs
-- [x] Bilingual frontend and generated API docs
-
-### Worth building next
-
-- [ ] richer managed execution and account binding flows
-- [ ] more complete backtest result views and metrics
-- [ ] stronger strategy sharing and marketplace experiences
-- [ ] clearer quota, subscription, and monetization model
-- [ ] better real-time data and push flows
-
-## Testing
+## Quality and Testing
 
 Backend:
 
@@ -408,16 +344,57 @@ cd frontend
 npm test
 ```
 
-## Contributing
-
-Issues and pull requests are welcome. Before opening a larger change, it helps to document the intended scope and direction first.
-
-Suggested pre-submit checks:
+Recommended pre-submit checks:
 
 ```bash
 uv run pytest backend/tests -q
 cd frontend && npm test
 ```
+
+## Production Rollout Notes
+
+If QYQuant is being prepared as an enterprise delivery target, the following should be treated as rollout prerequisites rather than optional polish:
+
+1. Disable the fixed development SMS code.
+   Remove `AUTH_FIXED_SMS_CODE` from production and connect a real verification or enterprise auth channel.
+2. Replace sandbox payments.
+   `PAYMENT_SANDBOX` is currently biased toward integration/testing workflows and is not a production payment path.
+3. Close the temporary frontend admin bypass.
+   The frontend router still contains a temporary `/admin` test bypass and it should be removed before production launch.
+4. Harden secrets and origin controls.
+   Use real secret management for `SECRET_KEY`, `JWT_SECRET`, and `FERNET_KEY`, and restrict `CORS_ORIGINS`.
+5. Establish formal storage and observability operations.
+   PostgreSQL, Redis, strategy storage, task logs, alerts, and backup workflows should all be productionized.
+
+This section belongs in the README because an enterprise-grade README should define operational truth, not just polished positioning.
+
+## Project Structure
+
+```text
+QYQuant/
+|- frontend/               # Vue 3 workspace frontend
+|- backend/                # Flask API, jobs, backtests, runtime, admin features
+|- packages/qysp/          # Strategy protocol, templates, and CLI
+|- docs/                   # Documentation and format guides
+|- openspec/               # Change proposals and specifications
+|- .gitnexus/              # GitNexus index metadata
+|- .env.example            # Environment template
+|- docker-compose.yml      # Integrated deployment orchestration
+```
+
+## Roadmap
+
+The next high-value investment areas are:
+
+- managed strategy execution and account binding
+- richer backtest analytics and comparison workflows
+- stronger strategy marketplace distribution and moderation features
+- clearer quota, subscription, and monetization models
+- production-grade security and observability hardening
+
+## Contributing
+
+Issues and pull requests are welcome. For larger product, architecture, or business changes, document intent and scope before implementation.
 
 ## License
 
