@@ -9,9 +9,17 @@ from .errors import StrategyRuntimeError
 from .manifest import normalize_zip_path, validate_manifest
 
 
-def _resolve_runtime_strategy(strategy_id):
+def _can_access_strategy(strategy, user_id):
+    if user_id is not None and strategy.owner_id == user_id:
+        return True
+    return bool(strategy.is_public and strategy.review_status == 'approved')
+
+
+def _resolve_runtime_strategy(strategy_id, user_id=None):
     strategy = db.session.get(Strategy, strategy_id)
     if strategy is None:
+        raise StrategyRuntimeError('strategy_not_found')
+    if not _can_access_strategy(strategy, user_id):
         raise StrategyRuntimeError('strategy_not_found')
 
     source_strategy = strategy
@@ -33,11 +41,11 @@ def _find_strategy_version(strategy, source_strategy, version):
     return strategy_version
 
 
-def load_strategy_package(strategy_id, version):
+def load_strategy_package(strategy_id, version, user_id=None):
     if not strategy_id:
         raise StrategyRuntimeError('strategy_id_required')
 
-    strategy, source_strategy = _resolve_runtime_strategy(strategy_id)
+    strategy, source_strategy = _resolve_runtime_strategy(strategy_id, user_id=user_id)
     strategy_version = _find_strategy_version(strategy, source_strategy, version)
     file_record = db.session.get(File, strategy_version.file_id)
     if not file_record:

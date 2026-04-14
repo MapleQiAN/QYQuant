@@ -52,10 +52,17 @@ def active_bot(app):
 def test_run_daily_simulation_creates_record_and_positions(monkeypatch, app, active_bot):
     from app.tasks.simulation_tasks import run_daily_simulation
 
+    seen = {}
     monkeypatch.setattr("app.tasks.simulation_tasks.date", _FixedDate)
     monkeypatch.setattr(
         "app.tasks.simulation_tasks.load_strategy_package",
-        lambda strategy_id, version=None: {
+        lambda strategy_id, version=None, user_id=None: seen.update(
+            {
+                "strategy_id": strategy_id,
+                "user_id": user_id,
+            }
+        )
+        or {
             "strategy_id": strategy_id,
             "manifest": {"symbol": "000001.XSHG"},
         },
@@ -77,6 +84,8 @@ def test_run_daily_simulation_creates_record_and_positions(monkeypatch, app, act
     assert result == {"processed": 1}
 
     with app.app_context():
+        bot = db.session.get(SimulationBot, active_bot)
+        assert seen == {"strategy_id": "sim-strategy", "user_id": bot.user_id}
         record = SimulationRecord.query.filter_by(bot_id=active_bot).one()
         assert record.trade_date == date(2026, 3, 23)
         assert record.equity == Decimal("102000")
@@ -195,7 +204,7 @@ def test_run_daily_simulation_upserts_same_trade_date(monkeypatch, app, active_b
     monkeypatch.setattr("app.tasks.simulation_tasks.date", _FixedDate)
     monkeypatch.setattr(
         "app.tasks.simulation_tasks.load_strategy_package",
-        lambda strategy_id, version=None: {
+        lambda strategy_id, version=None, user_id=None: {
             "strategy_id": strategy_id,
             "manifest": {"symbol": "000001.XSHG"},
         },
@@ -228,7 +237,7 @@ def test_run_daily_simulation_persists_trades(monkeypatch, app, active_bot):
     monkeypatch.setattr("app.tasks.simulation_tasks.date", _FixedDate)
     monkeypatch.setattr(
         "app.tasks.simulation_tasks.load_strategy_package",
-        lambda strategy_id, version=None: {
+        lambda strategy_id, version=None, user_id=None: {
             "strategy_id": strategy_id,
             "manifest": {"symbol": "000001.XSHG"},
         },

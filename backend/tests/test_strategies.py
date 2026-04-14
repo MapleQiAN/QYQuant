@@ -13,7 +13,7 @@ from app.utils.time import now_utc
 from qysp.validator import validate_integrity
 
 
-def _seed_runtime_strategy(app, tmp_path, *, owner_id=None, parameters=None):
+def _seed_runtime_strategy(app, tmp_path, *, owner_id=None, parameters=None, is_public=False, review_status='draft'):
     strategy_id = str(uuid.uuid4())
     version = '1.2.3'
     package_path = tmp_path / 'runtime-test.qys'
@@ -48,6 +48,8 @@ class Strategy:
             symbol='BTCUSDT',
             status='draft',
             owner_id=owner_id,
+            is_public=is_public,
+            review_status=review_status,
             returns=0,
             win_rate=0,
             max_drawdown=0,
@@ -271,8 +273,12 @@ def test_strategy_persists_original_and_built_package_file_links(app):
 
 
 def test_runtime_descriptor_returns_parameters(client, app, tmp_path):
-    strategy_id, version = _seed_runtime_strategy(app, tmp_path)
-    resp = client.get(f'/api/strategies/{strategy_id}/runtime?version={version}')
+    token, user_id = _login_user(client, phone="13800138024", nickname="RuntimeDescriptorOwner")
+    strategy_id, version = _seed_runtime_strategy(app, tmp_path, owner_id=user_id)
+    resp = client.get(
+        f'/api/strategies/{strategy_id}/runtime?version={version}',
+        headers=_auth_headers(token),
+    )
 
     assert resp.status_code == 200
     data = resp.json['data']
@@ -280,6 +286,35 @@ def test_runtime_descriptor_returns_parameters(client, app, tmp_path):
     assert data['strategyVersion'] == version
     assert data['interface'] == 'event_v1'
     assert len(data['parameters']) == 2
+
+
+def test_runtime_descriptor_hides_private_strategy_from_unauthenticated_calls(client, app, tmp_path):
+    token, user_id = _login_user(client, phone="13800138025", nickname="RuntimePrivateOwner")
+    strategy_id, version = _seed_runtime_strategy(app, tmp_path, owner_id=user_id)
+
+    authed = client.get(
+        f'/api/strategies/{strategy_id}/runtime?version={version}',
+        headers=_auth_headers(token),
+    )
+    anonymous = client.get(f'/api/strategies/{strategy_id}/runtime?version={version}')
+
+    assert authed.status_code == 200
+    assert anonymous.status_code == 404
+    assert anonymous.json["error"]["code"] == "STRATEGY_NOT_FOUND"
+
+
+def test_runtime_descriptor_allows_public_strategy_without_auth(client, app, tmp_path):
+    strategy_id, version = _seed_runtime_strategy(
+        app,
+        tmp_path,
+        is_public=True,
+        review_status="approved",
+    )
+
+    response = client.get(f'/api/strategies/{strategy_id}/runtime?version={version}')
+
+    assert response.status_code == 200
+    assert response.json["data"]["strategyVersion"] == version
 
 
 def test_analyze_strategy_import_for_python_file_persists_draft(client, app):

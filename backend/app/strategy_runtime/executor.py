@@ -4,8 +4,8 @@ from .params import validate_and_merge_params
 from .sandbox import guard_strategy_source
 
 
-def preflight_strategy(strategy_id, strategy_version, strategy_params):
-    loaded = load_strategy_package(strategy_id, strategy_version)
+def preflight_strategy(strategy_id, strategy_version, strategy_params, user_id=None):
+    loaded = load_strategy_package(strategy_id, strategy_version, user_id=user_id)
     params = validate_and_merge_params((loaded.get('manifest') or {}).get('parameters'), strategy_params)
     guard_strategy_source(loaded.get('source') or '')
     return loaded, params

@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 
 
 def _execute_single_bot(bot):
-    loaded = load_strategy_package(bot.strategy_id, version=None)
+    loaded = load_strategy_package(bot.strategy_id, version=None, user_id=bot.user_id)
     latest_record = (
         SimulationRecord.query
         .filter_by(bot_id=bot.id)

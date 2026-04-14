@@ -86,23 +86,18 @@ def recent():
 
 
 @bp.get("/strategies/<strategy_id>/runtime")
+@jwt_required(optional=True)
 def runtime_descriptor(strategy_id):
     requested_version = request.args.get("version")
-    strategy = db.session.get(Strategy, strategy_id)
-    if strategy is None:
-        return error_response("STRATEGY_NOT_FOUND", "Strategy not found", 404)
-    runtime_strategy_id = strategy.source_strategy_id or strategy.id
-
-    query = StrategyVersion.query.filter_by(strategy_id=runtime_strategy_id)
-    if requested_version:
-        query = query.filter_by(version=requested_version)
-    strategy_version = query.order_by(StrategyVersion.created_at.desc()).first()
-    if not strategy_version:
-        return {"code": 40000, "message": "strategy_version_not_found", "details": None}, 400
+    user_id = get_jwt_identity()
 
     try:
-        loaded = load_strategy_package(strategy_id, strategy_version.version)
+        loaded = load_strategy_package(strategy_id, requested_version, user_id=user_id)
     except StrategyRuntimeError as exc:
+        if exc.message == "strategy_not_found":
+            return error_response("STRATEGY_NOT_FOUND", "Strategy not found", 404)
+        if exc.message == "strategy_version_not_found":
+            return error_response("STRATEGY_VERSION_NOT_FOUND", "Strategy version not found", 404)
         return {"code": 40000, "message": exc.message, "details": exc.details}, 400
 
     manifest = loaded.get("manifest") or {}
@@ -110,7 +105,7 @@ def runtime_descriptor(strategy_id):
     return ok(
         {
             "strategyId": strategy_id,
-            "strategyVersion": strategy_version.version,
+            "strategyVersion": loaded.get("version"),
             "name": manifest.get("name"),
             "interface": entrypoint.get("interface") or "event_v1",
             "parameters": manifest.get("parameters") or [],
@@ -136,7 +131,7 @@ def get_strategy_parameters(strategy_id):
         return error_response("STRATEGY_VERSION_NOT_FOUND", "Strategy version not found", 404)
 
     try:
-        loaded = load_strategy_package(strategy_id, strategy_version.version)
+        loaded = load_strategy_package(strategy_id, strategy_version.version, user_id=user_id)
     except StrategyRuntimeError as exc:
         return error_response("STRATEGY_PARAMETERS_UNAVAILABLE", exc.message, 422, details=exc.details)
 
