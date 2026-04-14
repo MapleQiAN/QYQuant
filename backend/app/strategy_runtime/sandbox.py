@@ -4,7 +4,7 @@ import multiprocessing
 import traceback
 
 from .errors import StrategyRuntimeError
-from .events import StrategyContext
+from .events import StrategyContext, make_bar, normalize_order, resolve_fill_price
 
 FORBIDDEN_IMPORTS = {
     'os',
@@ -72,10 +72,14 @@ def _build_safe_builtins():
         'all',
         'any',
         'bool',
+        'callable',
         'dict',
         'enumerate',
         'float',
+        'getattr',
+        'hasattr',
         'int',
+        'isinstance',
         'len',
         'list',
         'max',
@@ -85,6 +89,7 @@ def _build_safe_builtins():
         'range',
         'round',
         'set',
+        'setattr',
         'str',
         'sum',
         'tuple',
@@ -125,6 +130,19 @@ def _worker(payload, queue):
     queue.put(_execute_payload(payload))
 
 
+def _collect_orders(ctx, returned_orders):
+    normalized_orders = []
+
+    if isinstance(returned_orders, (list, tuple)):
+        for item in returned_orders:
+            normalized = normalize_order(item, default_symbol=ctx.symbol)
+            if normalized is not None:
+                normalized_orders.append(normalized)
+
+    normalized_orders.extend(ctx.consume_orders())
+    return normalized_orders
+
+
 def _execute_payload(payload):
     strategy = None
     try:
@@ -143,12 +161,15 @@ def _execute_payload(payload):
         _invoke_optional(strategy, 'on_init', ctx)
 
         bars = payload.get('bars') or []
-        for index, bar in enumerate(bars):
-            _invoke_optional(strategy, 'on_bar', ctx, bar)
+        for index, raw_bar in enumerate(bars):
+            bar = make_bar(payload['symbol'], raw_bar)
+            ctx.sync_bar(bar)
+            returned_orders = _invoke_optional(strategy, 'on_bar', ctx, bar)
 
-            orders = ctx.consume_orders()
+            orders = _collect_orders(ctx, returned_orders)
             for order in orders:
                 order_event = dict(order)
+                order_event['price'] = resolve_fill_price(order_event, bar)
                 order_event['index'] = index
                 _invoke_optional(strategy, 'on_order', ctx, order_event)
 
@@ -160,6 +181,7 @@ def _execute_payload(payload):
                     "timestamp": bar.get('time'),
                     "pnl": None,
                 }
+                ctx.apply_trade(trade)
                 trades.append(trade)
                 _invoke_optional(strategy, 'on_trade', ctx, trade)
 

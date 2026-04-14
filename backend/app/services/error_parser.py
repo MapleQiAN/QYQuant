@@ -4,15 +4,15 @@ from typing import Any
 
 
 DEFAULT_EXAMPLE_CODE = """# 检查策略参数是否已定义
-window = ctx.params.get('window', 20)"""
+window = ctx.parameters.get('window', 20)"""
 
 ERROR_EXAMPLES = {
     "NameError": """# 在 on_init() 中获取参数
-sma_period = ctx.params.get('sma_period', 20)""",
+sma_period = ctx.parameters.get('sma_period', 20)""",
     "TypeError": """# 确保参数类型正确
-window = int(ctx.params.get('window', 20))""",
+window = int(ctx.parameters.get('window', 20))""",
     "KeyError": """# 读取参数前先提供默认值
-threshold = ctx.params.get('threshold', 0.05)""",
+threshold = ctx.parameters.get('threshold', 0.05)""",
     "ImportError": """# 使用平台支持的依赖库
 import pandas as pd
 import numpy as np""",

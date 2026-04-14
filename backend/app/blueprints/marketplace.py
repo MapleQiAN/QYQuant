@@ -539,7 +539,7 @@ def _ensure_onboarding_strategy():
 
     strategy_id = "onboarding-gold-step"
     file_id = "onboarding-gold-step-file"
-    version = "0.1.0"
+    version = "1.0.0"
 
     strategy = db.session.get(Strategy, strategy_id)
     if strategy is None:

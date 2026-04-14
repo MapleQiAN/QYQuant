@@ -49,7 +49,7 @@ with app.app_context():
         owner_id=admin.id,
         filename='GoldStepByStep.qys',
         content_type='application/zip',
-        size=8972,
+        size=3724,
         path='backend/strategy_store/GoldStepByStep.qys',
     )
     db.session.add(gold_file)
@@ -57,9 +57,9 @@ with app.app_context():
 
     gold_version = StrategyVersion(
         strategy_id=gold_strategy.id,
-        version='0.1.0',
+        version='1.0.0',
         file_id=gold_file.id,
-        checksum='4f969e331ef2f7e3c90997ee3e1f9d9035f286c99653938d9de8a53de9aa76bc',
+        checksum='7b152026653fd541391b9d6f4914653648bd0bd039b1f0e574d7249cce38c66f',
     )
     post = Post(
         title='My first strategy',
