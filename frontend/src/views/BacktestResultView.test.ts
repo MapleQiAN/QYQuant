@@ -187,6 +187,17 @@ describe('BacktestResultView', () => {
     expect(wrapper.get('[data-test="disclaimer-footer"]').text()).toContain('基于历史数据，不构成投资建议')
   })
 
+  it('renders narrative analysis and diagnostic sections for report readout', () => {
+    const wrapper = mount(BacktestResultView)
+
+    expect(wrapper.text()).toContain('运行剖面')
+    expect(wrapper.text()).toContain('收益不能脱离基准')
+    expect(wrapper.text()).toContain('回撤决定资金体验')
+    expect(wrapper.text()).toContain('交易密度影响执行压力')
+    expect(wrapper.text()).toContain('样本长度影响结论可信度')
+    expect(wrapper.text()).toContain('质量评分')
+  })
+
   it('renders structured error details for failed report', async () => {
     storeState.report = {
       job_id: 'job-1',

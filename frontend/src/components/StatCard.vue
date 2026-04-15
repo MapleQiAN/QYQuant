@@ -87,35 +87,40 @@ const isNegative = computed(() => {
 
 <style scoped>
 .stat-card {
-  display: flex;
-  align-items: flex-start;
-  gap: var(--spacing-md);
-  padding: var(--spacing-lg);
+  display: grid;
+  gap: 6px;
+  padding: 20px;
   background: var(--color-surface);
-  border-radius: var(--radius-lg);
-  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  border: 2px solid var(--color-border);
+  box-shadow: var(--shadow-md);
+  position: relative;
+  overflow: hidden;
 }
+
+.stat-card::after {
+  content: "";
+  position: absolute;
+  height: 5px;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: var(--color-primary);
+  border-radius: 0 0 8px 8px;
+}
+
+.stat-card.success::after,
+.stat-card.up::after { background: var(--color-success); }
+.stat-card.warning::after { background: var(--color-accent); }
+.stat-card.danger::after,
+.stat-card.down::after { background: var(--color-danger); }
+.stat-card.info::after { background: var(--color-info); }
 
 .stat-icon {
-  width: 44px;
-  height: 44px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: var(--radius-md);
-  color: var(--color-primary);
-  flex-shrink: 0;
+  display: none;
 }
 
-.stat-card.success .stat-icon { background: var(--color-success-bg); color: var(--color-success); }
-.stat-card.warning .stat-icon { background: var(--color-warning-bg); color: var(--color-warning); }
-.stat-card.danger .stat-icon { background: var(--color-danger-bg); color: var(--color-danger); }
-.stat-card.info .stat-icon { background: var(--color-info-bg); color: var(--color-info); }
-.stat-card.up .stat-icon { background: var(--color-up-bg); color: var(--color-up); }
-.stat-card.down .stat-icon { background: var(--color-down-bg); color: var(--color-down); }
-
 .stat-content {
-  flex: 1;
   min-width: 0;
 }
 
@@ -123,10 +128,12 @@ const isNegative = computed(() => {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  font-size: var(--font-size-sm);
-  font-weight: 500;
-  color: var(--color-text-secondary);
-  margin-bottom: var(--spacing-xs);
+  font-size: var(--font-size-xs);
+  font-weight: 800;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: 4px;
 }
 
 .stat-value {
@@ -137,23 +144,25 @@ const isNegative = computed(() => {
 
 .value {
   font-size: var(--font-size-xxl);
-  font-weight: 700;
+  font-weight: 900;
   color: var(--color-text-primary);
   font-variant-numeric: tabular-nums;
+  font-family: 'DM Mono', monospace;
 }
 
-.value.positive { color: var(--color-up); }
-.value.negative { color: var(--color-down); }
+.value.positive { color: var(--color-positive); }
+.value.negative { color: var(--color-negative); }
 
 .change {
   font-size: var(--font-size-xs);
-  font-weight: 600;
+  font-weight: 700;
   padding: 3px 8px;
   border-radius: var(--radius-full);
+  border: 2px solid transparent;
 }
 
-.change.positive { background: var(--color-up-bg); color: var(--color-up); }
-.change.negative { background: var(--color-down-bg); color: var(--color-down); }
+.change.positive { background: var(--color-positive-bg); color: var(--color-positive); border-color: var(--color-positive); }
+.change.negative { background: var(--color-negative-bg); color: var(--color-negative); border-color: var(--color-negative); }
 
 .stat-subtitle {
   font-size: var(--font-size-xs);
@@ -162,13 +171,11 @@ const isNegative = computed(() => {
 }
 
 @media (max-width: 768px) {
-  .stat-card { gap: var(--spacing-sm); padding: var(--spacing-sm); }
-  .stat-icon { width: 36px; height: 36px; }
-  .value { font-size: var(--font-size-lg); }
+  .stat-card { padding: 14px; }
+  .value { font-size: var(--font-size-xl); }
 }
 
 @media (max-width: 480px) {
-  .stat-card { flex-direction: column; padding: 10px; }
-  .stat-icon { width: 32px; height: 32px; }
+  .stat-card { padding: 12px; }
 }
 </style>

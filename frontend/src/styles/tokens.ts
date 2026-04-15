@@ -82,8 +82,8 @@ export const designTokens = {
   },
 
   typography: {
-    fontFamily: "'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
-    fontMono: "'Space Mono', 'JetBrains Mono', 'Courier New', monospace",
+    fontFamily: "'DM Sans', 'Noto Sans SC', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+    fontMono: "'DM Mono', 'JetBrains Mono', 'Courier New', monospace",
     fontSizes: {
       xs: '11px',
       sm: '12px',

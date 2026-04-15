@@ -194,12 +194,37 @@ function CrownIcon() {
   bottom: 0;
   width: var(--sidebar-width);
   background: var(--color-sidebar-bg);
-  border-right: 1px solid var(--color-sidebar-border);
+  border-right: 2px solid var(--color-sidebar-border);
   display: flex;
   flex-direction: column;
   z-index: 110;
   transition: width 250ms var(--ease-out-expo);
   overflow: hidden;
+}
+
+.side-nav::before {
+  content: "";
+  position: absolute;
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background: var(--color-accent);
+  top: -24px;
+  right: -24px;
+  opacity: 0.12;
+}
+
+.side-nav::after {
+  content: "";
+  position: absolute;
+  width: 40px;
+  height: 40px;
+  background: var(--color-danger);
+  bottom: 60px;
+  left: -10px;
+  transform: rotate(15deg);
+  border-radius: 8px;
+  opacity: 0.08;
 }
 
 .side-nav.collapsed {
@@ -211,9 +236,11 @@ function CrownIcon() {
   display: flex;
   align-items: center;
   padding: 16px 14px;
-  border-bottom: 1px solid var(--color-sidebar-border);
+  border-bottom: 2px solid var(--color-sidebar-border);
   min-height: var(--nav-height);
   flex-shrink: 0;
+  position: relative;
+  z-index: 1;
 }
 
 .logo-area {
@@ -264,12 +291,13 @@ function CrownIcon() {
   align-items: center;
   gap: 12px;
   padding: 10px 12px;
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-sm);
+  border: 2px solid transparent;
   color: var(--color-text-muted);
   text-decoration: none;
   font-size: var(--font-size-sm);
-  font-weight: 500;
-  transition: color var(--transition-fast), background var(--transition-fast);
+  font-weight: 600;
+  transition: color var(--transition-fast), background var(--transition-fast), border-color var(--transition-fast), transform var(--transition-fast);
   white-space: nowrap;
   cursor: pointer;
 }
@@ -280,8 +308,11 @@ function CrownIcon() {
 }
 
 .nav-item.active {
-  background: var(--color-sidebar-active);
-  color: var(--color-primary);
+  background: var(--color-primary);
+  color: #ffffff;
+  border-color: var(--color-border);
+  transform: translateX(4px);
+  font-weight: 700;
 }
 
 .nav-item-icon {
@@ -300,8 +331,10 @@ function CrownIcon() {
   flex-direction: column;
   gap: 6px;
   padding: 12px 8px;
-  border-top: 1px solid var(--color-sidebar-border);
+  border-top: 2px solid var(--color-sidebar-border);
   flex-shrink: 0;
+  position: relative;
+  z-index: 1;
 }
 
 /* Subscription nav item */
@@ -414,11 +447,17 @@ function CrownIcon() {
   align-items: center;
   justify-content: center;
   background: transparent;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-sm);
   color: var(--color-text-muted);
   cursor: pointer;
   transition: color var(--transition-fast), background var(--transition-fast);
+}
+
+.collapse-btn:hover {
+  background: var(--color-sidebar-hover);
+  color: var(--color-text-secondary);
+  border-color: var(--color-primary);
 }
 
 .collapse-btn:hover {

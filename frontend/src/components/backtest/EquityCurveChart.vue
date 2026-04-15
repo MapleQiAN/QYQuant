@@ -71,6 +71,9 @@ const tradeMarkers = computed(() => {
       : sortedPoints[lo].equity
   }
 
+  const upCol = getComputedStyle(document.documentElement).getPropertyValue('--color-up').trim() || '#d4393b'
+  const downCol = getComputedStyle(document.documentElement).getPropertyValue('--color-down').trim() || '#2e7d32'
+
   return (props.trades || []).map((trade) => {
     const timestamp = Number(trade.timestamp)
     const isBuy = trade.side === 'buy'
@@ -84,7 +87,7 @@ const tradeMarkers = computed(() => {
       symbolRotate: isBuy ? 180 : 0,
       symbolOffset: [0, isBuy ? -16 : 16],
       itemStyle: {
-        color: isBuy ? '#16a34a' : '#dc2626'
+        color: isBuy ? upCol : downCol
       },
       label: {
         show: true,
@@ -146,7 +149,7 @@ function buildTooltip(params: any[]) {
       const rawValue = Array.isArray(item.data) ? item.data[item.data.length - 1] : item.data
       return `<div style="display:flex;justify-content:space-between;gap:12px;">
         <span style="color:${item.color};">${item.seriesName}</span>
-        <strong style="color:#ebebf5;">${formatTooltipValue(rawValue)}</strong>
+        <strong style="color:#111111;">${formatTooltipValue(rawValue)}</strong>
       </div>`
     })
     .join('')
@@ -155,25 +158,25 @@ function buildTooltip(params: any[]) {
     strategyReturn === null
       ? ''
       : `<div style="display:flex;justify-content:space-between;gap:12px;">
-          <span style="color:#8888a0;">Strategy Return</span>
-          <strong style="color:#ebebf5;">${strategyReturn.toFixed(2)}%</strong>
+          <span style="color:#6b6b6b;">Strategy Return</span>
+          <strong style="color:#111111;">${strategyReturn.toFixed(2)}%</strong>
         </div>`,
     benchmarkReturn === null
       ? ''
       : `<div style="display:flex;justify-content:space-between;gap:12px;">
-          <span style="color:#8888a0;">Benchmark Return</span>
-          <strong style="color:#ebebf5;">${benchmarkReturn.toFixed(2)}%</strong>
+          <span style="color:#6b6b6b;">Benchmark Return</span>
+          <strong style="color:#111111;">${benchmarkReturn.toFixed(2)}%</strong>
         </div>`,
     currentPoint?.drawdown === undefined || currentPoint?.drawdown === null
       ? ''
       : `<div style="display:flex;justify-content:space-between;gap:12px;">
-          <span style="color:#8888a0;">Drawdown</span>
-          <strong style="color:#ebebf5;">${Number(currentPoint.drawdown).toFixed(2)}%</strong>
+          <span style="color:#6b6b6b;">Drawdown</span>
+          <strong style="color:#111111;">${Number(currentPoint.drawdown).toFixed(2)}%</strong>
         </div>`
   ].filter(Boolean).join('')
 
   return `<div style="min-width:190px;">
-    <div style="margin-bottom:8px;color:#8888a0;font-size:11px;">${formatAxisTime(axisValue)}</div>
+    <div style="margin-bottom:8px;color:#6b6b6b;font-size:11px;">${formatAxisTime(axisValue)}</div>
     ${items}
     ${contextRows ? `<div style="display:grid;gap:4px;margin-top:8px;">${contextRows}</div>` : ''}
   </div>`
@@ -242,10 +245,10 @@ function buildOption(): EChartsOption {
         showSymbol: false,
         lineStyle: {
           width: 2,
-          color: '#0f766e'
+          color: '#1976d2'
         },
         areaStyle: {
-          color: 'rgba(15, 118, 110, 0.10)'
+          color: 'rgba(25, 118, 210, 0.10)'
         },
         data: props.points.map((point) => [point.timestamp, point.equity]),
         markPoint: {
@@ -260,7 +263,7 @@ function buildOption(): EChartsOption {
         lineStyle: {
           width: 1.5,
           type: 'dashed',
-          color: '#94a3b8'
+          color: '#9e9e9e'
         },
         data: props.points.map((point) => [point.timestamp, point.benchmark_equity])
       }
@@ -299,9 +302,6 @@ onBeforeUnmount(() => {
 <style scoped>
 .equity-chart {
   border-radius: var(--radius-lg);
-  background:
-    radial-gradient(circle at top left, rgba(54, 214, 182, 0.08), transparent 30%),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.02), transparent);
   padding: 0;
 }
 

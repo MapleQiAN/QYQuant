@@ -109,9 +109,10 @@ function pnlClass(pnl?: number): string {
 <style scoped>
 .trade-table-card {
   background: var(--color-surface);
-  border: 1px solid var(--color-border);
+  border: 2px solid var(--color-border);
   border-radius: var(--radius-lg);
   overflow: hidden;
+  box-shadow: var(--shadow-md);
   margin-bottom: var(--spacing-lg);
 }
 
@@ -123,11 +124,11 @@ function pnlClass(pnl?: number): string {
   cursor: pointer;
   user-select: none;
   background: var(--color-surface-elevated);
-  border-bottom: 1px solid transparent;
+  border-bottom: 2px solid transparent;
   transition: background 0.15s;
   list-style: none;
   color: var(--color-text-primary);
-  font-weight: 700;
+  font-weight: 800;
   font-size: var(--font-size-sm);
 }
 
@@ -136,7 +137,7 @@ function pnlClass(pnl?: number): string {
 }
 
 .trade-table-card[open] .trade-summary {
-  border-bottom-color: var(--color-border-light);
+  border-bottom-color: var(--color-border);
 }
 
 .trade-summary:hover {
@@ -151,14 +152,16 @@ function pnlClass(pnl?: number): string {
 }
 
 .trade-summary__left svg {
-  color: var(--color-accent);
+  color: var(--color-primary);
 }
 
 .trade-count {
   font-size: var(--font-size-xs);
+  font-weight: 800;
   color: var(--color-text-muted);
   background: var(--color-surface-active);
   padding: 3px 10px;
+  border: 2px solid var(--color-border);
   border-radius: 999px;
 }
 
@@ -185,19 +188,20 @@ function pnlClass(pnl?: number): string {
 
 .trade-list th {
   text-align: left;
-  padding: 8px 12px;
+  padding: 10px 12px;
   font-size: var(--font-size-xs);
-  font-weight: 700;
+  font-weight: 800;
   color: var(--color-text-muted);
   text-transform: uppercase;
-  letter-spacing: 0.05em;
-  border-bottom: 1px solid var(--color-border);
+  letter-spacing: 0.08em;
+  border-bottom: 2px solid var(--color-border);
+  background: #fafafa;
   white-space: nowrap;
 }
 
 .trade-list td {
   padding: 10px 12px;
-  border-bottom: 1px solid var(--color-border-light);
+  border-bottom: 2px dashed #e8e8e4;
   color: var(--color-text-primary);
   white-space: nowrap;
 }
@@ -216,7 +220,7 @@ function pnlClass(pnl?: number): string {
 }
 
 .mono {
-  font-family: 'Space Mono', monospace;
+  font-family: 'DM Mono', monospace;
   font-variant-numeric: tabular-nums;
 }
 
@@ -224,29 +228,32 @@ function pnlClass(pnl?: number): string {
   display: inline-flex;
   align-items: center;
   padding: 2px 8px;
-  border-radius: var(--radius-sm);
+  border-radius: 999px;
   font-size: var(--font-size-xs);
-  font-weight: 700;
+  font-weight: 800;
   text-transform: uppercase;
   letter-spacing: 0.05em;
+  border: 2px solid transparent;
 }
 
 .side-badge.buy {
-  background: rgba(22, 163, 106, 0.12);
-  color: #16a34a;
+  background: var(--color-positive-bg);
+  color: var(--color-positive);
+  border-color: var(--color-positive);
 }
 
 .side-badge.sell {
-  background: rgba(220, 38, 38, 0.12);
-  color: #dc2626;
+  background: var(--color-negative-bg);
+  color: var(--color-negative);
+  border-color: var(--color-negative);
 }
 
 .positive {
-  color: #16a34a;
+  color: var(--color-positive);
 }
 
 .negative {
-  color: #dc2626;
+  color: var(--color-negative);
 }
 
 .pagination {
@@ -255,7 +262,7 @@ function pnlClass(pnl?: number): string {
   justify-content: center;
   gap: var(--spacing-md);
   padding-top: var(--spacing-md);
-  border-top: 1px solid var(--color-border-light);
+  border-top: 2px dashed var(--color-border-light);
   margin-top: var(--spacing-sm);
 }
 
@@ -265,8 +272,8 @@ function pnlClass(pnl?: number): string {
   justify-content: center;
   width: 32px;
   height: 32px;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-sm);
   background: var(--color-surface);
   color: var(--color-text-secondary);
   cursor: pointer;
@@ -274,19 +281,22 @@ function pnlClass(pnl?: number): string {
 }
 
 .page-btn:hover:not(:disabled) {
-  border-color: var(--color-primary-border);
-  color: var(--color-primary);
+  background: var(--color-primary);
+  color: #fff;
+  border-color: var(--color-primary);
 }
 
 .page-btn:disabled {
-  opacity: 0.4;
+  opacity: 0.3;
   cursor: not-allowed;
 }
 
 .page-info {
   font-size: var(--font-size-sm);
+  font-weight: 700;
   color: var(--color-text-muted);
   font-variant-numeric: tabular-nums;
+  font-family: 'DM Mono', monospace;
 }
 
 @media (max-width: 640px) {

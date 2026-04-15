@@ -1,210 +1,128 @@
-@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Space+Mono:wght@400;700&family=LXGW+WenKai:wght@400;700&family=Noto+Serif+SC:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800;900&family=DM+Mono:wght@400;500&family=Noto+Sans+SC:wght@400;500;600;700;900&display=swap');
 
 /* Global Styles - QY Quant */
 
-/* Dark Theme (Default) */
+/* Bauhaus Light Theme (Default) */
 :root,
 :root[data-theme="dark"] {
-  /* Primary - Muted Purple */
-  --color-primary: #7c6dd8;
-  --color-primary-light: #9585e6;
-  --color-primary-dark: #5f4fc4;
-  --color-primary-bg: rgba(124, 109, 216, 0.10);
-  --color-primary-border: rgba(124, 109, 216, 0.20);
+  /* Primary - Bauhaus Blue */
+  --color-primary: #1976d2;
+  --color-primary-light: #2196f3;
+  --color-primary-dark: #1565c0;
+  --color-primary-bg: rgba(25, 118, 210, 0.08);
+  --color-primary-border: rgba(25, 118, 210, 0.20);
 
   /* Secondary */
-  --color-secondary: #6e6e8a;
-  --color-secondary-light: #8b8ba5;
-  --color-secondary-dark: #55556e;
+  --color-secondary: #6b6b6b;
+  --color-secondary-light: #8b8b8b;
+  --color-secondary-dark: #4a4a4a;
 
-  /* Accent - Teal */
-  --color-accent: #36d6b6;
-  --color-accent-bg: rgba(54, 214, 182, 0.10);
+  /* Accent - Bauhaus Yellow */
+  --color-accent: #f9a825;
+  --color-accent-bg: rgba(249, 168, 37, 0.10);
 
   /* Status */
-  --color-success: #36d6b6;
-  --color-success-bg: rgba(54, 214, 182, 0.10);
-  --color-warning: #f0b429;
-  --color-warning-bg: rgba(240, 180, 41, 0.10);
-  --color-danger: #f06868;
-  --color-danger-bg: rgba(240, 104, 104, 0.10);
-  --color-info: #7c6dd8;
-  --color-info-bg: rgba(124, 109, 216, 0.10);
+  --color-success: #2e7d32;
+  --color-success-bg: rgba(46, 125, 50, 0.08);
+  --color-warning: #e65100;
+  --color-warning-bg: rgba(230, 81, 0, 0.08);
+  --color-danger: #d4393b;
+  --color-danger-bg: rgba(212, 57, 59, 0.08);
+  --color-info: #1976d2;
+  --color-info-bg: rgba(25, 118, 210, 0.08);
 
   /* Market up/down (CN default: red up, green down) */
-  --color-up: #f06868;
-  --color-up-bg: rgba(240, 104, 104, 0.10);
-  --color-down: #36d6b6;
-  --color-down-bg: rgba(54, 214, 182, 0.10);
+  --color-up: #d4393b;
+  --color-up-bg: rgba(212, 57, 59, 0.08);
+  --color-down: #2e7d32;
+  --color-down-bg: rgba(46, 125, 50, 0.08);
 
-  /* Surfaces */
-  --color-background: #0c0c1d;
-  --color-surface: #161630;
-  --color-surface-elevated: #1c1c3a;
-  --color-surface-hover: #22224a;
-  --color-surface-active: #282858;
-  --color-white: #ffffff;
-
-  /* Borders */
-  --color-border: rgba(255, 255, 255, 0.06);
-  --color-border-light: rgba(255, 255, 255, 0.03);
-  --color-border-hover: rgba(255, 255, 255, 0.10);
-  --color-border-strong: rgba(255, 255, 255, 0.10);
-
-  /* Text */
-  --color-text-primary: #ebebf5;
-  --color-text-secondary: #8888a0;
-  --color-text-muted: #55556e;
-  --color-text-tertiary: #55556e;
-  --color-text-inverse: #0c0c1d;
-
-  /* Positive / Negative */
-  --color-positive: #36d6b6;
-  --color-positive-bg: rgba(54, 214, 182, 0.10);
-  --color-negative: #f06868;
-  --color-negative-bg: rgba(240, 104, 104, 0.10);
-
-  /* Chart */
-  --color-chart-grid: rgba(255, 255, 255, 0.04);
-  --color-chart-line: #7c6dd8;
-  --color-chart-area: rgba(124, 109, 216, 0.15);
-
-  /* Shadows */
-  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.3);
-  --shadow-sm: 0 2px 6px rgba(0, 0, 0, 0.25);
-  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.3);
-  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.35);
-  --shadow-xl: 0 16px 40px rgba(0, 0, 0, 0.4);
-
-  /* Glass / Overlay */
-  --glass-background: rgba(22, 22, 48, 0.95);
-  --glass-backdrop: blur(20px);
-  --glass-border: 1px solid rgba(255, 255, 255, 0.06);
-  --color-overlay: rgba(0, 0, 0, 0.7);
-
-  /* Sidebar */
-  --color-sidebar-bg: #0e0e22;
-  --color-sidebar-border: rgba(255, 255, 255, 0.06);
-  --color-sidebar-hover: rgba(124, 109, 216, 0.08);
-  --color-sidebar-active: rgba(124, 109, 216, 0.12);
-
-  /* Nav */
-  --color-nav-bg: #0e0e22;
-  --color-nav-border: rgba(255, 255, 255, 0.06);
-
-  /* Scrollbar */
-  --color-scrollbar-track: transparent;
-  --color-scrollbar-thumb: rgba(255, 255, 255, 0.10);
-  --color-scrollbar-thumb-hover: rgba(255, 255, 255, 0.18);
-}
-
-/* Light Theme */
-:root[data-theme="light"] {
-  /* Primary */
-  --color-primary: #6354c0;
-  --color-primary-light: #7c6dd8;
-  --color-primary-dark: #4e40a8;
-  --color-primary-bg: rgba(99, 84, 192, 0.06);
-  --color-primary-border: rgba(99, 84, 192, 0.15);
-
-  /* Secondary */
-  --color-secondary: #6e6e8a;
-  --color-secondary-light: #8b8ba5;
-  --color-secondary-dark: #55556e;
-
-  /* Accent */
-  --color-accent: #2bb89e;
-  --color-accent-bg: rgba(43, 184, 158, 0.06);
-
-  /* Status */
-  --color-success: #2bb89e;
-  --color-success-bg: rgba(43, 184, 158, 0.06);
-  --color-warning: #d99e1e;
-  --color-warning-bg: rgba(217, 158, 30, 0.06);
-  --color-danger: #d95555;
-  --color-danger-bg: rgba(217, 85, 85, 0.06);
-  --color-info: #6354c0;
-  --color-info-bg: rgba(99, 84, 192, 0.06);
-
-  /* Market up/down */
-  --color-up: #d95555;
-  --color-up-bg: rgba(217, 85, 85, 0.06);
-  --color-down: #2bb89e;
-  --color-down-bg: rgba(43, 184, 158, 0.06);
-
-  /* Surfaces */
-  --color-background: #f0f0f5;
+  /* Surfaces - Bauhaus Warm */
+  --color-background: #f3f2ee;
   --color-surface: #ffffff;
-  --color-surface-elevated: #ffffff;
-  --color-surface-hover: #f5f5fa;
-  --color-surface-active: #ebebf0;
+  --color-surface-elevated: #fafafa;
+  --color-surface-hover: #f5f5f2;
+  --color-surface-active: #eaeae6;
   --color-white: #ffffff;
 
-  /* Borders */
-  --color-border: #e0e0ea;
-  --color-border-light: #ebebf0;
-  --color-border-hover: #d0d0dd;
-  --color-border-strong: #c0c0d0;
+  /* Borders - Bold 2px Bauhaus */
+  --color-border: #1a1a1a;
+  --color-border-light: #e0e0dc;
+  --color-border-hover: #1a1a1a;
+  --color-border-strong: #1a1a1a;
 
   /* Text */
-  --color-text-primary: #1a1a2e;
-  --color-text-secondary: #6e6e8a;
-  --color-text-muted: #9898b0;
-  --color-text-tertiary: #9898b0;
+  --color-text-primary: #111111;
+  --color-text-secondary: #6b6b6b;
+  --color-text-muted: #8a8a8a;
+  --color-text-tertiary: #8a8a8a;
   --color-text-inverse: #ffffff;
 
-  /* Positive / Negative */
-  --color-positive: #2bb89e;
-  --color-positive-bg: rgba(43, 184, 158, 0.06);
-  --color-negative: #d95555;
-  --color-negative-bg: rgba(217, 85, 85, 0.06);
+  /* Positive / Negative — mirrors up/down so market style controls both */
+  --color-positive: var(--color-up);
+  --color-positive-bg: var(--color-up-bg);
+  --color-negative: var(--color-down);
+  --color-negative-bg: var(--color-down-bg);
 
   /* Chart */
-  --color-chart-grid: #ebebf0;
-  --color-chart-line: #6354c0;
-  --color-chart-area: rgba(99, 84, 192, 0.08);
+  --color-chart-grid: #e8e8e4;
+  --color-chart-line: #1976d2;
+  --color-chart-area: rgba(25, 118, 210, 0.12);
 
   /* Shadows */
   --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.04);
-  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.06);
-  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.08);
-  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.10);
-  --shadow-xl: 0 16px 40px rgba(0, 0, 0, 0.12);
+  --shadow-sm: 0 2px 6px rgba(0, 0, 0, 0.06);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.07);
+  --shadow-lg: 0 8px 28px rgba(0, 0, 0, 0.07);
+  --shadow-xl: 0 16px 40px rgba(0, 0, 0, 0.08);
 
   /* Glass / Overlay */
   --glass-background: rgba(255, 255, 255, 0.95);
   --glass-backdrop: blur(20px);
-  --glass-border: 1px solid #e0e0ea;
+  --glass-border: 2px solid #1a1a1a;
   --color-overlay: rgba(0, 0, 0, 0.4);
 
   /* Sidebar */
   --color-sidebar-bg: #ffffff;
-  --color-sidebar-border: #e0e0ea;
-  --color-sidebar-hover: #f5f5fa;
-  --color-sidebar-active: rgba(99, 84, 192, 0.06);
+  --color-sidebar-border: #1a1a1a;
+  --color-sidebar-hover: #f5f5f2;
+  --color-sidebar-active: rgba(25, 118, 210, 0.10);
 
   /* Nav */
   --color-nav-bg: #ffffff;
-  --color-nav-border: #e0e0ea;
+  --color-nav-border: #1a1a1a;
 
   /* Scrollbar */
   --color-scrollbar-track: transparent;
-  --color-scrollbar-thumb: #d0d0dd;
-  --color-scrollbar-thumb-hover: #b0b0c0;
+  --color-scrollbar-thumb: #c0c0bc;
+  --color-scrollbar-thumb-hover: #a0a09c;
+}
+
+/* Light Theme — Same as default Bauhaus (no-op override) */
+:root[data-theme="light"] {
+  /* Identical to Bauhaus default — kept for theme toggle compatibility */
 }
 
 /* US market style override */
 :root[data-market-style="us"] {
-  --color-up: #36d6b6;
-  --color-up-bg: rgba(54, 214, 182, 0.10);
-  --color-down: #f06868;
-  --color-down-bg: rgba(240, 104, 104, 0.10);
+  --color-up: #2e7d32;
+  --color-up-bg: rgba(46, 125, 50, 0.08);
+  --color-down: #d4393b;
+  --color-down-bg: rgba(212, 57, 59, 0.08);
+  --color-positive: var(--color-up);
+  --color-positive-bg: var(--color-up-bg);
+  --color-negative: var(--color-down);
+  --color-negative-bg: var(--color-down-bg);
 }
 :root[data-theme="light"][data-market-style="us"] {
-  --color-up: #2bb89e;
-  --color-up-bg: rgba(43, 184, 158, 0.06);
-  --color-down: #d95555;
-  --color-down-bg: rgba(217, 85, 85, 0.06);
+  --color-up: #2e7d32;
+  --color-up-bg: rgba(46, 125, 50, 0.08);
+  --color-down: #d4393b;
+  --color-down-bg: rgba(212, 57, 59, 0.08);
+  --color-positive: var(--color-up);
+  --color-positive-bg: var(--color-up-bg);
+  --color-negative: var(--color-down);
+  --color-negative-bg: var(--color-down-bg);
 }
 
 /* Shared Tokens */
@@ -227,10 +145,10 @@
   --radius-full: 9999px;
 
   /* Typography */
-  --font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  --font-mono: 'Space Mono', 'JetBrains Mono', 'Courier New', monospace;
-  --font-zh-display: 'LXGW WenKai', 'STKaiti', 'KaiTi', serif;
-  --font-zh-body: 'Noto Serif SC', 'STSong', 'SimSun', serif;
+  --font-family: 'DM Sans', 'Noto Sans SC', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-mono: 'DM Mono', 'JetBrains Mono', 'Courier New', monospace;
+  --font-zh-display: 'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  --font-zh-body: 'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei', sans-serif;
 
   --font-size-xs: 11px;
   --font-size-sm: 12px;
@@ -356,8 +274,9 @@ a:hover {
 .card {
   background: var(--color-surface);
   border-radius: var(--radius-lg);
-  border: 1px solid var(--color-border);
+  border: 2px solid var(--color-border);
   transition: border-color var(--transition-normal);
+  box-shadow: var(--shadow-md);
 }
 
 .card:hover {
@@ -387,7 +306,7 @@ a:hover {
   font-weight: var(--font-weight-semibold);
   border-radius: var(--radius-full);
   white-space: nowrap;
-  border: 1px solid transparent;
+  border: 2px solid transparent;
 }
 
 .badge-success {
@@ -429,7 +348,7 @@ a:hover {
   font-size: var(--font-size-xs);
   font-weight: var(--font-weight-medium);
   background: var(--color-surface);
-  border: 1px solid var(--color-border);
+  border: 2px solid var(--color-border);
   border-radius: var(--radius-sm);
   color: var(--color-text-secondary);
   cursor: pointer;
@@ -452,10 +371,16 @@ a:hover {
   font-size: var(--font-size-sm);
   font-weight: var(--font-weight-semibold);
   border-radius: var(--radius-full);
-  border: 1px solid transparent;
+  border: 2px solid var(--color-border);
   cursor: pointer;
-  transition: opacity var(--transition-fast), background var(--transition-fast);
+  transition: opacity var(--transition-fast), background var(--transition-fast), transform var(--transition-fast);
   white-space: nowrap;
+  font-family: inherit;
+}
+
+.btn:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
 }
 
 .btn:active {
@@ -468,13 +393,14 @@ a:hover {
 }
 
 .btn-primary {
-  background: var(--color-primary);
-  color: #fff;
-  border: none;
+  background: var(--color-accent);
+  color: var(--color-text-primary);
+  border: 2px solid var(--color-border);
+  font-weight: var(--font-weight-bold);
 }
 
 .btn-primary:hover {
-  background: var(--color-primary-light);
+  opacity: 0.9;
 }
 
 .btn-accent {
@@ -489,9 +415,9 @@ a:hover {
 }
 
 .btn-secondary {
-  background: transparent;
+  background: var(--color-surface);
   color: var(--color-text-secondary);
-  border: 1px solid var(--color-border-strong);
+  border: 2px solid var(--color-border);
 }
 
 .btn-secondary:hover {

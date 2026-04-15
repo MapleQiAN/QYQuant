@@ -1,0 +1,1289 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>QY Quant — Bauhaus Backtest Report</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800;900&family=DM+Mono:wght@400;500&family=Noto+Sans+SC:wght@400;500;600;700;900&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #f3f2ee;
+      --panel: #ffffff;
+      --text: #111111;
+      --muted: #6b6b6b;
+      --line: #1a1a1a;
+      --red: #d4393b;
+      --blue: #1976d2;
+      --yellow: #f9a825;
+      --green: #2e7d32;
+      --teal: #00897b;
+      --radius: 16px;
+      --radius-sm: 10px;
+      --shadow: 0 8px 28px rgba(0, 0, 0, 0.07);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'DM Sans', 'Noto Sans SC', -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ── Layout ── */
+    .page {
+      display: grid;
+      grid-template-columns: 260px 1fr;
+      min-height: 100vh;
+    }
+
+    /* ── Sidebar ── */
+    .sidebar {
+      background: var(--panel);
+      border-right: 2px solid var(--line);
+      padding: 28px 20px;
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      overflow: auto;
+      position: relative;
+    }
+
+    .sidebar::before {
+      content: "";
+      position: absolute;
+      width: 100px;
+      height: 100px;
+      border-radius: 50%;
+      background: var(--yellow);
+      top: -28px;
+      right: -28px;
+      opacity: 0.92;
+    }
+
+    .sidebar::after {
+      content: "";
+      position: absolute;
+      width: 50px;
+      height: 50px;
+      background: var(--red);
+      bottom: 40px;
+      left: -12px;
+      transform: rotate(15deg);
+      border-radius: 10px;
+      opacity: 0.85;
+    }
+
+    .brand { position: relative; z-index: 1; margin-bottom: 32px; }
+
+    .brand-tag {
+      display: inline-block;
+      padding: 5px 12px;
+      background: var(--blue);
+      color: #fff;
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 0.1em;
+      border-radius: 999px;
+      margin-bottom: 14px;
+    }
+
+    .brand h1 {
+      font-size: 26px;
+      line-height: 1;
+      letter-spacing: 0.03em;
+      text-transform: uppercase;
+      font-weight: 900;
+    }
+
+    .brand p {
+      margin-top: 10px;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.6;
+      max-width: 200px;
+    }
+
+    .nav { display: grid; gap: 8px; position: relative; z-index: 1; }
+
+    .nav a {
+      text-decoration: none;
+      color: var(--text);
+      padding: 12px 14px;
+      border: 2px solid transparent;
+      border-radius: 12px;
+      font-weight: 700;
+      font-size: 14px;
+      transition: 0.15s ease;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .nav a:hover { background: #f5f5f2; }
+
+    .nav a.active {
+      background: var(--blue);
+      color: #fff;
+      border-color: var(--line);
+      transform: translateX(4px);
+    }
+
+    .nav a svg { flex-shrink: 0; }
+
+    /* ── Content ── */
+    .content {
+      padding: 28px 32px;
+      display: grid;
+      gap: 20px;
+      max-width: 1200px;
+    }
+
+    /* ── Page Header ── */
+    .page-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      flex-wrap: wrap;
+      gap: 16px;
+    }
+
+    .header-badges { display: flex; gap: 10px; align-items: center; margin-bottom: 8px; }
+
+    .eyebrow {
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+
+    .job-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 4px 10px;
+      border: 2px solid var(--line);
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 800;
+      background: var(--panel);
+    }
+
+    .job-chip__id { color: var(--blue); }
+
+    .page-title {
+      font-size: 36px;
+      font-weight: 900;
+      line-height: 1.05;
+      letter-spacing: -0.02em;
+    }
+
+    .page-subtitle {
+      color: var(--muted);
+      font-size: 15px;
+      margin-top: 6px;
+    }
+
+    .header-actions { display: flex; gap: 10px; align-items: center; }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      border: 2px solid var(--line);
+      background: var(--panel);
+      color: var(--text);
+      border-radius: 999px;
+      padding: 10px 18px;
+      font-weight: 800;
+      font-size: 13px;
+      cursor: pointer;
+      transition: 0.15s ease;
+      font-family: inherit;
+    }
+
+    .btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 16px rgba(0,0,0,0.08);
+    }
+
+    .btn-primary { background: var(--yellow); }
+    .btn-secondary { background: var(--panel); }
+
+    /* ── Report Summary Hero ── */
+    .report-summary {
+      background: var(--panel);
+      border: 2px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+      position: relative;
+    }
+
+    .report-summary::after {
+      content: "";
+      position: absolute;
+      width: 180px;
+      height: 180px;
+      background: var(--red);
+      bottom: -70px;
+      right: -50px;
+      transform: rotate(25deg);
+      border-radius: 22px;
+      opacity: 0.85;
+    }
+
+    .summary-hero {
+      padding: 28px;
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 24px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .summary-meta {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-bottom: 12px;
+    }
+
+    .summary-chip {
+      font-size: 12px;
+      font-weight: 700;
+      padding: 5px 12px;
+      border: 2px solid var(--line);
+      border-radius: 999px;
+      background: var(--panel);
+    }
+
+    .summary-hero h2 {
+      font-size: 28px;
+      font-weight: 900;
+      line-height: 1.1;
+    }
+
+    .summary-hero__subtitle {
+      color: var(--muted);
+      font-size: 14px;
+      margin-top: 8px;
+      line-height: 1.6;
+    }
+
+    .quality-card {
+      background: #fefefe;
+      border: 2px solid var(--line);
+      border-radius: 14px;
+      padding: 20px 24px;
+      text-align: center;
+      min-width: 140px;
+      position: relative;
+    }
+
+    .quality-card::before {
+      content: "";
+      position: absolute;
+      width: 40px;
+      height: 40px;
+      background: var(--blue);
+      border-radius: 50%;
+      top: -14px;
+      right: -14px;
+      opacity: 0.9;
+    }
+
+    .quality-card__label {
+      font-size: 11px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--muted);
+    }
+
+    .quality-card__value {
+      font-size: 48px;
+      font-weight: 900;
+      line-height: 1;
+      margin-top: 4px;
+      color: var(--green);
+    }
+
+    .quality-card__unit {
+      font-size: 16px;
+      color: var(--muted);
+      font-weight: 600;
+    }
+
+    .quality-card__tone {
+      display: block;
+      margin-top: 6px;
+      font-size: 12px;
+      font-weight: 800;
+      color: var(--green);
+    }
+
+    /* ── Summary Facts ── */
+    .summary-facts {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      border-top: 2px solid var(--line);
+      position: relative;
+      z-index: 1;
+    }
+
+    .summary-fact {
+      padding: 18px 24px;
+      border-right: 2px solid #e8e8e8;
+      display: grid;
+      gap: 4px;
+    }
+
+    .summary-fact:last-child { border-right: none; }
+
+    .summary-fact__label {
+      font-size: 11px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--muted);
+    }
+
+    .summary-fact__value {
+      font-size: 22px;
+      font-weight: 900;
+      font-family: 'DM Mono', monospace;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .summary-fact__note {
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .tone-positive { color: var(--green); }
+    .tone-negative { color: var(--red); }
+    .tone-warning { color: #e65100; }
+    .tone-neutral { color: var(--muted); }
+
+    /* ── Summary Conclusion ── */
+    .summary-conclusion {
+      border-top: 2px solid var(--line);
+      padding: 22px 28px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .conclusion-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 10px;
+    }
+
+    .conclusion-pill {
+      padding: 5px 14px;
+      border: 2px solid var(--line);
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 800;
+    }
+
+    .conclusion-title {
+      font-size: 20px;
+      font-weight: 900;
+    }
+
+    .conclusion-body {
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.7;
+      max-width: 640px;
+    }
+
+    .conclusion-tags {
+      display: flex;
+      gap: 8px;
+      margin-top: 14px;
+      flex-wrap: wrap;
+    }
+
+    .conclusion-tag {
+      font-size: 12px;
+      font-weight: 700;
+      padding: 4px 12px;
+      border: 2px dashed #d0d0d0;
+      border-radius: 999px;
+    }
+
+    /* ── Metrics Grid (Core Stats) ── */
+    .metrics-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+    }
+
+    .metric-card {
+      background: var(--panel);
+      border: 2px solid var(--line);
+      border-radius: var(--radius-sm);
+      padding: 20px;
+      box-shadow: var(--shadow);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .metric-card::after {
+      content: "";
+      position: absolute;
+      height: 5px;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: var(--blue);
+      border-radius: 0 0 8px 8px;
+    }
+
+    .metric-card.positive::after { background: var(--green); }
+    .metric-card.negative::after { background: var(--red); }
+    .metric-card.warning::after { background: var(--yellow); }
+
+    .metric-card__label {
+      font-size: 11px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--muted);
+      margin-bottom: 8px;
+    }
+
+    .metric-card__value {
+      font-size: 28px;
+      font-weight: 900;
+      font-family: 'DM Mono', monospace;
+      font-variant-numeric: tabular-nums;
+      line-height: 1;
+    }
+
+    .metric-card__suffix {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--muted);
+      margin-left: 2px;
+    }
+
+    /* ── Analysis Grid (2 columns) ── */
+    .analysis-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+
+    .analysis-panel {
+      background: var(--panel);
+      border: 2px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 24px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .analysis-panel:nth-child(1)::before {
+      content: "";
+      position: absolute;
+      width: 60px;
+      height: 60px;
+      border-radius: 50%;
+      background: var(--yellow);
+      top: -18px;
+      left: -18px;
+      opacity: 0.9;
+    }
+
+    .analysis-panel:nth-child(2)::before {
+      content: "";
+      position: absolute;
+      width: 50px;
+      height: 50px;
+      background: var(--teal);
+      bottom: -16px;
+      right: -16px;
+      transform: rotate(20deg);
+      border-radius: 10px;
+      opacity: 0.85;
+    }
+
+    .panel-eyebrow {
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 4px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .panel-title {
+      font-size: 20px;
+      font-weight: 900;
+      margin-bottom: 4px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .panel-subtitle {
+      color: var(--muted);
+      font-size: 13px;
+      margin-bottom: 18px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .insight-row {
+      display: flex;
+      gap: 12px;
+      padding: 12px 0;
+      border-bottom: 2px dashed #e8e8e8;
+      position: relative;
+      z-index: 1;
+    }
+
+    .insight-row:last-child { border-bottom: none; }
+
+    .insight-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      border: 2px solid var(--line);
+      background: var(--blue);
+      flex-shrink: 0;
+      margin-top: 5px;
+    }
+
+    .insight-row.tone-positive .insight-dot { background: var(--green); }
+    .insight-row.tone-negative .insight-dot { background: var(--red); }
+
+    .insight-row strong { font-size: 14px; font-weight: 800; display: block; margin-bottom: 2px; }
+    .insight-row p { font-size: 13px; color: var(--muted); line-height: 1.5; }
+
+    .diagnostic-grid { position: relative; z-index: 1; }
+
+    .diagnostic-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 0;
+      border-bottom: 2px dashed #e8e8e8;
+    }
+
+    .diagnostic-row:last-child { border-bottom: none; }
+
+    .diagnostic-row__label { font-size: 13px; color: var(--muted); }
+    .diagnostic-row__value { font-size: 15px; font-weight: 800; font-family: 'DM Mono', monospace; }
+
+    /* ── Support Grid (4 panels: Strategy, Signal, Benchmark, Risk) ── */
+    .support-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 16px;
+    }
+
+    .support-panel {
+      background: var(--panel);
+      border: 2px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 22px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .support-panel:nth-child(1) { /* Strategy - Blue accent */
+    }
+    .support-panel:nth-child(1)::before {
+      content: "";
+      position: absolute;
+      width: 44px;
+      height: 44px;
+      background: var(--blue);
+      top: -12px;
+      right: -12px;
+      border-radius: 50%;
+      opacity: 0.9;
+    }
+
+    .support-panel:nth-child(2)::before { /* Signal - Yellow accent */
+      content: "";
+      position: absolute;
+      width: 8px;
+      left: 0;
+      top: 20px;
+      bottom: 20px;
+      background: var(--yellow);
+      border-top-right-radius: 8px;
+      border-bottom-right-radius: 8px;
+      opacity: 0.9;
+    }
+
+    .support-panel:nth-child(3)::before { /* Benchmark - Teal accent */
+      content: "";
+      position: absolute;
+      width: 44px;
+      height: 44px;
+      background: var(--teal);
+      bottom: -14px;
+      left: -14px;
+      transform: rotate(25deg);
+      border-radius: 10px;
+      opacity: 0.85;
+    }
+
+    .support-panel:nth-child(4)::before { /* Risk - Red accent */
+      content: "";
+      position: absolute;
+      height: 6px;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: var(--red);
+      border-radius: 0 0 14px 14px;
+      opacity: 0.9;
+    }
+
+    .support-panel__title {
+      font-size: 17px;
+      font-weight: 900;
+      margin-bottom: 3px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .support-panel__subtitle {
+      font-size: 12px;
+      color: var(--muted);
+      margin-bottom: 16px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .stats-grid.cols-2 { grid-template-columns: repeat(2, 1fr); }
+
+    .stat-tile {
+      padding: 12px;
+      border: 2px solid #eaeaea;
+      border-radius: 10px;
+      background: #fafafa;
+    }
+
+    .stat-tile__label {
+      font-size: 10px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--muted);
+      display: block;
+      margin-bottom: 4px;
+    }
+
+    .stat-tile__value {
+      font-size: 16px;
+      font-weight: 800;
+      font-family: 'DM Mono', monospace;
+      font-variant-numeric: tabular-nums;
+    }
+
+    /* ── Chart Section ── */
+    .chart-section {
+      background: var(--panel);
+      border: 2px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+
+    .chart-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 18px 24px;
+      border-bottom: 2px solid var(--line);
+    }
+
+    .chart-title-group {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .chart-title {
+      font-size: 16px;
+      font-weight: 800;
+    }
+
+    .chart-subtitle {
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    .chart-placeholder {
+      height: 280px;
+      background:
+        linear-gradient(135deg, rgba(25, 118, 210, 0.06) 0% 40%, transparent 40% 100%),
+        repeating-linear-gradient(90deg, transparent, transparent 60px, #f0f0f0 60px, #f0f0f0 61px),
+        repeating-linear-gradient(0deg, transparent, transparent 40px, #f0f0f0 40px, #f0f0f0 41px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--muted);
+      font-size: 14px;
+      font-weight: 700;
+    }
+
+    /* ── Trade Table ── */
+    .table-card {
+      background: var(--panel);
+      border: 2px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+
+    .table-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 16px 24px;
+      border-bottom: 2px solid var(--line);
+    }
+
+    .table-head h3 { font-size: 18px; font-weight: 900; }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    th, td {
+      text-align: left;
+      padding: 12px 24px;
+      border-bottom: 1px solid #ececec;
+      font-size: 13px;
+    }
+
+    th {
+      text-transform: uppercase;
+      font-size: 11px;
+      letter-spacing: 0.08em;
+      color: var(--muted);
+      font-weight: 800;
+      background: #fafafa;
+    }
+
+    .mono {
+      font-family: 'DM Mono', monospace;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .status-dot {
+      display: inline-block;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      margin-right: 6px;
+      border: 2px solid var(--line);
+    }
+
+    .status-dot.win { background: var(--green); }
+    .status-dot.loss { background: var(--red); }
+
+    /* ── Footer ── */
+    .footer-note {
+      color: var(--muted);
+      font-size: 12px;
+      text-align: right;
+      padding: 4px 0;
+    }
+
+    /* ── Responsive ── */
+    @media (max-width: 1100px) {
+      .page { grid-template-columns: 1fr; }
+      .sidebar {
+        border-right: none;
+        border-bottom: 2px solid var(--line);
+        height: auto;
+        position: relative;
+      }
+      .metrics-grid,
+      .analysis-grid,
+      .support-grid,
+      .summary-facts { grid-template-columns: 1fr 1fr; }
+    }
+
+    @media (max-width: 680px) {
+      .content { padding: 16px; }
+      .metrics-grid,
+      .analysis-grid,
+      .support-grid,
+      .summary-facts { grid-template-columns: 1fr; }
+      .summary-hero { grid-template-columns: 1fr; }
+      .page-title { font-size: 26px; }
+      .stats-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand-tag">QY QUANT v1.0</div>
+        <h1>Backtest<br>Report</h1>
+        <p>策略回测报告，包豪斯几何秩序 + 金融数据可视化</p>
+      </div>
+      <nav class="nav">
+        <a href="#">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+          Dashboard
+        </a>
+        <a href="#">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+          Strategy
+        </a>
+        <a href="#" class="active">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+          Backtest
+        </a>
+        <a href="#">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+          History
+        </a>
+        <a href="#">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+          Settings
+        </a>
+      </nav>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="content">
+      <!-- Page Header -->
+      <div class="page-header">
+        <div>
+          <div class="header-badges">
+            <span class="eyebrow">Backtest Report</span>
+            <span class="job-chip">
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+              JOB&nbsp;<span class="job-chip__id">a3f7c2e1</span>
+            </span>
+          </div>
+          <h1 class="page-title">策略回测报告</h1>
+          <p class="page-subtitle">BTCUSDT · 1d · 2023-01-01 至 2024-12-31 · 共 730 天</p>
+        </div>
+        <div class="header-actions">
+          <button class="btn btn-secondary">Export HTML</button>
+          <button class="btn btn-primary">Export PDF</button>
+        </div>
+      </div>
+
+      <!-- Report Summary -->
+      <section class="report-summary">
+        <div class="summary-hero">
+          <div>
+            <div class="summary-meta">
+              <span class="summary-chip">生成时间 · 2024-12-31</span>
+              <span class="summary-chip">标的 · BTCUSDT</span>
+              <span class="summary-chip">周期 · 1d</span>
+              <span class="summary-chip">区间 · 730 天</span>
+            </div>
+            <h2>报告概览</h2>
+            <p class="summary-hero__subtitle">策略表现的综合评估，包含收益、风险和质量指标。</p>
+          </div>
+          <div class="quality-card">
+            <span class="quality-card__label">质量评分</span>
+            <div>
+              <strong class="quality-card__value">82</strong>
+              <span class="quality-card__unit">/100</span>
+            </div>
+            <span class="quality-card__tone tone-positive">优良</span>
+          </div>
+        </div>
+
+        <div class="summary-facts">
+          <div class="summary-fact">
+            <span class="summary-fact__label">总收益率</span>
+            <strong class="summary-fact__value tone-positive mono">+127.35%</strong>
+            <span class="summary-fact__note tone-positive">超额 +89.2%</span>
+          </div>
+          <div class="summary-fact">
+            <span class="summary-fact__label">年化收益率</span>
+            <strong class="summary-fact__value tone-positive mono">+56.8%</strong>
+            <span class="summary-fact__note tone-positive">跑赢基准</span>
+          </div>
+          <div class="summary-fact">
+            <span class="summary-fact__label">最大回撤</span>
+            <strong class="summary-fact__value tone-negative mono">-18.4%</strong>
+            <span class="summary-fact__note tone-warning">注意风险</span>
+          </div>
+          <div class="summary-fact">
+            <span class="summary-fact__label">胜率</span>
+            <strong class="summary-fact__value tone-positive mono">64.2%</strong>
+            <span class="summary-fact__note tone-positive">62/97 笔</span>
+          </div>
+        </div>
+
+        <div class="summary-conclusion">
+          <div class="conclusion-header">
+            <div>
+              <span class="eyebrow">执行摘要</span>
+              <h3 class="conclusion-title">策略表现优于基准，风险可控</h3>
+            </div>
+            <span class="conclusion-pill tone-positive">优良</span>
+          </div>
+          <p class="conclusion-body">
+            该策略在回测期间内取得了 127.35% 的累计收益，显著超越基准收益。Sharpe 比率为 1.82，表明风险调整后收益表现优异。最大回撤控制在 18.4% 以内，整体风险可控。
+          </p>
+          <div class="conclusion-tags">
+            <span class="conclusion-tag tone-positive">夏普比 · 1.82</span>
+            <span class="conclusion-tag tone-positive">卡尔玛比 · 3.08</span>
+            <span class="conclusion-tag tone-warning">波动率 · 22.6%</span>
+            <span class="conclusion-tag tone-negative">最大连续亏损 · 5 笔</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- Core Metrics Grid -->
+      <div class="metrics-grid">
+        <div class="metric-card positive">
+          <div class="metric-card__label">累计收益</div>
+          <strong class="metric-card__value tone-positive">+127.35<span class="metric-card__suffix">%</span></strong>
+        </div>
+        <div class="metric-card positive">
+          <div class="metric-card__label">年化收益</div>
+          <strong class="metric-card__value tone-positive">+56.8<span class="metric-card__suffix">%</span></strong>
+        </div>
+        <div class="metric-card negative">
+          <div class="metric-card__label">最大回撤</div>
+          <strong class="metric-card__value tone-negative">-18.4<span class="metric-card__suffix">%</span></strong>
+        </div>
+        <div class="metric-card warning">
+          <div class="metric-card__label">夏普比率</div>
+          <strong class="metric-card__value">1.82</strong>
+        </div>
+        <div class="metric-card positive">
+          <div class="metric-card__label">胜率</div>
+          <strong class="metric-card__value tone-positive">64.2<span class="metric-card__suffix">%</span></strong>
+        </div>
+        <div class="metric-card positive">
+          <div class="metric-card__label">盈亏比</div>
+          <strong class="metric-card__value tone-positive">2.14</strong>
+        </div>
+        <div class="metric-card">
+          <div class="metric-card__label">总交易数</div>
+          <strong class="metric-card__value">97</strong>
+        </div>
+        <div class="metric-card warning">
+          <div class="metric-card__label">Sortino 比</div>
+          <strong class="metric-card__value">2.46</strong>
+        </div>
+      </div>
+
+      <!-- Analysis Grid -->
+      <div class="analysis-grid">
+        <div class="analysis-panel">
+          <span class="panel-eyebrow">关键观察</span>
+          <h3 class="panel-title">策略分析</h3>
+          <p class="panel-subtitle">基于回测数据的自动分析洞察</p>
+
+          <div class="insight-row tone-positive">
+            <span class="insight-dot"></span>
+            <div>
+              <strong>上涨趋势捕捉能力强</strong>
+              <p>策略在主要上涨行情中捕捉了 78% 的涨幅，表明趋势跟踪逻辑有效。</p>
+            </div>
+          </div>
+          <div class="insight-row tone-negative">
+            <span class="insight-dot"></span>
+            <div>
+              <strong>震荡市有回撤风险</strong>
+              <p>横盘期间策略产生较多虚假信号，连续亏损最高达 5 笔。</p>
+            </div>
+          </div>
+          <div class="insight-row tone-positive">
+            <span class="insight-dot"></span>
+            <div>
+              <strong>风险控制到位</strong>
+              <p>最大单笔亏损控制在总资金的 3.2% 以内，风控规则执行良好。</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="analysis-panel">
+          <span class="panel-eyebrow">诊断指标</span>
+          <h3 class="panel-title">质量评分</h3>
+          <p class="panel-subtitle">策略健康度多维度评估</p>
+
+          <div class="diagnostic-grid">
+            <div class="diagnostic-row">
+              <span class="diagnostic-row__label">收益稳定性</span>
+              <strong class="diagnostic-row__value tone-positive">A</strong>
+            </div>
+            <div class="diagnostic-row">
+              <span class="diagnostic-row__label">风险控制</span>
+              <strong class="diagnostic-row__value tone-positive">B+</strong>
+            </div>
+            <div class="diagnostic-row">
+              <span class="diagnostic-row__label">信号质量</span>
+              <strong class="diagnostic-row__value tone-warning">B</strong>
+            </div>
+            <div class="diagnostic-row">
+              <span class="diagnostic-row__label">参数合理性</span>
+              <strong class="diagnostic-row__value tone-positive">A-</strong>
+            </div>
+            <div class="diagnostic-row">
+              <span class="diagnostic-row__label">过拟合风险</span>
+              <strong class="diagnostic-row__value tone-positive">低</strong>
+            </div>
+            <div class="diagnostic-row">
+              <span class="diagnostic-row__label">数据充足性</span>
+              <strong class="diagnostic-row__value tone-positive">良好</strong>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Support Grid (4 Panels) -->
+      <div class="support-grid">
+        <!-- Strategy Params -->
+        <div class="support-panel">
+          <h3 class="support-panel__title">策略参数</h3>
+          <p class="support-panel__subtitle">策略配置与运行参数</p>
+          <div class="stats-grid cols-2">
+            <div class="stat-tile">
+              <span class="stat-tile__label">策略ID</span>
+              <strong class="stat-tile__value mono">dual_ma_v2</strong>
+            </div>
+            <div class="stat-tile">
+              <span class="stat-tile__label">版本</span>
+              <strong class="stat-tile__value mono">1.0.0</strong>
+            </div>
+            <div class="stat-tile">
+              <span class="stat-tile__label">快线周期</span>
+              <strong class="stat-tile__value mono">10</strong>
+            </div>
+            <div class="stat-tile">
+              <span class="stat-tile__label">慢线周期</span>
+              <strong class="stat-tile__value mono">30</strong>
+            </div>
+            <div class="stat-tile">
+              <span class="stat-tile__label">止损比例</span>
+              <strong class="stat-tile__value mono">3.0%</strong>
+            </div>
+            <div class="stat-tile">
+              <span class="stat-tile__label">止盈比例</span>
+              <strong class="stat-tile__value mono">8.0%</strong>
+            </div>
+          </div>
+        </div>
+
+        <!-- Signal Stats -->
+        <div class="support-panel">
+          <h3 class="support-panel__title">信号统计</h3>
+          <p class="support-panel__subtitle">买卖信号与胜率分析</p>
+          <div class="stats-grid">
+            <div class="stat-tile">
+              <span class="stat-tile__label">买入次数</span>
+              <strong class="stat-tile__value tone-positive mono">48</strong>
+            </div>
+            <div class="stat-tile">
+              <span class="stat-tile__label">卖出次数</span>
+              <strong class="stat-tile__value tone-negative mono">49</strong>
+            </div>
+            <div class="stat-tile">
+              <span class="stat-tile__label">买卖比</span>
+              <strong class="stat-tile__value mono">0.98</strong>
+            </div>
+            <div class="stat-tile">
+              <span class="stat-tile__label">买入胜率</span>
+              <strong class="stat-tile__value tone-positive mono">66.7%</strong>
+            </div>
+            <div class="stat-tile">
+              <span class="stat-tile__label">卖空胜率</span>
+              <strong class="stat-tile__value tone-positive mono">61.2%</strong>
+            </div>
+            <div class="stat-tile">
+              <span class="stat-tile__label">日均信号</span>
+              <strong class="stat-tile__value mono">0.13</strong>
+            </div>
+          </div>
+        </div>
+
+        <!-- Benchmark -->
+        <div class="support-panel">
+          <h3 class="support-panel__title">基准对比</h3>
+          <p class="support-panel__subtitle">与买入持有基准的表现对比</p>
+          <div class="stats-grid cols-2">
+            <div class="stat-tile">
+              <span class="stat-tile__label">基准收益</span>
+              <strong class="stat-tile__value tone-positive mono">+38.15%</strong>
+            </div>
+            <div class="stat-tile">
+              <span class="stat-tile__label">超额收益</span>
+              <strong class="stat-tile__value tone-positive mono">+89.2%</strong>
+            </div>
+            <div class="stat-tile">
+              <span class="stat-tile__label">跟踪误差</span>
+              <strong class="stat-tile__value mono">14.6%</strong>
+            </div>
+            <div class="stat-tile">
+              <span class="stat-tile__label">信息比率</span>
+              <strong class="stat-tile__value tone-positive mono">1.245</strong>
+            </div>
+          </div>
+        </div>
+
+        <!-- Risk Metrics -->
+        <div class="support-panel">
+          <h3 class="support-panel__title">风险指标</h3>
+          <p class="support-panel__subtitle">风险分析与压力测试</p>
+          <div class="stats-grid">
+            <div class="stat-tile">
+              <span class="stat-tile__label">盈亏因子</span>
+              <strong class="stat-tile__value tone-positive mono">2.85</strong>
+            </div>
+            <div class="stat-tile">
+              <span class="stat-tile__label">期望值</span>
+              <strong class="stat-tile__value tone-positive mono">+1.32</strong>
+            </div>
+            <div class="stat-tile">
+              <span class="stat-tile__label">最大连胜</span>
+              <strong class="stat-tile__value mono">8 笔</strong>
+            </div>
+            <div class="stat-tile">
+              <span class="stat-tile__label">VaR 95%</span>
+              <strong class="stat-tile__value tone-negative mono">-2.4%</strong>
+            </div>
+            <div class="stat-tile">
+              <span class="stat-tile__label">平均盈利</span>
+              <strong class="stat-tile__value tone-positive mono">+3.8%</strong>
+            </div>
+            <div class="stat-tile">
+              <span class="stat-tile__label">平均亏损</span>
+              <strong class="stat-tile__value tone-negative mono">-1.8%</strong>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Equity Curve Chart -->
+      <div class="chart-section">
+        <div class="chart-header">
+          <div class="chart-title-group">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+            <span class="chart-title">资金曲线</span>
+          </div>
+          <span class="chart-subtitle">策略 vs 基准净值走势</span>
+        </div>
+        <div class="chart-placeholder">
+          [ECharts Equity Curve — 策略净值 (蓝线) / 基准净值 (虚线)]
+        </div>
+      </div>
+
+      <!-- Drawdown Chart -->
+      <div class="chart-section">
+        <div class="chart-header">
+          <div class="chart-title-group">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 18 13.5 8.5 8.5 13.5 1 6"/><polyline points="17 18 23 18 23 12"/></svg>
+            <span class="chart-title">回撤分析</span>
+          </div>
+          <span class="chart-subtitle">组合回撤深度变化</span>
+        </div>
+        <div class="chart-placeholder" style="height:180px;">
+          [ECharts Drawdown — 红色面积图]
+        </div>
+      </div>
+
+      <!-- Trade Table -->
+      <div class="table-card">
+        <div class="table-head">
+          <h3>交易明细</h3>
+          <span style="font-size:12px;color:var(--muted);font-weight:700;">共 97 笔交易</span>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>方向</th>
+              <th>开仓时间</th>
+              <th>平仓时间</th>
+              <th>开仓价</th>
+              <th>平仓价</th>
+              <th>收益</th>
+              <th>持有天数</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="mono">1</td>
+              <td><span class="status-dot win"></span>做多</td>
+              <td class="mono">2023-01-15</td>
+              <td class="mono">2023-01-22</td>
+              <td class="mono">20,450</td>
+              <td class="mono">22,180</td>
+              <td class="mono tone-positive">+8.46%</td>
+              <td class="mono">7</td>
+            </tr>
+            <tr>
+              <td class="mono">2</td>
+              <td><span class="status-dot loss"></span>做多</td>
+              <td class="mono">2023-01-28</td>
+              <td class="mono">2023-02-03</td>
+              <td class="mono">22,800</td>
+              <td class="mono">21,960</td>
+              <td class="mono tone-negative">-3.68%</td>
+              <td class="mono">6</td>
+            </tr>
+            <tr>
+              <td class="mono">3</td>
+              <td><span class="status-dot win"></span>做空</td>
+              <td class="mono">2023-02-10</td>
+              <td class="mono">2023-02-18</td>
+              <td class="mono">21,200</td>
+              <td class="mono">19,850</td>
+              <td class="mono tone-positive">+6.37%</td>
+              <td class="mono">8</td>
+            </tr>
+            <tr>
+              <td class="mono">4</td>
+              <td><span class="status-dot win"></span>做多</td>
+              <td class="mono">2023-02-25</td>
+              <td class="mono">2023-03-08</td>
+              <td class="mono">20,100</td>
+              <td class="mono">22,350</td>
+              <td class="mono tone-positive">+11.19%</td>
+              <td class="mono">11</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Footer -->
+      <div class="footer-note">
+        免责声明：回测结果不代表未来表现 · QY Quant &copy; 2024
+      </div>
+    </main>
+  </div>
+</body>
+</html>

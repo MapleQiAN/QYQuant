@@ -28,6 +28,18 @@
           <span v-if="signal.pnl !== undefined" :class="pnlClass(signal.pnl)">
             {{ $t('backtestReport.tradePnlLabel') }} {{ formatPnl(signal.pnl) }}
           </span>
+          <span
+            v-if="durations.has(signalIndexMap.get(signal.id) ?? -1)"
+            class="signal-item__duration"
+          >
+            {{ $t('backtestReport.holdingDays') }} {{ durations.get(signalIndexMap.get(signal.id)!) }}
+          </span>
+          <span
+            v-if="cumReturns[signalIndexMap.get(signal.id) ?? -1] !== undefined"
+            :class="['signal-item__cumulative', cumulativeClass(signalIndexMap.get(signal.id)!)]"
+          >
+            {{ $t('backtestReport.cumulativeReturn') }} {{ formatPnl(cumReturns[signalIndexMap.get(signal.id)!]) }}
+          </span>
         </div>
       </article>
     </div>
@@ -40,11 +52,22 @@ import type { TradeMarker } from '../../lib/chartIndicators'
 
 const props = defineProps<{
   signals: TradeMarker[]
+  holdingDurations?: Map<number, number>
+  cumulativeReturns?: number[]
 }>()
+
+const durations = computed(() => props.holdingDurations ?? new Map<number, number>())
+const cumReturns = computed(() => props.cumulativeReturns ?? [])
 
 const sortedSignals = computed(() =>
   [...props.signals].sort((left, right) => right.epochMs - left.epochMs),
 )
+
+const signalIndexMap = computed(() => {
+  const map = new Map<string, number>()
+  props.signals.forEach((s, i) => map.set(s.id, i))
+  return map
+})
 
 function formatTimestamp(ts: number | string): string {
   const ms = typeof ts === 'number'
@@ -79,6 +102,14 @@ function formatPnl(value: number): string {
 function pnlClass(value: number): string {
   if (value > 0) return 'positive'
   if (value < 0) return 'negative'
+  return ''
+}
+
+function cumulativeClass(index: number): string {
+  const val = cumReturns.value[index]
+  if (val === undefined) return ''
+  if (val > 0) return 'cumulative-positive'
+  if (val < 0) return 'cumulative-negative'
   return ''
 }
 </script>
@@ -169,6 +200,32 @@ function pnlClass(value: number): string {
   font-size: var(--font-size-sm);
 }
 
+.signal-item__duration {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-xs);
+  padding: 2px 6px;
+  border-radius: 6px;
+  background: rgba(139, 92, 246, 0.08);
+}
+
+.signal-item__cumulative {
+  font-size: var(--font-size-xs);
+  padding: 2px 6px;
+  border-radius: 6px;
+  font-family: 'DM Mono', monospace;
+  font-variant-numeric: tabular-nums;
+}
+
+.cumulative-positive {
+  color: var(--color-up);
+  background: var(--color-up-bg);
+}
+
+.cumulative-negative {
+  color: var(--color-down);
+  background: var(--color-down-bg);
+}
+
 .side-badge {
   display: inline-flex;
   align-items: center;
@@ -181,26 +238,26 @@ function pnlClass(value: number): string {
 }
 
 .side-badge.buy {
-  background: rgba(22, 163, 106, 0.12);
-  color: #16a34a;
+  background: var(--color-up-bg);
+  color: var(--color-up);
 }
 
 .side-badge.sell {
-  background: rgba(220, 38, 38, 0.12);
-  color: #dc2626;
+  background: var(--color-down-bg);
+  color: var(--color-down);
 }
 
 .mono {
-  font-family: 'Space Mono', monospace;
+  font-family: 'DM Mono', monospace;
   font-variant-numeric: tabular-nums;
 }
 
 .positive {
-  color: #16a34a;
+  color: var(--color-up);
 }
 
 .negative {
-  color: #dc2626;
+  color: var(--color-down);
 }
 
 @media (max-width: 768px) {

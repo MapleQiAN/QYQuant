@@ -231,7 +231,7 @@ const LogoutIcon = () => h('svg', { width: 14, height: 14, viewBox: '0 0 24 24',
   z-index: 100;
   height: var(--nav-height);
   background: var(--color-nav-bg);
-  border-bottom: 1px solid var(--color-nav-border);
+  border-bottom: 2px solid var(--color-nav-border);
 }
 
 .header-content {
@@ -256,8 +256,8 @@ const LogoutIcon = () => h('svg', { width: 14, height: 14, viewBox: '0 0 24 24',
   align-items: center;
   justify-content: center;
   background: transparent;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-sm);
   color: var(--color-text-secondary);
   cursor: pointer;
   transition: color var(--transition-fast), background var(--transition-fast);
@@ -278,9 +278,10 @@ const LogoutIcon = () => h('svg', { width: 14, height: 14, viewBox: '0 0 24 24',
 .nav-tab {
   padding: 6px 16px;
   font-size: var(--font-size-sm);
-  font-weight: 500;
+  font-weight: 600;
   color: var(--color-text-muted);
   text-decoration: none;
+  border: 2px solid transparent;
   border-radius: var(--radius-full);
   transition: color var(--transition-fast), background var(--transition-fast);
 }
@@ -291,9 +292,10 @@ const LogoutIcon = () => h('svg', { width: 14, height: 14, viewBox: '0 0 24 24',
 }
 
 .nav-tab.active {
-  color: var(--color-text-inverse);
-  background: var(--color-text-primary);
-  font-weight: 600;
+  color: #ffffff;
+  background: var(--color-primary);
+  font-weight: 700;
+  border-color: var(--color-border);
 }
 
 :root[data-theme="light"] .nav-tab.active {
@@ -330,7 +332,7 @@ const LogoutIcon = () => h('svg', { width: 14, height: 14, viewBox: '0 0 24 24',
   font-weight: 500;
   color: var(--color-text-primary);
   background: var(--color-surface);
-  border: 1px solid var(--color-border);
+  border: 2px solid var(--color-border);
   border-radius: var(--radius-full);
   outline: none;
   transition: border-color var(--transition-fast);
@@ -353,7 +355,7 @@ const LogoutIcon = () => h('svg', { width: 14, height: 14, viewBox: '0 0 24 24',
   font-weight: 600;
   color: var(--color-text-muted);
   background: var(--color-surface-elevated);
-  border: 1px solid var(--color-border);
+  border: 2px solid var(--color-border);
   border-radius: var(--radius-xs);
   line-height: 1.2;
   pointer-events: none;
@@ -452,7 +454,7 @@ const LogoutIcon = () => h('svg', { width: 14, height: 14, viewBox: '0 0 24 24',
   min-width: 200px;
   padding: 6px;
   background: var(--color-surface);
-  border: 1px solid var(--color-border);
+  border: 2px solid var(--color-border);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-lg);
   z-index: 200;

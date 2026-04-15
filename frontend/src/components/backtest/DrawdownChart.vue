@@ -71,11 +71,11 @@ function buildOption(): EChartsOption {
         type: 'line',
         smooth: true,
         showSymbol: false,
-        lineStyle: { width: 1.5, color: '#dc2626' },
+        lineStyle: { width: 1.5, color: '#d4393b' },
         areaStyle: {
           color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-            { offset: 0, color: 'rgba(220, 38, 38, 0.25)' },
-            { offset: 1, color: 'rgba(220, 38, 38, 0.02)' }
+            { offset: 0, color: 'rgba(212, 57, 59, 0.20)' },
+            { offset: 1, color: 'rgba(212, 57, 59, 0.02)' }
           ])
         },
         data: drawdownData

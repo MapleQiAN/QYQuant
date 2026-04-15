@@ -83,6 +83,26 @@
                 <span :class="['summary-fact__note', toneClass(fact.tone)]">{{ fact.note }}</span>
               </article>
             </div>
+
+            <article class="summary-conclusion">
+              <div class="summary-conclusion__header">
+                <div>
+                  <span class="analysis-panel__eyebrow">{{ $t('backtestReport.executiveSummary') }}</span>
+                  <h3 class="summary-conclusion__title">{{ summaryHeadline }}</h3>
+                </div>
+                <span :class="['summary-conclusion__pill', toneClass(qualityTone)]">{{ qualityLabel }}</span>
+              </div>
+              <p class="summary-conclusion__body">{{ summaryBody }}</p>
+              <div class="summary-conclusion__tags">
+                <span
+                  v-for="tag in summaryTags"
+                  :key="tag.label"
+                  :class="['summary-conclusion__tag', toneClass(tag.tone)]"
+                >
+                  {{ tag.label }} · {{ tag.value }}
+                </span>
+              </div>
+            </article>
           </section>
 
           <!-- Core Metrics Grid -->
@@ -106,6 +126,56 @@
             </StatCard>
           </div>
 
+          <section class="analysis-grid">
+            <article class="analysis-panel" data-test="report-insights">
+              <div class="analysis-panel__header">
+                <span class="analysis-panel__eyebrow">{{ $t('backtestReport.keyObservationsTitle') }}</span>
+                <h3 class="analysis-panel__title">{{ $t('backtestReport.reportSummary') }}</h3>
+                <p class="analysis-panel__subtitle">{{ $t('backtestReport.keyObservationsSubtitle') }}</p>
+              </div>
+              <div class="analysis-panel__body">
+                <article v-for="item in insightItems" :key="item.title" :class="['insight-row', toneClass(item.tone)]">
+                  <span class="insight-row__dot"></span>
+                  <div class="insight-row__content">
+                    <strong>{{ item.title }}</strong>
+                    <p>{{ item.body }}</p>
+                  </div>
+                </article>
+              </div>
+            </article>
+
+            <article class="analysis-panel" data-test="report-diagnostics">
+              <div class="analysis-panel__header">
+                <span class="analysis-panel__eyebrow">{{ $t('backtestReport.diagnosticsTitle') }}</span>
+                <h3 class="analysis-panel__title">{{ $t('backtestReport.qualityScore') }}</h3>
+                <p class="analysis-panel__subtitle">{{ $t('backtestReport.diagnosticsSubtitle') }}</p>
+              </div>
+              <div class="diagnostic-grid">
+                <div v-for="row in diagnosticRows" :key="row.label" class="diagnostic-row">
+                  <span class="diagnostic-row__label">{{ row.label }}</span>
+                  <strong :class="['diagnostic-row__value', toneClass(row.tone)]">{{ row.value }}</strong>
+                </div>
+              </div>
+            </article>
+          </section>
+
+          <section class="support-grid">
+            <StrategyParamsPanel
+              :strategy-id="strategyId"
+              :version="strategyVersion"
+              :symbols="strategySymbols"
+              :interval="strategyInterval"
+              :data-source="strategyDataSource"
+              :params="strategyParamsFiltered"
+            />
+
+            <SignalStatsPanel :stats="signalStats" />
+
+            <BenchmarkComparison :data="benchmarkComparison" />
+
+            <RiskMetricsPanel :metrics="riskMetrics" />
+          </section>
+
           <!-- K-line Chart -->
           <div v-if="hasKlineData" class="chart-section">
             <div class="chart-section__header">
@@ -122,7 +192,7 @@
                 :symbol="report.symbol || 'BTCUSDT'"
                 :timeframe="report.interval || '1d'"
               />
-              <TradeSignalList :signals="tradeMarkers" />
+              <TradeSignalList :signals="tradeMarkers" :holding-durations="tradeHoldingDurations" :cumulative-returns="cumulativeReturns" />
             </div>
           </div>
 
@@ -152,6 +222,9 @@
 
           <!-- Trade List -->
           <TradeTable :trades="report.trades || []" />
+
+          <!-- Trade Distribution Charts -->
+          <TradeDistributionCharts :distribution="tradeDistribution" />
 
           <!-- Detailed Metrics -->
           <section class="metrics-board">
@@ -194,8 +267,22 @@ import KlinePlaceholder from '../components/KlinePlaceholder.vue'
 import ErrorDisplay from '../components/backtest/ErrorDisplay.vue'
 import DisclaimerFooter from '../components/disclaimer/DisclaimerFooter.vue'
 import MetricTooltip from '../components/help/MetricTooltip.vue'
+import StrategyParamsPanel from '../components/backtest/StrategyParamsPanel.vue'
+import SignalStatsPanel from '../components/backtest/SignalStatsPanel.vue'
+import BenchmarkComparison from '../components/backtest/BenchmarkComparison.vue'
+import RiskMetricsPanel from '../components/backtest/RiskMetricsPanel.vue'
+import TradeDistributionCharts from '../components/backtest/TradeDistributionCharts.vue'
 import { useUserStore } from '../stores'
-import { mapTradesToMarkers, toEpochMs, type TradeMarker } from '../lib/chartIndicators'
+import { mapTradesToMarkers, toEpochMs } from '../lib/chartIndicators'
+import type { BacktestSummary } from '../types/Backtest'
+import {
+  computeSignalStats,
+  computeBenchmarkComparison,
+  computeRiskMetrics,
+  computeTradeDistribution,
+  computeTradeHoldingDurations,
+  computeCumulativeReturns,
+} from '../lib/backtestComputed'
 import {
   downloadBacktestReportAsHtml,
   printBacktestReportAsPdf,
@@ -203,19 +290,6 @@ import {
 import { useBacktestsStore } from '../stores/backtests'
 
 type Tone = 'positive' | 'negative' | 'warning' | 'neutral'
-
-interface HoveredKlineSnapshot {
-  time: string | number
-  formattedTime: string
-  open: number
-  high: number
-  low: number
-  close: number
-  volume: number
-  priceChange: number
-  signalCount: number
-  signals: TradeMarker[]
-}
 
 const { t } = useI18n()
 
@@ -228,7 +302,7 @@ const isGuidedMode = route.query.guided === 'true'
 const exportRoot = ref<HTMLElement | null>(null)
 
 const report = computed(() => store.report)
-const summary = computed(() => report.value?.result_summary ?? {})
+const summary = computed<Partial<BacktestSummary>>(() => report.value?.result_summary ?? {})
 
 const hasKlineData = computed(() => (report.value?.kline?.length ?? 0) > 0)
 const hasDrawdownData = computed(() =>
@@ -302,7 +376,6 @@ const tradeMarkers = computed(() => mapTradesToMarkers(klineBars.value, trades.v
 const reportParams = computed<Record<string, unknown>>(() => report.value?.params ?? {})
 const firstPoint = computed(() => points.value[0] ?? null)
 const lastPoint = computed(() => points.value[points.value.length - 1] ?? null)
-const hoveredKlineSnapshot = ref<HoveredKlineSnapshot | null>(null)
 
 const strategyReturn = computed(() => {
   const direct = numberOrNull(summary.value.totalReturn)
@@ -369,13 +442,51 @@ const durationDays = computed(() => {
 
 const buySignals = computed(() => tradeMarkers.value.filter((trade) => trade.side === 'buy').length)
 const sellSignals = computed(() => tradeMarkers.value.filter((trade) => trade.side === 'sell').length)
-const totalSignalCount = computed(() => tradeMarkers.value.length)
-const latestTradeMarker = computed(() => tradeMarkers.value[tradeMarkers.value.length - 1] ?? null)
 const signalDensityLabel = computed(() => {
   if (!klineBars.value.length) {
     return '--'
   }
   return `${formatPlain((tradeMarkers.value.length / klineBars.value.length) * 100, 1)} / 100`
+})
+
+const signalStats = computed(() => computeSignalStats(trades.value, durationDays.value))
+const benchmarkComparison = computed(() => computeBenchmarkComparison(points.value))
+const riskMetrics = computed(() => computeRiskMetrics(trades.value))
+const tradeDistribution = computed(() => computeTradeDistribution(trades.value, points.value))
+const tradeHoldingDurations = computed(() => computeTradeHoldingDurations(trades.value))
+const cumulativeReturns = computed(() => computeCumulativeReturns(trades.value))
+
+const strategyId = computed(() => {
+  const params = reportParams.value
+  return typeof params.strategy_id === 'string' ? params.strategy_id : ''
+})
+
+const strategyVersion = computed(() => {
+  const params = reportParams.value
+  return typeof params.version === 'string' ? params.version : typeof params.strategy_version === 'string' ? params.strategy_version : ''
+})
+
+const strategySymbols = computed<string[]>(() => {
+  const params = reportParams.value
+  const symbols = params.symbols
+  if (Array.isArray(symbols)) return symbols.filter((s): s is string => typeof s === 'string')
+  if (typeof params.symbol === 'string') return [params.symbol]
+  return []
+})
+
+const strategyInterval = computed(() => {
+  const params = reportParams.value
+  return typeof params.interval === 'string' ? params.interval : report.value?.interval ?? ''
+})
+
+const strategyDataSource = computed(() => {
+  const params = reportParams.value
+  return typeof params.data_source === 'string' ? params.data_source : ''
+})
+
+const strategyParamsFiltered = computed<Record<string, unknown>>(() => {
+  const { strategy_id, version, strategy_version, symbols, symbol, interval, data_source, start_date, end_date, ...rest } = reportParams.value as Record<string, unknown>
+  return rest
 })
 
 const qualityScore = computed(() => {
@@ -423,6 +534,52 @@ const qualityLabel = computed(() => {
 })
 
 const completedAtLabel = computed(() => formatDateTime(report.value?.completed_at))
+
+const summaryHeadline = computed(() => {
+  if (qualityScore.value >= 78 && (excessReturn.value ?? 0) > 0) {
+    return t('backtestReport.executiveHeadlineStrong')
+  }
+  if (qualityScore.value >= 58) {
+    return t('backtestReport.executiveHeadlineBalanced')
+  }
+  if ((strategyReturn.value ?? 0) > 0) {
+    return t('backtestReport.executiveHeadlineFragile')
+  }
+  return t('backtestReport.executiveHeadlineWeak')
+})
+
+const summaryBody = computed(() =>
+  t('backtestReport.executiveSummaryBody', {
+    strategy: formatPercent(strategyReturn.value, 2, true),
+    benchmark: formatPercent(benchmarkReturn.value, 2, true),
+    excess: formatPercent(excessReturn.value, 2, true),
+    drawdown: formatPercent(numberOrNull(summary.value.maxDrawdown), 2, true),
+    winRate: formatPercent(numberOrNull(summary.value.winRate), 2),
+  })
+)
+
+const summaryTags = computed(() => [
+  {
+    label: t('backtestReport.strategyVsBenchmark'),
+    value: formatPercent(excessReturn.value, 2, true),
+    tone: toneFromSignedValue(excessReturn.value),
+  },
+  {
+    label: t('backtestReport.currentDrawdown'),
+    value: formatPercent(currentDrawdown.value, 2, true),
+    tone: toneFromSignedValue(currentDrawdown.value, true),
+  },
+  {
+    label: t('backtestReport.metrics.totalTrades'),
+    value: formatInteger(numberOrNull(summary.value.totalTrades) ?? trades.value.length),
+    tone: 'neutral' as Tone,
+  },
+  {
+    label: t('backtestReport.signalBalance'),
+    value: signalDensityLabel.value,
+    tone: 'neutral' as Tone,
+  },
+])
 
 const snapshotFacts = computed(() => [
   {
@@ -559,19 +716,71 @@ const coreMetrics = computed(() => ([
   }
 ]))
 
-const detailedMetrics = computed(() =>
-  [
-    [t('backtestReport.metrics.annualizedReturn'), 'annualized_return', formatMetric(summary.value.annualizedReturn, 2, '%')],
-    [t('backtestReport.metrics.volatility'), 'volatility', formatMetric(summary.value.volatility, 2, '%')],
-    [t('backtestReport.metrics.sortinoRatio'), 'sortino_ratio', formatMetric(summary.value.sortinoRatio, 2)],
-    [t('backtestReport.metrics.calmarRatio'), 'calmar_ratio', formatMetric(summary.value.calmarRatio, 2)],
-    [t('backtestReport.metrics.profitLossRatio'), 'profit_loss_ratio', formatMetric(summary.value.profitLossRatio, 2)],
-    [t('backtestReport.metrics.maxConsecutiveLosses'), 'max_consecutive_losses', formatMetric(summary.value.maxConsecutiveLosses, 0)],
-    [t('backtestReport.metrics.totalTrades'), 'total_trades', formatMetric(summary.value.totalTrades, 0)],
-    [t('backtestReport.metrics.alpha'), 'alpha', formatMetric(summary.value.alpha, 2)],
-    [t('backtestReport.metrics.beta'), 'beta', formatMetric(summary.value.beta, 2)]
-  ].map(([label, metricKey, value]) => ({ label, metricKey, value }))
-)
+const detailedMetrics = computed(() => [
+  {
+    label: t('backtestReport.metrics.annualizedReturn'),
+    metricKey: 'annualized_return',
+    value: formatMetric(summary.value.annualizedReturn, 2, '%'),
+    tone: toneFromSignedValue(numberOrNull(summary.value.annualizedReturn)),
+    caption: t('backtestReport.metricCaptionAnnualizedReturn'),
+  },
+  {
+    label: t('backtestReport.metrics.volatility'),
+    metricKey: 'volatility',
+    value: formatMetric(summary.value.volatility, 2, '%'),
+    tone: toneFromSignedValue(numberOrNull(summary.value.volatility), true),
+    caption: t('backtestReport.metricCaptionVolatility'),
+  },
+  {
+    label: t('backtestReport.metrics.sortinoRatio'),
+    metricKey: 'sortino_ratio',
+    value: formatMetric(summary.value.sortinoRatio, 2),
+    tone: toneFromSignedValue(numberOrNull(summary.value.sortinoRatio)),
+    caption: t('backtestReport.metricCaptionSortinoRatio'),
+  },
+  {
+    label: t('backtestReport.metrics.calmarRatio'),
+    metricKey: 'calmar_ratio',
+    value: formatMetric(summary.value.calmarRatio, 2),
+    tone: toneFromSignedValue(numberOrNull(summary.value.calmarRatio)),
+    caption: t('backtestReport.metricCaptionCalmarRatio'),
+  },
+  {
+    label: t('backtestReport.metrics.profitLossRatio'),
+    metricKey: 'profit_loss_ratio',
+    value: formatMetric(summary.value.profitLossRatio, 2),
+    tone: toneFromSignedValue((numberOrNull(summary.value.profitLossRatio) ?? 1) - 1),
+    caption: t('backtestReport.metricCaptionProfitLossRatio'),
+  },
+  {
+    label: t('backtestReport.metrics.maxConsecutiveLosses'),
+    metricKey: 'max_consecutive_losses',
+    value: formatMetric(summary.value.maxConsecutiveLosses, 0),
+    tone: toneFromSignedValue(numberOrNull(summary.value.maxConsecutiveLosses), true),
+    caption: t('backtestReport.metricCaptionMaxConsecutiveLosses'),
+  },
+  {
+    label: t('backtestReport.metrics.totalTrades'),
+    metricKey: 'total_trades',
+    value: formatMetric(summary.value.totalTrades, 0),
+    tone: 'neutral' as Tone,
+    caption: t('backtestReport.metricCaptionTotalTrades'),
+  },
+  {
+    label: t('backtestReport.metrics.alpha'),
+    metricKey: 'alpha',
+    value: formatMetric(summary.value.alpha, 2),
+    tone: toneFromSignedValue(numberOrNull(summary.value.alpha)),
+    caption: t('backtestReport.metricCaptionAlpha'),
+  },
+  {
+    label: t('backtestReport.metrics.beta'),
+    metricKey: 'beta',
+    value: formatMetric(summary.value.beta, 2),
+    tone: toneFromSignedValue(Math.abs(numberOrNull(summary.value.beta) ?? 0) - 1, true),
+    caption: t('backtestReport.metricCaptionBeta'),
+  },
+])
 
 async function finishGuidedOnboarding() {
   await userStore.markOnboardingCompleted(true)
@@ -603,10 +812,6 @@ async function exportReportAsPdf() {
   } catch (error) {
     console.error('Failed to export backtest PDF', error)
   }
-}
-
-function handleKlineHover(payload: HoveredKlineSnapshot | null) {
-  hoveredKlineSnapshot.value = payload
 }
 
 onMounted(() => {
@@ -663,10 +868,10 @@ onMounted(() => {
 
 .eyebrow {
   font-size: var(--font-size-xs);
-  font-weight: 700;
+  font-weight: 800;
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: var(--color-accent);
+  color: var(--color-primary);
 }
 
 .job-chip {
@@ -674,22 +879,23 @@ onMounted(() => {
   align-items: center;
   gap: 5px;
   padding: 3px 10px;
-  border: 1px solid var(--color-border);
+  border: 2px solid var(--color-border);
   border-radius: 999px;
-  background: var(--color-surface-elevated);
+  background: var(--color-surface);
   font-size: 11px;
+  font-weight: 800;
   color: var(--color-text-muted);
 }
 
 .job-chip__id {
-  font-family: 'Space Mono', monospace;
-  color: var(--color-text-secondary);
+  font-family: 'DM Mono', monospace;
+  color: var(--color-primary);
 }
 
 .page-title {
   margin: 0;
   font-size: var(--font-size-xxl);
-  font-weight: 800;
+  font-weight: 900;
   color: var(--color-text-primary);
   letter-spacing: -0.02em;
 }
@@ -707,24 +913,25 @@ onMounted(() => {
   gap: var(--spacing-sm);
   padding: var(--spacing-xl);
   background: var(--color-surface);
-  border: 1px solid var(--color-border);
+  border: 2px solid var(--color-border);
   border-radius: var(--radius-lg);
   color: var(--color-text-muted);
   font-size: var(--font-size-sm);
   justify-content: center;
+  box-shadow: var(--shadow-md);
 }
 
 .state-block--error {
   color: var(--color-danger);
-  border-color: rgba(255, 59, 59, 0.2);
-  background: rgba(255, 59, 59, 0.04);
+  border-color: var(--color-danger);
+  background: var(--color-danger-bg);
 }
 
 .state-block__spinner {
   width: 18px;
   height: 18px;
-  border: 2px solid var(--color-border);
-  border-top-color: var(--color-accent);
+  border: 2px solid var(--color-border-light);
+  border-top-color: var(--color-primary);
   border-radius: 50%;
   animation: spin 0.7s linear infinite;
 }
@@ -736,10 +943,11 @@ onMounted(() => {
   gap: var(--spacing-md);
   padding: var(--spacing-md) var(--spacing-lg);
   margin-bottom: var(--spacing-lg);
-  background: rgba(16, 185, 129, 0.08);
-  border: 1px solid rgba(16, 185, 129, 0.25);
+  background: var(--color-success-bg);
+  border: 2px solid var(--color-success);
   border-radius: var(--radius-lg);
   animation: slide-up 0.3s ease;
+  box-shadow: var(--shadow-md);
 }
 
 .guided-success__icon {
@@ -756,7 +964,7 @@ onMounted(() => {
   display: block;
   color: var(--color-success);
   font-size: var(--font-size-sm);
-  font-weight: 700;
+  font-weight: 800;
 }
 
 .guided-success__content p {
@@ -769,19 +977,33 @@ onMounted(() => {
   display: grid;
   gap: var(--spacing-md);
   padding: clamp(18px, 3vw, 28px);
-  border: 1px solid var(--color-border);
-  border-radius: 24px;
-  background:
-    radial-gradient(circle at top left, rgba(124, 109, 216, 0.18), transparent 28%),
-    radial-gradient(circle at top right, rgba(54, 214, 182, 0.14), transparent 32%),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.03), rgba(255, 255, 255, 0.01));
-  box-shadow: var(--shadow-md);
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-lg);
+  position: relative;
+  overflow: hidden;
+}
+
+.report-summary::after {
+  content: "";
+  position: absolute;
+  width: 180px;
+  height: 180px;
+  background: var(--color-danger);
+  bottom: -70px;
+  right: -50px;
+  transform: rotate(25deg);
+  border-radius: 22px;
+  opacity: 0.12;
 }
 
 .report-summary__hero {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 220px;
+  grid-template-columns: minmax(0, 1fr) 180px;
   gap: var(--spacing-lg);
+  position: relative;
+  z-index: 1;
 }
 
 .report-summary__copy {
@@ -802,9 +1024,10 @@ onMounted(() => {
   gap: 6px;
   padding: 4px 10px;
   border-radius: 999px;
-  border: 1px solid var(--color-border);
-  background: rgba(255, 255, 255, 0.04);
+  border: 2px solid var(--color-border);
+  background: var(--color-surface);
   font-size: var(--font-size-xs);
+  font-weight: 700;
 }
 
 .report-summary__title {
@@ -825,10 +1048,23 @@ onMounted(() => {
   gap: 8px;
   align-content: start;
   padding: 18px;
-  border-radius: 20px;
-  border: 1px solid var(--color-border);
-  background: var(--color-surface-elevated);
-  backdrop-filter: blur(12px);
+  border-radius: 14px;
+  border: 2px solid var(--color-border);
+  background: var(--color-surface);
+  position: relative;
+  text-align: center;
+}
+
+.quality-score-card::before {
+  content: "";
+  position: absolute;
+  width: 40px;
+  height: 40px;
+  background: var(--color-primary);
+  border-radius: 50%;
+  top: -14px;
+  right: -14px;
+  opacity: 0.9;
 }
 
 .quality-score-card__label {
@@ -868,16 +1104,20 @@ onMounted(() => {
 .summary-facts {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: var(--spacing-md);
+  border-top: 2px solid var(--color-border);
+  position: relative;
+  z-index: 1;
 }
 
 .summary-fact {
   display: grid;
-  gap: 6px;
-  padding: 16px 18px;
-  border: 1px solid var(--color-border);
-  border-radius: 18px;
-  background: rgba(255, 255, 255, 0.02);
+  gap: 4px;
+  padding: 18px 20px;
+  border-right: 2px solid var(--color-border-light);
+}
+
+.summary-fact:last-child {
+  border-right: none;
 }
 
 .summary-fact__label,
@@ -886,6 +1126,7 @@ onMounted(() => {
 .diagnostic-row__label {
   color: var(--color-text-muted);
   font-size: var(--font-size-xs);
+  font-weight: 800;
   text-transform: uppercase;
   letter-spacing: 0.08em;
 }
@@ -893,20 +1134,82 @@ onMounted(() => {
 .summary-fact__value {
   color: var(--color-text-primary);
   font-size: var(--font-size-xl);
-  font-weight: 700;
+  font-weight: 900;
   font-variant-numeric: tabular-nums;
+  font-family: 'DM Mono', monospace;
 }
 
 .diagnostic-row__value {
   color: var(--color-text-primary);
   font-size: var(--font-size-lg);
-  font-weight: 700;
+  font-weight: 800;
   font-variant-numeric: tabular-nums;
+  font-family: 'DM Mono', monospace;
 }
 
 .summary-fact__note,
 .metric-tile__caption {
   font-size: var(--font-size-sm);
+  font-weight: 700;
+}
+
+.summary-conclusion {
+  display: grid;
+  gap: 14px;
+  padding: 22px 24px;
+  border-top: 2px solid var(--color-border);
+  position: relative;
+  z-index: 1;
+}
+
+.summary-conclusion__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--spacing-md);
+}
+
+.summary-conclusion__title {
+  margin: 6px 0 0;
+  font-size: clamp(1.15rem, 2vw, 1.55rem);
+  letter-spacing: -0.03em;
+}
+
+.summary-conclusion__pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 5px 14px;
+  border-radius: 999px;
+  border: 2px solid currentColor;
+  font-size: var(--font-size-xs);
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.summary-conclusion__body {
+  margin: 0;
+  max-width: 900px;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-lg);
+  line-height: 1.7;
+}
+
+.summary-conclusion__tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.summary-conclusion__tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 12px;
+  border-radius: 999px;
+  border: 2px dashed #d0d0cc;
+  background: var(--color-surface);
+  font-size: var(--font-size-xs);
+  font-weight: 700;
 }
 
 /* ── Metrics Grid ── */
@@ -920,10 +1223,11 @@ onMounted(() => {
 /* ── Chart Section ── */
 .chart-section {
   background: var(--color-surface);
-  border: 1px solid var(--color-border);
+  border: 2px solid var(--color-border);
   border-radius: var(--radius-lg);
   overflow: hidden;
   margin-bottom: var(--spacing-lg);
+  box-shadow: var(--shadow-md);
 }
 
 .chart-section__header {
@@ -933,7 +1237,7 @@ onMounted(() => {
   flex-wrap: wrap;
   gap: var(--spacing-sm);
   padding: var(--spacing-md) var(--spacing-lg);
-  border-bottom: 1px solid var(--color-border-light);
+  border-bottom: 2px solid var(--color-border);
   background: var(--color-surface-elevated);
 }
 
@@ -945,7 +1249,7 @@ onMounted(() => {
   display: flex;
   align-items: center;
   gap: 8px;
-  color: var(--color-accent);
+  color: var(--color-primary);
 }
 
 .chart-section__title {
@@ -1119,10 +1423,43 @@ onMounted(() => {
 
 .analysis-panel,
 .metrics-board {
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-xl);
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-lg);
   background: var(--color-surface);
   overflow: hidden;
+  box-shadow: var(--shadow-md);
+  position: relative;
+}
+
+.analysis-panel {
+  overflow: hidden;
+}
+
+.analysis-panel:nth-child(1)::before {
+  content: "";
+  position: absolute;
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  background: var(--color-accent);
+  top: -18px;
+  left: -18px;
+  opacity: 0.15;
+  z-index: 0;
+}
+
+.analysis-panel:nth-child(2)::before {
+  content: "";
+  position: absolute;
+  width: 50px;
+  height: 50px;
+  background: var(--color-primary);
+  bottom: -16px;
+  right: -16px;
+  transform: rotate(20deg);
+  border-radius: 10px;
+  opacity: 0.12;
+  z-index: 0;
 }
 
 .analysis-panel__header,
@@ -1130,8 +1467,10 @@ onMounted(() => {
   display: grid;
   gap: 6px;
   padding: var(--spacing-md) var(--spacing-lg);
-  border-bottom: 1px solid var(--color-border-light);
+  border-bottom: 2px solid var(--color-border);
   background: var(--color-surface-elevated);
+  position: relative;
+  z-index: 1;
 }
 
 .analysis-panel__title {
@@ -1146,6 +1485,12 @@ onMounted(() => {
   font-size: var(--font-size-sm);
 }
 
+.analysis-panel__body {
+  display: grid;
+  gap: 0;
+  padding: 4px 0 var(--spacing-md);
+}
+
 .insight-row {
   display: grid;
   grid-template-columns: 10px minmax(0, 1fr);
@@ -1157,9 +1502,15 @@ onMounted(() => {
   width: 10px;
   height: 10px;
   margin-top: 6px;
-  border-radius: 999px;
-  background: currentColor;
+  border-radius: 50%;
+  background: var(--color-primary);
+  border: 2px solid var(--color-border);
+  flex-shrink: 0;
 }
+
+.insight-row.tone-positive .insight-row__dot { background: var(--color-success); }
+.insight-row.tone-negative .insight-row__dot { background: var(--color-danger); }
+.insight-row.tone-warning .insight-row__dot { background: var(--color-accent); }
 
 .insight-row__content strong {
   display: block;
@@ -1183,12 +1534,19 @@ onMounted(() => {
   align-items: center;
   justify-content: space-between;
   gap: var(--spacing-md);
-  padding: 12px var(--spacing-sm);
-  border-bottom: 1px solid var(--color-border-light);
+  padding: 10px var(--spacing-sm);
+  border-bottom: 2px dashed var(--color-border-light);
 }
 
 .diagnostic-row:last-child {
   border-bottom: none;
+}
+
+.support-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--spacing-lg);
+  margin-bottom: var(--spacing-lg);
 }
 
 .metrics-board {
@@ -1211,9 +1569,10 @@ onMounted(() => {
   display: grid;
   gap: 10px;
   padding: 18px;
-  border: 1px solid var(--color-border);
-  border-radius: 18px;
-  background: rgba(255, 255, 255, 0.02);
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-sm);
 }
 
 .metric-tile__label {
@@ -1225,9 +1584,10 @@ onMounted(() => {
 .metric-tile__value {
   color: var(--color-text-primary);
   font-size: var(--font-size-xxl);
-  font-weight: 800;
+  font-weight: 900;
   letter-spacing: -0.03em;
   font-variant-numeric: tabular-nums;
+  font-family: 'DM Mono', monospace;
 }
 
 .tone-positive {
@@ -1249,10 +1609,11 @@ onMounted(() => {
 /* ── Details Card ── */
 .details-card {
   background: var(--color-surface);
-  border: 1px solid var(--color-border);
+  border: 2px solid var(--color-border);
   border-radius: var(--radius-lg);
   overflow: hidden;
   margin-bottom: var(--spacing-lg);
+  box-shadow: var(--shadow-md);
 }
 
 .details-summary {
@@ -1263,11 +1624,11 @@ onMounted(() => {
   cursor: pointer;
   user-select: none;
   background: var(--color-surface-elevated);
-  border-bottom: 1px solid transparent;
+  border-bottom: 2px solid transparent;
   transition: background 0.15s;
   list-style: none;
   color: var(--color-text-primary);
-  font-weight: 700;
+  font-weight: 800;
   font-size: var(--font-size-sm);
 }
 
@@ -1276,7 +1637,7 @@ onMounted(() => {
 }
 
 .details-card[open] .details-summary {
-  border-bottom-color: var(--color-border-light);
+  border-bottom-color: var(--color-border);
 }
 
 .details-summary:hover {
@@ -1311,11 +1672,11 @@ onMounted(() => {
   align-items: center;
   gap: var(--spacing-md);
   padding: 11px var(--spacing-sm);
-  border-bottom: 1px solid var(--color-border-light);
+  border-bottom: 2px dashed var(--color-border-light);
 }
 
 .detail-row:nth-child(odd) {
-  border-right: 1px solid var(--color-border-light);
+  border-right: 2px dashed var(--color-border-light);
   padding-right: var(--spacing-lg);
 }
 
@@ -1336,10 +1697,10 @@ onMounted(() => {
 
 .detail-value {
   color: var(--color-text-primary);
-  font-weight: 700;
+  font-weight: 800;
   font-size: var(--font-size-sm);
   font-variant-numeric: tabular-nums;
-  font-family: 'Space Mono', monospace;
+  font-family: 'DM Mono', monospace;
 }
 
 /* ── Responsive ── */
@@ -1354,6 +1715,7 @@ onMounted(() => {
 
   .report-summary__hero,
   .analysis-grid,
+  .support-grid,
   .metrics-board__header,
   .metrics-board__grid {
     grid-template-columns: 1fr;
@@ -1365,6 +1727,10 @@ onMounted(() => {
 
   .summary-facts {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .summary-conclusion__header {
+    flex-direction: column;
   }
 
   .signal-stats,
@@ -1382,7 +1748,7 @@ onMounted(() => {
   }
 
   .detail-row:nth-last-child(-n+2) {
-    border-bottom: 1px solid var(--color-border-light);
+    border-bottom: 2px dashed var(--color-border-light);
   }
 
   .detail-row:last-child {
@@ -1397,6 +1763,10 @@ onMounted(() => {
 
   .summary-facts {
     grid-template-columns: 1fr;
+  }
+
+  .summary-conclusion {
+    padding: 16px;
   }
 
   .signal-stats,
