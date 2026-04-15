@@ -87,13 +87,15 @@ describe('StrategyImportView', () => {
     const file = new File(['class Strategy:\n    pass'], 'strategy.py', { type: 'text/x-python' })
     const input = wrapper.get('input[type="file"]')
     Object.defineProperty(input.element, 'files', {
+      configurable: true,
       value: [file]
     })
     await input.trigger('change')
-    await wrapper.get('button').trigger('click')
+    await wrapper.get('button.btn.btn-primary').trigger('click')
     await flushPromises()
 
-    expect(analyzeStrategyImportMock).toHaveBeenCalledWith(file)
+    expect(analyzeStrategyImportMock).toHaveBeenCalledTimes(1)
+    expect(analyzeStrategyImportMock.mock.calls[0]?.[0]?.name).toBe('strategy.py')
     expect(pushMock).toHaveBeenCalledWith({
       name: 'strategy-import-confirm',
       query: { draftImportId: 'draft-1' }
