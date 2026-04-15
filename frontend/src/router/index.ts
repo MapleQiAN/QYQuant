@@ -80,12 +80,6 @@ const router = createRouter({
 
 const publicRoutes = new Set(['login', 'forgot-password', 'reset-password'])
 
-// --------------------------------------------------
-// [TODO: REMOVE] /admin 测试登录方案 - 之后删除此段
-// --------------------------------------------------
-let testBypass = false
-// --------------------------------------------------
-
 async function waitForProfileToSettle(userStore: ReturnType<typeof useUserStore>) {
   while (userStore.token && userStore.profileLoading && !userStore.profileLoaded) {
     await new Promise((resolve) => setTimeout(resolve, 0))
@@ -109,17 +103,6 @@ router.beforeEach(async (to) => {
   if (isPublic && userStore.token) {
     return { path: '/' }
   }
-
-  // --------------------------------------------------
-  // [TODO: REMOVE] /admin 测试登录方案 - 之后删除此段
-  // --------------------------------------------------
-  if (to.path.startsWith('/admin')) {
-    testBypass = true
-  }
-  if (testBypass) {
-    return true
-  }
-  // --------------------------------------------------
 
   // Redirect unauthenticated users to login (except public pages).
   if (!isPublic && !userStore.token) {
