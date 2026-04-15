@@ -26,6 +26,7 @@
         </div>
       </footer>
     </div>
+    <NotificationContainer />
     <HelpPanel v-if="!hideChrome" :open="userStore.helpPanelOpen" @close="userStore.setHelpPanelOpen(false)" />
     <GuidedBacktestFlow
       v-if="userStore.guidedBacktestActive"
@@ -44,6 +45,7 @@
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { RouterView, useRoute, useRouter } from 'vue-router'
 import HelpPanel from './components/help/HelpPanel.vue'
+import NotificationContainer from './components/notification/NotificationContainer.vue'
 import GuidedBacktestFlow from './components/onboarding/GuidedBacktestFlow.vue'
 import SideNav from './components/SideNav.vue'
 import TopNav from './components/TopNav.vue'
@@ -130,6 +132,7 @@ onBeforeUnmount(() => {
   display: flex;
   flex-direction: column;
   min-height: 100vh;
+  min-width: 0;
   margin-left: var(--sidebar-width);
   transition: margin-left 250ms var(--ease-out-expo);
 }
