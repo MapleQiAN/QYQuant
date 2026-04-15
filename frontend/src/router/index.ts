@@ -14,6 +14,7 @@ import NewStrategyView from '../views/NewStrategyView.vue'
 import StrategyLibraryView from '../views/StrategyLibraryView.vue'
 import StrategyImportView from '../views/StrategyImportView.vue'
 import StrategyImportConfirmView from '../views/StrategyImportConfirmView.vue'
+import StrategyWritingGuideView from '../views/StrategyWritingGuideView.vue'
 import StrategyDetailView from '../views/StrategyDetailView.vue'
 import MarketplaceView from '../views/Marketplace.vue'
 import MarketplaceStrategyDetailView from '../views/MarketplaceStrategyDetailView.vue'
@@ -54,6 +55,7 @@ const router = createRouter({
     { path: '/strategies/new', name: 'strategy-new', component: NewStrategyView },
     { path: '/strategies/import', name: 'strategy-import', component: StrategyImportView },
     { path: '/strategies/import/confirm', name: 'strategy-import-confirm', component: StrategyImportConfirmView },
+    { path: '/strategies/guide', name: 'strategy-writing-guide', component: StrategyWritingGuideView },
     { path: '/strategies/:strategyId/parameters', name: 'strategy-parameters', component: StrategyDetailView },
     { path: '/backtest/configure', name: 'backtest-configure', component: StrategyDetailView },
     { path: '/marketplace', name: 'marketplace', component: MarketplaceView },

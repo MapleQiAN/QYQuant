@@ -3,6 +3,32 @@ import { beforeEach, describe, it, expect, vi } from 'vitest'
 import { toast } from '../lib/toast'
 import { pinia } from '../stores/pinia'
 
+const storage = vi.hoisted(() => {
+  const values = new Map<string, string>()
+
+  const api = {
+    getItem(key: string) {
+      return values.has(key) ? values.get(key)! : null
+    },
+    setItem(key: string, value: string) {
+      values.set(key, value)
+    },
+    removeItem(key: string) {
+      values.delete(key)
+    },
+    clear() {
+      values.clear()
+    }
+  }
+
+  Object.defineProperty(globalThis, 'localStorage', {
+    value: api,
+    configurable: true,
+  })
+
+  return api
+})
+
 vi.mock('../views/DashboardView.vue', () => ({ default: { template: '<div />' } }))
 vi.mock('../views/BacktestsView.vue', () => ({ default: { template: '<div />' } }))
 vi.mock('../views/BacktestResultView.vue', () => ({ default: { template: '<div />' } }))
@@ -14,6 +40,7 @@ vi.mock('../views/NewStrategyView.vue', () => ({ default: { template: '<div />' 
 vi.mock('../views/StrategyLibraryView.vue', () => ({ default: { template: '<div />' } }))
 vi.mock('../views/StrategyImportView.vue', () => ({ default: { template: '<div />' } }))
 vi.mock('../views/StrategyImportConfirmView.vue', () => ({ default: { template: '<div />' } }))
+vi.mock('../views/StrategyWritingGuideView.vue', () => ({ default: { template: '<div />' } }))
 vi.mock('../views/StrategyDetailView.vue', () => ({ default: { template: '<div />' } }))
 vi.mock('../views/Marketplace.vue', () => ({ default: { template: '<div />' } }))
 vi.mock('../views/MarketplaceStrategyDetailView.vue', () => ({ default: { template: '<div />' } }))
@@ -36,7 +63,7 @@ describe('router', () => {
   beforeEach(async () => {
     useUserStore(pinia).$dispose()
     useUserStore(pinia)
-    localStorage.clear()
+    storage.clear()
     vi.restoreAllMocks()
     vi.stubGlobal('scrollTo', vi.fn())
     vi.spyOn(toast, 'error').mockImplementation(() => undefined)
@@ -62,6 +89,11 @@ describe('router', () => {
   it('contains strategy library route', () => {
     const hasStrategyLibrary = router.getRoutes().some((route) => route.path === '/strategies')
     expect(hasStrategyLibrary).toBe(true)
+  })
+
+  it('contains strategy writing guide route', () => {
+    const hasStrategyWritingGuide = router.getRoutes().some((route) => route.path === '/strategies/guide')
+    expect(hasStrategyWritingGuide).toBe(true)
   })
 
   it('contains strategy parameter route', () => {

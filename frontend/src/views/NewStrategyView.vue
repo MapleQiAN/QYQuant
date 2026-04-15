@@ -88,6 +88,44 @@
             </div>
           </div>
         </div>
+
+        <div class="card form-card guide-card">
+          <div class="card-header">
+            <h3>{{ $t('strategyNew.guideTitle') }}</h3>
+            <p class="hint">{{ $t('strategyNew.guideHint') }}</p>
+          </div>
+          <div class="guide-body">
+            <ol class="guide-steps">
+              <li>{{ $t('strategyNew.guideStep1') }}</li>
+              <li>{{ $t('strategyNew.guideStep2') }}</li>
+              <li>{{ $t('strategyNew.guideStep3') }}</li>
+            </ol>
+
+            <pre class="guide-snippet guide-snippet--tree"><code>strategy.py</code></pre>
+
+            <pre class="guide-snippet"><code>from qysp import BarData, Order, StrategyContext
+
+def on_bar(ctx: StrategyContext, data: BarData) -> list[Order]:
+    return []</code></pre>
+
+            <div class="form-actions">
+              <RouterLink
+                class="btn btn-primary"
+                :to="{ name: 'strategy-writing-guide' }"
+                data-testid="strategy-guide-primary"
+              >
+                {{ $t('strategyNew.guidePrimaryAction') }}
+              </RouterLink>
+              <RouterLink
+                class="btn btn-secondary"
+                :to="{ name: 'strategy-writing-guide', hash: '#spec-reference' }"
+                data-testid="strategy-guide-secondary"
+              >
+                {{ $t('strategyNew.guideSecondaryAction') }}
+              </RouterLink>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   </section>
@@ -217,6 +255,10 @@ const ArrowLeftIcon = () => h('svg', {
   transform: none;
 }
 
+.guide-card {
+  grid-column: 1 / -1;
+}
+
 .card-header h3 {
   margin: 0 0 var(--spacing-xs);
   font-size: var(--font-size-lg);
@@ -329,6 +371,34 @@ const ArrowLeftIcon = () => h('svg', {
   color: var(--color-text-muted);
   max-width: 260px;
   line-height: 1.5;
+}
+
+.guide-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+}
+
+.guide-steps {
+  margin: 0;
+  padding-left: 18px;
+  display: grid;
+  gap: 6px;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
+}
+
+.guide-snippet {
+  margin: 0;
+  padding: var(--spacing-sm) var(--spacing-md);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+  background: var(--color-background);
+  color: var(--color-text-primary);
+  font-family: var(--font-mono);
+  font-size: var(--font-size-xs);
+  line-height: 1.5;
+  overflow: auto;
 }
 
 .file-meta {
