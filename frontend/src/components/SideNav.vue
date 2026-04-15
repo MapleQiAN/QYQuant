@@ -259,7 +259,6 @@ function CrownIcon() {
   border-radius: var(--radius-sm);
   overflow: hidden;
   flex-shrink: 0;
-  background: var(--color-primary);
 }
 
 .logo-image {
