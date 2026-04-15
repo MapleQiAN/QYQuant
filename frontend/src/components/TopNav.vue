@@ -141,7 +141,7 @@ function handleLogout() {
   isUserMenuOpen.value = false
   localStorage.removeItem('qyquant-token')
   userStore.$reset()
-  router.replace({ name: 'login' })
+  window.location.href = '/login'
 }
 
 function handleClickOutside(e: MouseEvent) {

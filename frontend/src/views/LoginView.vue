@@ -60,9 +60,9 @@ function validate() {
 
 async function finalizeLogin(accessToken: string) {
   localStorage.setItem('qyquant-token', accessToken)
-  await userStore.refreshProfile()
   const redirect = typeof route.query.redirect === 'string' ? route.query.redirect : '/'
   await router.replace(redirect)
+  userStore.refreshProfile().catch(() => {})
 }
 
 async function handleSubmit() {
