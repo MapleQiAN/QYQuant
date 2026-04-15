@@ -17,6 +17,18 @@ class ProviderDefinition:
 
 
 _PROVIDERS = {
+    "openai_compatible": ProviderDefinition(
+        key="openai_compatible",
+        name="OpenAI Compatible",
+        type="llm",
+        mode="hosted",
+        capabilities={"chat": True, "strategy_generation": True},
+        config_schema={
+            "public_fields": ["base_url", "model"],
+            "secret_fields": ["api_key"],
+            "fields": ["api_key"],
+        },
+    ),
     "joinquant": ProviderDefinition(
         key="joinquant",
         name="JoinQuant",

@@ -42,6 +42,7 @@ def test_list_integration_providers_returns_enabled_provider_catalog(client):
     response = client.get("/api/v1/integrations/providers", headers=_auth_headers(token))
 
     assert response.status_code == 200
+    assert any(item["key"] == "openai_compatible" for item in response.json["data"])
     assert any(item["key"] == "joinquant" for item in response.json["data"])
     assert any(item["key"] == "longport" for item in response.json["data"])
 

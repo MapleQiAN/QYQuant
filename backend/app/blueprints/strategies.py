@@ -12,6 +12,10 @@ from ..services.strategy_import_analysis import (
     StrategyImportAnalysisError,
     analyze_strategy_import,
 )
+from ..services.ai_strategy_generation import (
+    AIStrategyGenerationError,
+    generate_strategy_draft,
+)
 from ..services.strategy_import_confirm import (
     StrategyImportConfirmError,
     confirm_strategy_import,
@@ -200,6 +204,27 @@ def confirm_strategy_import_v1():
     response_payload = _build_import_payload(strategy, version, file_record)
     response_payload["next"] = f"/strategies/{strategy.id}/parameters"
     return ok(response_payload)
+
+
+@bp.post("/v1/strategy-ai/generate")
+@jwt_required()
+def generate_ai_strategy_v1():
+    payload = request.get_json() or {}
+    integration_id = str(payload.get("integrationId") or "").strip()
+    if not integration_id:
+        return error_response("INTEGRATION_ID_REQUIRED", "AI integration id is required", 400)
+
+    try:
+        result = generate_strategy_draft(
+            user_id=get_jwt_identity(),
+            integration_id=integration_id,
+            messages=payload.get("messages"),
+        )
+    except AIStrategyGenerationError as exc:
+        return error_response(exc.code, exc.message, exc.status, details=exc.details)
+
+    return ok(result)
+
 
 @bp.delete("/v1/strategies/<strategy_id>")
 @jwt_required()

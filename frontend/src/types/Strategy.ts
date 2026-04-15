@@ -93,6 +93,16 @@ export interface StrategyImportConfirmPayload {
   parameterDefinitions?: StrategyParameter[]
 }
 
+export interface AiStrategyMessage {
+  role: 'user' | 'assistant'
+  content: string
+}
+
+export interface AiStrategyDraftResult {
+  reply: string
+  analysis: StrategyImportAnalysis | null
+}
+
 export type StrategyParameterValue = string | number | boolean | null
 export type StrategyParameterDefinitionType = 'int' | 'float' | 'string' | 'enum'
 

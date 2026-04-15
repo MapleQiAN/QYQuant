@@ -5,7 +5,7 @@ const client = createHttpClient()
 export interface IntegrationProvider {
   key: string
   name: string
-  type: 'market_data' | 'broker_account'
+  type: 'market_data' | 'broker_account' | 'llm'
   mode: 'hosted' | 'local_connector'
   capabilities: Record<string, boolean>
   configSchema: Record<string, unknown>
@@ -112,7 +112,12 @@ function normalizeProvider(item: IntegrationProviderDto): IntegrationProvider {
   return {
     key: item.key,
     name: item.name ?? item.key,
-    type: item.type === 'broker_account' ? 'broker_account' : 'market_data',
+    type:
+      item.type === 'broker_account'
+        ? 'broker_account'
+        : item.type === 'llm'
+          ? 'llm'
+          : 'market_data',
     mode: item.mode === 'local_connector' ? 'local_connector' : 'hosted',
     capabilities: item.capabilities ?? {},
     configSchema: item.config_schema ?? {},

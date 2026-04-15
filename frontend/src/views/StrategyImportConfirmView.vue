@@ -174,7 +174,11 @@ const selectedEntrypoint = computed(() => {
   )
 })
 
-const sourceLabel = computed(() => (source === 'template' ? 'Template' : 'Imported file'))
+const sourceLabel = computed(() => {
+  if (source === 'template') return 'Template'
+  if (source === 'ai') return 'AI draft'
+  return 'Imported file'
+})
 
 const validationState = computed(() => {
   const base = analysis.value

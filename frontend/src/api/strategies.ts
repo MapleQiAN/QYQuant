@@ -11,6 +11,8 @@ import type {
   MarketplaceStrategyImportResult,
   MarketplaceStrategyReportResult,
   MarketplaceStrategyImportStatus,
+  AiStrategyDraftResult,
+  AiStrategyMessage,
   Strategy,
   StrategyImportAnalysis,
   StrategyImportConfirmPayload,
@@ -339,6 +341,20 @@ export function confirmStrategyImport(payload: StrategyImportConfirmPayload): Pr
     method: 'post',
     url: '/v1/strategy-imports/confirm',
     data: payload
+  })
+}
+
+export function generateAiStrategyDraft(payload: {
+  integrationId: string
+  messages: AiStrategyMessage[]
+}): Promise<AiStrategyDraftResult> {
+  return client.request({
+    method: 'post',
+    url: '/v1/strategy-ai/generate',
+    data: {
+      integrationId: payload.integrationId,
+      messages: payload.messages
+    }
   })
 }
 

@@ -4,9 +4,18 @@ import { flushPromises, mount } from '@vue/test-utils'
 import { createI18n } from 'vue-i18n'
 import NewStrategyView from './NewStrategyView.vue'
 
-const { pushMock, analyzeStrategyImportMock } = vi.hoisted(() => ({
+const {
+  pushMock,
+  analyzeStrategyImportMock,
+  fetchIntegrationsMock,
+  createIntegrationMock,
+  generateAiStrategyDraftMock,
+} = vi.hoisted(() => ({
   pushMock: vi.fn(),
   analyzeStrategyImportMock: vi.fn(),
+  fetchIntegrationsMock: vi.fn(),
+  createIntegrationMock: vi.fn(),
+  generateAiStrategyDraftMock: vi.fn(),
 }))
 
 vi.mock('vue-router', () => ({
@@ -20,12 +29,21 @@ vi.mock('vue-router', () => ({
 
 vi.mock('../api/strategies', () => ({
   analyzeStrategyImport: analyzeStrategyImportMock,
+  generateAiStrategyDraft: generateAiStrategyDraftMock,
+}))
+
+vi.mock('../api/integrations', () => ({
+  fetchIntegrations: fetchIntegrationsMock,
+  createIntegration: createIntegrationMock,
 }))
 
 describe('NewStrategyView', () => {
   beforeEach(() => {
     pushMock.mockReset()
     analyzeStrategyImportMock.mockReset()
+    fetchIntegrationsMock.mockReset()
+    createIntegrationMock.mockReset()
+    generateAiStrategyDraftMock.mockReset()
     sessionStorage.clear()
   })
 
@@ -59,6 +77,40 @@ describe('NewStrategyView', () => {
                     two: 'two',
                     three: 'three',
                   },
+                  aiBadge: 'AI',
+                  aiTitle: 'Create with AI',
+                  aiHint: 'Use AI',
+                  aiAction: 'Start AI draft',
+                  aiChecklist: {
+                    one: 'one',
+                    two: 'two',
+                    three: 'three',
+                  },
+                  aiModalTitle: 'AI Strategy Builder',
+                  aiModalHint: 'Hint',
+                  aiLoading: 'Loading AI connections...',
+                  aiConnectionTitle: 'AI connection',
+                  aiIntegrationLabel: 'Saved AI connection',
+                  aiReuseHint: 'Reuse',
+                  aiSetupHint: 'Setup',
+                  aiDisplayNameLabel: 'Connection name',
+                  aiBaseUrlLabel: 'Base URL',
+                  aiModelLabel: 'Model',
+                  aiApiKeyLabel: 'API key',
+                  aiConnectAction: 'Save AI connection',
+                  aiConnectSuccess: 'Saved',
+                  aiConfigRequired: 'Required',
+                  aiSelectIntegration: 'Select integration',
+                  aiDraftTitle: 'Latest draft',
+                  aiAdoptAction: 'Use this draft',
+                  aiEmptyState: 'Empty',
+                  aiUserRole: 'You',
+                  aiAssistantRole: 'AI',
+                  aiPromptLabel: 'Prompt',
+                  aiPromptPlaceholder: 'Describe strategy',
+                  aiSendAction: 'Send to AI',
+                  aiSending: 'Generating...',
+                  aiError: 'AI error',
                   importTitle: 'Import existing strategy',
                   importHint: 'Bring your code into the platform.',
                   importNote: 'Analyze before creating',
@@ -143,5 +195,60 @@ describe('NewStrategyView', () => {
     expect(wrapper.text()).toContain('Missing on_bar')
     expect(wrapper.get('[data-testid="strategy-guide-primary"]').exists()).toBe(true)
     expect(wrapper.get('[data-testid="strategy-guide-secondary"]').exists()).toBe(true)
+  })
+
+  it('creates AI draft and routes to confirm import', async () => {
+    fetchIntegrationsMock.mockResolvedValue([
+      {
+        id: 'integration-ai-1',
+        providerKey: 'openai_compatible',
+        displayName: 'Strategy AI',
+        status: 'active',
+        configPublic: {},
+        lastValidatedAt: null,
+        lastSuccessAt: null,
+        lastFailureAt: null,
+        lastErrorMessage: null,
+        createdAt: null,
+        updatedAt: null,
+      },
+    ])
+    generateAiStrategyDraftMock.mockResolvedValue({
+      reply: 'Draft ready.',
+      analysis: {
+        draftImportId: 'draft-ai-1',
+        sourceType: 'python_file',
+        entrypointCandidates: [{ path: 'ai-draft.py', callable: 'on_bar', interface: 'event_v1', confidence: 0.8 }],
+        parameterCandidates: [],
+        warnings: [],
+        errors: [],
+        metadataCandidates: {
+          name: 'AI Draft',
+          symbol: 'BTCUSDT',
+          category: 'momentum',
+        },
+      },
+    })
+
+    const wrapper = mountView()
+    await wrapper.get('[data-test="open-ai-builder"]').trigger('click')
+    await flushPromises()
+
+    await wrapper.get('[data-test="ai-prompt"]').setValue('Build a BTC trend strategy')
+    await wrapper.get('[data-test="ai-send"]').trigger('click')
+    await flushPromises()
+
+    expect(generateAiStrategyDraftMock).toHaveBeenCalledWith({
+      integrationId: 'integration-ai-1',
+      messages: [{ role: 'user', content: 'Build a BTC trend strategy' }],
+    })
+
+    await wrapper.get('[data-test="ai-adopt"]').trigger('click')
+
+    expect(sessionStorage.getItem('strategy-import:draft-ai-1')).toContain('"draftImportId":"draft-ai-1"')
+    expect(pushMock).toHaveBeenCalledWith({
+      name: 'strategy-import-confirm',
+      query: { draftImportId: 'draft-ai-1', source: 'ai' },
+    })
   })
 })

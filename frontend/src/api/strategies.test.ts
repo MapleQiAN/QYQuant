@@ -93,6 +93,23 @@ describe('strategies api', () => {
     })
   })
 
+  it('calls ai strategy draft endpoint', async () => {
+    const data = await strategies.generateAiStrategyDraft({
+      integrationId: 'integration-ai-1',
+      messages: [{ role: 'user', content: 'Build a BTC trend strategy' }]
+    })
+
+    expect(data).toEqual({ ok: true })
+    expect(requestMock).toHaveBeenCalledWith({
+      method: 'post',
+      url: '/v1/strategy-ai/generate',
+      data: {
+        integrationId: 'integration-ai-1',
+        messages: [{ role: 'user', content: 'Build a BTC trend strategy' }]
+      }
+    })
+  })
+
   it('calls runtime descriptor endpoint', async () => {
     const data = await strategies.fetchRuntimeDescriptor('strategy-id')
     expect(data).toEqual({ ok: true })

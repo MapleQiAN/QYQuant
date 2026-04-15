@@ -153,6 +153,7 @@
                 {{ $t('settings.validateAction') }}
               </button>
               <button
+                v-if="providerByKey[integration.providerKey]?.type === 'broker_account'"
                 type="button"
                 :data-action="`load-account-${integration.id}`"
                 @click="loadAccount(integration.id)"
@@ -160,6 +161,7 @@
                 {{ $t('settings.loadAccountAction') }}
               </button>
               <button
+                v-if="providerByKey[integration.providerKey]?.type === 'broker_account'"
                 type="button"
                 :data-action="`load-positions-${integration.id}`"
                 @click="loadPositions(integration.id)"
@@ -215,6 +217,9 @@ const configPublic = reactive<Record<string, string>>({})
 const secretPayload = reactive<Record<string, string>>({})
 
 const selectedProvider = computed(() => providers.value.find((provider) => provider.key === selectedProviderKey.value) ?? null)
+const providerByKey = computed(() =>
+  Object.fromEntries(providers.value.map((provider) => [provider.key, provider]))
+)
 const providerPublicFieldNames = computed(() => {
   const fields = selectedProvider.value?.configSchema?.public_fields
   return Array.isArray(fields) ? fields.map((field) => String(field)) : []

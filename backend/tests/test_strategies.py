@@ -8,7 +8,16 @@ from datetime import timedelta
 from pathlib import Path
 
 from app.extensions import db
-from app.models import BacktestJob, File, Strategy, StrategyImportDraft, StrategyVersion
+from app.models import (
+    BacktestJob,
+    File,
+    IntegrationProvider,
+    Strategy,
+    StrategyImportDraft,
+    StrategyVersion,
+    UserIntegration,
+    UserIntegrationSecret,
+)
 from app.utils.time import now_utc
 from qysp.validator import validate_integrity
 
@@ -442,6 +451,114 @@ def test_analyze_strategy_import_reports_python_syntax_validation(client):
         "orderListReturnLikely": None,
         "metadataDetected": True,
     }
+
+
+def test_generate_ai_strategy_creates_import_draft_from_user_integration(client, app, monkeypatch):
+    token, user_id = _login_user(client, phone="13800138040", nickname="AiDraftUser")
+
+    with app.app_context():
+        provider = IntegrationProvider(
+            key="openai_compatible",
+            name="OpenAI Compatible",
+            type="llm",
+            mode="hosted",
+            capabilities={"chat": True, "strategy_generation": True},
+            config_schema={"public_fields": ["base_url", "model"], "secret_fields": ["api_key"]},
+        )
+        db.session.merge(provider)
+
+        integration = UserIntegration(
+            user_id=user_id,
+            provider_key="openai_compatible",
+            display_name="Strategy AI",
+            status="active",
+            config_public={"base_url": "https://example.com/v1", "model": "demo-model"},
+        )
+        db.session.add(integration)
+        db.session.flush()
+        db.session.add(
+            UserIntegrationSecret(
+                integration_id=integration.id,
+                encrypted_payload="ciphertext",
+                schema_version=1,
+            )
+        )
+        db.session.commit()
+        integration_id = integration.id
+
+    from app.services import ai_strategy_generation as ai_generation_service
+    monkeypatch.setattr(ai_generation_service, "decrypt_secret_payload", lambda integration: {"api_key": "secret-key"})
+    monkeypatch.setattr(
+        ai_generation_service,
+        "_request_chat_completion",
+        lambda **kwargs: json.dumps(
+            {
+                "reply": "Draft ready. Review entry rules and ATR stop.",
+                "strategy": {
+                    "name": "AI Momentum Draft",
+                    "description": "EMA trend following with ATR stop",
+                    "category": "momentum",
+                    "symbol": "BTCUSDT",
+                    "tags": ["ai", "momentum"],
+                    "parameters": [
+                        {"key": "fast_period", "type": "integer", "default": 10, "min": 2, "max": 50},
+                        {"key": "slow_period", "type": "integer", "default": 30, "min": 5, "max": 120},
+                    ],
+                    "code": (
+                        "from qysp import BarData, Order, StrategyContext\n\n"
+                        "def on_bar(ctx: StrategyContext, data: BarData) -> list[Order]:\n"
+                        "    fast_period = int(ctx.parameters.get('fast_period', 10))\n"
+                        "    slow_period = int(ctx.parameters.get('slow_period', 30))\n"
+                        "    prices = list(getattr(ctx, '_prices', []))\n"
+                        "    prices.append(float(data.close))\n"
+                        "    prices = prices[-slow_period:]\n"
+                        "    setattr(ctx, '_prices', prices)\n"
+                        "    if len(prices) < slow_period or fast_period >= slow_period:\n"
+                        "        return []\n"
+                        "    fast_ma = sum(prices[-fast_period:]) / fast_period\n"
+                        "    slow_ma = sum(prices) / slow_period\n"
+                        "    if fast_ma > slow_ma:\n"
+                        "        return [ctx.buy(data.symbol, quantity=1)]\n"
+                        "    return []\n"
+                    ),
+                },
+            }
+        ),
+    )
+
+    response = client.post(
+        "/api/v1/strategy-ai/generate",
+        headers=_auth_headers(token),
+        json={
+            "integrationId": integration_id,
+            "messages": [{"role": "user", "content": "Build a BTC trend strategy with EMA crossover"}],
+        },
+    )
+
+    assert response.status_code == 200
+    data = response.json["data"]
+    assert data["reply"] == "Draft ready. Review entry rules and ATR stop."
+    assert data["analysis"]["metadataCandidates"]["name"] == "AI Momentum Draft"
+    assert data["analysis"]["metadataCandidates"]["symbol"] == "BTCUSDT"
+    assert data["analysis"]["parameterCandidates"] == [
+        {"key": "fast_period", "type": "integer", "default": 10, "min": 2, "max": 50},
+        {"key": "slow_period", "type": "integer", "default": 30, "min": 5, "max": 120},
+    ]
+    assert data["analysis"]["errors"] == []
+    assert data["analysis"]["entrypointCandidates"] == [
+        {
+            "path": "ai-momentum-draft.py",
+            "callable": "on_bar",
+            "interface": "event_v1",
+            "confidence": 0.8,
+        }
+    ]
+
+    with app.app_context():
+        draft = db.session.get(StrategyImportDraft, data["analysis"]["draftImportId"])
+        assert draft is not None
+        assert draft.owner_id == user_id
+        assert draft.analysis_payload["metadataCandidates"]["category"] == "momentum"
 
 
 def test_confirm_strategy_import_uses_selected_entrypoint_and_creates_final_package(client, app):
