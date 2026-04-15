@@ -1508,8 +1508,8 @@ onMounted(() => {
   flex-shrink: 0;
 }
 
-.insight-row.tone-positive .insight-row__dot { background: var(--color-success); }
-.insight-row.tone-negative .insight-row__dot { background: var(--color-danger); }
+.insight-row.tone-positive .insight-row__dot { background: var(--color-positive); }
+.insight-row.tone-negative .insight-row__dot { background: var(--color-negative); }
 .insight-row.tone-warning .insight-row__dot { background: var(--color-accent); }
 
 .insight-row__content strong {
@@ -1591,11 +1591,11 @@ onMounted(() => {
 }
 
 .tone-positive {
-  color: var(--color-success);
+  color: var(--color-positive);
 }
 
 .tone-negative {
-  color: var(--color-danger);
+  color: var(--color-negative);
 }
 
 .tone-warning {

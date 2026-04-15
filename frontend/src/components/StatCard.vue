@@ -109,11 +109,11 @@ const isNegative = computed(() => {
   border-radius: 0 0 8px 8px;
 }
 
-.stat-card.success::after,
-.stat-card.up::after { background: var(--color-success); }
+.stat-card.success::after { background: var(--color-success); }
+.stat-card.up::after { background: var(--color-up); }
 .stat-card.warning::after { background: var(--color-accent); }
-.stat-card.danger::after,
-.stat-card.down::after { background: var(--color-danger); }
+.stat-card.danger::after { background: var(--color-danger); }
+.stat-card.down::after { background: var(--color-down); }
 .stat-card.info::after { background: var(--color-info); }
 
 .stat-icon {
