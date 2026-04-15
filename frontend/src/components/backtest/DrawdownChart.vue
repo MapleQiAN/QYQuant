@@ -7,6 +7,7 @@
 <script setup lang="ts">
 import { onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { useUserStore } from '../../stores/user'
 import * as echarts from 'echarts'
 import type { ECharts, EChartsOption } from 'echarts'
 import type { BacktestReportPoint } from '../../types/Backtest'
@@ -16,6 +17,7 @@ const props = defineProps<{
 }>()
 
 const { t, locale } = useI18n()
+const userStore = useUserStore()
 const chartRef = ref<HTMLDivElement | null>(null)
 const chart = ref<ECharts | null>(null)
 let resizeObserver: ResizeObserver | null = null
@@ -35,6 +37,10 @@ function buildOption(): EChartsOption {
       }
     }
   }
+
+  const downCol = typeof window !== 'undefined'
+    ? getComputedStyle(document.documentElement).getPropertyValue('--color-down').trim() || '#d4393b'
+    : '#d4393b'
 
   return {
     animation: false,
@@ -71,11 +77,11 @@ function buildOption(): EChartsOption {
         type: 'line',
         smooth: true,
         showSymbol: false,
-        lineStyle: { width: 1.5, color: '#d4393b' },
+        lineStyle: { width: 1.5, color: downCol },
         areaStyle: {
           color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-            { offset: 0, color: 'rgba(212, 57, 59, 0.20)' },
-            { offset: 1, color: 'rgba(212, 57, 59, 0.02)' }
+            { offset: 0, color: downCol + '33' },
+            { offset: 1, color: downCol + '05' }
           ])
         },
         data: drawdownData
@@ -100,7 +106,7 @@ onMounted(() => {
   }
 })
 
-watch(() => [props.points, locale.value], () => {
+watch(() => [props.points, locale.value, userStore.marketStyle], () => {
   renderChart()
 }, { deep: true })
 

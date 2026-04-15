@@ -11,6 +11,7 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { useUserStore } from '../../stores/user'
 import * as echarts from 'echarts'
 import type { ECharts, EChartsOption } from 'echarts'
 import { mapTradeSignalsToBars, simpleMovingAverage, toEpochMs, type TradeMarker } from '../../lib/chartIndicators'
@@ -45,6 +46,7 @@ const emit = defineEmits<{
 
 const chartRef = ref<HTMLDivElement | null>(null)
 const chart = ref<ECharts | null>(null)
+const userStore = useUserStore()
 let resizeObserver: ResizeObserver | null = null
 const { t, locale } = useI18n()
 
@@ -97,7 +99,10 @@ function formatSignedNumber(value: number, digits = 2): string {
 function buildScatterSeries(side: Trade['side']) {
   const isBuy = side === 'buy'
   const name = isBuy ? buySeriesName.value : sellSeriesName.value
-  const accent = isBuy ? '#22c55e' : '#f87171'
+  const accent = isBuy ? upColor() : downColor()
+  const shadowCol = isBuy
+    ? getCssVar('--color-up-bg', 'rgba(212, 57, 59, 0.3)')
+    : getCssVar('--color-down-bg', 'rgba(46, 125, 50, 0.3)')
   const symbol = isBuy ? 'circle' : 'diamond'
 
   return enrichedBars.value.flatMap((bar) =>
@@ -105,7 +110,6 @@ function buildScatterSeries(side: Trade['side']) {
       .filter((signal) => signal.side === side)
       .map((signal) => ({
         name,
-        // Keep markers visually attached to the candle instead of letting outlier fill prices distort the axis.
         value: [signal.barTime, isBuy ? bar.low : bar.high],
         marker: signal,
         symbol,
@@ -115,7 +119,7 @@ function buildScatterSeries(side: Trade['side']) {
           borderColor: '#0b1020',
           borderWidth: 2,
           shadowBlur: 14,
-          shadowColor: isBuy ? 'rgba(34, 197, 94, 0.3)' : 'rgba(248, 113, 113, 0.28)',
+          shadowColor: shadowCol,
         },
         label: {
           show: true,
@@ -452,7 +456,7 @@ onMounted(() => {
   }
 })
 
-watch(() => [props.bars, props.trades, locale.value], () => {
+watch(() => [props.bars, props.trades, locale.value, userStore.marketStyle], () => {
   renderChart()
 }, { deep: true })
 

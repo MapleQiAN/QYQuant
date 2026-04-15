@@ -36,6 +36,7 @@
 <script setup lang="ts">
 import { onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { useUserStore } from '../../stores/user'
 import * as echarts from 'echarts'
 import type { ECharts, EChartsOption } from 'echarts'
 import type { TradeDistribution } from '../../lib/backtestComputed'
@@ -45,6 +46,7 @@ const props = defineProps<{
 }>()
 
 const { locale } = useI18n()
+const userStore = useUserStore()
 
 const pnlChartRef = ref<HTMLDivElement | null>(null)
 const durationChartRef = ref<HTMLDivElement | null>(null)
@@ -200,7 +202,7 @@ onMounted(() => {
   }
 })
 
-watch(() => [props.distribution, locale.value], () => {
+watch(() => [props.distribution, locale.value, userStore.marketStyle], () => {
   renderCharts()
 }, { deep: true })
 

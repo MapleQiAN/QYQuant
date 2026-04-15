@@ -13,6 +13,7 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { useUserStore } from '../../stores/user'
 import * as echarts from 'echarts'
 import type { ECharts, EChartsOption } from 'echarts'
 import type { BacktestReportPoint } from '../../types/Backtest'
@@ -26,6 +27,7 @@ const props = withDefaults(defineProps<{
 })
 
 const { t, locale } = useI18n()
+const userStore = useUserStore()
 const chartRef = ref<HTMLDivElement | null>(null)
 const chart = ref<ECharts | null>(null)
 let resizeObserver: ResizeObserver | null = null
@@ -287,7 +289,7 @@ onMounted(() => {
   }
 })
 
-watch(() => [props.points, props.trades, locale.value], () => {
+watch(() => [props.points, props.trades, locale.value, userStore.marketStyle], () => {
   renderChart()
 }, { deep: true })
 
