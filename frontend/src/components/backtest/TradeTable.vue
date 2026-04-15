@@ -195,13 +195,13 @@ function pnlClass(pnl?: number): string {
   text-transform: uppercase;
   letter-spacing: 0.08em;
   border-bottom: 2px solid var(--color-border);
-  background: #fafafa;
+  background: var(--color-surface-elevated);
   white-space: nowrap;
 }
 
 .trade-list td {
   padding: 10px 12px;
-  border-bottom: 2px dashed #e8e8e4;
+  border-bottom: 2px dashed var(--color-border-light);
   color: var(--color-text-primary);
   white-space: nowrap;
 }

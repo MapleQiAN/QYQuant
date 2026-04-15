@@ -118,7 +118,7 @@ const paramEntries = computed(() => {
   border-radius: var(--radius-sm);
   text-align: center;
   color: var(--color-text-muted);
-  background: #fafafa;
+  background: var(--color-surface-elevated);
   border: 2px dashed var(--color-border-light);
   position: relative;
   z-index: 1;
@@ -137,7 +137,7 @@ const paramEntries = computed(() => {
   gap: 4px;
   padding: 12px;
   border-radius: var(--radius-sm);
-  background: #fafafa;
+  background: var(--color-surface-elevated);
   border: 2px solid var(--color-border-light);
 }
 
@@ -181,7 +181,7 @@ const paramEntries = computed(() => {
   gap: 12px;
   padding: 6px 10px;
   border-radius: var(--radius-sm);
-  background: #fafafa;
+  background: var(--color-surface-elevated);
   border: 2px dashed var(--color-border-light);
 }
 

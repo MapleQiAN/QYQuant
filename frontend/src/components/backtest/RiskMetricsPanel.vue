@@ -121,7 +121,7 @@ function toneFromValue(value: string): string {
   gap: 4px;
   padding: 12px;
   border-radius: var(--radius-sm);
-  background: #fafafa;
+  background: var(--color-surface-elevated);
   border: 2px solid var(--color-border-light);
 }
 

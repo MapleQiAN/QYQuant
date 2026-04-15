@@ -261,7 +261,7 @@ onBeforeUnmount(() => {
   padding: 14px;
   border-radius: var(--radius-sm);
   border: 2px solid var(--color-border-light);
-  background: #fafafa;
+  background: var(--color-surface-elevated);
 }
 
 .chart-card__title {
