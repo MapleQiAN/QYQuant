@@ -446,23 +446,46 @@ a:hover {
   color: var(--color-text-primary);
 }
 
-/* Scrollbar */
+/* Scrollbar — thin, fade-in on hover */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+}
+
+*:hover,
+*:focus-within,
+*:active {
+  scrollbar-color: var(--color-scrollbar-thumb) transparent;
+}
+
 ::-webkit-scrollbar {
   width: 4px;
   height: 4px;
 }
 
 ::-webkit-scrollbar-track {
-  background: var(--color-scrollbar-track);
+  background: transparent;
+  margin: 4px 0;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: var(--color-scrollbar-thumb);
+  background: transparent;
   border-radius: var(--radius-full);
+  transition: background 0.4s ease;
+}
+
+*:hover::-webkit-scrollbar-thumb,
+*:focus-within::-webkit-scrollbar-thumb,
+*:active::-webkit-scrollbar-thumb {
+  background: var(--color-scrollbar-thumb);
 }
 
 ::-webkit-scrollbar-thumb:hover {
   background: var(--color-scrollbar-thumb-hover);
+}
+
+::-webkit-scrollbar-corner {
+  background: transparent;
 }
 
 /* Focus */
