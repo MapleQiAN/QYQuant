@@ -1,71 +1,65 @@
-type ToastType = 'success' | 'error' | 'warning' | 'info'
-
-interface ToastOptions {
+export interface NotificationOptions {
+  type?: 'success' | 'error' | 'warning' | 'info'
+  title?: string
   message: string
-  type?: ToastType
   duration?: number
+  closable?: boolean
 }
 
-export function showToast(options: ToastOptions): void {
-  const { message, type = 'info', duration = 3000 } = options
+export interface ConfirmOptions {
+  type?: 'success' | 'error' | 'warning' | 'info'
+  title?: string
+  message: string
+  confirmText?: string
+  cancelText?: string
+  positive?: boolean
+}
 
-  console.log(`[${type.toUpperCase()}] ${message}`)
+// Injected by NotificationContainer via provide/inject
+type AddNotifFn = (options: NotificationOptions) => string
+type ShowConfirmFn = (options: ConfirmOptions) => Promise<boolean>
 
-  const toast = document.createElement('div')
-  toast.textContent = message
-  toast.style.cssText = `
-    position: fixed;
-    top: 20px;
-    right: 20px;
-    padding: 12px 20px;
-    background: var(--color-surface);
-    color: var(--color-text-primary);
-    border-left: 4px solid var(--color-${type});
-    border-radius: var(--radius-md);
-    box-shadow: var(--shadow-lg);
-    z-index: 9999;
-    animation: slideIn 0.3s ease-out;
-    font-size: var(--font-size-md);
-  `
+let _addNotification: AddNotifFn | null = null
+let _showConfirm: ShowConfirmFn | null = null
 
-  const style = document.createElement('style')
-  style.textContent = `
-    @keyframes slideIn {
-      from {
-        transform: translateX(100%);
-        opacity: 0;
-      }
-      to {
-        transform: translateX(0);
-        opacity: 1;
-      }
-    }
-    @keyframes slideOut {
-      from {
-        transform: translateX(0);
-        opacity: 1;
-      }
-      to {
-        transform: translateX(100%);
-        opacity: 0;
-      }
-    }
-  `
-  document.head.appendChild(style)
-  document.body.appendChild(toast)
+/** Called by NotificationContainer on mount to wire up the API */
+export function registerNotificationHandlers(
+  addFn: AddNotifFn,
+  confirmFn: ShowConfirmFn
+) {
+  _addNotification = addFn
+  _showConfirm = confirmFn
+}
 
-  setTimeout(() => {
-    toast.style.animation = 'slideOut 0.3s ease-out'
-    setTimeout(() => {
-      document.body.removeChild(toast)
-      document.head.removeChild(style)
-    }, 300)
-  }, duration)
+function notify(options: NotificationOptions): string {
+  if (_addNotification) {
+    return _addNotification(options)
+  }
+  // Fallback: console only (SSR / before mount)
+  console.log(`[${(options.type ?? 'info').toUpperCase()}] ${options.message}`)
+  return ''
 }
 
 export const toast = {
-  success: (message: string, duration?: number) => showToast({ message, type: 'success', duration }),
-  error: (message: string, duration?: number) => showToast({ message, type: 'error', duration }),
-  warning: (message: string, duration?: number) => showToast({ message, type: 'warning', duration }),
-  info: (message: string, duration?: number) => showToast({ message, type: 'info', duration })
+  success: (message: string, duration?: number) =>
+    notify({ message, type: 'success', duration }),
+  error: (message: string, duration?: number) =>
+    notify({ message, type: 'error', duration }),
+  warning: (message: string, duration?: number) =>
+    notify({ message, type: 'warning', duration }),
+  info: (message: string, duration?: number) =>
+    notify({ message, type: 'info', duration }),
+}
+
+export function confirmDialog(options: ConfirmOptions): Promise<boolean> {
+  if (_showConfirm) {
+    return _showConfirm(options)
+  }
+  // Fallback: native confirm
+  return Promise.resolve(window.confirm(options.message))
+}
+
+// Backward compat — also re-export showToast for any stragglers
+export function showToast(options: NotificationOptions & { type?: string }): void {
+  notify(options as NotificationOptions)
 }

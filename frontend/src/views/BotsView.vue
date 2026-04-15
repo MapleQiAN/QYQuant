@@ -69,6 +69,7 @@ import BotDetailModal from '../components/simulation/BotDetailModal.vue'
 import BotPositionsModal from '../components/simulation/BotPositionsModal.vue'
 import CreateBotModal from '../components/simulation/CreateBotModal.vue'
 import SimulationDisclaimerModal from '../components/simulation/SimulationDisclaimerModal.vue'
+import { confirmDialog } from '../lib/toast'
 import { useSimulationStore } from '../stores/useSimulationStore'
 import { useUserStore } from '../stores/user'
 import type { SimulationBot } from '../types/Simulation'
@@ -179,7 +180,13 @@ async function handleResume(botId: string) {
 }
 
 async function handleDelete(botId: string) {
-  if (!confirm('Delete this bot? Historical data will be preserved, but the slot will be released.')) return
+  if (!await confirmDialog({
+    type: 'warning',
+    title: 'Delete Bot',
+    message: 'Historical data will be preserved, but the slot will be released.',
+    confirmText: 'Delete',
+    positive: false,
+  })) return
 
   try {
     await simulationStore.deleteBot(botId)

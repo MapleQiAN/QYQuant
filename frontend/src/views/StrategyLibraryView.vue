@@ -211,7 +211,7 @@ import { useI18n } from 'vue-i18n'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
 import StrategyPublishFlow from '../components/strategy/StrategyPublishFlow.vue'
 import { deleteStrategy, fetchMarketplaceStrategies, fetchStrategies } from '../api/strategies'
-import { toast } from '../lib/toast'
+import { confirmDialog, toast } from '../lib/toast'
 import type { MarketplacePublishPayload, MarketplaceReviewStatus, Strategy } from '../types/Strategy'
 import { useMarketplaceStore, useUserStore } from '../stores'
 
@@ -303,7 +303,12 @@ async function handleOpenCreateStrategy() {
 }
 
 async function handleDelete(strategyId: string) {
-  if (!window.confirm(t('strategy.library.deleteConfirm'))) {
+  if (!await confirmDialog({
+    type: 'warning',
+    title: t('strategy.library.deleteConfirm'),
+    message: t('strategy.library.deleteConfirm'),
+    confirmText: t('common.confirm'),
+  })) {
     return
   }
 

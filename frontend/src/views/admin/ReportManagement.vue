@@ -76,7 +76,7 @@
 
 <script setup lang="ts">
 import { onMounted, reactive } from 'vue'
-import { toast } from '../../lib/toast'
+import { confirmDialog, toast } from '../../lib/toast'
 import { useAdminStore } from '../../stores/useAdminStore'
 
 const adminStore = useAdminStore()
@@ -105,7 +105,12 @@ function isResolving(reportId: string): boolean {
 async function takedown(reportId: string) {
   const item = adminStore.reportQueue.find(r => r.id === reportId)
   const title = item?.strategyTitle || '该策略'
-  if (!window.confirm(`确认下架策略「${title}」？此操作不可撤销。`)) return
+  if (!await confirmDialog({
+    type: 'error',
+    title: '确认下架',
+    message: `确认下架策略「${title}」？此操作不可撤销。`,
+    confirmText: '下架',
+  })) return
 
   try {
     await adminStore.resolveReport(reportId, {
