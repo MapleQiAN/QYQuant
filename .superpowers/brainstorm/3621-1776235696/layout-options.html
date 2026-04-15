@@ -1,0 +1,54 @@
+<h2>策略创建页里的指导卡片放哪更顺手？</h2>
+<p class="subtitle">两种都保留“核心步骤 + 最小示例 + 查看完整文档”，差别主要是打断感和可发现性。</p>
+
+<div class="cards">
+  <div class="card" data-choice="top-guide" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div class="mockup">
+        <div class="mockup-header">方案 A: 顶部引导</div>
+        <div class="mockup-body">
+          <div style="display:grid;gap:10px">
+            <div style="padding:10px 12px;border:1px solid #29424a;border-radius:12px;background:#10252b">
+              <div class="label">策略编写指南</div>
+              <div style="font-weight:700;margin-top:6px">先看 3 步开始编写</div>
+              <div style="font-size:13px;opacity:.85;margin-top:6px">1. 准备 strategy.json  2. 实现 src/strategy.py  3. 打包或导入验证</div>
+              <button class="mock-button" style="margin-top:10px">查看最小示例</button>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+              <div style="padding:10px;border:1px dashed #35545e;border-radius:12px">手动创建表单</div>
+              <div style="padding:10px;border:1px dashed #35545e;border-radius:12px">导入策略</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>方案 A: 顶部先引导</h3>
+      <p>更适合第一次来创建策略的用户，指导信息会先进入视野，再决定手动创建还是导入。</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="inline-card" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div class="mockup">
+        <div class="mockup-header">方案 B: 并列卡片</div>
+        <div class="mockup-body">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+            <div style="padding:10px;border:1px dashed #35545e;border-radius:12px">手动创建表单</div>
+            <div style="padding:10px;border:1px dashed #35545e;border-radius:12px">导入策略</div>
+          </div>
+          <div style="padding:10px 12px;border:1px solid #29424a;border-radius:12px;background:#10252b;margin-top:10px">
+            <div class="label">不会写策略？</div>
+            <div style="font-weight:700;margin-top:6px">快速查看结构、示例与常见错误</div>
+            <div style="font-size:13px;opacity:.85;margin-top:6px">适合需要时再展开阅读，不会抢掉创建动作的主焦点。</div>
+            <button class="mock-button" style="margin-top:10px">查看编写指南</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>方案 B: 放在当前动作附近</h3>
+      <p>更克制，页面主任务还是创建/导入；指导作为补充资源出现，打断感更低。</p>
+    </div>
+  </div>
+</div>
