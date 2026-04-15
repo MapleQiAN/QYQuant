@@ -421,6 +421,29 @@ def test_analyze_strategy_import_reports_blocking_errors_for_unsupported_layout(
     assert data["errors"] == ["No supported strategy entrypoint candidates found"]
 
 
+def test_analyze_strategy_import_reports_python_syntax_validation(client):
+    token, _ = _login_user(client, phone="13800138039", nickname="AnalyzeSyntaxUser")
+    invalid_source = "def on_bar(ctx, data):\n    if data.close > data.open\n        return []\n"
+
+    response = client.post(
+        "/api/v1/strategy-imports/analyze",
+        headers=_auth_headers(token),
+        data={"file": (io.BytesIO(invalid_source.encode("utf-8")), "broken.py")},
+        content_type="multipart/form-data",
+    )
+
+    assert response.status_code == 200
+    data = response.json["data"]
+    assert data["entrypointCandidates"] == []
+    assert data["errors"] == ["Python syntax could not be parsed"]
+    assert data["validation"] == {
+        "entrypointFound": False,
+        "pythonSyntaxValid": False,
+        "orderListReturnLikely": None,
+        "metadataDetected": True,
+    }
+
+
 def test_confirm_strategy_import_uses_selected_entrypoint_and_creates_final_package(client, app):
     token, user_id = _login_user(client, phone="13800138035", nickname="ConfirmPyUser")
     source = (

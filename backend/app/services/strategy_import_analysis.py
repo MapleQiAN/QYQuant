@@ -86,7 +86,17 @@ def _analyze_python_file(filename, payload):
         raise StrategyImportAnalysisError("INVALID_SOURCE", "Python source must be UTF-8", 422) from exc
 
     path = Path(filename).name
-    candidates = _entrypoint_candidates_from_source(source, path)
+    inspection = _inspect_source(source, path)
+    candidates = inspection["candidates"]
+    errors = []
+    if not inspection["syntaxValid"]:
+      errors.append("Python syntax could not be parsed")
+    elif not candidates:
+      errors.append("No supported strategy entrypoint candidates found")
+
+    metadata_candidates = {
+        "name": _derived_name_from_filename(filename),
+    }
     return {
         "sourceType": "python_file",
         "fileSummary": {
@@ -95,12 +105,16 @@ def _analyze_python_file(filename, payload):
             "entries": [path],
         },
         "entrypointCandidates": candidates,
-        "metadataCandidates": {
-            "name": _derived_name_from_filename(filename),
-        },
+        "metadataCandidates": metadata_candidates,
         "parameterCandidates": [],
         "warnings": [],
-        "errors": [] if candidates else ["No supported strategy entrypoint candidates found"],
+        "errors": errors,
+        "validation": _build_validation(
+            entrypoint_found=bool(candidates),
+            syntax_valid=inspection["syntaxValid"],
+            order_list_return_likely=inspection["orderListReturnLikely"],
+            metadata_candidates=metadata_candidates,
+        ),
     }
 
 
@@ -127,10 +141,23 @@ def _analyze_archive(filename, payload, *, source_type):
             if Path(entry).name in IGNORED_DEPENDENCY_MANIFESTS:
                 warnings.append(f"Ignored unsupported dependency manifest: {Path(entry).name}")
 
+        syntax_valid = True
+        order_list_return_likely = None
+
         if manifest is not None:
             entrypoint = manifest.get("entrypoint") or {}
             entrypoint_path = (entrypoint.get("path") or "src/strategy.py").replace("\\", "/")
             entrypoint_callable = entrypoint.get("callable") or "Strategy"
+            try:
+                entrypoint_source = archive.read(entrypoint_path).decode("utf-8")
+            except KeyError as exc:
+                raise StrategyImportAnalysisError("INVALID_STRATEGY_PACKAGE", "Strategy entrypoint is missing", 422) from exc
+            except UnicodeDecodeError as exc:
+                raise StrategyImportAnalysisError("INVALID_SOURCE", f"{entrypoint_path} must be UTF-8", 422) from exc
+
+            inspection = _inspect_source(entrypoint_source, entrypoint_path)
+            syntax_valid = inspection["syntaxValid"]
+            order_list_return_likely = inspection["orderListReturnLikely"]
             candidates.append(
                 {
                     "path": entrypoint_path,
@@ -139,7 +166,10 @@ def _analyze_archive(filename, payload, *, source_type):
                     "confidence": 1.0,
                 }
             )
+            if not syntax_valid:
+                errors.append("Python syntax could not be parsed")
         else:
+            any_syntax_error = False
             for entry in entries:
                 if not entry.endswith(".py"):
                     continue
@@ -147,10 +177,18 @@ def _analyze_archive(filename, payload, *, source_type):
                     source = archive.read(entry).decode("utf-8")
                 except UnicodeDecodeError as exc:
                     raise StrategyImportAnalysisError("INVALID_SOURCE", f"{entry} must be UTF-8", 422) from exc
-                candidates.extend(_entrypoint_candidates_from_source(source, entry))
+                inspection = _inspect_source(source, entry)
+                candidates.extend(inspection["candidates"])
+                if inspection["syntaxValid"] and inspection["orderListReturnLikely"] is not None and order_list_return_likely is None:
+                    order_list_return_likely = inspection["orderListReturnLikely"]
+                if not inspection["syntaxValid"]:
+                    any_syntax_error = True
 
         candidates = _dedupe_candidates(candidates)
-        if not candidates:
+        if not candidates and manifest is None and any_syntax_error:
+            syntax_valid = False
+            errors.append("Python syntax could not be parsed")
+        elif not candidates:
             errors.append("No supported strategy entrypoint candidates found")
 
         metadata_candidates = _metadata_from_manifest(manifest) if manifest else {"name": _derived_name_from_filename(filename)}
@@ -167,14 +205,24 @@ def _analyze_archive(filename, payload, *, source_type):
             "parameterCandidates": parameter_candidates,
             "warnings": warnings,
             "errors": errors,
+            "validation": _build_validation(
+                entrypoint_found=bool(candidates),
+                syntax_valid=syntax_valid,
+                order_list_return_likely=order_list_return_likely,
+                metadata_candidates=metadata_candidates,
+            ),
         }
 
 
-def _entrypoint_candidates_from_source(source, path):
+def _inspect_source(source, path):
     try:
         tree = ast.parse(source)
     except SyntaxError:
-        return []
+        return {
+            "candidates": [],
+            "syntaxValid": False,
+            "orderListReturnLikely": None,
+        }
 
     candidates = []
     for node in tree.body:
@@ -196,7 +244,11 @@ def _entrypoint_candidates_from_source(source, path):
                     "confidence": 0.8,
                 }
             )
-    return _dedupe_candidates(candidates)
+    return {
+        "candidates": _dedupe_candidates(candidates),
+        "syntaxValid": True,
+        "orderListReturnLikely": _infer_order_list_return(tree),
+    }
 
 
 def _dedupe_candidates(candidates):
@@ -237,6 +289,39 @@ def _safe_symbol(manifest):
     dataset = (manifest.get("performance") or {}).get("backtest") or {}
     symbol = (dataset.get("dataset") or {}).get("symbol")
     return symbol or "N/A"
+
+
+def _build_validation(*, entrypoint_found, syntax_valid, order_list_return_likely, metadata_candidates):
+    return {
+        "entrypointFound": entrypoint_found,
+        "pythonSyntaxValid": syntax_valid,
+        "orderListReturnLikely": order_list_return_likely,
+        "metadataDetected": bool((metadata_candidates or {}).get("name") or (metadata_candidates or {}).get("symbol")),
+    }
+
+
+def _infer_order_list_return(tree):
+    targets = []
+    for node in tree.body:
+        if isinstance(node, ast.FunctionDef) and node.name == "on_bar":
+            targets.append(node)
+        if isinstance(node, ast.ClassDef) and node.name == "Strategy":
+            for child in node.body:
+                if isinstance(child, ast.FunctionDef) and child.name == "on_bar":
+                    targets.append(child)
+
+    if not targets:
+        return None
+
+    saw_return = False
+    for target in targets:
+        for child in ast.walk(target):
+            if not isinstance(child, ast.Return):
+                continue
+            saw_return = True
+            if isinstance(child.value, ast.List):
+                return True
+    return False if saw_return else None
 
 
 def _strategy_storage_root():

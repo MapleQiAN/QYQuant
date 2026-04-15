@@ -175,4 +175,32 @@ describe('StrategyDetailView', () => {
     expect(fetchBacktestStatusMock).toHaveBeenCalledWith('job-1')
     expect(wrapper.text()).toContain("Backtest failed: Undefined variable 'sma_period' (line 15)")
   })
+
+  it('shows next-step guidance when arriving from template creation', async () => {
+    routeState.query = { guided: 'true', source: 'template' }
+    fetchStrategyParametersMock.mockResolvedValue([
+      {
+        name: 'window',
+        type: 'int',
+        default: 20,
+        min: 5,
+        max: 50,
+        step: 1,
+        required: false,
+      },
+    ])
+
+    const wrapper = mount(StrategyDetailView, {
+      global: {
+        mocks: {
+          $t: (key: string, params?: Record<string, string>) => (params?.jobId ? `${key}:${params.jobId}` : key),
+        },
+      },
+    })
+    await flushPromises()
+
+    expect(wrapper.get('[data-test="guided-next-steps"]').text()).toContain('strategyDetail.nextStepsTitle')
+    expect(wrapper.text()).toContain('strategyDetail.nextStepsTemplate')
+    expect(wrapper.text()).toContain('strategyDetail.nextStepsRun')
+  })
 })

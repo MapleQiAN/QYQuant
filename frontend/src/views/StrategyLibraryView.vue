@@ -11,6 +11,14 @@
           <RouterLink class="btn btn-secondary" to="/">
             {{ t('strategy.library.backToDashboard') }}
           </RouterLink>
+          <button
+            class="btn btn-secondary"
+            type="button"
+            data-test="open-create-strategy"
+            @click="handleOpenCreateStrategy"
+          >
+            {{ t('strategy.library.createStrategy') }}
+          </button>
           <RouterLink class="btn btn-primary" to="/strategies/import">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
             {{ t('strategy.library.openImportWizard') }}
@@ -288,6 +296,10 @@ async function loadGuidedStrategies() {
 
 async function handleOpenImportWizard() {
   await router.push('/strategies/import')
+}
+
+async function handleOpenCreateStrategy() {
+  await router.push('/strategies/new')
 }
 
 async function handleDelete(strategyId: string) {

@@ -13,7 +13,6 @@
         </RouterLink>
       </div>
 
-      <!-- Step Indicator -->
       <div class="steps">
         <div class="step step--done">
           <span class="step__num">1</span>
@@ -27,10 +26,7 @@
       </div>
 
       <div v-if="!analysis" class="card panel">
-        <div class="error-state">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-          <p class="message error">{{ $t('strategy.import.failedToAnalyze') }}</p>
-        </div>
+        <p class="message error">{{ $t('strategy.import.failedToAnalyze') }}</p>
       </div>
 
       <div v-else class="layout-grid">
@@ -41,22 +37,44 @@
             </div>
             <h2 class="summary-title">Import Summary</h2>
           </div>
+
           <div class="summary-rows">
             <div class="summary-row">
               <span class="summary-label">Source</span>
-              <span class="summary-value">{{ analysis.sourceType }}</span>
+              <span class="summary-value">{{ sourceLabel }}</span>
             </div>
             <div v-if="analysis.fileSummary?.filename" class="summary-row">
               <span class="summary-label">File</span>
               <span class="summary-value summary-value--mono">{{ analysis.fileSummary.filename }}</span>
             </div>
           </div>
+
+          <div class="validation-block">
+            <h3 class="validation-title">{{ $t('strategy.import.validationTitle') }}</h3>
+            <div class="validation-list">
+              <div data-test="validation-entrypoint" class="validation-item">
+                <span>{{ $t('strategy.import.validationEntrypoint') }}</span>
+                <strong :class="validationClass(validationState.entrypointFound)">{{ validationLabel(validationState.entrypointFound) }}</strong>
+              </div>
+              <div data-test="validation-syntax" class="validation-item">
+                <span>{{ $t('strategy.import.validationSyntax') }}</span>
+                <strong :class="validationClass(validationState.pythonSyntaxValid)">{{ validationLabel(validationState.pythonSyntaxValid) }}</strong>
+              </div>
+              <div data-test="validation-return" class="validation-item">
+                <span>{{ $t('strategy.import.validationReturn') }}</span>
+                <strong :class="validationClass(validationState.orderListReturnLikely)">{{ validationLabel(validationState.orderListReturnLikely) }}</strong>
+              </div>
+              <div class="validation-item">
+                <span>{{ $t('strategy.import.validationMetadata') }}</span>
+                <strong :class="validationClass(validationState.metadataDetected)">{{ validationLabel(validationState.metadataDetected) }}</strong>
+              </div>
+            </div>
+          </div>
+
           <div v-if="analysis.warnings.length" class="summary-alert summary-alert--warning">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
             {{ analysis.warnings.join(', ') }}
           </div>
           <div v-if="analysis.errors.length" class="summary-alert summary-alert--error">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
             {{ analysis.errors.join(', ') }}
           </div>
         </div>
@@ -103,6 +121,7 @@
 
           <div class="actions">
             <button
+              data-test="confirm-import"
               class="btn btn-primary"
               type="button"
               :disabled="submitting || !selectedEntrypoint"
@@ -130,6 +149,7 @@ import type { StrategyImportAnalysis } from '../types/Strategy'
 const route = useRoute()
 const router = useRouter()
 const draftImportId = String(route.query.draftImportId || '')
+const source = String(route.query.source || 'import')
 const rawAnalysis = draftImportId ? sessionStorage.getItem(`strategy-import:${draftImportId}`) : null
 const analysis = ref<StrategyImportAnalysis | null>(rawAnalysis ? JSON.parse(rawAnalysis) : null)
 const selectedEntrypointKey = ref(
@@ -154,6 +174,41 @@ const selectedEntrypoint = computed(() => {
   )
 })
 
+const sourceLabel = computed(() => (source === 'template' ? 'Template' : 'Imported file'))
+
+const validationState = computed(() => {
+  const base = analysis.value
+    ? {
+        entrypointFound: analysis.value.entrypointCandidates.length > 0,
+        pythonSyntaxValid: !(analysis.value.errors || []).some((item) => item.toLowerCase().includes('syntax')),
+        orderListReturnLikely: null,
+        metadataDetected: Boolean((analysis.value.metadataCandidates || {}).name || (analysis.value.metadataCandidates || {}).symbol),
+      }
+    : {
+        entrypointFound: false,
+        pythonSyntaxValid: null,
+        orderListReturnLikely: null,
+        metadataDetected: false,
+      }
+
+  return {
+    ...base,
+    ...(analysis.value?.validation || {}),
+  }
+})
+
+function validationLabel(value: boolean | null | undefined) {
+  if (value === true) return 'Passed'
+  if (value === false) return 'Needs review'
+  return 'Not checked'
+}
+
+function validationClass(value: boolean | null | undefined) {
+  if (value === true) return 'validation-state validation-state--pass'
+  if (value === false) return 'validation-state validation-state--warn'
+  return 'validation-state validation-state--unknown'
+}
+
 async function handleConfirm() {
   if (!analysis.value || !selectedEntrypoint.value) {
     error.value = 'Select an entrypoint before continuing.'
@@ -174,7 +229,7 @@ async function handleConfirm() {
       selectedEntrypoint: {
         path: selectedEntrypoint.value.path,
         callable: selectedEntrypoint.value.callable,
-        interface: selectedEntrypoint.value.interface || 'event_v1'
+        interface: selectedEntrypoint.value.interface || 'event_v1',
       },
       metadata: {
         name: name.value.trim(),
@@ -184,14 +239,20 @@ async function handleConfirm() {
         tags: tags.value
           .split(',')
           .map((item) => item.trim())
-          .filter(Boolean)
+          .filter(Boolean),
       },
-      parameterDefinitions: analysis.value.parameterCandidates
+      parameterDefinitions: analysis.value.parameterCandidates,
     })
     sessionStorage.removeItem(`strategy-import:${analysis.value.draftImportId}`)
     toast.success(`策略已导入：${result.strategy.name}`)
     if (result.next) {
-      await router.push(result.next)
+      await router.push({
+        path: result.next,
+        query: {
+          guided: 'true',
+          source,
+        },
+      })
     }
   } catch (err: any) {
     error.value = err?.message || 'Failed to confirm strategy import'
@@ -231,20 +292,16 @@ async function handleConfirm() {
   margin: 0;
   font-size: var(--font-size-xxl);
   font-weight: 800;
-  letter-spacing: -0.02em;
 }
 
 .page-subtitle {
   margin: var(--spacing-xs) 0 0;
   color: var(--color-text-muted);
-  font-size: var(--font-size-sm);
 }
 
-/* ── Steps ── */
 .steps {
   display: flex;
   align-items: center;
-  gap: 0;
   margin-bottom: var(--spacing-xl);
 }
 
@@ -255,205 +312,137 @@ async function handleConfirm() {
 }
 
 .step__num {
-  display: flex;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 24px;
-  height: 24px;
-  border-radius: 50%;
-  font-size: 11px;
-  font-weight: 700;
-  border: 1px solid var(--color-border);
-  color: var(--color-text-muted);
-  background: var(--color-surface);
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  background: var(--color-surface-elevated);
 }
 
-.step--done .step__num {
-  background: var(--color-primary-bg);
-  border-color: var(--color-primary-border);
-  color: var(--color-accent);
-}
-
+.step--done .step__num,
 .step--active .step__num {
   background: var(--color-accent);
-  border-color: var(--color-accent);
-  color: var(--color-text-inverse);
-}
-
-.step__label {
-  font-size: var(--font-size-xs);
-  font-weight: 600;
-  color: var(--color-text-muted);
-}
-
-.step--active .step__label {
-  color: var(--color-text-primary);
+  color: white;
 }
 
 .step__line {
-  width: 40px;
-  height: 1px;
+  flex: 0 0 44px;
+  height: 2px;
   background: var(--color-border);
   margin: 0 var(--spacing-sm);
 }
 
 .step__line--done {
-  background: var(--color-primary-border);
+  background: var(--color-accent);
 }
 
-/* ── Layout ── */
 .layout-grid {
   display: grid;
-  grid-template-columns: minmax(280px, 0.8fr) minmax(0, 1.2fr);
+  grid-template-columns: minmax(280px, 380px) minmax(0, 1fr);
   gap: var(--spacing-lg);
-  align-items: start;
 }
 
 .panel {
   padding: var(--spacing-lg);
 }
 
-.panel:hover {
-  transform: none;
-}
-
-.panel-title {
-  margin: 0 0 var(--spacing-sm);
-  font-size: var(--font-size-lg);
-  font-weight: 700;
-  color: var(--color-text-primary);
-}
-
-/* ── Summary Panel ── */
-.summary-panel {
-  position: relative;
-  overflow: hidden;
-}
-
-.summary-panel::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 2px;
-  background: linear-gradient(90deg, var(--color-primary), var(--color-accent));
+.summary-header,
+.summary-row,
+.validation-item,
+.actions {
+  display: flex;
+  align-items: center;
 }
 
 .summary-header {
-  display: flex;
-  align-items: center;
   gap: var(--spacing-sm);
   margin-bottom: var(--spacing-md);
 }
 
 .summary-icon {
-  display: flex;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 28px;
-  height: 28px;
-  border-radius: var(--radius-sm);
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-md);
   background: var(--color-primary-bg);
   color: var(--color-accent);
 }
 
-.summary-title {
+.summary-title,
+.validation-title,
+.panel-title {
   margin: 0;
-  font-size: var(--font-size-md);
-  font-weight: 700;
-  color: var(--color-text-primary);
 }
 
-.summary-rows {
+.summary-rows,
+.validation-list {
   display: flex;
   flex-direction: column;
+  gap: 10px;
+}
+
+.summary-row,
+.validation-item {
+  justify-content: space-between;
   gap: var(--spacing-sm);
 }
 
-.summary-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: var(--spacing-sm) 0;
-  border-bottom: 1px solid var(--color-border-light);
-}
-
-.summary-row:last-child {
-  border-bottom: none;
-}
-
 .summary-label {
-  font-size: var(--font-size-xs);
   color: var(--color-text-muted);
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  font-weight: 600;
-}
-
-.summary-value {
-  font-size: var(--font-size-sm);
-  color: var(--color-text-primary);
-  font-weight: 600;
 }
 
 .summary-value--mono {
   font-family: var(--font-mono);
-  font-size: var(--font-size-xs);
+}
+
+.validation-block {
+  margin-top: var(--spacing-lg);
+  padding-top: var(--spacing-md);
+  border-top: 1px solid var(--color-border);
+}
+
+.validation-title {
+  margin-bottom: var(--spacing-sm);
+  font-size: var(--font-size-md);
+}
+
+.validation-state--pass {
+  color: #2a9d65;
+}
+
+.validation-state--warn {
+  color: #c87a00;
+}
+
+.validation-state--unknown {
+  color: var(--color-text-muted);
 }
 
 .summary-alert {
-  display: flex;
-  align-items: flex-start;
-  gap: var(--spacing-sm);
+  margin-top: var(--spacing-md);
   padding: var(--spacing-sm) var(--spacing-md);
   border-radius: var(--radius-md);
-  font-size: var(--font-size-xs);
-  margin-top: var(--spacing-md);
-  line-height: 1.4;
 }
 
 .summary-alert--warning {
-  background: var(--color-warning-bg);
-  color: var(--color-warning);
-  border: 1px solid rgba(245, 158, 11, 0.2);
+  background: rgba(200, 122, 0, 0.12);
+  color: #c87a00;
 }
 
 .summary-alert--error {
-  background: var(--color-danger-bg);
-  color: var(--color-danger);
-  border: 1px solid rgba(255, 59, 59, 0.2);
+  background: rgba(207, 78, 78, 0.12);
+  color: #cf4e4e;
 }
 
-.summary-alert svg {
-  flex-shrink: 0;
-  margin-top: 1px;
-}
-
-/* ── Error State ── */
-.error-state {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: var(--spacing-sm);
-  padding: var(--spacing-xl);
-  color: var(--color-danger);
-}
-
-/* ── Fields ── */
 .field {
   display: flex;
   flex-direction: column;
   gap: var(--spacing-xs);
-  margin-top: var(--spacing-md);
-}
-
-.field-label {
-  font-size: var(--font-size-xs);
-  font-weight: 600;
-  color: var(--color-text-secondary);
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
+  margin-bottom: var(--spacing-md);
 }
 
 .field-input {
@@ -461,16 +450,8 @@ async function handleConfirm() {
   padding: var(--spacing-sm) var(--spacing-md);
   border-radius: var(--radius-md);
   border: 1px solid var(--color-border);
-  background: var(--color-surface-elevated);
+  background: var(--color-surface);
   color: var(--color-text-primary);
-  font-size: var(--font-size-sm);
-  transition: border-color 0.15s, box-shadow 0.15s;
-}
-
-.field-input:focus {
-  outline: none;
-  border-color: var(--color-primary-border);
-  box-shadow: 0 0 0 3px rgba(30, 90, 168, 0.12);
 }
 
 .field-textarea {
@@ -479,37 +460,35 @@ async function handleConfirm() {
 }
 
 .actions {
-  margin-top: var(--spacing-lg);
+  justify-content: flex-start;
 }
 
 .btn-spinner {
   width: 14px;
   height: 14px;
-  border: 2px solid rgba(255, 255, 255, 0.3);
-  border-top-color: #fff;
-  border-radius: 50%;
-  animation: spin 0.7s linear infinite;
+  border-radius: 999px;
+  border: 2px solid rgba(255, 255, 255, 0.35);
+  border-top-color: white;
+  animation: spin 0.8s linear infinite;
 }
 
-.message.warning {
-  color: var(--color-warning);
+.message {
+  margin: var(--spacing-md) 0 0;
 }
 
-.message.error {
-  margin-top: var(--spacing-md);
+.error {
   color: var(--color-danger);
-  font-size: var(--font-size-sm);
 }
 
-@media (max-width: 768px) {
-  .page-header,
+@media (max-width: 900px) {
   .layout-grid {
-    display: flex;
-    flex-direction: column;
+    grid-template-columns: 1fr;
   }
+}
 
-  .steps {
-    justify-content: center;
+@media (max-width: 720px) {
+  .page-header {
+    flex-direction: column;
   }
 }
 </style>

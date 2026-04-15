@@ -18,6 +18,22 @@
         {{ $t('strategyDetail.guidedBanner') }}
       </div>
 
+      <div v-if="isGuidedMode" data-test="guided-next-steps" class="guided-next-steps">
+        <div class="guided-next-steps__content">
+          <p class="guided-next-steps__eyebrow">{{ $t('strategyDetail.nextStepsTitle') }}</p>
+          <h2>{{ nextStepsBody }}</h2>
+          <p>{{ $t('strategyDetail.nextStepsRun') }}</p>
+        </div>
+        <div class="guided-next-steps__actions">
+          <RouterLink class="btn btn-secondary" to="/strategies">
+            {{ $t('strategyDetail.nextStepsLibrary') }}
+          </RouterLink>
+          <button class="btn btn-primary" type="button" @click="focusRunButton">
+            {{ $t('strategyDetail.nextStepsConfigure') }}
+          </button>
+        </div>
+      </div>
+
       <div v-if="strategyId" class="strategy-identity">
         <div class="strategy-identity__icon">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
@@ -140,7 +156,7 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, reactive, ref } from 'vue'
+import { computed, onMounted, reactive, ref } from 'vue'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { fetchBacktestStatus, getBacktestFailureMessage, submitBacktest } from '../api/backtests'
@@ -158,6 +174,7 @@ const router = useRouter()
 const userStore = useUserStore()
 const strategyId = String(route.params.strategyId || route.query.strategy_id || '')
 const isGuidedMode = route.query.guided === 'true'
+const guidedSource = String(route.query.source || '')
 const presetsStore = usePresetsStore()
 
 const definitions = ref<StrategyParameterDefinition[]>([])
@@ -174,6 +191,16 @@ const runForm = reactive({
   symbols: '',
   startDate: defaultStartDate(),
   endDate: defaultEndDate(),
+})
+
+const nextStepsBody = computed(() => {
+  if (guidedSource === 'template') {
+    return t('strategyDetail.nextStepsTemplate')
+  }
+  if (guidedSource === 'import') {
+    return t('strategyDetail.nextStepsImport')
+  }
+  return t('strategyDetail.nextStepsGeneric')
 })
 
 onMounted(() => {
@@ -272,6 +299,12 @@ async function handleSubmit() {
   } finally {
     submitting.value = false
   }
+}
+
+function focusRunButton() {
+  const button = document.querySelector('[data-test="start-backtest"]') as HTMLButtonElement | null
+  button?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+  button?.focus()
 }
 
 function mergeDefaults(definitionsList: StrategyParameterDefinition[], values: Record<string, unknown>) {
@@ -389,6 +422,45 @@ async function waitForGuidedReport(jobId: string) {
   border-radius: var(--radius-md);
   color: var(--color-text-secondary);
   font-size: var(--font-size-sm);
+}
+
+.guided-next-steps {
+  margin-bottom: var(--spacing-lg);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-lg);
+  padding: var(--spacing-lg);
+  border: 1px solid rgba(64, 162, 255, 0.25);
+  border-radius: var(--radius-lg);
+  background:
+    radial-gradient(circle at top left, rgba(64, 162, 255, 0.18), transparent 46%),
+    linear-gradient(135deg, rgba(8, 19, 34, 0.92), rgba(17, 32, 56, 0.96));
+  color: #f5f8ff;
+}
+
+.guided-next-steps__eyebrow {
+  margin: 0 0 8px;
+  color: rgba(245, 248, 255, 0.72);
+  font-size: var(--font-size-xs);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.guided-next-steps__content h2 {
+  margin: 0 0 var(--spacing-xs);
+  font-size: var(--font-size-xl);
+}
+
+.guided-next-steps__content p {
+  margin: 0;
+  color: rgba(245, 248, 255, 0.76);
+}
+
+.guided-next-steps__actions {
+  display: flex;
+  gap: var(--spacing-sm);
+  flex-wrap: wrap;
 }
 
 /* ── Grid Layout ── */
@@ -660,6 +732,11 @@ async function waitForGuidedReport(jobId: string) {
   .submit-bar {
     flex-direction: column;
     align-items: stretch;
+  }
+
+  .guided-next-steps {
+    flex-direction: column;
+    align-items: flex-start;
   }
 
   .btn-run {

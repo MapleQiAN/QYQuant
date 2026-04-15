@@ -91,6 +91,7 @@ describe('StrategyLibraryView', () => {
                     pageTitle: 'Strategy Library',
                     pageSubtitle: 'Manage your strategies',
                     backToDashboard: 'Back',
+                    createStrategy: 'Create strategy',
                     openImportWizard: 'Open import wizard',
                     guidedStrategy: 'Guided strategy',
                     guidedStrategyDesc: 'Guided picks',
@@ -171,6 +172,17 @@ describe('StrategyLibraryView', () => {
 
     expect(pushMock).toHaveBeenCalledWith('/strategies/import')
     expect(importStrategyMock).not.toHaveBeenCalled()
+  })
+
+  it('opens the strategy creation page from the library header', async () => {
+    fetchStrategiesMock.mockResolvedValue({ items: [], page: 1, perPage: 10, total: 0 })
+
+    const wrapper = mountView()
+    await flushPromises()
+
+    await wrapper.get('[data-test="open-create-strategy"]').trigger('click')
+
+    expect(pushMock).toHaveBeenCalledWith('/strategies/new')
   })
 
   it('shows review status and disables publish button for pending strategies', async () => {

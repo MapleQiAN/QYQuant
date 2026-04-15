@@ -65,6 +65,12 @@ export interface StrategyImportAnalysis {
   entrypointCandidates: StrategyImportEntrypointCandidate[]
   metadataCandidates?: Record<string, unknown> | null
   parameterCandidates: StrategyParameter[]
+  validation?: {
+    entrypointFound?: boolean
+    pythonSyntaxValid?: boolean | null
+    orderListReturnLikely?: boolean | null
+    metadataDetected?: boolean
+  } | null
   warnings: string[]
   errors: string[]
 }
