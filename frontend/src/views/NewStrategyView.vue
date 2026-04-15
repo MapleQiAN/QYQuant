@@ -40,9 +40,9 @@
           </div>
         </article>
 
-        <article class="card path-card path-card--accent">
+        <article class="card path-card">
           <div class="path-card__header">
-            <span class="path-badge path-badge--warm">{{ $t('strategyNew.aiBadge') }}</span>
+            <span class="path-badge">{{ $t('strategyNew.aiBadge') }}</span>
             <h2>{{ $t('strategyNew.aiTitle') }}</h2>
             <p>{{ $t('strategyNew.aiHint') }}</p>
           </div>
@@ -582,12 +582,6 @@ const ArrowLeftIcon = () => h('svg', {
   gap: var(--spacing-lg);
 }
 
-.path-card--accent {
-  background:
-    radial-gradient(circle at top right, rgba(245, 158, 11, 0.16), transparent 42%),
-    linear-gradient(180deg, rgba(15, 23, 42, 0.9), rgba(15, 23, 42, 0.96));
-}
-
 .path-card__header {
   display: flex;
   flex-direction: column;
@@ -624,11 +618,6 @@ const ArrowLeftIcon = () => h('svg', {
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-}
-
-.path-badge--warm {
-  background: rgba(245, 158, 11, 0.14);
-  color: #f7b642;
 }
 
 .path-checklist,
