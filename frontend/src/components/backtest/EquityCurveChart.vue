@@ -204,7 +204,7 @@ function buildOption(): EChartsOption {
     animation: false,
     tooltip: {
       trigger: 'axis',
-      valueFormatter: (value) => Number(value).toLocaleString(undefined, { maximumFractionDigits: 2 })
+      formatter: (params: any) => buildTooltip(params)
     },
     legend: {
       top: 8,

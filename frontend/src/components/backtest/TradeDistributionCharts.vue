@@ -161,13 +161,16 @@ function buildMonthlyOption(): EChartsOption {
     ],
     series: [{
       type: 'bar',
-      data: months.map((m) => ({
-        value: m.returnPct ?? 0,
-        itemStyle: {
-          color: (m.returnPct ?? 0) >= 0 ? upCol : downCol,
-          borderRadius: [4, 4, 0, 0]
+      data: months.map((m) => {
+        const val = m.returnPct ?? 0
+        return {
+          value: val,
+          itemStyle: {
+            color: val >= 0 ? upCol : downCol,
+            borderRadius: val >= 0 ? [4, 4, 0, 0] : [0, 0, 4, 4]
+          }
         }
-      })),
+      }),
       barMaxWidth: 28
     }]
   }

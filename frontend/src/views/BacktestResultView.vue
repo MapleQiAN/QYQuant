@@ -1434,6 +1434,7 @@ onMounted(() => {
   overflow: hidden;
   box-shadow: var(--shadow-md);
   position: relative;
+  margin-top: var(--spacing-lg);
 }
 
 .analysis-panel {
