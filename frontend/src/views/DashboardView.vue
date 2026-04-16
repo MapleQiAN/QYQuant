@@ -267,12 +267,25 @@ const PlusIcon = () => h('svg', {
   max-width: min(1280px, calc(100% - var(--spacing-lg) * 2));
 }
 
-/* Page Header */
+/* ── Page Header — Bauhaus ── */
 .page-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
   margin-bottom: var(--spacing-lg);
+  position: relative;
+  padding-bottom: var(--spacing-lg);
+}
+
+.page-header::after {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 80px;
+  height: 6px;
+  background: var(--color-accent);
+  border-radius: 3px;
 }
 
 .header-text {
@@ -282,10 +295,11 @@ const PlusIcon = () => h('svg', {
 }
 
 .page-title {
-  font-size: var(--font-size-xxl);
-  font-weight: 700;
+  font-size: var(--font-size-xxxl);
+  font-weight: 900;
   color: var(--color-text-primary);
   margin: 0;
+  letter-spacing: -0.02em;
 }
 
 .page-subtitle {
@@ -299,7 +313,7 @@ const PlusIcon = () => h('svg', {
   gap: var(--spacing-sm);
 }
 
-/* KPI Row */
+/* ── KPI Row — Bauhaus Cards ── */
 .kpi-row {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
@@ -310,14 +324,60 @@ const PlusIcon = () => h('svg', {
 .kpi-card {
   padding: 20px;
   background: var(--color-surface);
-  border: 1px solid var(--color-border);
+  border: 2px solid var(--color-border);
   border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+  position: relative;
+  overflow: hidden;
+}
+
+.kpi-card::after {
+  content: "";
+  position: absolute;
+  height: 4px;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: var(--color-primary);
+  border-radius: 0 0 14px 14px;
+}
+
+.kpi-card:nth-child(1)::after { background: var(--color-up); }
+.kpi-card:nth-child(2)::after { background: #269A8F; }
+.kpi-card:nth-child(3)::after { background: var(--color-accent); }
+.kpi-card:nth-child(4)::after { background: var(--color-danger); }
+
+.kpi-card:nth-child(2)::before {
+  content: "";
+  position: absolute;
+  width: 36px;
+  height: 36px;
+  background: #269A8F;
+  border-radius: 50%;
+  top: -10px;
+  right: -10px;
+  opacity: 0.85;
+}
+
+.kpi-card:nth-child(3)::before {
+  content: "";
+  position: absolute;
+  width: 30px;
+  height: 30px;
+  background: var(--color-accent);
+  bottom: 12px;
+  right: -8px;
+  transform: rotate(20deg);
+  border-radius: 8px;
+  opacity: 0.85;
 }
 
 .kpi-label {
-  font-size: var(--font-size-sm);
-  font-weight: 500;
-  color: var(--color-text-secondary);
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--color-text-muted);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
   margin-bottom: 8px;
 }
 
@@ -330,9 +390,11 @@ const PlusIcon = () => h('svg', {
 
 .kpi-value {
   font-size: var(--font-size-xxxl);
-  font-weight: 700;
+  font-weight: 900;
   color: var(--color-text-primary);
   line-height: 1.1;
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
 }
 
 .kpi-value.positive { color: var(--color-positive); }
@@ -342,7 +404,8 @@ const PlusIcon = () => h('svg', {
   font-size: 11px;
   padding: 3px 8px;
   border-radius: var(--radius-full);
-  font-weight: 600;
+  font-weight: 800;
+  border: 2px solid transparent;
 }
 
 .kpi-dot {
@@ -350,6 +413,7 @@ const PlusIcon = () => h('svg', {
   height: 8px;
   border-radius: var(--radius-full);
   background: var(--color-text-muted);
+  border: 2px solid var(--color-border);
 }
 
 .kpi-dot.active {
@@ -359,9 +423,10 @@ const PlusIcon = () => h('svg', {
 .kpi-sub {
   font-size: var(--font-size-sm);
   color: var(--color-text-muted);
+  font-weight: 600;
 }
 
-/* Dashboard Grid */
+/* ── Dashboard Grid ── */
 .dashboard-grid {
   display: grid;
   grid-template-columns: 1fr 1fr 320px;
@@ -430,6 +495,8 @@ const PlusIcon = () => h('svg', {
   .header-actions .btn { flex: 1; }
   .kpi-row { grid-template-columns: repeat(2, 1fr); gap: var(--spacing-sm); }
   .kpi-card { padding: 14px; }
+  .kpi-card:nth-child(2)::before,
+  .kpi-card:nth-child(3)::before { display: none; }
   .kpi-value { font-size: var(--font-size-xxl); }
   .dashboard-grid {
     grid-template-columns: 1fr;
