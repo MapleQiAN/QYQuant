@@ -151,6 +151,63 @@ def test_market_data_service_bulk_insert_is_idempotent(app):
         assert db.session.query(MarketDataCache).count() == 1
 
 
+def test_market_data_service_supports_akshare_daily_contract(app):
+    from app.services.market_data import MarketDataService
+
+    calls = []
+
+    class FakeAkShareClient:
+        def fetch_stock_history(self, symbol, start_date, end_date, period="daily", adjust="qfq"):
+            calls.append((symbol, start_date, end_date, period, adjust))
+            return [
+                {
+                    "symbol": symbol,
+                    "trade_date": date(2025, 1, 2),
+                    "open": 10.0,
+                    "high": 10.5,
+                    "low": 9.8,
+                    "close": 10.2,
+                    "volume": 100000,
+                    "source": "akshare",
+                }
+            ]
+
+    with app.app_context():
+        service = MarketDataService(client=FakeAkShareClient(), provider_key="akshare")
+        result = service.get_market_data("000001.XSHE", date(2025, 1, 2), date(2025, 1, 2))
+
+        assert calls == [("000001.XSHE", date(2025, 1, 2), date(2025, 1, 2), "daily", "qfq")]
+        assert result["bars"] == [
+            {
+                "symbol": "000001.XSHE",
+                "trade_date": date(2025, 1, 2),
+                "open": 10.0,
+                "high": 10.5,
+                "low": 9.8,
+                "close": 10.2,
+                "volume": 100000,
+                "source": "akshare",
+            }
+        ]
+
+
+def test_market_data_service_uses_env_provider_when_client_is_not_supplied(monkeypatch):
+    from app.services.market_data import MarketDataService
+
+    class FakeAkShareClient:
+        def fetch_stock_history(self, symbol, start_date, end_date, period="daily", adjust="qfq"):
+            return []
+
+    monkeypatch.setenv("MARKET_DATA_PROVIDER", "akshare")
+    monkeypatch.setattr("app.services.market_data.AkShareClient", FakeAkShareClient)
+    monkeypatch.setattr("app.services.market_data.JoinQuantClient", lambda: (_ for _ in ()).throw(AssertionError("joinquant should not be used")))
+
+    service = MarketDataService()
+
+    assert service.provider_key == "akshare"
+    assert hasattr(service.client, "fetch_daily_data")
+
+
 def test_run_backtest_includes_data_range_notice_from_provider(monkeypatch):
     from app.backtest.engine import run_backtest
 

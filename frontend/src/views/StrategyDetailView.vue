@@ -83,6 +83,19 @@
                   type="date"
                 />
               </label>
+              <label class="field field--full">
+                <span class="field-label">{{ $t('strategyDetail.dataSource') }}</span>
+                <select
+                  data-test="data-source-select"
+                  v-model="runForm.dataSource"
+                  class="field-input"
+                >
+                  <option v-for="option in dataSourceOptions" :key="option.value" :value="option.value">
+                    {{ option.label }}
+                  </option>
+                </select>
+                <span v-if="dataSourceHint" class="field-hint">{{ dataSourceHint }}</span>
+              </label>
             </div>
 
             <div class="preset-divider">
@@ -191,6 +204,45 @@ const runForm = reactive({
   symbols: '',
   startDate: defaultStartDate(),
   endDate: defaultEndDate(),
+  dataSource: 'auto',
+})
+
+const dataSourceOptions = computed(() => ([
+  { value: 'auto', label: t('backtest.dataSourceAuto') },
+  { value: 'joinquant', label: t('backtest.dataSourceJoinquant') },
+  { value: 'akshare', label: t('backtest.dataSourceAkshare') },
+  { value: 'binance', label: t('backtest.dataSourceBinance') },
+  { value: 'freegold', label: t('backtest.dataSourceFreegold') },
+  { value: 'mock', label: t('backtest.dataSourceMock') },
+]))
+
+const primarySymbol = computed(() => {
+  const [first] = runForm.symbols
+    .split(',')
+    .map((item) => item.trim())
+    .filter(Boolean)
+  return first || ''
+})
+
+const recommendedDataSource = computed(() => inferRecommendedDataSource(primarySymbol.value))
+const effectiveDataSource = computed(() =>
+  runForm.dataSource === 'auto' ? recommendedDataSource.value : runForm.dataSource
+)
+const dataSourceHint = computed(() => {
+  if (!primarySymbol.value) {
+    return ''
+  }
+  const resolvedLabel = dataSourceOptions.value.find((option) => option.value === effectiveDataSource.value)?.label ?? effectiveDataSource.value
+  if (runForm.dataSource === 'auto' && effectiveDataSource.value !== 'auto') {
+    return t('strategyDetail.dataSourceAutoResolved', { source: resolvedLabel })
+  }
+  if (isAshareSymbol(primarySymbol.value)) {
+    return t('strategyDetail.dataSourceAshareHint')
+  }
+  if (isGoldSymbol(primarySymbol.value)) {
+    return t('strategyDetail.dataSourceGoldHint')
+  }
+  return ''
 })
 
 const nextStepsBody = computed(() => {
@@ -268,6 +320,10 @@ async function handleSubmit() {
     submitError.value = t('strategyDetail.errorFixFormErrors')
     return
   }
+  if (hasIncompatibleDataSource(symbols, effectiveDataSource.value)) {
+    submitError.value = t('strategyDetail.errorIncompatibleDataSource')
+    return
+  }
 
   submitting.value = true
   try {
@@ -276,6 +332,7 @@ async function handleSubmit() {
       symbols,
       start_date: runForm.startDate,
       end_date: runForm.endDate,
+      data_source: effectiveDataSource.value,
       parameters: sanitizeParameters(definitions.value, parameterValues.value),
     })
 
@@ -340,6 +397,43 @@ function defaultStartDate() {
   const date = new Date()
   date.setMonth(date.getMonth() - 1)
   return date.toISOString().slice(0, 10)
+}
+
+function isAshareSymbol(symbol: string) {
+  const normalized = String(symbol || '').trim().toUpperCase()
+  return /^\d{6}\.(XSHE|XSHG)$/.test(normalized)
+}
+
+function isGoldSymbol(symbol: string) {
+  const normalized = String(symbol || '').trim().toUpperCase().replace(/[\/-]/g, '')
+  return ['XAUUSD', 'XAU', 'GOLD', 'GCF', 'GC=F', 'GCF=F'].includes(normalized)
+}
+
+function inferRecommendedDataSource(symbol: string) {
+  if (isAshareSymbol(symbol)) {
+    return 'akshare'
+  }
+  if (isGoldSymbol(symbol)) {
+    return 'freegold'
+  }
+  return 'auto'
+}
+
+function hasIncompatibleDataSource(symbols: string[], dataSource: string) {
+  if (!symbols.length) {
+    return false
+  }
+  const normalizedSource = String(dataSource || '').trim().toLowerCase()
+  const allAshare = symbols.every((symbol) => isAshareSymbol(symbol))
+  const allGold = symbols.every((symbol) => isGoldSymbol(symbol))
+
+  if (allAshare) {
+    return ['binance', 'freegold'].includes(normalizedSource)
+  }
+  if (allGold) {
+    return ['akshare', 'joinquant'].includes(normalizedSource)
+  }
+  return false
 }
 
 function sleep(ms: number) {
@@ -553,6 +647,12 @@ async function waitForGuidedReport(jobId: string) {
   outline: none;
   border-color: var(--color-primary-border);
   box-shadow: 0 0 0 3px rgba(30, 90, 168, 0.12);
+}
+
+.field-hint {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-xs);
+  line-height: 1.5;
 }
 
 /* ── Preset Divider ── */

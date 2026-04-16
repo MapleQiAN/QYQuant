@@ -295,6 +295,7 @@ def test_submit_backtest_creates_pending_job_and_returns_job_id(monkeypatch, cli
             "symbols": ["BTCUSDT", "ETHUSDT"],
             "start_date": "2024-01-01",
             "end_date": "2024-01-31",
+            "data_source": "binance",
             "parameters": {"window": 5},
         },
     )
@@ -312,6 +313,7 @@ def test_submit_backtest_creates_pending_job_and_returns_job_id(monkeypatch, cli
         assert job.params["symbols"] == ["BTCUSDT", "ETHUSDT"]
         assert job.params["start_date"] == "2024-01-01"
         assert job.params["end_date"] == "2024-01-31"
+        assert job.params["data_source"] == "binance"
 
     assert queued["kwargs"]["task_id"] == job_id
     assert queued["kwargs"]["queue"] == "backtest"

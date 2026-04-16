@@ -1,3 +1,4 @@
+import os
 from datetime import date, datetime, timedelta
 
 from sqlalchemy import select
@@ -6,7 +7,64 @@ from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 
 from ..extensions import db
 from ..models import MarketDataCache
-from ..providers.joinquant import JoinQuantClient
+from ..providers import AkShareClient, JoinQuantClient
+
+_CANONICAL_MARKET_DATA_PROVIDERS = {"joinquant", "akshare"}
+_MARKET_DATA_PROVIDER_ALIASES = {
+    "joinquant": "joinquant",
+    "jq": "joinquant",
+    "jqdata": "joinquant",
+    "akshare": "akshare",
+    "ak": "akshare",
+}
+
+
+def _normalize_provider_name(value):
+    if value is None:
+        return None
+    normalized = str(value).strip().lower()
+    if not normalized:
+        return None
+    return _MARKET_DATA_PROVIDER_ALIASES.get(normalized, normalized)
+
+
+def _default_provider_name():
+    provider = _normalize_provider_name(os.getenv("MARKET_DATA_PROVIDER"))
+    if provider in _CANONICAL_MARKET_DATA_PROVIDERS:
+        return provider
+
+    fallback = _normalize_provider_name(os.getenv("BACKTEST_DATA_PROVIDER"))
+    if fallback in _CANONICAL_MARKET_DATA_PROVIDERS:
+        return fallback
+    return "joinquant"
+
+
+class _AkShareDailyDataClientAdapter:
+    def __init__(self, client):
+        self.client = client
+
+    def fetch_daily_data(self, symbol, start_date, end_date):
+        return self.client.fetch_stock_history(
+            symbol,
+            start_date,
+            end_date,
+            period="daily",
+            adjust="qfq",
+        )
+
+
+def _build_market_data_client(provider_key):
+    if provider_key == "akshare":
+        return AkShareClient()
+    return JoinQuantClient()
+
+
+def _coerce_market_data_client(client, provider_key):
+    if hasattr(client, "fetch_daily_data"):
+        return client
+    if provider_key == "akshare" and hasattr(client, "fetch_stock_history"):
+        return _AkShareDailyDataClientAdapter(client)
+    raise TypeError(f"Client for provider {provider_key} must expose fetch_daily_data or compatible contract")
 
 
 def _coerce_date(value):
@@ -31,8 +89,14 @@ def _weekday_dates(start_date, end_date):
 
 
 class MarketDataService:
-    def __init__(self, client=None, session=None):
-        self.client = client or JoinQuantClient()
+    def __init__(self, client=None, session=None, provider_key=None):
+        self.provider_key = _normalize_provider_name(provider_key) or _default_provider_name()
+        if self.provider_key not in _CANONICAL_MARKET_DATA_PROVIDERS:
+            self.provider_key = "joinquant"
+        self.client = _coerce_market_data_client(
+            client if client is not None else _build_market_data_client(self.provider_key),
+            self.provider_key,
+        )
         self.session = session or db.session
 
     def get_market_data(self, symbol, start_date, end_date):

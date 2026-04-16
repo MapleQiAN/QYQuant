@@ -66,3 +66,99 @@ def on_bar(ctx: StrategyContext, data: BarData) -> list[Order]:
             "pnl": None,
         }
     ]
+
+
+def test_siyuan_electric_pullback_strategy_generates_buy_and_sell_signals():
+    source = Path(
+        r"E:\QYQuant\docs\strategy-format\examples\SiyuanElectricPullback\src\strategy.py"
+    ).read_text(encoding="utf-8")
+
+    buy_bars = []
+    for idx in range(1, 31):
+        close = 100.0 + idx
+        buy_bars.append(
+            {
+                "time": idx,
+                "open": close - 0.5,
+                "high": close + 1.0,
+                "low": close - 1.0,
+                "close": close,
+                "volume": 1000,
+            }
+        )
+    buy_bars.append(
+        {
+            "time": 31,
+            "open": 129.5,
+            "high": 130.5,
+            "low": 124.0,
+            "close": 126.0,
+            "volume": 1000,
+        }
+    )
+
+    buy_result = run_strategy_inline(
+        symbol="002028.XSHE",
+        source=source,
+        callable_name="on_bar",
+        bars=buy_bars,
+        params={
+            "fast_sma_period": 10,
+            "slow_sma_period": 30,
+            "bb_period": 20,
+            "bb_std": 2.0,
+            "position_pct": 1.0,
+        },
+    )
+
+    assert [trade["side"] for trade in buy_result["trades"]] == ["buy"]
+
+    sell_bars = []
+    for idx in range(1, 31):
+        close = 100.0
+        sell_bars.append(
+            {
+                "time": idx,
+                "open": close,
+                "high": close + 1.0,
+                "low": close - 1.0,
+                "close": close,
+                "volume": 1000,
+            }
+        )
+    sell_bars.append(
+        {
+            "time": 31,
+            "open": 100.0,
+            "high": 101.0,
+            "low": 99.0,
+            "close": 100.0,
+            "volume": 1000,
+        }
+    )
+    sell_bars.append(
+        {
+            "time": 32,
+            "open": 100.0,
+            "high": 131.0,
+            "low": 99.0,
+            "close": 130.0,
+            "volume": 1000,
+        }
+    )
+
+    sell_result = run_strategy_inline(
+        symbol="002028.XSHE",
+        source=source,
+        callable_name="on_bar",
+        bars=sell_bars,
+        params={
+            "fast_sma_period": 10,
+            "slow_sma_period": 30,
+            "bb_period": 20,
+            "bb_std": 2.0,
+            "position_pct": 1.0,
+        },
+    )
+
+    assert [trade["side"] for trade in sell_result["trades"]] == ["buy", "sell"]

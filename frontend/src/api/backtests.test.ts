@@ -50,7 +50,8 @@ describe('backtests api', () => {
       strategy_id: 'strategy-id',
       symbols: ['BTCUSDT'],
       start_date: '2024-01-01',
-      end_date: '2024-01-31'
+      end_date: '2024-01-31',
+      data_source: 'binance'
     })
 
     expect(data).toEqual({ ok: true })
@@ -61,7 +62,8 @@ describe('backtests api', () => {
         strategy_id: 'strategy-id',
         symbols: ['BTCUSDT'],
         start_date: '2024-01-01',
-        end_date: '2024-01-31'
+        end_date: '2024-01-31',
+        data_source: 'binance'
       }
     })
   })

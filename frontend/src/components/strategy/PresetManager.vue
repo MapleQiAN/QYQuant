@@ -122,10 +122,11 @@ function confirmSave() {
   min-width: 220px;
   padding: var(--spacing-sm) var(--spacing-md);
   border-radius: var(--radius-md);
-  border: 1px solid var(--color-border);
+  border: 2px solid var(--color-border);
   background: var(--color-surface-elevated);
   color: var(--color-text-primary);
   font-size: var(--font-size-sm);
+  font-family: var(--font-mono);
   transition: border-color 0.15s;
 }
 
@@ -158,7 +159,7 @@ function confirmSave() {
   padding: var(--spacing-lg);
   border-radius: var(--radius-lg);
   background: var(--color-surface);
-  border: 1px solid var(--color-border);
+  border: 2px solid var(--color-border);
   box-shadow: var(--shadow-xl);
 }
 
@@ -178,6 +179,7 @@ function confirmSave() {
 
 .danger {
   color: var(--color-danger);
+  border-color: var(--color-danger);
 }
 
 /* ── Dialog Transition ── */

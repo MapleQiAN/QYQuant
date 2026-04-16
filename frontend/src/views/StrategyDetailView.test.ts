@@ -121,6 +121,7 @@ describe('StrategyDetailView', () => {
     await wrapper.get('[data-test="symbol-input"]').setValue('BTCUSDT')
     await wrapper.get('[data-test="start-date-input"]').setValue('2024-01-01')
     await wrapper.get('[data-test="end-date-input"]').setValue('2024-01-31')
+    await wrapper.get('[data-test="data-source-select"]').setValue('binance')
     await wrapper.get('[data-test="start-backtest"]').trigger('click')
     await flushPromises()
 
@@ -129,9 +130,67 @@ describe('StrategyDetailView', () => {
       symbols: ['BTCUSDT'],
       start_date: '2024-01-01',
       end_date: '2024-01-31',
+      data_source: 'binance',
       parameters: { window: 20 },
     })
     expect(wrapper.text()).toContain('strategyDetail.backtestSubmitted:job-1')
+  })
+
+  it('auto-resolves A-share symbol to akshare when data source stays auto', async () => {
+    fetchStrategyParametersMock.mockResolvedValue([
+      {
+        name: 'window',
+        type: 'int',
+        default: 20,
+        min: 5,
+        max: 50,
+        step: 1,
+        required: false,
+      },
+    ])
+    submitBacktestMock.mockResolvedValue({ job_id: 'job-2' })
+
+    const wrapper = mount(StrategyDetailView)
+    await flushPromises()
+
+    await wrapper.get('[data-test="symbol-input"]').setValue('002028.XSHE')
+    await wrapper.get('[data-test="start-date-input"]').setValue('2024-01-01')
+    await wrapper.get('[data-test="end-date-input"]').setValue('2024-01-31')
+    await wrapper.get('[data-test="start-backtest"]').trigger('click')
+    await flushPromises()
+
+    expect(submitBacktestMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data_source: 'akshare',
+      })
+    )
+  })
+
+  it('blocks incompatible data source for A-share symbols', async () => {
+    fetchStrategyParametersMock.mockResolvedValue([
+      {
+        name: 'window',
+        type: 'int',
+        default: 20,
+        min: 5,
+        max: 50,
+        step: 1,
+        required: false,
+      },
+    ])
+
+    const wrapper = mount(StrategyDetailView)
+    await flushPromises()
+
+    await wrapper.get('[data-test="symbol-input"]').setValue('002028.XSHE')
+    await wrapper.get('[data-test="data-source-select"]').setValue('binance')
+    await wrapper.get('[data-test="start-date-input"]').setValue('2024-01-01')
+    await wrapper.get('[data-test="end-date-input"]').setValue('2024-01-31')
+    await wrapper.get('[data-test="start-backtest"]').trigger('click')
+    await flushPromises()
+
+    expect(submitBacktestMock).not.toHaveBeenCalled()
+    expect(wrapper.text()).toContain('strategyDetail.errorIncompatibleDataSource')
   })
 
   it('shows detailed failure reason when guided polling sees a failed job', async () => {

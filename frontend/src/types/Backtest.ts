@@ -71,6 +71,7 @@ export interface SubmitBacktestPayload {
   symbols: string[]
   start_date: string
   end_date: string
+  data_source?: string
   name?: string
   parameters?: Record<string, unknown>
 }

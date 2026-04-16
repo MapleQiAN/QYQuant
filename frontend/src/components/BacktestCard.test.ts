@@ -67,4 +67,70 @@ describe('BacktestCard', () => {
       dataSource: 'mock'
     })
   })
+
+  it('renders joinquant and akshare as selectable data sources', () => {
+    const i18n = createI18n({
+      legacy: false,
+      locale: 'en',
+      messages: {
+        en: {
+          backtest: {
+            title: 'Backtest',
+            statusCompleted: 'Completed',
+            dataSource: 'Data source',
+            dataSourceAuto: 'Auto',
+            dataSourceBinance: 'Binance',
+            dataSourceFreegold: 'FreeGold',
+            dataSourceJoinquant: 'JoinQuant',
+            dataSourceAkshare: 'AkShare',
+            dataSourceMock: 'Mock',
+            dataSourceAutoWith: 'Auto · {source}',
+            refresh: 'Refresh',
+            export: 'Export'
+          },
+          common: {
+            retry: 'Retry'
+          }
+        }
+      },
+      missingWarn: false,
+      fallbackWarn: false
+    })
+
+    const wrapper = mount(BacktestCard, {
+      props: {
+        data: {
+          summary: {
+            totalReturn: 12,
+            annualizedReturn: 10,
+            sharpeRatio: 1.4,
+            maxDrawdown: -4,
+            winRate: 56,
+            profitFactor: 1.8,
+            totalTrades: 18,
+            avgHoldingDays: 3
+          },
+          kline: [],
+          trades: [],
+          dataSource: 'joinquant'
+        }
+      },
+      global: {
+        plugins: [i18n],
+        stubs: {
+          KlinePlaceholder: true,
+          StatCard: {
+            template: '<div />'
+          },
+          EmptyState: true,
+          ErrorState: true,
+          SkeletonState: true
+        }
+      }
+    })
+
+    const optionValues = wrapper.findAll('option').map((option) => option.attributes('value'))
+
+    expect(optionValues).toEqual(['auto', 'joinquant', 'akshare', 'binance', 'freegold', 'mock'])
+  })
 })

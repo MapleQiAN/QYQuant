@@ -97,6 +97,7 @@ def _build_v1_job_params(payload):
         "end_date": payload.get("end_date"),
         "start_time": payload.get("start_date"),
         "end_time": payload.get("end_date"),
+        "data_source": payload.get("data_source", payload.get("dataSource", payload.get("provider"))),
         "strategy_id": payload.get("strategy_id"),
         "strategy_params": parameters,
         "parameters": parameters,

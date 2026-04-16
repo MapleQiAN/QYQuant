@@ -251,14 +251,15 @@ function formatValue(value: StrategyParameterValue | number) {
 
 .parameter-card {
   padding: var(--spacing-md);
-  border: 1px solid var(--color-border-light);
+  border: 2px solid var(--color-border);
   border-radius: var(--radius-md);
   background: var(--color-surface);
-  transition: border-color 0.15s;
+  box-shadow: var(--shadow-xs);
+  transition: border-color 0.15s, box-shadow 0.15s;
 }
 
 .parameter-card:hover {
-  border-color: var(--color-border);
+  box-shadow: var(--shadow-sm);
 }
 
 .parameter-head {
@@ -292,14 +293,13 @@ function formatValue(value: StrategyParameterValue | number) {
   padding: 6px 10px;
   border-radius: var(--radius-sm);
   background: var(--color-surface-active);
-  border: 1px solid var(--color-border);
+  border: 2px solid var(--color-border);
   color: var(--color-text-secondary);
   font-size: var(--font-size-xs);
   font-weight: 400;
   line-height: 1.4;
-  white-space: nowrap;
-  max-width: 260px;
   white-space: normal;
+  max-width: 260px;
   pointer-events: none;
   opacity: 0;
   transition: opacity 0.15s;
@@ -327,10 +327,11 @@ function formatValue(value: StrategyParameterValue | number) {
   width: 100%;
   padding: var(--spacing-sm) var(--spacing-md);
   border-radius: var(--radius-md);
-  border: 1px solid var(--color-border);
+  border: 2px solid var(--color-border);
   background: var(--color-surface-elevated);
   color: var(--color-text-primary);
   font-size: var(--font-size-sm);
+  font-family: var(--font-mono);
   transition: border-color 0.15s, box-shadow 0.15s;
 }
 
@@ -342,7 +343,7 @@ function formatValue(value: StrategyParameterValue | number) {
 
 .field-input.invalid {
   border-color: var(--color-danger);
-  box-shadow: 0 0 0 2px rgba(255, 59, 59, 0.12);
+  box-shadow: 0 0 0 3px rgba(212, 57, 59, 0.15);
 }
 
 /* ── Slider ── */
@@ -356,9 +357,10 @@ function formatValue(value: StrategyParameterValue | number) {
   -webkit-appearance: none;
   appearance: none;
   width: 100%;
-  height: 4px;
-  border-radius: 2px;
-  background: var(--color-border);
+  height: 6px;
+  border-radius: var(--radius-xs);
+  background: var(--color-border-light);
+  border: 2px solid var(--color-border);
   outline: none;
   cursor: pointer;
 }
@@ -366,28 +368,28 @@ function formatValue(value: StrategyParameterValue | number) {
 .slider-input::-webkit-slider-thumb {
   -webkit-appearance: none;
   appearance: none;
-  width: 14px;
-  height: 14px;
+  width: 18px;
+  height: 18px;
   border-radius: 50%;
   background: var(--color-accent);
-  border: 2px solid var(--color-surface);
-  box-shadow: 0 0 0 2px var(--color-primary-border);
+  border: 2px solid var(--color-border);
+  box-shadow: var(--shadow-sm);
   cursor: pointer;
   transition: transform 0.15s, box-shadow 0.15s;
 }
 
 .slider-input::-webkit-slider-thumb:hover {
   transform: scale(1.15);
-  box-shadow: 0 0 0 3px var(--color-primary-border);
+  box-shadow: var(--shadow-md);
 }
 
 .slider-input::-moz-range-thumb {
-  width: 14px;
-  height: 14px;
+  width: 18px;
+  height: 18px;
   border-radius: 50%;
   background: var(--color-accent);
-  border: 2px solid var(--color-surface);
-  box-shadow: 0 0 0 2px var(--color-primary-border);
+  border: 2px solid var(--color-border);
+  box-shadow: var(--shadow-sm);
   cursor: pointer;
 }
 
@@ -412,15 +414,17 @@ function formatValue(value: StrategyParameterValue | number) {
   font-size: var(--font-size-xs);
   font-family: var(--font-mono);
   font-weight: 700;
-  color: var(--color-accent);
-  padding: 1px 6px;
+  color: var(--color-text-primary);
+  padding: 2px 8px;
   border-radius: var(--radius-sm);
-  background: var(--color-primary-bg);
+  border: 2px solid var(--color-border);
+  background: var(--color-accent-bg);
 }
 
 .field-error {
   margin: var(--spacing-xs) 0 0;
   color: var(--color-danger);
   font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
 }
 </style>
