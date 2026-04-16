@@ -223,6 +223,9 @@
           <!-- Trade List -->
           <TradeTable :trades="report.trades || []" />
 
+          <!-- Trade Detail (Paired) -->
+          <TradeDetailTable :trades="report.trades || []" />
+
           <!-- Trade Distribution Charts -->
           <TradeDistributionCharts :distribution="tradeDistribution" />
 
@@ -263,6 +266,7 @@ import EquityCurveChart from '../components/backtest/EquityCurveChart.vue'
 import DrawdownChart from '../components/backtest/DrawdownChart.vue'
 import TradeSignalList from '../components/backtest/TradeSignalList.vue'
 import TradeTable from '../components/backtest/TradeTable.vue'
+import TradeDetailTable from '../components/backtest/TradeDetailTable.vue'
 import KlinePlaceholder from '../components/KlinePlaceholder.vue'
 import ErrorDisplay from '../components/backtest/ErrorDisplay.vue'
 import DisclaimerFooter from '../components/disclaimer/DisclaimerFooter.vue'

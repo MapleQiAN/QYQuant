@@ -823,6 +823,20 @@ const zh = {
     buy: '买入',
     sell: '卖出'
   },
+  tradeDetail: {
+    title: '交易明细',
+    count: '{count} 笔交易',
+    noTrades: '暂无交易记录',
+    direction: '方向',
+    long: '做多',
+    short: '做空',
+    openTime: '开仓时间',
+    closeTime: '平仓时间',
+    openPrice: '开仓价',
+    closePrice: '平仓价',
+    return: '收益',
+    holdingDays: '持有天数'
+  },
   admin: {
     title: '管理后台',
     overview: '系统概览',

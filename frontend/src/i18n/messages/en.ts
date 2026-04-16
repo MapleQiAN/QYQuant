@@ -820,6 +820,20 @@ const en = {
     buy: 'BUY',
     sell: 'SELL'
   },
+  tradeDetail: {
+    title: 'Trade Details',
+    count: '{count} trades',
+    noTrades: 'No trade records',
+    direction: 'Side',
+    long: 'Long',
+    short: 'Short',
+    openTime: 'Open Time',
+    closeTime: 'Close Time',
+    openPrice: 'Open Price',
+    closePrice: 'Close Price',
+    return: 'Return',
+    holdingDays: 'Holding Days'
+  },
   admin: {
     title: 'Admin Dashboard',
     overview: 'System Overview',

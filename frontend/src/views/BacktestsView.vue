@@ -35,6 +35,7 @@
         <!-- Left Panel: Config Form -->
         <div class="card panel panel--form">
           <div class="panel-header">
+            <span class="panel-header__accent"></span>
             <span class="panel-header__icon">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
             </span>
@@ -190,6 +191,7 @@
         <!-- Right Panel: Status Terminal -->
         <div class="card panel panel--status">
           <div class="panel-header">
+            <span class="panel-header__accent panel-header__accent--accent"></span>
             <span class="panel-header__icon panel-header__icon--status">
               <span :class="['status-dot', { 'status-dot--active': runState.running, 'status-dot--done': runState.completedJobId }]"></span>
             </span>
@@ -241,6 +243,7 @@
 
       <section class="card history-panel">
         <div class="panel-header">
+          <span class="panel-header__accent panel-header__accent--secondary"></span>
           <span class="panel-header__icon">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v5h5"/><path d="M3.05 13A9 9 0 1 0 6 5.3L3 8"/></svg>
           </span>
@@ -619,9 +622,9 @@ onMounted(() => {
 <style scoped>
 /* ── Animations ── */
 @keyframes pulse-ring {
-  0% { box-shadow: 0 0 0 0 rgba(0, 217, 255, 0.35); }
-  70% { box-shadow: 0 0 0 12px rgba(0, 217, 255, 0); }
-  100% { box-shadow: 0 0 0 0 rgba(0, 217, 255, 0); }
+  0% { box-shadow: 0 0 0 0 var(--color-primary-bg); }
+  70% { box-shadow: 0 0 0 12px transparent; }
+  100% { box-shadow: 0 0 0 0 transparent; }
 }
 @keyframes spin {
   to { transform: rotate(360deg); }
@@ -641,6 +644,10 @@ onMounted(() => {
 @keyframes slide-up {
   from { opacity: 0; transform: translateY(10px); }
   to { opacity: 1; transform: translateY(0); }
+}
+@keyframes terminal-scan {
+  0% { background-position: 0 0; }
+  100% { background-position: 0 100%; }
 }
 
 /* ── Page Layout ── */
@@ -683,17 +690,30 @@ onMounted(() => {
   font-size: var(--font-size-sm);
 }
 
-/* ── Quota Widget ── */
+/* ── Quota Widget — Bauhaus card with accent bar ── */
 .quota-widget {
   flex-shrink: 0;
   min-width: 200px;
   padding: 14px 18px;
   background: var(--color-surface);
-  border: 1px solid var(--color-border);
+  border: 2px solid var(--color-border);
   border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
   display: flex;
   flex-direction: column;
   gap: 8px;
+  position: relative;
+  overflow: hidden;
+}
+
+.quota-widget::after {
+  content: "";
+  position: absolute;
+  height: 5px;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: var(--color-accent);
 }
 
 .quota-widget__top {
@@ -706,7 +726,7 @@ onMounted(() => {
 .quota-label {
   font-size: var(--font-size-xs);
   color: var(--color-text-muted);
-  font-weight: 600;
+  font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.08em;
 }
@@ -717,6 +737,7 @@ onMounted(() => {
   gap: 4px;
   font-size: var(--font-size-sm);
   color: var(--color-text-secondary);
+  font-family: var(--font-mono);
 }
 
 .quota-num {
@@ -724,6 +745,7 @@ onMounted(() => {
   font-weight: 800;
   color: var(--color-accent);
   font-variant-numeric: tabular-nums;
+  font-family: var(--font-mono);
 }
 
 .quota-sep {
@@ -731,21 +753,20 @@ onMounted(() => {
 }
 
 .quota-bar {
-  height: 3px;
-  background: var(--color-border);
-  border-radius: 999px;
+  height: 4px;
+  background: var(--color-surface-active);
+  border-radius: 0;
   overflow: hidden;
 }
 
 .quota-bar__fill {
   height: 100%;
-  background: linear-gradient(90deg, var(--color-primary), var(--color-accent));
-  border-radius: 999px;
-  transition: width 0.6s ease;
+  background: var(--color-primary);
+  transition: width 0.6s var(--ease-out-expo);
 }
 
 .quota-bar__fill--low {
-  background: linear-gradient(90deg, var(--color-danger), #ff8080);
+  background: var(--color-danger);
 }
 
 .quota-reset {
@@ -769,6 +790,7 @@ onMounted(() => {
   margin-top: var(--spacing-lg);
   padding: 0;
   overflow: hidden;
+  position: relative;
 }
 
 .history-panel__header-copy {
@@ -784,7 +806,7 @@ onMounted(() => {
 
 .history-panel__toolbar {
   padding: var(--spacing-md) var(--spacing-lg);
-  border-bottom: 1px solid var(--color-border-light);
+  border-bottom: 2px solid var(--color-border);
 }
 
 .history-panel__search {
@@ -807,7 +829,12 @@ onMounted(() => {
   justify-content: space-between;
   gap: var(--spacing-md);
   padding: var(--spacing-md) var(--spacing-lg);
-  border-top: 1px solid var(--color-border-light);
+  border-top: 2px solid var(--color-border-light);
+  transition: background var(--transition-fast);
+}
+
+.history-item:hover {
+  background: var(--color-surface-hover);
 }
 
 .history-item:first-child {
@@ -830,36 +857,37 @@ onMounted(() => {
 .history-item__name {
   color: var(--color-text-primary);
   font-size: var(--font-size-md);
+  font-weight: 700;
 }
 
 .history-item__status {
   padding: 3px 10px;
-  border-radius: 999px;
+  border-radius: var(--radius-full);
   font-size: 11px;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.06em;
-  border: 1px solid var(--color-border);
+  border: 2px solid transparent;
 }
 
 .history-item__status--completed {
   color: var(--color-success);
-  border-color: rgba(16, 185, 129, 0.3);
-  background: rgba(16, 185, 129, 0.08);
+  border-color: var(--color-success);
+  background: var(--color-success-bg);
 }
 
 .history-item__status--failed,
 .history-item__status--timeout {
   color: var(--color-danger);
-  border-color: rgba(255, 59, 59, 0.25);
-  background: rgba(255, 59, 59, 0.08);
+  border-color: var(--color-danger);
+  background: var(--color-danger-bg);
 }
 
 .history-item__status--pending,
 .history-item__status--running {
   color: var(--color-warning);
-  border-color: rgba(245, 158, 11, 0.25);
-  background: rgba(245, 158, 11, 0.08);
+  border-color: var(--color-warning);
+  background: var(--color-warning-bg);
 }
 
 .history-item__meta,
@@ -872,18 +900,41 @@ onMounted(() => {
   font-size: var(--font-size-xs);
 }
 
+.history-item__summary {
+  font-family: var(--font-mono);
+  font-weight: 500;
+}
+
 .history-item__action {
   flex-shrink: 0;
 }
 
-/* ── Panel Cards ── */
+/* ── Panel Cards — Bauhaus geometric structure ── */
 .panel {
   padding: 0;
   overflow: hidden;
+  position: relative;
 }
 
 .panel:hover {
   transform: none;
+}
+
+.panel::after {
+  content: "";
+  position: absolute;
+  height: 5px;
+  bottom: 0;
+  left: 0;
+  right: 0;
+}
+
+.panel--form::after {
+  background: var(--color-primary);
+}
+
+.panel--status::after {
+  background: var(--color-accent);
 }
 
 .panel-header {
@@ -891,8 +942,24 @@ onMounted(() => {
   align-items: center;
   gap: 10px;
   padding: var(--spacing-md) var(--spacing-lg);
-  border-bottom: 1px solid var(--color-border-light);
+  border-bottom: 2px solid var(--color-border);
   background: var(--color-surface-elevated);
+}
+
+.panel-header__accent {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--color-primary);
+  flex-shrink: 0;
+}
+
+.panel-header__accent--accent {
+  background: var(--color-accent);
+}
+
+.panel-header__accent--secondary {
+  background: var(--color-secondary);
 }
 
 .panel-header__icon {
@@ -901,16 +968,19 @@ onMounted(() => {
   justify-content: center;
   width: 28px;
   height: 28px;
-  border-radius: var(--radius-sm);
-  background: var(--color-primary-bg);
-  color: var(--color-accent);
+  border: 2px solid var(--color-border);
+  border-radius: 0;
+  background: var(--color-surface);
+  color: var(--color-primary);
   flex-shrink: 0;
 }
 
 .panel-header__icon--status {
   background: transparent;
+  border: none;
   width: auto;
   height: auto;
+  border-radius: 0;
 }
 
 .panel-title {
@@ -928,7 +998,7 @@ onMounted(() => {
 
 .form-section__label {
   font-size: var(--font-size-xs);
-  font-weight: 700;
+  font-weight: 800;
   text-transform: uppercase;
   letter-spacing: 0.1em;
   color: var(--color-text-muted);
@@ -936,7 +1006,7 @@ onMounted(() => {
 }
 
 .form-divider {
-  height: 1px;
+  height: 2px;
   background: var(--color-border-light);
   margin: 0 var(--spacing-lg);
 }
@@ -961,27 +1031,28 @@ onMounted(() => {
 }
 
 .field-label--mono {
-  font-family: 'Space Mono', monospace;
+  font-family: var(--font-mono);
   font-size: 11px;
-  color: var(--color-accent);
+  color: var(--color-primary);
 }
 
 .field-input {
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-sm);
   padding: 9px 12px;
-  background: var(--color-surface-elevated);
+  background: var(--color-surface);
   color: var(--color-text-primary);
   font-size: var(--font-size-sm);
-  transition: border-color 0.15s, box-shadow 0.15s;
+  font-family: var(--font-family);
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
   width: 100%;
   box-sizing: border-box;
 }
 
 .field-input:focus {
   outline: none;
-  border-color: var(--color-primary-border);
-  box-shadow: 0 0 0 3px rgba(30, 90, 168, 0.12);
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px var(--color-primary-bg);
 }
 
 .field-input:hover:not(:focus) {
@@ -1000,14 +1071,25 @@ onMounted(() => {
   line-height: 1.4;
 }
 
-/* ── Runtime Box ── */
+/* ── Runtime Box — Bauhaus inset panel ── */
 .runtime-box {
   margin: 0 var(--spacing-lg);
   padding: var(--spacing-md);
-  border: 1px solid var(--color-primary-border);
-  border-radius: var(--radius-md);
+  border: 2px solid var(--color-primary);
+  border-radius: 0;
   background: var(--color-primary-bg);
   margin-bottom: var(--spacing-md);
+  position: relative;
+}
+
+.runtime-box::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  width: 5px;
+  background: var(--color-primary);
 }
 
 .runtime-header {
@@ -1015,7 +1097,7 @@ onMounted(() => {
   align-items: center;
   gap: 8px;
   margin-bottom: var(--spacing-sm);
-  color: var(--color-accent);
+  color: var(--color-primary);
 }
 
 .runtime-title {
@@ -1028,12 +1110,13 @@ onMounted(() => {
 
 .runtime-version-badge {
   padding: 2px 8px;
-  border-radius: 999px;
-  background: rgba(0, 217, 255, 0.12);
-  color: var(--color-accent);
+  border-radius: var(--radius-full);
+  background: var(--color-accent-bg);
+  color: var(--color-primary);
   font-size: 11px;
-  font-family: 'Space Mono', monospace;
+  font-family: var(--font-mono);
   font-weight: 700;
+  border: 2px solid var(--color-primary-border);
 }
 
 .runtime-loading {
@@ -1062,15 +1145,15 @@ onMounted(() => {
 .loading-dots span {
   width: 5px;
   height: 5px;
-  border-radius: 50%;
-  background: var(--color-accent);
+  border-radius: 0;
+  background: var(--color-primary);
   animation: dot-bounce 1.2s infinite ease-in-out both;
 }
 
 .loading-dots span:nth-child(1) { animation-delay: -0.32s; }
 .loading-dots span:nth-child(2) { animation-delay: -0.16s; }
 
-/* ── Run Button ── */
+/* ── Run Button — Bauhaus accent (yellow) with 2px border ── */
 .actions {
   padding: var(--spacing-md) var(--spacing-lg) var(--spacing-lg);
 }
@@ -1080,10 +1163,10 @@ onMounted(() => {
   align-items: center;
   gap: 8px;
   padding: 12px 24px;
-  border: none;
-  border-radius: var(--radius-md);
-  background: linear-gradient(135deg, var(--color-primary), var(--color-primary-light));
-  color: #fff;
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-full);
+  background: var(--color-accent);
+  color: var(--color-text-primary);
   font-size: var(--font-size-sm);
   font-weight: 700;
   letter-spacing: 0.03em;
@@ -1091,12 +1174,13 @@ onMounted(() => {
   transition: all 0.2s;
   width: 100%;
   justify-content: center;
+  font-family: var(--font-family);
 }
 
 .btn-run:hover:not(:disabled) {
-  background: linear-gradient(135deg, var(--color-primary-light), var(--color-accent));
+  opacity: 0.9;
   transform: translateY(-1px);
-  box-shadow: 0 8px 24px rgba(30, 90, 168, 0.4);
+  box-shadow: var(--shadow-lg);
 }
 
 .btn-run:disabled {
@@ -1107,14 +1191,15 @@ onMounted(() => {
 
 .btn-run--active {
   animation: pulse-ring 1.5s infinite;
-  background: linear-gradient(135deg, var(--color-primary-dark), var(--color-primary));
+  background: var(--color-primary);
+  color: var(--color-text-inverse);
 }
 
 .btn-run__spinner {
   width: 14px;
   height: 14px;
-  border: 2px solid rgba(255, 255, 255, 0.3);
-  border-top-color: #fff;
+  border: 2px solid var(--color-border-light);
+  border-top-color: var(--color-text-primary);
   border-radius: 50%;
   animation: spin 0.7s linear infinite;
   flex-shrink: 0;
@@ -1125,8 +1210,8 @@ onMounted(() => {
   align-items: center;
   gap: 8px;
   padding: 12px 24px;
-  border: 1px solid var(--color-accent);
-  border-radius: var(--radius-md);
+  border: 2px solid var(--color-accent);
+  border-radius: var(--radius-full);
   background: transparent;
   color: var(--color-accent);
   font-size: var(--font-size-sm);
@@ -1135,11 +1220,13 @@ onMounted(() => {
   width: 100%;
   justify-content: center;
   transition: all 0.2s;
+  font-family: var(--font-family);
 }
 
 .btn-upgrade:hover {
   background: var(--color-accent-bg);
   transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
 }
 
 .run-error {
@@ -1157,12 +1244,12 @@ onMounted(() => {
   color: var(--color-danger);
 }
 
-/* ── Status Dot ── */
+/* ── Status Dot — geometric square ── */
 .status-dot {
   display: inline-block;
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
+  width: 10px;
+  height: 10px;
+  border-radius: 0;
   background: var(--color-border-strong);
 }
 
@@ -1175,13 +1262,14 @@ onMounted(() => {
   background: var(--color-success);
 }
 
-/* ── Terminal ── */
+/* ── Terminal — Bauhaus light with scan lines ── */
 .terminal {
   margin: var(--spacing-md) var(--spacing-lg);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
+  border: 2px solid var(--color-border);
+  border-radius: 0;
   overflow: hidden;
-  font-family: 'Space Mono', monospace;
+  font-family: var(--font-mono);
+  background: var(--color-surface-elevated);
 }
 
 .terminal__bar {
@@ -1189,30 +1277,38 @@ onMounted(() => {
   align-items: center;
   gap: 6px;
   padding: 8px 12px;
-  background: var(--color-surface-elevated);
-  border-bottom: 1px solid var(--color-border-light);
+  background: var(--color-surface);
+  border-bottom: 2px solid var(--color-border);
 }
 
 .terminal__dot {
   width: 10px;
   height: 10px;
-  border-radius: 50%;
+  border-radius: 0;
 }
 
-.terminal__dot--red { background: #FF5F57; }
-.terminal__dot--yellow { background: #FFBD2E; }
-.terminal__dot--green { background: #28CA41; }
+.terminal__dot--red { background: var(--color-danger); }
+.terminal__dot--yellow { background: var(--color-accent); }
+.terminal__dot--green { background: var(--color-success); }
 
 .terminal__path {
   margin-left: 8px;
   font-size: 11px;
   color: var(--color-text-muted);
+  letter-spacing: 0.05em;
 }
 
 .terminal__body {
   padding: var(--spacing-md);
   min-height: 120px;
-  background: #02050D;
+  background: var(--color-surface-elevated);
+  background-image: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 23px,
+    var(--color-border-light) 23px,
+    var(--color-border-light) 24px
+  );
 }
 
 .terminal__line {
@@ -1227,46 +1323,51 @@ onMounted(() => {
 }
 
 .terminal__prompt {
-  color: var(--color-accent);
+  color: var(--color-primary);
   font-size: 13px;
+  font-weight: 700;
 }
 
 .terminal__key {
   font-size: 11px;
   color: var(--color-text-muted);
   letter-spacing: 0.05em;
+  text-transform: uppercase;
+  font-weight: 700;
 }
 
 .terminal__output {
   padding: 6px 10px;
   font-size: 12px;
   color: var(--color-text-primary);
-  background: rgba(255, 255, 255, 0.03);
-  border-radius: 4px;
+  background: var(--color-surface);
+  border-left: 3px solid var(--color-primary);
   line-height: 1.5;
 }
 
 .terminal__output--mono {
-  color: var(--color-accent);
+  color: var(--color-primary);
   letter-spacing: 0.05em;
+  font-weight: 500;
 }
 
 .terminal__cursor {
   animation: blink 1s step-end infinite;
   color: var(--color-accent);
+  font-weight: 700;
 }
 
-/* ── Report Ready Banner ── */
+/* ── Report Ready Banner — Bauhaus success card ── */
 .report-ready {
   display: flex;
   align-items: center;
   gap: var(--spacing-md);
   margin: 0 var(--spacing-lg) var(--spacing-lg);
   padding: var(--spacing-md);
-  background: rgba(16, 185, 129, 0.08);
-  border: 1px solid rgba(16, 185, 129, 0.25);
-  border-radius: var(--radius-md);
-  animation: slide-up 0.3s ease;
+  background: var(--color-success-bg);
+  border: 2px solid var(--color-success);
+  border-radius: 0;
+  animation: slide-up 0.3s var(--ease-out-expo);
 }
 
 .report-ready__icon {
@@ -1297,21 +1398,23 @@ onMounted(() => {
   align-items: center;
   gap: 6px;
   padding: 9px 16px;
-  border: 1px solid var(--color-success);
-  border-radius: var(--radius-md);
+  border: 2px solid var(--color-success);
+  border-radius: var(--radius-full);
   background: transparent;
   color: var(--color-success);
   font-size: var(--font-size-sm);
   font-weight: 700;
   cursor: pointer;
   white-space: nowrap;
-  transition: all 0.2s;
+  transition: all var(--transition-fast);
   flex-shrink: 0;
+  font-family: var(--font-family);
 }
 
 .btn-report:hover {
-  background: rgba(16, 185, 129, 0.12);
+  background: var(--color-success-bg);
   transform: translateX(2px);
+  box-shadow: var(--shadow-sm);
 }
 
 /* ── Responsive ── */
