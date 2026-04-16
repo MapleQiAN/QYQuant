@@ -5,6 +5,7 @@ import type {
   BacktestStatusResponse,
   BacktestJobResponse,
   BacktestLatestResponse,
+  LatestCompletedReportResponse,
   RunBacktestPayload,
   RunBacktestResponse,
   SubmitBacktestPayload,
@@ -24,6 +25,10 @@ export interface FetchLatestParams {
 
 export function fetchLatest(params?: FetchLatestParams): Promise<BacktestLatestResponse> {
   return client.request({ method: 'get', url: '/backtests/latest', params })
+}
+
+export function fetchLatestCompletedReport(): Promise<LatestCompletedReportResponse | null> {
+  return client.request({ method: 'get', url: '/v1/backtest/latest-report' })
 }
 
 export function runBacktest(payload: RunBacktestPayload): Promise<RunBacktestResponse> {

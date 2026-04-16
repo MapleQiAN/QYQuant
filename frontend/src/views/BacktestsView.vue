@@ -304,23 +304,26 @@
               </div>
             </div>
 
-            <button
-              v-if="item.has_report"
-              :data-test="`history-open-report-${item.job_id}`"
-              class="btn btn-report history-item__action"
-              type="button"
-              @click="openReport(item.job_id)"
-            >
-              {{ $t('backtests.openReport') }}
-            </button>
-            <button
-              class="btn btn-delete history-item__action"
-              type="button"
-              :disabled="deleting"
-              @click="handleDelete(item.job_id)"
-            >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
-            </button>
+            <div class="history-item__actions">
+              <button
+                v-if="item.has_report"
+                :data-test="`history-open-report-${item.job_id}`"
+                class="btn btn-report history-item__action"
+                type="button"
+                @click="openReport(item.job_id)"
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+                {{ $t('backtests.openReport') }}
+              </button>
+              <button
+                class="btn btn-delete history-item__action"
+                type="button"
+                :disabled="deleting"
+                @click="handleDelete(item.job_id)"
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+              </button>
+            </div>
           </article>
         </div>
       </section>
@@ -334,6 +337,7 @@ import { useRouter } from 'vue-router'
 import { fetchRecent, fetchRuntimeDescriptor } from '../api/strategies'
 import { fetchBacktestHistory, fetchBacktestStatus, getBacktestFailureMessage, submitBacktest, deleteBacktestJob, batchDeleteBacktests } from '../api/backtests'
 import { fetchMyQuota, type UserQuotaResponse } from '../api/users'
+import { confirmDialog, toast } from '../lib/toast'
 import type { BacktestHistoryItem, SubmitBacktestPayload } from '../types/Backtest'
 import type { Strategy, StrategyParameter, StrategyRuntimeDescriptor } from '../types/Strategy'
 
@@ -455,7 +459,13 @@ const failedCount = computed(() =>
 )
 
 async function handleDelete(jobId: string) {
-  if (!window.confirm(instance?.proxy?.$t('backtests.deleteConfirm'))) {
+  const confirmed = await confirmDialog({
+    type: 'warning',
+    title: t('backtests.deleteTitle'),
+    confirmText: t('backtests.batchDeleteFailed'),
+    message: t('backtests.deleteConfirm'),
+  })
+  if (!confirmed) {
     return
   }
   deleting.value = true
@@ -463,14 +473,20 @@ async function handleDelete(jobId: string) {
     await deleteBacktestJob(jobId)
     await loadHistory()
   } catch {
-    alert(instance?.proxy?.$t('backtests.deleteFailed'))
+    toast.error(t('backtests.deleteFailed'))
   } finally {
     deleting.value = false
   }
 }
 
 async function handleBatchDeleteFailed() {
-  if (!window.confirm(instance?.proxy?.$t('backtests.batchDeleteConfirm'))) {
+  const confirmed = await confirmDialog({
+    type: 'warning',
+    title: t('backtests.batchDeleteTitle'),
+    confirmText: t('backtests.batchDeleteFailed'),
+    message: t('backtests.batchDeleteConfirm'),
+  })
+  if (!confirmed) {
     return
   }
   deleting.value = true
@@ -478,7 +494,7 @@ async function handleBatchDeleteFailed() {
     await batchDeleteBacktests('failed')
     await loadHistory()
   } catch {
-    alert(instance?.proxy?.$t('backtests.deleteFailed'))
+    toast.error(t('backtests.deleteFailed'))
   } finally {
     deleting.value = false
   }
@@ -1048,6 +1064,13 @@ onMounted(() => {
 .history-item__summary {
   font-family: var(--font-mono);
   font-weight: 500;
+}
+
+.history-item__actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
 }
 
 .history-item__action {

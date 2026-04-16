@@ -128,6 +128,14 @@ export interface BacktestHistoryResponse {
   items: BacktestHistoryItem[]
 }
 
+export interface LatestCompletedReportResponse extends BacktestLatestResponse {
+  job_id: string
+  strategy_name?: string | null
+  symbol?: string | null
+  interval?: string | null
+  completed_at?: string | null
+}
+
 export interface SupportedPackagesResponse {
   packages: SupportedPackage[]
 }

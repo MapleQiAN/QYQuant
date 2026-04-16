@@ -501,8 +501,10 @@ const en = {
     unknownStrategy: 'Unknown strategy',
     errorIncompatibleDataSource: 'The selected data source is incompatible with the current symbol.',
     deleteConfirm: 'Delete this backtest record?',
+    deleteTitle: 'Delete Backtest',
     batchDeleteFailed: 'Clear Failed',
     batchDeleteConfirm: 'Delete all failed backtest records?',
+    batchDeleteTitle: 'Clear Failed Records',
     deleting: 'Deleting...',
     deleteFailed: 'Delete failed'
   },

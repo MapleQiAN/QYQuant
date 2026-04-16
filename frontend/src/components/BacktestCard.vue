@@ -13,22 +13,26 @@
         <div class="header-left">
           <h3 class="card-title">{{ $t('backtest.title') }}</h3>
           <span class="badge badge-success">{{ $t('backtest.statusCompleted') }}</span>
-          <span class="badge badge-info">{{ dataSourceBadge }}</span>
+          <span v-if="historical && strategyLabel" class="badge badge-info">{{ strategyLabel }}</span>
+          <span v-if="historical && completedLabel" class="badge badge-default">{{ completedLabel }}</span>
+          <span v-if="!historical" class="badge badge-info">{{ dataSourceBadge }}</span>
         </div>
         <div class="header-actions">
-          <div class="data-source-control">
-            <span class="data-source-label">{{ $t('backtest.dataSource') }}</span>
-            <select
-              class="data-source-select"
-              :value="selectedDataSource"
-              @change="handleDataSourceChange"
-            >
-              <option v-for="option in dataSourceOptions" :key="option.value" :value="option.value">
-                {{ option.label }}
-              </option>
-            </select>
-          </div>
-          <button class="btn btn-secondary" @click="emit('refresh')">
+          <template v-if="!historical">
+            <div class="data-source-control">
+              <span class="data-source-label">{{ $t('backtest.dataSource') }}</span>
+              <select
+                class="data-source-select"
+                :value="selectedDataSource"
+                @change="handleDataSourceChange"
+              >
+                <option v-for="option in dataSourceOptions" :key="option.value" :value="option.value">
+                  {{ option.label }}
+                </option>
+              </select>
+            </div>
+          </template>
+          <button v-if="!historical" class="btn btn-secondary" @click="emit('refresh')">
             <RefreshIcon />
             {{ $t('backtest.refresh') }}
           </button>
@@ -123,7 +127,7 @@
 import { computed, h } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { downloadJson } from '../lib/download'
-import type { BacktestLatestResponse } from '../types/Backtest'
+import type { BacktestLatestResponse, LatestCompletedReportResponse } from '../types/Backtest'
 import type { KlineBar } from '../types/KlineBar'
 import EmptyState from './EmptyState.vue'
 import ErrorState from './ErrorState.vue'
@@ -139,18 +143,20 @@ const emit = defineEmits<{
 }>()
 
 const props = withDefaults(defineProps<{
-  data: BacktestLatestResponse | null
+  data: BacktestLatestResponse | LatestCompletedReportResponse | null
   loading?: boolean
   error?: string | null
   symbol?: string
   timeframe?: string
   dataSource?: string
+  historical?: boolean
 }>(), {
   loading: false,
   error: null,
   symbol: 'XAUUSD',
   timeframe: '15m',
-  dataSource: 'auto'
+  dataSource: 'auto',
+  historical: false
 })
 
 const { t } = useI18n()
@@ -168,6 +174,14 @@ const kpis = computed(() => ({
 
 const klineData = computed<KlineBar[]>(() => props.data?.kline ?? [])
 const tradeData = computed(() => props.data?.trades ?? [])
+const strategyLabel = computed(() => {
+  const report = props.data as LatestCompletedReportResponse | null
+  return report?.strategy_name || null
+})
+const completedLabel = computed(() => {
+  const report = props.data as LatestCompletedReportResponse | null
+  return report?.completed_at ? report.completed_at.slice(0, 16).replace('T', ' ') : null
+})
 const selectedDataSource = computed(() => normalizeDataSource(props.dataSource) ?? 'auto')
 const resolvedDataSource = computed(() => normalizeDataSource(props.data?.dataSource) ?? selectedDataSource.value)
 
@@ -427,6 +441,15 @@ const TargetIcon = () => h('svg', {
   font-weight: 700;
   color: var(--color-primary);
   font-variant-numeric: tabular-nums;
+}
+
+.badge-default {
+  background: var(--color-surface-elevated);
+  color: var(--color-text-muted);
+  font-size: 11px;
+  padding: 3px 8px;
+  border-radius: var(--radius-full);
+  font-weight: 600;
 }
 
 @media (min-width: 1920px) {

@@ -1,17 +1,20 @@
 import { defineStore } from 'pinia'
-import { fetchBacktestReport, fetchLatest, fetchSupportedPackages } from '../api/backtests'
+import { fetchBacktestReport, fetchLatest, fetchLatestCompletedReport, fetchSupportedPackages } from '../api/backtests'
 import type { FetchLatestParams } from '../api/backtests'
-import type { BacktestLatestResponse, BacktestReportResponse, SupportedPackage } from '../types/Backtest'
+import type { BacktestLatestResponse, BacktestReportResponse, LatestCompletedReportResponse, SupportedPackage } from '../types/Backtest'
 
 export const useBacktestsStore = defineStore('backtests', {
   state: () => ({
     latest: null as BacktestLatestResponse | null,
+    latestReport: null as LatestCompletedReportResponse | null,
     report: null as BacktestReportResponse | null,
     supportedPackages: [] as SupportedPackage[],
     loading: false,
+    latestReportLoading: false,
     reportLoading: false,
     supportedPackagesLoading: false,
     error: null as string | null,
+    latestReportError: null as string | null,
     reportError: null as string | null
   }),
   actions: {
@@ -24,6 +27,17 @@ export const useBacktestsStore = defineStore('backtests', {
         this.error = error?.message || 'Failed to load backtest'
       } finally {
         this.loading = false
+      }
+    },
+    async loadLatestReport() {
+      this.latestReportLoading = true
+      this.latestReportError = null
+      try {
+        this.latestReport = await fetchLatestCompletedReport()
+      } catch (error: any) {
+        this.latestReportError = error?.message || 'Failed to load latest report'
+      } finally {
+        this.latestReportLoading = false
       }
     },
     async loadReport(jobId: string) {

@@ -266,6 +266,9 @@ function buildOption(): EChartsOption {
   const ma5 = simpleMovingAverage(closes, 5)
   const ma10 = simpleMovingAverage(closes, 10)
   const ma20 = simpleMovingAverage(closes, 20)
+  const ma30 = simpleMovingAverage(closes, 30)
+  const ma60 = simpleMovingAverage(closes, 60)
+  const ma120 = simpleMovingAverage(closes, 120)
   const buyMarkers = buildScatterSeries('buy')
   const sellMarkers = buildScatterSeries('sell')
 
@@ -273,7 +276,7 @@ function buildOption(): EChartsOption {
     animation: false,
     legend: {
       top: 4,
-      data: [candleSeriesName.value, 'MA5', 'MA10', 'MA20', volumeSeriesName.value, buySeriesName.value, sellSeriesName.value],
+      data: [candleSeriesName.value, 'MA5', 'MA10', 'MA20', 'MA30', 'MA60', 'MA120', volumeSeriesName.value, buySeriesName.value, sellSeriesName.value],
       textStyle: { color: getCssVar('--color-text-secondary', '#64748b'), fontSize: 11 }
     },
     tooltip: {
@@ -373,7 +376,8 @@ function buildOption(): EChartsOption {
         data: ma5,
         showSymbol: false,
         smooth: true,
-        lineStyle: { width: 1.2, color: '#f59e0b' }
+        lineStyle: { width: 1.2, color: '#f59e0b' },
+        itemStyle: { color: '#f59e0b' }
       },
       {
         name: 'MA10',
@@ -381,7 +385,8 @@ function buildOption(): EChartsOption {
         data: ma10,
         showSymbol: false,
         smooth: true,
-        lineStyle: { width: 1.2, color: '#3b82f6' }
+        lineStyle: { width: 1.2, color: '#3b82f6' },
+        itemStyle: { color: '#3b82f6' }
       },
       {
         name: 'MA20',
@@ -389,7 +394,35 @@ function buildOption(): EChartsOption {
         data: ma20,
         showSymbol: false,
         smooth: true,
-        lineStyle: { width: 1.2, color: '#8b5cf6' }
+        lineStyle: { width: 1.2, color: '#8b5cf6' },
+        itemStyle: { color: '#8b5cf6' }
+      },
+      {
+        name: 'MA30',
+        type: 'line',
+        data: ma30,
+        showSymbol: false,
+        smooth: true,
+        lineStyle: { width: 1.2, color: '#ec4899' },
+        itemStyle: { color: '#ec4899' }
+      },
+      {
+        name: 'MA60',
+        type: 'line',
+        data: ma60,
+        showSymbol: false,
+        smooth: true,
+        lineStyle: { width: 1.2, color: '#14b8a6' },
+        itemStyle: { color: '#14b8a6' }
+      },
+      {
+        name: 'MA120',
+        type: 'line',
+        data: ma120,
+        showSymbol: false,
+        smooth: true,
+        lineStyle: { width: 1.2, color: '#f97316' },
+        itemStyle: { color: '#f97316' }
       },
       {
         name: volumeSeriesName.value,
@@ -410,12 +443,14 @@ function buildOption(): EChartsOption {
         type: 'scatter',
         data: buyMarkers,
         z: 6,
+        itemStyle: { color: upColor() },
       },
       {
         name: sellSeriesName.value,
         type: 'scatter',
         data: sellMarkers,
         z: 6,
+        itemStyle: { color: downColor() },
       }
     ]
   }

@@ -501,8 +501,10 @@ const zh = {
     unknownStrategy: '未知策略',
     errorIncompatibleDataSource: '当前交易对与所选数据源不兼容，请调整数据源。',
     deleteConfirm: '确定删除这条回测记录？',
+    deleteTitle: '删除回测',
     batchDeleteFailed: '清除失败记录',
     batchDeleteConfirm: '确定删除所有失败的回测记录？',
+    batchDeleteTitle: '清除失败记录',
     deleting: '删除中...',
     deleteFailed: '删除失败'
   },

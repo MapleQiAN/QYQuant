@@ -67,16 +67,14 @@
     <div class="dashboard-grid">
       <div class="grid-area-backtest">
         <BacktestCard
-          :data="backtestsStore.latest"
-          :loading="backtestsStore.loading"
-          :error="backtestsStore.error"
-          :symbol="backtestQuery.symbol"
-          :timeframe="backtestQuery.interval"
-          :data-source="backtestQuery.dataSource"
-          @retry="loadBacktest"
-          @refresh="loadBacktest"
-          @timeframe-change="handleTimeframeChange"
-          @data-source-change="handleDataSourceChange"
+          :data="backtestsStore.latestReport"
+          :loading="backtestsStore.latestReportLoading"
+          :error="backtestsStore.latestReportError"
+          :symbol="backtestsStore.latestReport?.symbol ?? 'XAUUSD'"
+          :timeframe="backtestsStore.latestReport?.interval ?? '1d'"
+          :data-source="backtestsStore.latestReport?.dataSource ?? 'auto'"
+          :historical="true"
+          @retry="backtestsStore.loadLatestReport"
         />
       </div>
 
@@ -121,7 +119,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, h, onMounted, reactive } from 'vue'
+import { computed, h, onMounted } from 'vue'
 import { RouterLink, useRouter } from 'vue-router'
 import BacktestCard from '../components/BacktestCard.vue'
 import ForumMiniCard from '../components/ForumMiniCard.vue'
@@ -145,48 +143,26 @@ const botsStore = useBotsStore()
 const strategiesStore = useStrategiesStore()
 const forumStore = useForumStore()
 const simulationStore = useSimulationStore()
-const backtestQuery = reactive({
-  symbol: 'XAUUSD',
-  interval: '1d',
-  dataSource: 'auto'
-})
 
 // KPI computed values
 const kpiReturn = computed(() => {
-  const latest = backtestsStore.latest
+  const latest = backtestsStore.latestReport
   return latest?.summary?.totalReturn ?? 0
 })
 const activeBotCount = computed(() => {
   return botsStore.recent?.filter((b: any) => b.status === 'running').length ?? 0
 })
 const strategyCount = computed(() => strategiesStore.recent?.length ?? 0)
-const backtestCount = computed(() => backtestsStore.latest ? 1 : 0)
+const backtestCount = computed(() => backtestsStore.latestReport ? 1 : 0)
 
 const isFreePlan = computed(() => {
   const tier = PLAN_TIER_ORDER[user.value.plan_level] ?? 0
   return tier === 0
 })
 
-const loadBacktest = () => {
-  backtestsStore.loadLatest({ ...backtestQuery })
-}
-
-const handleTimeframeChange = (interval: string) => {
-  backtestQuery.interval = interval
-  loadBacktest()
-}
-
-const handleDataSourceChange = (dataSource: string) => {
-  backtestQuery.dataSource = dataSource
-  if (dataSource === 'freegold') {
-    backtestQuery.interval = '1d'
-  }
-  loadBacktest()
-}
-
 onMounted(() => {
   void userStore.loadProfile?.()
-  loadBacktest()
+  backtestsStore.loadLatestReport()
   botsStore.loadRecent()
   strategiesStore.loadRecent()
   forumStore.loadHot()
@@ -264,7 +240,7 @@ const PlusIcon = () => h('svg', {
 <style scoped>
 .dashboard-view {
   width: 100%;
-  max-width: min(1280px, calc(100% - var(--spacing-lg) * 2));
+  max-width: 100%;
 }
 
 /* ── Page Header — Bauhaus ── */
@@ -456,7 +432,6 @@ const PlusIcon = () => h('svg', {
 
 /* Large screens */
 @media (min-width: 1920px) {
-  .dashboard-view { max-width: min(1760px, 100%); }
   .dashboard-grid {
     grid-template-columns: 1fr 1fr 380px;
     gap: var(--grid-gap);
@@ -464,7 +439,6 @@ const PlusIcon = () => h('svg', {
 }
 
 @media (min-width: 2560px) {
-  .dashboard-view { max-width: min(2400px, 100%); }
   .dashboard-grid { grid-template-columns: 1fr 1fr 460px; }
 }
 
@@ -506,7 +480,6 @@ const PlusIcon = () => h('svg', {
 }
 
 @media (max-width: 480px) {
-  .dashboard-view { max-width: 100%; }
   .kpi-row { gap: 8px; }
   .kpi-card { padding: 12px; }
   .kpi-value { font-size: var(--font-size-xl); }
