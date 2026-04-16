@@ -173,14 +173,16 @@ const BookmarkIcon = () => h('svg', {
   display: flex;
   flex-direction: column;
   height: 100%;
+  overflow: hidden;
 }
 
 .card-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: var(--spacing-lg);
-  border-bottom: 1px solid var(--color-border-light);
+  padding: var(--spacing-md) var(--spacing-lg);
+  border-bottom: 2px solid var(--color-border);
+  background: var(--color-surface-elevated);
 }
 
 .card-title {
@@ -188,9 +190,10 @@ const BookmarkIcon = () => h('svg', {
   align-items: center;
   gap: var(--spacing-sm);
   font-size: var(--font-size-md);
-  font-weight: var(--font-weight-semibold);
+  font-weight: 800;
   color: var(--color-text-primary);
   margin: 0;
+  letter-spacing: -0.01em;
 }
 
 .title-icon {
@@ -198,17 +201,21 @@ const BookmarkIcon = () => h('svg', {
 }
 
 .view-all {
-  font-size: var(--font-size-sm);
+  font-size: var(--font-size-xs);
+  font-weight: 800;
   color: var(--color-primary);
-  padding: 0;
+  padding: 4px 10px;
   background: transparent;
-  border: none;
+  border: 2px solid var(--color-border);
+  border-radius: 999px;
   cursor: pointer;
   text-decoration: none;
+  transition: all var(--transition-fast);
 }
 
 .view-all:hover {
-  text-decoration: underline;
+  background: var(--color-primary-bg);
+  border-color: var(--color-primary-border);
 }
 
 .posts-list {
@@ -305,7 +312,7 @@ const BookmarkIcon = () => h('svg', {
   display: flex;
   gap: var(--spacing-sm);
   padding: var(--spacing-md);
-  border-top: 1px solid var(--color-border-light);
+  border-top: 2px solid var(--color-border);
 }
 
 .action-btn {
@@ -316,27 +323,31 @@ const BookmarkIcon = () => h('svg', {
   gap: var(--spacing-sm);
   padding: var(--spacing-sm) var(--spacing-md);
   font-size: var(--font-size-sm);
-  font-weight: var(--font-weight-medium);
-  background: var(--color-primary);
-  color: var(--color-text-inverse);
-  border: none;
+  font-weight: 700;
+  background: var(--color-accent);
+  color: var(--color-text-primary);
+  border: 2px solid var(--color-border);
   border-radius: var(--radius-md);
   cursor: pointer;
   transition: all var(--transition-fast);
+  font-family: inherit;
 }
 
 .action-btn:hover {
-  background: var(--color-primary-dark);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
 }
 
 .action-btn.secondary {
-  background: var(--color-background);
+  background: var(--color-surface);
   color: var(--color-text-secondary);
-  border: 1px solid var(--color-border);
+  border: 2px solid var(--color-border);
 }
 
 .action-btn.secondary:hover {
-  background: var(--color-border-light);
+  background: var(--color-surface-hover);
   color: var(--color-text-primary);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-sm);
 }
 </style>

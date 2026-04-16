@@ -296,28 +296,32 @@ const ArrowRightIcon = () => h('svg', {
   display: flex;
   flex-direction: column;
   height: 100%;
+  overflow: hidden;
 }
 
 .list-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: var(--spacing-lg);
-  border-bottom: 1px solid var(--color-border-light);
+  padding: var(--spacing-md) var(--spacing-lg);
+  border-bottom: 2px solid var(--color-border);
+  background: var(--color-surface-elevated);
 }
 
 .list-title {
-  font-size: var(--font-size-lg);
-  font-weight: var(--font-weight-semibold);
+  font-size: var(--font-size-md);
+  font-weight: 800;
   color: var(--color-text-primary);
   margin: 0;
+  letter-spacing: -0.01em;
 }
 
 .tab-switcher {
   display: flex;
-  background: var(--color-background);
-  border-radius: var(--radius-md);
-  padding: var(--spacing-xs);
+  background: var(--color-surface-active);
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-full);
+  padding: 2px;
 }
 
 .tab-btn {
@@ -339,6 +343,7 @@ const ArrowRightIcon = () => h('svg', {
 .tab-btn.active {
   background: var(--color-surface);
   color: var(--color-primary);
+  font-weight: 700;
   box-shadow: var(--shadow-sm);
 }
 
@@ -547,25 +552,28 @@ const ArrowRightIcon = () => h('svg', {
 
 .list-footer {
   padding: var(--spacing-md) var(--spacing-lg);
-  border-top: 1px solid var(--color-border-light);
+  border-top: 2px solid var(--color-border);
 }
 
 .view-all-link {
   display: flex;
   align-items: center;
   gap: var(--spacing-xs);
-  font-size: var(--font-size-sm);
-  font-weight: var(--font-weight-medium);
+  font-size: var(--font-size-xs);
+  font-weight: 800;
   color: var(--color-primary);
-  padding: 0;
+  padding: 4px 10px;
   background: transparent;
-  border: none;
+  border: 2px solid var(--color-border);
+  border-radius: 999px;
   cursor: pointer;
   text-decoration: none;
+  transition: all var(--transition-fast);
 }
 
 .view-all-link:hover {
-  color: var(--color-primary-dark);
+  background: var(--color-primary-bg);
+  border-color: var(--color-primary-border);
 }
 
 @media (max-width: 768px) {

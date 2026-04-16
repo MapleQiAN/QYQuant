@@ -228,15 +228,16 @@ const TargetIcon = () => h('svg', {
   height: 100%;
   display: flex;
   flex-direction: column;
+  overflow: hidden;
 }
 
 .card-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: var(--spacing-lg);
-  border-bottom: 1px solid var(--color-border);
-  background: linear-gradient(135deg, var(--color-surface-elevated), var(--color-surface));
+  padding: var(--spacing-md) var(--spacing-lg);
+  border-bottom: 2px solid var(--color-border);
+  background: var(--color-surface-elevated);
 }
 
 .card-title {
@@ -244,7 +245,7 @@ const TargetIcon = () => h('svg', {
   align-items: center;
   gap: var(--spacing-sm);
   font-size: var(--font-size-md);
-  font-weight: 700;
+  font-weight: 800;
   color: var(--color-text-primary);
   margin: 0;
   letter-spacing: -0.01em;
@@ -285,15 +286,32 @@ const TargetIcon = () => h('svg', {
 
 .stat-block {
   padding: var(--spacing-lg);
-  background: linear-gradient(135deg, var(--color-surface-elevated), var(--color-surface-active));
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-md);
   transition: all var(--transition-fast);
+  position: relative;
+  overflow: hidden;
 }
 
+.stat-block::after {
+  content: "";
+  position: absolute;
+  height: 4px;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: var(--color-primary);
+  border-radius: 0 0 8px 8px;
+}
+
+.stat-block:nth-child(1)::after { background: var(--color-primary); }
+.stat-block:nth-child(2)::after { background: var(--color-accent); }
+.stat-block:nth-child(3)::after { background: var(--color-up); }
+
 .stat-block:hover {
-  border-color: var(--color-primary-border);
-  background: linear-gradient(135deg, var(--color-surface-elevated), var(--color-surface-hover));
+  border-color: var(--color-border-hover);
+  box-shadow: var(--shadow-sm);
 }
 
 .stat-header {
@@ -376,21 +394,22 @@ const TargetIcon = () => h('svg', {
 }
 
 .profit-block {
-  background: linear-gradient(135deg, var(--color-up-bg) 0%, var(--color-surface-active) 100%);
+  background: var(--color-up-bg);
 }
 
 .profit-block:hover {
-  background: linear-gradient(135deg, rgba(255, 59, 59, 0.15), var(--color-surface-hover) 100%);
+  background: var(--color-up-bg);
+  box-shadow: var(--shadow-sm);
 }
 
 .profit-change {
   font-size: var(--font-size-xs);
-  font-weight: 700;
+  font-weight: 800;
   padding: 4px 10px;
   background: var(--color-up-bg);
   color: var(--color-up);
-  border: 1px solid rgba(255, 59, 59, 0.25);
-  border-radius: var(--radius-md);
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-full);
 }
 
 .profit-value {
@@ -415,9 +434,9 @@ const TargetIcon = () => h('svg', {
   flex-direction: column;
   gap: var(--spacing-sm);
   padding: var(--spacing-lg);
-  border-top: 1px solid var(--color-border);
+  border-top: 2px solid var(--color-border);
   margin-top: auto;
-  background: linear-gradient(135deg, var(--color-surface-elevated), var(--color-surface-active));
+  background: var(--color-surface-elevated);
   overflow: hidden;
 }
 
@@ -441,22 +460,23 @@ const TargetIcon = () => h('svg', {
   display: flex;
   align-items: center;
   justify-content: center;
+  border: 2px solid var(--color-border);
   border-radius: var(--radius-md);
   flex-shrink: 0;
 }
 
 .quick-stat-icon.success {
-  background: linear-gradient(135deg, var(--color-success-bg), rgba(16, 185, 129, 0.08));
+  background: var(--color-success-bg);
   color: var(--color-success);
 }
 
 .quick-stat-icon.info {
-  background: linear-gradient(135deg, var(--color-info-bg), rgba(30, 90, 168, 0.08));
+  background: var(--color-info-bg);
   color: var(--color-info);
 }
 
 .quick-stat-icon.warning {
-  background: linear-gradient(135deg, var(--color-warning-bg), rgba(245, 158, 11, 0.08));
+  background: var(--color-warning-bg);
   color: var(--color-warning);
 }
 

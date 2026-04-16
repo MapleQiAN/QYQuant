@@ -173,6 +173,8 @@ const resolvedDataSource = computed(() => normalizeDataSource(props.data?.dataSo
 
 const dataSourceOptions = computed(() => ([
   { value: 'auto', label: t('backtest.dataSourceAuto') },
+  { value: 'joinquant', label: t('backtest.dataSourceJoinquant') },
+  { value: 'akshare', label: t('backtest.dataSourceAkshare') },
   { value: 'binance', label: t('backtest.dataSourceBinance') },
   { value: 'freegold', label: t('backtest.dataSourceFreegold') },
   { value: 'mock', label: t('backtest.dataSourceMock') }
@@ -310,6 +312,7 @@ const TargetIcon = () => h('svg', {
 <style scoped>
 .backtest-card {
   padding: var(--spacing-xl);
+  overflow: hidden;
 }
 
 .card-header {
@@ -317,8 +320,9 @@ const TargetIcon = () => h('svg', {
   align-items: center;
   justify-content: space-between;
   margin-bottom: var(--spacing-xl);
-  padding-bottom: var(--spacing-lg);
-  border-bottom: 1px solid var(--color-border);
+  padding: var(--spacing-md) var(--spacing-xl);
+  border-bottom: 2px solid var(--color-border);
+  background: var(--color-surface-elevated);
 }
 
 .header-left {
@@ -328,8 +332,8 @@ const TargetIcon = () => h('svg', {
 }
 
 .card-title {
-  font-size: var(--font-size-xl);
-  font-weight: 700;
+  font-size: var(--font-size-lg);
+  font-weight: 800;
   color: var(--color-text-primary);
   margin: 0;
   letter-spacing: -0.01em;
