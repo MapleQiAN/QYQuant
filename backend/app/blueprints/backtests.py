@@ -278,6 +278,44 @@ def get_job_status(job_id):
     return ok(_serialize_job_status(job_record))
 
 
+@bp.get("/v1/backtest/latest-report")
+@jwt_required()
+def get_latest_completed_report():
+    user_id = get_jwt_identity()
+    job_record = (
+        BacktestJob.query.filter_by(user_id=user_id, status=BacktestJobStatus.COMPLETED.value)
+        .order_by(BacktestJob.completed_at.desc())
+        .first()
+    )
+    if job_record is None:
+        return ok(None)
+
+    params = job_record.params or {}
+    storage_key = job_record.result_storage_key or build_backtest_storage_key(job_record.id)
+    try:
+        kline = read_json(f"{storage_key}/kline.json")
+        trades = read_json(f"{storage_key}/trades.json")
+    except FileNotFoundError:
+        return ok(None)
+
+    strategy_name = None
+    if job_record.strategy_id:
+        strategy = db.session.get(Strategy, job_record.strategy_id)
+        strategy_name = strategy.name if strategy else None
+
+    return ok({
+        "summary": job_record.result_summary or {},
+        "kline": kline,
+        "trades": trades,
+        "dataSource": params.get("data_source"),
+        "job_id": job_record.id,
+        "strategy_name": strategy_name,
+        "symbol": params.get("symbol"),
+        "interval": params.get("interval"),
+        "completed_at": format_beijing_iso(job_record.completed_at),
+    })
+
+
 @bp.get("/v1/backtest/history")
 @jwt_required()
 def get_backtest_history():

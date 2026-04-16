@@ -254,11 +254,13 @@ class BacktestJob(db.Model):
     completed_at = db.Column(db.DateTime(timezone=True), nullable=True)
     created_at = db.Column(db.DateTime(timezone=True), nullable=False, default=now_utc)
 
+    trades = db.relationship('BacktestTrade', backref='job', cascade='all, delete-orphan')
+
 
 class BacktestTrade(db.Model):
     __tablename__ = 'backtest_trades'
     id = db.Column(db.String, primary_key=True, default=gen_id)
-    backtest_id = db.Column(db.String, db.ForeignKey('backtest_jobs.id'))
+    backtest_id = db.Column(db.String, db.ForeignKey('backtest_jobs.id', ondelete='CASCADE'))
     symbol = db.Column(db.String, nullable=False)
     side = db.Column(db.String, nullable=False)
     price = db.Column(db.Float, nullable=False)
@@ -282,7 +284,7 @@ class BacktestQuotaLedger(db.Model):
         db.Index('ix_backtest_quota_ledger_user_id_status', 'user_id', 'status'),
     )
 
-    job_id = db.Column(db.String, db.ForeignKey('backtest_jobs.id'), primary_key=True)
+    job_id = db.Column(db.String, db.ForeignKey('backtest_jobs.id', ondelete='CASCADE'), primary_key=True)
     user_id = db.Column(db.String, db.ForeignKey('users.id'), nullable=False)
     status = db.Column(db.String(20), nullable=False, default='reserved')
     created_at = db.Column(db.DateTime(timezone=True), nullable=False, default=now_utc)
