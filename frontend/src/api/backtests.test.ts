@@ -99,4 +99,18 @@ describe('backtests api', () => {
     expect(data).toEqual({ ok: true })
     expect(requestMock).toHaveBeenCalledWith({ method: 'get', url: '/v1/backtest/supported-packages' })
   })
+
+  it('deletes a single backtest job', async () => {
+    const data = await backtests.deleteBacktestJob('job-123')
+
+    expect(data).toEqual({ ok: true })
+    expect(requestMock).toHaveBeenCalledWith({ method: 'delete', url: '/v1/backtest/job-123' })
+  })
+
+  it('batch deletes backtests by status', async () => {
+    const data = await backtests.batchDeleteBacktests('failed')
+
+    expect(data).toEqual({ ok: true })
+    expect(requestMock).toHaveBeenCalledWith({ method: 'post', url: '/v1/backtest/batch-delete', data: { status: 'failed' } })
+  })
 })

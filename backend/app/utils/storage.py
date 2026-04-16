@@ -1,5 +1,6 @@
 import json
 import os
+import shutil
 from pathlib import Path
 
 
@@ -24,6 +25,11 @@ def _storage_root():
     if configured:
         return Path(configured)
     return Path(__file__).resolve().parents[2] / "storage"
+
+
+def delete_json(key):
+    path = _storage_root() / _normalize_key(key)
+    shutil.rmtree(str(path), ignore_errors=True)
 
 
 def _normalize_key(key):

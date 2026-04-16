@@ -469,6 +469,10 @@ const en = {
     selectStrategy: 'Select a strategy',
     symbol: 'Symbol',
     symbolPlaceholder: 'e.g. BTCUSDT',
+    dataSource: 'Data Source',
+    dataSourceAutoResolved: 'This symbol will use: {source}',
+    dataSourceAshareHint: 'A-share symbols should use AkShare or JoinQuant.',
+    dataSourceGoldHint: 'Gold symbols should use FreeGold.',
     interval: 'Interval',
     intervalPlaceholder: 'e.g. 1m',
     bars: 'Bars',
@@ -494,7 +498,13 @@ const en = {
     historyEmpty: 'No backtest history yet.',
     historyNoMatch: 'No matching backtests found.',
     historyTotalReturn: 'Total Return',
-    unknownStrategy: 'Unknown strategy'
+    unknownStrategy: 'Unknown strategy',
+    errorIncompatibleDataSource: 'The selected data source is incompatible with the current symbol.',
+    deleteConfirm: 'Delete this backtest record?',
+    batchDeleteFailed: 'Clear Failed',
+    batchDeleteConfirm: 'Delete all failed backtest records?',
+    deleting: 'Deleting...',
+    deleteFailed: 'Delete failed'
   },
   backtestReport: {
     eyebrow: 'Backtest Report',

@@ -1373,3 +1373,91 @@ NameError: name 'missing_factor' is not defined
         assert payload["type"] == "NameError"
         assert payload["line"] == 21
         assert "missing_factor" in payload["message"]
+
+
+def test_v1_delete_backtest_requires_auth(client):
+    response = client.delete("/api/v1/backtest/nonexistent-id")
+
+    assert response.status_code == 401
+    assert response.json["error"]["code"] == "UNAUTHORIZED"
+
+
+def test_v1_delete_backtest_own_job(client, app):
+    import json
+    from app.extensions import db
+    from app.models import BacktestJob
+
+    token, user_id = _login_user(client, phone="13800138040", nickname="DeleteOwner")
+
+    with app.app_context():
+        job = BacktestJob(user_id=user_id, params={"symbol": "BTCUSDT"}, status="completed")
+        db.session.add(job)
+        db.session.commit()
+        job_id = job.id
+
+    response = client.delete(f"/api/v1/backtest/{job_id}", headers=_auth_headers(token))
+
+    assert response.status_code == 200
+    assert response.json["data"]["deleted"] == job_id
+
+    with app.app_context():
+        assert db.session.get(BacktestJob, job_id) is None
+
+
+def test_v1_delete_backtest_rejects_other_user(client, app):
+    from app.extensions import db
+    from app.models import BacktestJob
+
+    owner_token, owner_id = _login_user(client, phone="13800138041", nickname="DeleteOwner2")
+    other_token, other_id = _login_user(client, phone="13800138042", nickname="DeleteOther")
+
+    with app.app_context():
+        job = BacktestJob(user_id=owner_id, params={"symbol": "BTCUSDT"}, status="completed")
+        db.session.add(job)
+        db.session.commit()
+        job_id = job.id
+
+    response = client.delete(f"/api/v1/backtest/{job_id}", headers=_auth_headers(other_token))
+
+    assert response.status_code == 404
+    assert response.json["error"]["code"] == "JOB_NOT_FOUND"
+
+
+def test_v1_batch_delete_filters_by_status(client, app):
+    from app.extensions import db
+    from app.models import BacktestJob
+
+    token, user_id = _login_user(client, phone="13800138043", nickname="BatchDeleteUser")
+
+    with app.app_context():
+        db.session.add(BacktestJob(user_id=user_id, params={"symbol": "BTCUSDT"}, status="failed"))
+        db.session.add(BacktestJob(user_id=user_id, params={"symbol": "ETHUSDT"}, status="failed"))
+        db.session.add(BacktestJob(user_id=user_id, params={"symbol": "XRPUSDT"}, status="completed"))
+        db.session.commit()
+
+    response = client.post(
+        "/api/v1/backtest/batch-delete",
+        headers=_auth_headers(token),
+        json={"status": "failed"},
+    )
+
+    assert response.status_code == 200
+    assert response.json["data"]["deleted_count"] == 2
+
+    with app.app_context():
+        remaining = BacktestJob.query.filter_by(user_id=user_id).all()
+        assert len(remaining) == 1
+        assert remaining[0].status == "completed"
+
+
+def test_v1_batch_delete_requires_status(client):
+    token, _ = _login_user(client, phone="13800138044", nickname="BatchDeleteNoStatus")
+
+    response = client.post(
+        "/api/v1/backtest/batch-delete",
+        headers=_auth_headers(token),
+        json={},
+    )
+
+    assert response.status_code == 422
+    assert response.json["error"]["code"] == "VALIDATION_ERROR"

@@ -81,3 +81,11 @@ export function fetchBacktestReport(jobId: string): Promise<BacktestReportRespon
 export function fetchSupportedPackages(): Promise<SupportedPackagesResponse> {
   return client.request({ method: 'get', url: '/v1/backtest/supported-packages' })
 }
+
+export function deleteBacktestJob(jobId: string): Promise<{ deleted: string }> {
+  return client.request({ method: 'delete', url: `/v1/backtest/${jobId}` })
+}
+
+export function batchDeleteBacktests(status: string): Promise<{ deleted_count: number }> {
+  return client.request({ method: 'post', url: '/v1/backtest/batch-delete', data: { status } })
+}

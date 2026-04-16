@@ -1,0 +1,98 @@
+{
+  "schemaVersion": "1.0",
+  "kind": "QYStrategy",
+  "id": "b95022a5-ef85-4afc-bdb3-a17d7f20d4f9",
+  "name": "Siyuan Electric Pullback",
+  "version": "1.0.0",
+  "description": "Long-only A-share pullback strategy for Siyuan Electric. Buy when price pulls back to the 10-day SMA and closes back above it; sell when price closes below the 30-day SMA or reaches the Bollinger upper band.",
+  "language": "python",
+  "runtime": {
+    "name": "python",
+    "version": "3.11"
+  },
+  "entrypoint": {
+    "path": "src/strategy.py",
+    "callable": "on_bar",
+    "interface": "event_v1"
+  },
+  "parameters": [
+    {
+      "key": "fast_sma_period",
+      "type": "integer",
+      "default": 10,
+      "min": 5,
+      "max": 30,
+      "step": 1,
+      "description": "Pullback reference line."
+    },
+    {
+      "key": "slow_sma_period",
+      "type": "integer",
+      "default": 30,
+      "min": 10,
+      "max": 120,
+      "step": 1,
+      "description": "Trend exit line."
+    },
+    {
+      "key": "bb_period",
+      "type": "integer",
+      "default": 20,
+      "min": 10,
+      "max": 60,
+      "step": 1,
+      "description": "Bollinger band window."
+    },
+    {
+      "key": "bb_std",
+      "type": "number",
+      "default": 2.0,
+      "min": 1.0,
+      "max": 4.0,
+      "step": 0.1,
+      "description": "Bollinger band standard deviation multiplier."
+    },
+    {
+      "key": "position_pct",
+      "type": "number",
+      "default": 0.95,
+      "min": 0.1,
+      "max": 1.0,
+      "step": 0.05,
+      "description": "Share of available cash used for each entry."
+    }
+  ],
+  "universe": {
+    "symbols": ["002028.XSHE"],
+    "assetClass": "equity",
+    "market": "cn",
+    "currency": "CNY",
+    "timezone": "Asia/Shanghai"
+  },
+  "data": {
+    "resolution": "1d",
+    "fields": ["open", "high", "low", "close", "volume"],
+    "lookback": 40
+  },
+  "execution": {
+    "orderTypes": ["MARKET"],
+    "slippageBps": 5,
+    "commissionBps": 3,
+    "priceType": "close"
+  },
+  "risk": {
+    "maxPositionPct": 0.95
+  },
+  "ui": {
+    "category": "trend-following",
+    "difficulty": "intermediate"
+  },
+  "backtest": {
+    "defaultPeriod": {
+      "start": "2020-01-01",
+      "end": "2025-12-31"
+    },
+    "initialCapital": 1000000
+  },
+  "tags": ["a-share", "002028", "siyuan-electric", "pullback", "bollinger", "sma"]
+}

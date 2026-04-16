@@ -75,6 +75,16 @@
               <input v-model.trim="runForm.symbol" class="field-input" type="text" :placeholder="$t('backtests.symbolPlaceholder')" />
             </label>
 
+            <label class="field">
+              <span class="field-label">{{ $t('backtests.dataSource') }}</span>
+              <select v-model="runForm.dataSource" data-test="data-source-select" class="field-input">
+                <option v-for="option in dataSourceOptions" :key="option.value" :value="option.value">
+                  {{ option.label }}
+                </option>
+              </select>
+              <span v-if="dataSourceHint" class="field-help">{{ dataSourceHint }}</span>
+            </label>
+
             <div class="field-row">
               <label class="field">
                 <span class="field-label">{{ $t('backtests.interval') }}</span>
@@ -261,6 +271,15 @@
             type="text"
             :placeholder="$t('backtests.historySearchPlaceholder')"
           />
+          <button
+            v-if="failedCount > 0"
+            class="btn btn-clear-failed"
+            type="button"
+            :disabled="deleting"
+            @click="handleBatchDeleteFailed"
+          >
+            {{ deleting ? $t('backtests.deleting') : $t('backtests.batchDeleteFailed') }} ({{ failedCount }})
+          </button>
         </div>
 
         <div v-if="historyLoading" class="history-panel__empty">{{ $t('backtests.historyLoading') }}</div>
@@ -294,6 +313,14 @@
             >
               {{ $t('backtests.openReport') }}
             </button>
+            <button
+              class="btn btn-delete history-item__action"
+              type="button"
+              :disabled="deleting"
+              @click="handleDelete(item.job_id)"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+            </button>
           </article>
         </div>
       </section>
@@ -302,10 +329,10 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref, watch } from 'vue'
+import { computed, getCurrentInstance, onMounted, reactive, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { fetchRecent, fetchRuntimeDescriptor } from '../api/strategies'
-import { fetchBacktestHistory, fetchBacktestStatus, getBacktestFailureMessage, submitBacktest } from '../api/backtests'
+import { fetchBacktestHistory, fetchBacktestStatus, getBacktestFailureMessage, submitBacktest, deleteBacktestJob, batchDeleteBacktests } from '../api/backtests'
 import { fetchMyQuota, type UserQuotaResponse } from '../api/users'
 import type { BacktestHistoryItem, SubmitBacktestPayload } from '../types/Backtest'
 import type { Strategy, StrategyParameter, StrategyRuntimeDescriptor } from '../types/Strategy'
@@ -321,7 +348,14 @@ const historyItems = ref<BacktestHistoryItem[]>([])
 const historyLoading = ref(false)
 const historyError = ref('')
 const historySearch = ref('')
+const deleting = ref(false)
 const router = useRouter()
+const instance = getCurrentInstance()
+
+function t(key: string, params?: Record<string, unknown>) {
+  const translator = instance?.proxy?.$t as ((message: string, values?: Record<string, unknown>) => string) | undefined
+  return translator ? translator(key, params) : key
+}
 
 function formatDateInput(date: Date) {
   return date.toISOString().slice(0, 10)
@@ -345,6 +379,7 @@ const runForm = reactive({
   limit: 120,
   startDate: defaultStartDate(),
   endDate: defaultEndDate(),
+  dataSource: 'auto',
 })
 
 const runState = reactive({
@@ -359,6 +394,37 @@ const paramValues = reactive<Record<string, any>>({})
 
 const selectedStrategy = computed(() => {
   return strategies.value.find((item) => item.id === runForm.strategyId) || null
+})
+
+const dataSourceOptions = computed(() => ([
+  { value: 'auto', label: t('backtest.dataSourceAuto') },
+  { value: 'joinquant', label: t('backtest.dataSourceJoinquant') },
+  { value: 'akshare', label: t('backtest.dataSourceAkshare') },
+  { value: 'binance', label: t('backtest.dataSourceBinance') },
+  { value: 'freegold', label: t('backtest.dataSourceFreegold') },
+  { value: 'mock', label: t('backtest.dataSourceMock') },
+]))
+
+const primarySymbol = computed(() => runForm.symbol.trim())
+const recommendedDataSource = computed(() => inferRecommendedDataSource(primarySymbol.value))
+const effectiveDataSource = computed(() =>
+  runForm.dataSource === 'auto' ? recommendedDataSource.value : runForm.dataSource
+)
+const dataSourceHint = computed(() => {
+  if (!primarySymbol.value) {
+    return ''
+  }
+  const resolvedLabel = dataSourceOptions.value.find((option) => option.value === effectiveDataSource.value)?.label ?? effectiveDataSource.value
+  if (runForm.dataSource === 'auto' && effectiveDataSource.value !== 'auto') {
+    return t('backtests.dataSourceAutoResolved', { source: resolvedLabel })
+  }
+  if (isAshareSymbol(primarySymbol.value)) {
+    return t('backtests.dataSourceAshareHint')
+  }
+  if (isGoldSymbol(primarySymbol.value)) {
+    return t('backtests.dataSourceGoldHint')
+  }
+  return ''
 })
 
 const suggestedBacktestName = computed(() => {
@@ -383,6 +449,40 @@ const filteredHistory = computed(() => {
       .some((value) => String(value).toLowerCase().includes(keyword))
   })
 })
+
+const failedCount = computed(() =>
+  historyItems.value.filter((item) => item.status === 'failed' || item.status === 'timeout').length
+)
+
+async function handleDelete(jobId: string) {
+  if (!window.confirm(instance?.proxy?.$t('backtests.deleteConfirm'))) {
+    return
+  }
+  deleting.value = true
+  try {
+    await deleteBacktestJob(jobId)
+    await loadHistory()
+  } catch {
+    alert(instance?.proxy?.$t('backtests.deleteFailed'))
+  } finally {
+    deleting.value = false
+  }
+}
+
+async function handleBatchDeleteFailed() {
+  if (!window.confirm(instance?.proxy?.$t('backtests.batchDeleteConfirm'))) {
+    return
+  }
+  deleting.value = true
+  try {
+    await batchDeleteBacktests('failed')
+    await loadHistory()
+  } catch {
+    alert(instance?.proxy?.$t('backtests.deleteFailed'))
+  } finally {
+    deleting.value = false
+  }
+}
 
 function defaultParamValue(param: StrategyParameter): unknown {
   if (param.default !== undefined) {
@@ -508,6 +608,43 @@ function buildBacktestName() {
   return runForm.name.trim() || suggestedBacktestName.value
 }
 
+function isAshareSymbol(symbol: string) {
+  const normalized = String(symbol || '').trim().toUpperCase()
+  return /^\d{6}\.(XSHE|XSHG)$/.test(normalized)
+}
+
+function isGoldSymbol(symbol: string) {
+  const normalized = String(symbol || '').trim().toUpperCase().replace(/[\/-]/g, '')
+  return ['XAUUSD', 'XAU', 'GOLD', 'GCF', 'GC=F', 'GCF=F'].includes(normalized)
+}
+
+function inferRecommendedDataSource(symbol: string) {
+  if (isAshareSymbol(symbol)) {
+    return 'akshare'
+  }
+  if (isGoldSymbol(symbol)) {
+    return 'freegold'
+  }
+  return 'auto'
+}
+
+function hasIncompatibleDataSource(symbols: string[], dataSource: string) {
+  if (!symbols.length) {
+    return false
+  }
+  const normalizedSource = String(dataSource || '').trim().toLowerCase()
+  const allAshare = symbols.every((symbol) => isAshareSymbol(symbol))
+  const allGold = symbols.every((symbol) => isGoldSymbol(symbol))
+
+  if (allAshare) {
+    return ['binance', 'freegold'].includes(normalizedSource)
+  }
+  if (allGold) {
+    return ['akshare', 'joinquant'].includes(normalizedSource)
+  }
+  return false
+}
+
 function sleep(ms: number) {
   return new Promise((resolve) => {
     setTimeout(resolve, ms)
@@ -574,12 +711,17 @@ async function handleRun() {
     if (!runForm.strategyId) {
       throw new Error('Please select a strategy before running a backtest')
     }
+    const symbols = [runForm.symbol].map((item) => item.trim()).filter(Boolean)
+    if (hasIncompatibleDataSource(symbols, effectiveDataSource.value)) {
+      throw new Error(t('backtests.errorIncompatibleDataSource'))
+    }
 
     const payload: SubmitBacktestPayload = {
       strategy_id: runForm.strategyId,
-      symbols: [runForm.symbol],
+      symbols,
       start_date: runForm.startDate,
       end_date: runForm.endDate,
+      data_source: effectiveDataSource.value,
       name: buildBacktestName(),
     }
 
@@ -805,6 +947,9 @@ onMounted(() => {
 }
 
 .history-panel__toolbar {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
   padding: var(--spacing-md) var(--spacing-lg);
   border-bottom: 2px solid var(--color-border);
 }
@@ -1415,6 +1560,60 @@ onMounted(() => {
   background: var(--color-success-bg);
   transform: translateX(2px);
   box-shadow: var(--shadow-sm);
+}
+
+.btn-delete {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  flex-shrink: 0;
+}
+
+.btn-delete:hover:not(:disabled) {
+  border-color: var(--color-danger);
+  color: var(--color-danger);
+  background: var(--color-danger-bg);
+}
+
+.btn-delete:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-clear-failed {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  border: 2px solid var(--color-danger);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--color-danger);
+  font-size: var(--font-size-xs);
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all var(--transition-fast);
+  font-family: var(--font-family);
+  flex-shrink: 0;
+}
+
+.btn-clear-failed:hover:not(:disabled) {
+  background: var(--color-danger-bg);
+}
+
+.btn-clear-failed:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 /* ── Responsive ── */

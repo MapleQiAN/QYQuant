@@ -182,6 +182,7 @@ describe('BacktestsView', () => {
 
     await flushPromises()
     await wrapper.get('input[data-test="backtest-name-input"]').setValue('Momentum Sprint')
+    await wrapper.get('[data-test="data-source-select"]').setValue('binance')
     await wrapper.get('.btn-run').trigger('click')
     await flushPromises()
 
@@ -190,9 +191,56 @@ describe('BacktestsView', () => {
       symbols: ['BTCUSDT'],
       start_date: expect.any(String),
       end_date: expect.any(String),
+      data_source: 'binance',
       name: 'Momentum Sprint',
     })
     expect(pushMock).toHaveBeenCalledWith({ name: 'backtest-report', params: { jobId: 'job-1' } })
+  })
+
+  it('auto-resolves A-share symbols to akshare on run page', async () => {
+    fetchRecentMock.mockResolvedValueOnce([
+      { id: 'strategy-1', name: 'Alpha', symbol: '002028.XSHE' },
+    ])
+
+    const wrapper = mount(BacktestsView, {
+      global: {
+        mocks: {
+          $t: (key: string) => key,
+        },
+      },
+    })
+
+    await flushPromises()
+    await wrapper.get('.btn-run').trigger('click')
+    await flushPromises()
+
+    expect(submitBacktestMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data_source: 'akshare',
+      })
+    )
+  })
+
+  it('blocks incompatible data source selection for A-share symbols', async () => {
+    fetchRecentMock.mockResolvedValueOnce([
+      { id: 'strategy-1', name: 'Alpha', symbol: '002028.XSHE' },
+    ])
+
+    const wrapper = mount(BacktestsView, {
+      global: {
+        mocks: {
+          $t: (key: string) => key,
+        },
+      },
+    })
+
+    await flushPromises()
+    await wrapper.get('[data-test="data-source-select"]').setValue('binance')
+    await wrapper.get('.btn-run').trigger('click')
+    await flushPromises()
+
+    expect(submitBacktestMock).not.toHaveBeenCalled()
+    expect(wrapper.text()).toContain('backtests.errorIncompatibleDataSource')
   })
 
   it('shows backtest history, filters by name, and opens reports from history', async () => {

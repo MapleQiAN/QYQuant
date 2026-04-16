@@ -16,7 +16,7 @@ from ..services.supported_packages import get_supported_packages
 from ..strategy_runtime import StrategyRuntimeError, as_response, preflight_strategy
 from ..tasks.backtests import run_backtest_task
 from ..utils.response import error_response, ok
-from ..utils.storage import build_backtest_storage_key, read_json
+from ..utils.storage import build_backtest_storage_key, delete_json, read_json
 from ..utils.time import format_beijing_iso
 
 
@@ -435,3 +435,36 @@ def submit_backtest():
 
     run_backtest_task.apply_async(args=[job_record.id], task_id=job_record.id, queue="backtest")
     return ok({"job_id": job_record.id})
+
+
+@bp.delete("/v1/backtest/<job_id>")
+@jwt_required()
+def delete_backtest(job_id):
+    user_id = get_jwt_identity()
+    job_record = db.session.get(BacktestJob, job_id)
+    if job_record is None or job_record.user_id != user_id:
+        return error_response("JOB_NOT_FOUND", "回测任务不存在", 404)
+    storage_key = job_record.result_storage_key or build_backtest_storage_key(job_record.id)
+    db.session.delete(job_record)
+    db.session.commit()
+    delete_json(storage_key)
+    return ok({"deleted": job_id})
+
+
+@bp.post("/v1/backtest/batch-delete")
+@jwt_required()
+def batch_delete_backtests():
+    user_id = get_jwt_identity()
+    payload = request.get_json() or {}
+    status = payload.get("status")
+    if not status:
+        return error_response("VALIDATION_ERROR", "status is required", 422)
+    jobs = BacktestJob.query.filter_by(user_id=user_id, status=status).all()
+    deleted_count = 0
+    for job_record in jobs:
+        storage_key = job_record.result_storage_key or build_backtest_storage_key(job_record.id)
+        db.session.delete(job_record)
+        delete_json(storage_key)
+        deleted_count += 1
+    db.session.commit()
+    return ok({"deleted_count": deleted_count})

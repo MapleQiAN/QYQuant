@@ -469,6 +469,10 @@ const zh = {
     selectStrategy: '选择策略',
     symbol: '交易对',
     symbolPlaceholder: '例如：BTCUSDT',
+    dataSource: '数据源',
+    dataSourceAutoResolved: '将按交易对自动使用：{source}',
+    dataSourceAshareHint: 'A 股代码推荐使用 AkShare 或 JoinQuant。',
+    dataSourceGoldHint: '黄金代码推荐使用 FreeGold。',
     interval: '周期',
     intervalPlaceholder: '例如：1m',
     bars: 'K线数量',
@@ -494,7 +498,13 @@ const zh = {
     historyEmpty: '还没有回测历史。',
     historyNoMatch: '没有找到匹配的回测记录。',
     historyTotalReturn: '总收益率',
-    unknownStrategy: '未知策略'
+    unknownStrategy: '未知策略',
+    errorIncompatibleDataSource: '当前交易对与所选数据源不兼容，请调整数据源。',
+    deleteConfirm: '确定删除这条回测记录？',
+    batchDeleteFailed: '清除失败记录',
+    batchDeleteConfirm: '确定删除所有失败的回测记录？',
+    deleting: '删除中...',
+    deleteFailed: '删除失败'
   },
   backtestReport: {
     eyebrow: '回测报告',
