@@ -417,8 +417,8 @@ async function waitForGuidedReport(jobId: string) {
   padding: var(--spacing-md) var(--spacing-lg);
   margin-bottom: var(--spacing-lg);
   background: var(--color-primary-bg);
-  border: 1px solid var(--color-primary-border);
-  border-left: 3px solid var(--color-accent);
+  border: 2px solid var(--color-primary-border);
+  border-left: 4px solid var(--color-accent);
   border-radius: var(--radius-md);
   color: var(--color-text-secondary);
   font-size: var(--font-size-sm);
@@ -431,18 +431,17 @@ async function waitForGuidedReport(jobId: string) {
   justify-content: space-between;
   gap: var(--spacing-lg);
   padding: var(--spacing-lg);
-  border: 1px solid rgba(64, 162, 255, 0.25);
+  border: 2px solid var(--color-border);
   border-radius: var(--radius-lg);
-  background:
-    radial-gradient(circle at top left, rgba(64, 162, 255, 0.18), transparent 46%),
-    linear-gradient(135deg, rgba(8, 19, 34, 0.92), rgba(17, 32, 56, 0.96));
-  color: #f5f8ff;
+  background: var(--color-surface);
+  box-shadow: var(--shadow-sm);
 }
 
 .guided-next-steps__eyebrow {
   margin: 0 0 8px;
-  color: rgba(245, 248, 255, 0.72);
+  color: var(--color-text-muted);
   font-size: var(--font-size-xs);
+  font-weight: 700;
   letter-spacing: 0.12em;
   text-transform: uppercase;
 }
@@ -450,11 +449,12 @@ async function waitForGuidedReport(jobId: string) {
 .guided-next-steps__content h2 {
   margin: 0 0 var(--spacing-xs);
   font-size: var(--font-size-xl);
+  color: var(--color-text-primary);
 }
 
 .guided-next-steps__content p {
   margin: 0;
-  color: rgba(245, 248, 255, 0.76);
+  color: var(--color-text-secondary);
 }
 
 .guided-next-steps__actions {
@@ -482,7 +482,7 @@ async function waitForGuidedReport(jobId: string) {
   align-items: center;
   gap: var(--spacing-sm);
   padding: var(--spacing-md) var(--spacing-lg);
-  border-bottom: 1px solid var(--color-border-light);
+  border-bottom: 2px solid var(--color-border);
   background: var(--color-surface-elevated);
 }
 
@@ -494,6 +494,7 @@ async function waitForGuidedReport(jobId: string) {
   height: 28px;
   border-radius: var(--radius-sm);
   background: var(--color-primary-bg);
+  border: 2px solid var(--color-border);
   color: var(--color-accent);
   flex-shrink: 0;
 }
@@ -536,12 +537,13 @@ async function waitForGuidedReport(jobId: string) {
 }
 
 .field-input {
-  border: 1px solid var(--color-border);
+  border: 2px solid var(--color-border);
   border-radius: var(--radius-md);
   padding: 9px 12px;
   background: var(--color-surface-elevated);
   color: var(--color-text-primary);
   font-size: var(--font-size-sm);
+  font-family: var(--font-mono);
   transition: border-color 0.15s, box-shadow 0.15s;
   width: 100%;
   box-sizing: border-box;
@@ -607,8 +609,9 @@ async function waitForGuidedReport(jobId: string) {
   margin-top: var(--spacing-lg);
   padding: var(--spacing-md) var(--spacing-lg);
   background: var(--color-surface);
-  border: 1px solid var(--color-border);
+  border: 2px solid var(--color-border);
   border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
 }
 
 .submit-bar__feedback {
@@ -637,10 +640,10 @@ async function waitForGuidedReport(jobId: string) {
   align-items: center;
   gap: 8px;
   padding: 11px 28px;
-  border: none;
-  border-radius: var(--radius-md);
-  background: linear-gradient(135deg, var(--color-primary), var(--color-primary-light));
-  color: #fff;
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-full);
+  background: var(--color-accent);
+  color: var(--color-text-primary);
   font-size: var(--font-size-sm);
   font-weight: 700;
   letter-spacing: 0.03em;
@@ -651,9 +654,8 @@ async function waitForGuidedReport(jobId: string) {
 }
 
 .btn-run:hover:not(:disabled) {
-  background: linear-gradient(135deg, var(--color-primary-light), var(--color-accent));
   transform: translateY(-1px);
-  box-shadow: 0 8px 24px rgba(30, 90, 168, 0.4);
+  box-shadow: var(--shadow-lg);
 }
 
 .btn-run:disabled {
@@ -683,7 +685,7 @@ async function waitForGuidedReport(jobId: string) {
   padding: var(--spacing-sm) var(--spacing-md);
   margin-bottom: var(--spacing-lg);
   background: var(--color-surface);
-  border: 1px solid var(--color-border-light);
+  border: 2px solid var(--color-border);
   border-radius: var(--radius-md);
   width: fit-content;
 }
