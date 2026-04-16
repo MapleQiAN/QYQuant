@@ -975,7 +975,7 @@ onMounted(() => {
 
 .report-summary {
   display: grid;
-  gap: var(--spacing-md);
+  gap: var(--spacing-lg);
   padding: clamp(18px, 3vw, 28px);
   border: 2px solid var(--color-border);
   border-radius: var(--radius-lg);
@@ -983,6 +983,7 @@ onMounted(() => {
   box-shadow: var(--shadow-lg);
   position: relative;
   overflow: hidden;
+  margin-bottom: var(--spacing-xl);
 }
 
 .report-summary::after {
@@ -1216,7 +1217,7 @@ onMounted(() => {
 .metrics-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: var(--spacing-md);
+  gap: var(--spacing-lg);
   margin-bottom: var(--spacing-xl);
 }
 
@@ -1226,7 +1227,7 @@ onMounted(() => {
   border: 2px solid var(--color-border);
   border-radius: var(--radius-lg);
   overflow: hidden;
-  margin-bottom: var(--spacing-lg);
+  margin-bottom: var(--spacing-xl);
   box-shadow: var(--shadow-md);
 }
 
@@ -1418,7 +1419,7 @@ onMounted(() => {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: var(--spacing-lg);
-  margin-bottom: var(--spacing-lg);
+  margin-bottom: var(--spacing-xl);
 }
 
 .analysis-panel,
@@ -1546,11 +1547,11 @@ onMounted(() => {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: var(--spacing-lg);
-  margin-bottom: var(--spacing-lg);
+  margin-bottom: var(--spacing-xl);
 }
 
 .metrics-board {
-  margin-bottom: var(--spacing-lg);
+  margin-bottom: var(--spacing-xl);
 }
 
 .metrics-board__header {
@@ -1561,7 +1562,7 @@ onMounted(() => {
 .metrics-board__grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: var(--spacing-md);
+  gap: var(--spacing-lg);
   padding: var(--spacing-md) var(--spacing-lg) var(--spacing-lg);
 }
 
@@ -1612,7 +1613,7 @@ onMounted(() => {
   border: 2px solid var(--color-border);
   border-radius: var(--radius-lg);
   overflow: hidden;
-  margin-bottom: var(--spacing-lg);
+  margin-bottom: var(--spacing-xl);
   box-shadow: var(--shadow-md);
 }
 
