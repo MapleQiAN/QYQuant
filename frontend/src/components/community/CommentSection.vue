@@ -144,9 +144,35 @@ watch(
   display: grid;
   gap: 20px;
   padding: 24px;
-  border: 1px solid var(--color-border);
-  border-radius: 20px;
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-lg);
   background: var(--color-surface);
+  position: relative;
+  overflow: hidden;
+  box-shadow: var(--shadow-md);
+}
+
+.comment-section::before {
+  content: "";
+  position: absolute;
+  width: 44px;
+  height: 44px;
+  background: var(--color-primary);
+  border-radius: 50%;
+  top: -14px;
+  right: -14px;
+  opacity: 0.9;
+}
+
+.comment-section::after {
+  content: "";
+  position: absolute;
+  height: 4px;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: var(--color-primary);
+  border-radius: 0 0 14px 14px;
 }
 
 .comment-header {
@@ -154,6 +180,8 @@ watch(
   align-items: center;
   justify-content: space-between;
   gap: 12px;
+  position: relative;
+  z-index: 1;
 }
 
 .comment-title {
@@ -171,26 +199,32 @@ watch(
 .comment-title h2 {
   margin: 0;
   font-size: 16px;
-  font-weight: 700;
+  font-weight: 900;
   color: var(--color-text-primary);
+  letter-spacing: -0.01em;
 }
 
 .comment-badge {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 22px;
-  padding: 2px 7px;
+  min-width: 24px;
+  padding: 3px 8px;
   border-radius: 999px;
   background: var(--color-primary-bg);
-  color: var(--color-primary-light);
+  border: 2px solid var(--color-primary);
+  color: var(--color-primary);
   font-size: 12px;
-  font-weight: 600;
+  font-weight: 800;
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
 }
 
 .comment-form {
   display: grid;
   gap: 10px;
+  position: relative;
+  z-index: 1;
 }
 
 .comment-form textarea {
@@ -198,8 +232,8 @@ watch(
   resize: vertical;
   min-height: 100px;
   padding: 14px 16px;
-  border-radius: 14px;
-  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  border: 2px solid var(--color-border);
   background: var(--color-surface-elevated);
   font: inherit;
   font-size: 14px;
@@ -210,7 +244,7 @@ watch(
 }
 
 .comment-form textarea:focus {
-  border-color: var(--color-primary-border);
+  border-color: var(--color-primary);
   box-shadow: 0 0 0 3px var(--color-primary-bg);
 }
 
@@ -227,6 +261,9 @@ watch(
 
 .char-count {
   font-size: 12px;
+  font-weight: 700;
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
   color: var(--color-text-muted);
 }
 
@@ -239,16 +276,17 @@ watch(
   display: inline-flex;
   align-items: center;
   gap: 7px;
-  border: 0;
+  border: 2px solid var(--color-border);
   border-radius: 999px;
   padding: 9px 18px;
-  background: linear-gradient(135deg, #0f766e, #0ea5e9);
-  color: #fff;
+  background: var(--color-accent);
+  color: var(--color-text-primary);
   font: inherit;
   font-size: 13px;
-  font-weight: 600;
+  font-weight: 800;
   cursor: pointer;
-  transition: opacity 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
+  box-shadow: var(--shadow-md);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
 }
 
 .comment-form button svg,
@@ -260,9 +298,8 @@ watch(
 
 .comment-form button:hover:not(:disabled),
 .load-more:hover {
-  opacity: 0.9;
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(14, 165, 233, 0.25);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
 }
 
 .comment-form button:disabled {
@@ -272,6 +309,8 @@ watch(
 
 .load-more {
   justify-self: center;
+  position: relative;
+  z-index: 1;
 }
 
 .submit-error {
@@ -280,10 +319,12 @@ watch(
   gap: 8px;
   margin: 0;
   padding: 10px 14px;
-  border-radius: 10px;
+  border-radius: var(--radius-sm);
   background: var(--color-danger-bg);
+  border: 2px solid var(--color-danger);
   color: var(--color-danger);
   font-size: 13px;
+  font-weight: 600;
 }
 
 .submit-error svg {
@@ -298,10 +339,14 @@ watch(
   gap: 8px;
   margin: 0;
   padding: 14px 16px;
-  border-radius: 12px;
+  border-radius: var(--radius-sm);
   background: var(--color-surface-elevated);
+  border: 2px dashed var(--color-border);
   color: var(--color-text-muted);
   font-size: 14px;
+  font-weight: 600;
+  position: relative;
+  z-index: 1;
 }
 
 .comment-tip svg {
@@ -312,14 +357,16 @@ watch(
 
 .comment-list {
   display: grid;
-  gap: 2px;
+  gap: 0;
+  position: relative;
+  z-index: 1;
 }
 
 .comment-item {
   display: flex;
   gap: 12px;
   padding: 14px 4px;
-  border-bottom: 1px solid var(--color-border-light);
+  border-bottom: 2px dashed #e0e0dc;
 }
 
 .comment-item:last-child {
@@ -332,9 +379,10 @@ watch(
   border-radius: 50%;
   display: grid;
   place-items: center;
-  background: linear-gradient(135deg, #7c3aed, #a855f7);
+  background: var(--color-primary);
+  border: 2px solid var(--color-border);
   color: #fff;
-  font-weight: 700;
+  font-weight: 800;
   font-size: 13px;
   flex-shrink: 0;
   margin-top: 2px;
@@ -355,12 +403,15 @@ watch(
 
 .comment-author {
   font-size: 14px;
-  font-weight: 600;
+  font-weight: 800;
   color: var(--color-text-primary);
 }
 
 .comment-time {
   font-size: 12px;
+  font-weight: 500;
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
   color: var(--color-text-muted);
 }
 
@@ -378,11 +429,15 @@ watch(
   gap: 8px;
   margin: 0;
   padding: 20px;
-  border-radius: 12px;
+  border-radius: var(--radius-sm);
   background: var(--color-surface-elevated);
+  border: 2px dashed var(--color-border);
   color: var(--color-text-muted);
   font-size: 14px;
+  font-weight: 600;
   justify-content: center;
+  position: relative;
+  z-index: 1;
 }
 
 .empty svg {

@@ -118,11 +118,24 @@ async function toggleCollect() {
   display: grid;
   gap: 18px;
   padding: 24px;
-  border: 1px solid var(--color-border);
-  border-radius: 20px;
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-lg);
   background: var(--color-surface);
   box-shadow: var(--shadow-md);
+  position: relative;
+  overflow: hidden;
   transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+.post-card::after {
+  content: "";
+  position: absolute;
+  height: 4px;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: var(--color-primary);
+  border-radius: 0 0 14px 14px;
 }
 
 .post-card:hover {
@@ -151,16 +164,17 @@ async function toggleCollect() {
   border-radius: 50%;
   object-fit: cover;
   flex-shrink: 0;
-  box-shadow: 0 0 0 2px var(--color-surface), 0 0 0 3px rgba(14, 165, 233, 0.3);
+  border: 2px solid var(--color-border);
 }
 
 .avatar-fallback {
   display: grid;
   place-items: center;
-  background: linear-gradient(135deg, #0f766e, #0ea5e9);
+  background: var(--color-primary);
   color: #fff;
-  font-weight: 700;
+  font-weight: 800;
   font-size: 16px;
+  border: 2px solid var(--color-border);
 }
 
 .author-info {
@@ -169,14 +183,18 @@ async function toggleCollect() {
 }
 
 .nickname {
-  font-weight: 600;
+  font-weight: 800;
   font-size: 15px;
   color: var(--color-text-primary);
+  letter-spacing: -0.01em;
 }
 
 .meta {
   color: var(--color-text-muted);
-  font-size: 13px;
+  font-size: 12px;
+  font-weight: 500;
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
 }
 
 .detail-link {
@@ -184,22 +202,25 @@ async function toggleCollect() {
   align-items: center;
   gap: 4px;
   color: var(--color-text-muted);
-  font-size: 13px;
+  font-size: 12px;
+  font-weight: 700;
   text-decoration: none;
-  padding: 6px 10px;
-  border-radius: 8px;
-  transition: color 0.15s ease, background 0.15s ease;
+  padding: 6px 12px;
+  border: 2px solid var(--color-border);
+  border-radius: 999px;
+  transition: color 0.15s ease, background 0.15s ease, border-color 0.15s ease;
   white-space: nowrap;
 }
 
 .detail-link:hover {
-  color: var(--color-primary-light);
+  color: var(--color-primary);
   background: var(--color-primary-bg);
+  border-color: var(--color-primary);
 }
 
 .detail-icon {
-  width: 14px;
-  height: 14px;
+  width: 13px;
+  height: 13px;
 }
 
 .content {
@@ -214,9 +235,24 @@ async function toggleCollect() {
   display: grid;
   gap: 10px;
   padding: 14px 16px;
-  border-radius: 14px;
-  background: linear-gradient(135deg, rgba(14, 165, 233, 0.06), rgba(15, 118, 110, 0.06));
-  border: 1px solid rgba(14, 165, 233, 0.12);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-elevated);
+  border: 2px solid var(--color-border);
+  position: relative;
+  overflow: hidden;
+}
+
+.strategy-card::before {
+  content: "";
+  position: absolute;
+  width: 8px;
+  left: 0;
+  top: 12px;
+  bottom: 12px;
+  background: var(--color-accent);
+  border-top-right-radius: 6px;
+  border-bottom-right-radius: 6px;
+  opacity: 0.9;
 }
 
 .strategy-header {
@@ -228,12 +264,12 @@ async function toggleCollect() {
 .strategy-icon {
   width: 16px;
   height: 16px;
-  color: #0ea5e9;
+  color: var(--color-primary);
   flex-shrink: 0;
 }
 
 .strategy-title {
-  font-weight: 600;
+  font-weight: 800;
   font-size: 14px;
   color: var(--color-text-primary);
 }
@@ -246,29 +282,36 @@ async function toggleCollect() {
 
 .strategy-tag {
   display: inline-flex;
-  padding: 3px 8px;
-  border-radius: 6px;
-  background: var(--color-surface-elevated);
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: var(--color-surface);
+  border: 2px solid var(--color-border);
   color: var(--color-text-secondary);
-  font-size: 12px;
+  font-size: 11px;
+  font-weight: 700;
 }
 
 .strategy-metric {
   display: inline-flex;
-  padding: 3px 8px;
-  border-radius: 6px;
-  font-size: 12px;
-  font-weight: 500;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  border: 2px solid transparent;
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
 }
 
 .strategy-metric.positive {
   background: var(--color-down-bg);
   color: var(--color-down);
+  border-color: rgba(46, 125, 50, 0.2);
 }
 
 .strategy-metric.negative {
   background: var(--color-up-bg);
   color: var(--color-up);
+  border-color: rgba(212, 57, 59, 0.2);
 }
 
 .actions {
@@ -281,28 +324,30 @@ async function toggleCollect() {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  border: 1px solid var(--color-border);
+  border: 2px solid var(--color-border);
   border-radius: 999px;
   padding: 7px 14px;
   background: transparent;
   color: var(--color-text-secondary);
   font: inherit;
   font-size: 13px;
+  font-weight: 700;
   cursor: pointer;
   text-decoration: none;
-  transition: border-color 0.15s ease, background 0.15s ease, color 0.15s ease;
+  transition: border-color 0.15s ease, background 0.15s ease, color 0.15s ease, transform 0.15s ease;
 }
 
 .action:hover {
   border-color: var(--color-border-hover);
   background: var(--color-surface-hover);
   color: var(--color-text-primary);
+  transform: translateY(-1px);
 }
 
 .action.active {
-  border-color: rgba(14, 165, 233, 0.32);
-  background: rgba(14, 165, 233, 0.08);
-  color: #38bdf8;
+  border-color: var(--color-danger);
+  background: var(--color-danger-bg);
+  color: var(--color-danger);
 }
 
 .action-icon {

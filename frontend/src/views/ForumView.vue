@@ -178,7 +178,7 @@ function switchFeed(mode: 'all' | 'collections') {
   gap: 20px;
 }
 
-/* ── Hero ── */
+/* ── Hero — Bauhaus Geometric ── */
 .hero {
   position: relative;
   display: flex;
@@ -186,12 +186,37 @@ function switchFeed(mode: 'all' | 'collections') {
   justify-content: space-between;
   gap: 16px;
   padding: 32px 36px;
-  border-radius: 24px;
-  background:
-    radial-gradient(circle at top left, var(--color-primary-light), transparent 40%),
-    linear-gradient(135deg, var(--color-primary-dark), var(--color-primary));
+  border-radius: var(--radius-xl);
+  background: var(--color-primary);
+  border: 2px solid #1a1a1a;
   color: var(--color-text-inverse);
   overflow: hidden;
+  box-shadow: var(--shadow-lg);
+}
+
+.hero::before {
+  content: "";
+  position: absolute;
+  width: 140px;
+  height: 140px;
+  border-radius: 50%;
+  background: var(--color-accent);
+  top: -40px;
+  right: -30px;
+  opacity: 0.92;
+}
+
+.hero::after {
+  content: "";
+  position: absolute;
+  width: 60px;
+  height: 60px;
+  background: var(--color-danger);
+  bottom: -16px;
+  right: 140px;
+  transform: rotate(25deg);
+  border-radius: 12px;
+  opacity: 0.88;
 }
 
 .hero-content {
@@ -203,28 +228,30 @@ function switchFeed(mode: 'all' | 'collections') {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 5px 12px;
+  padding: 5px 14px;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.15);
-  font-size: 12px;
-  font-weight: 600;
-  letter-spacing: 0.04em;
-  color: rgba(255, 255, 255, 0.9);
-  margin-bottom: 14px;
-  backdrop-filter: blur(4px);
+  background: rgba(255, 255, 255, 0.18);
+  border: 2px solid rgba(255, 255, 255, 0.25);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.95);
+  margin-bottom: 16px;
 }
 
 .hero-eyebrow svg {
-  width: 14px;
-  height: 14px;
+  width: 13px;
+  height: 13px;
 }
 
 .view-title {
-  margin: 0 0 10px;
-  font-size: clamp(24px, 4vw, 36px);
-  font-weight: 800;
+  margin: 0 0 8px;
+  font-size: clamp(26px, 4vw, 38px);
+  font-weight: 900;
   letter-spacing: -0.02em;
   color: #fff;
+  line-height: 1.05;
 }
 
 .view-subtitle {
@@ -232,10 +259,10 @@ function switchFeed(mode: 'all' | 'collections') {
   max-width: 520px;
   font-size: 14px;
   line-height: 1.6;
-  color: rgba(255, 255, 255, 0.75);
+  color: rgba(255, 255, 255, 0.72);
 }
 
-/* Decorative rings */
+/* Decorative geometric shapes */
 .hero-decoration {
   position: absolute;
   right: -40px;
@@ -247,7 +274,7 @@ function switchFeed(mode: 'all' | 'collections') {
 .deco-ring {
   position: absolute;
   border-radius: 50%;
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  border: 2px solid rgba(255, 255, 255, 0.15);
   transform: translate(-50%, -50%);
 }
 
@@ -255,14 +282,14 @@ function switchFeed(mode: 'all' | 'collections') {
 .deco-ring--2 { width: 200px; height: 200px; }
 .deco-ring--3 { width: 300px; height: 300px; }
 
-/* ── Feed Switch ── */
+/* ── Feed Switch — Bauhaus Pills ── */
 .feed-switch {
   display: flex;
-  gap: 8px;
-  padding: 4px;
-  border-radius: 14px;
+  gap: 6px;
+  padding: 5px;
+  border-radius: 999px;
   background: var(--color-surface);
-  border: 1px solid var(--color-border);
+  border: 2px solid var(--color-border);
   width: fit-content;
 }
 
@@ -270,16 +297,16 @@ function switchFeed(mode: 'all' | 'collections') {
   display: inline-flex;
   align-items: center;
   gap: 7px;
-  border: 0;
-  border-radius: 10px;
-  padding: 9px 16px;
+  border: 2px solid transparent;
+  border-radius: 999px;
+  padding: 8px 16px;
   background: transparent;
   color: var(--color-text-muted);
   font: inherit;
   font-size: 13px;
-  font-weight: 500;
+  font-weight: 700;
   cursor: pointer;
-  transition: background 0.15s ease, color 0.15s ease;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease, transform 0.15s ease;
 }
 
 .feed-switch__button svg {
@@ -288,47 +315,67 @@ function switchFeed(mode: 'all' | 'collections') {
 }
 
 .feed-switch__button:hover {
-  color: var(--color-text-secondary);
+  color: var(--color-text-primary);
   background: var(--color-surface-hover);
 }
 
 .feed-switch__button.active {
   background: var(--color-primary);
   color: #fff;
+  border-color: #1a1a1a;
+  font-weight: 800;
+  transform: translateX(2px);
 }
 
-/* ── Login Tip ── */
+/* ── Login Tip — Bauhaus Card ── */
 .login-tip {
   display: flex;
   align-items: center;
   gap: 16px;
-  padding: 18px 20px;
-  border-radius: 16px;
+  padding: 20px 22px;
+  border-radius: var(--radius-lg);
   background: var(--color-surface);
-  border: 1px solid var(--color-border);
+  border: 2px solid var(--color-border);
+  position: relative;
+  overflow: hidden;
+  box-shadow: var(--shadow-md);
+}
+
+.login-tip::after {
+  content: "";
+  position: absolute;
+  width: 44px;
+  height: 44px;
+  background: var(--color-accent);
+  border-radius: 50%;
+  top: -14px;
+  right: -14px;
+  opacity: 0.85;
 }
 
 .login-tip__icon {
   display: grid;
   place-items: center;
-  width: 40px;
-  height: 40px;
-  border-radius: 12px;
+  width: 42px;
+  height: 42px;
+  border-radius: 10px;
   background: var(--color-primary-bg);
-  color: var(--color-primary-light);
+  border: 2px solid var(--color-border);
+  color: var(--color-primary);
   flex-shrink: 0;
 }
 
 .login-tip__icon svg {
-  width: 20px;
-  height: 20px;
+  width: 18px;
+  height: 18px;
 }
 
 .login-tip__title {
-  font-weight: 600;
+  font-weight: 800;
   font-size: 14px;
   color: var(--color-text-primary);
   margin-bottom: 3px;
+  letter-spacing: -0.01em;
 }
 
 .login-tip__text {
@@ -344,15 +391,19 @@ function switchFeed(mode: 'all' | 'collections') {
   gap: 10px;
   margin: 0;
   padding: 20px;
-  border-radius: 16px;
+  border-radius: var(--radius-lg);
   background: var(--color-surface);
+  border: 2px solid var(--color-border);
   color: var(--color-text-muted);
   font-size: 14px;
+  font-weight: 600;
+  box-shadow: var(--shadow-md);
 }
 
 .status.error {
   background: var(--color-danger-bg);
   color: var(--color-danger);
+  border-color: var(--color-danger);
 }
 
 .status svg {
@@ -361,7 +412,7 @@ function switchFeed(mode: 'all' | 'collections') {
   flex-shrink: 0;
 }
 
-/* ── Skeleton Loading ── */
+/* ── Skeleton Loading — Bauhaus ── */
 .skeleton-list {
   display: grid;
   gap: 16px;
@@ -371,9 +422,23 @@ function switchFeed(mode: 'all' | 'collections') {
   display: grid;
   gap: 14px;
   padding: 24px;
-  border: 1px solid var(--color-border);
-  border-radius: 20px;
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-lg);
   background: var(--color-surface);
+  box-shadow: var(--shadow-md);
+  position: relative;
+  overflow: hidden;
+}
+
+.skeleton-card::after {
+  content: "";
+  position: absolute;
+  height: 4px;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: var(--color-border-light);
+  border-radius: 0 0 14px 14px;
 }
 
 .skeleton-header {
@@ -387,6 +452,7 @@ function switchFeed(mode: 'all' | 'collections') {
   height: 44px;
   border-radius: 50%;
   background: var(--color-surface-elevated);
+  border: 2px solid var(--color-border-light);
   flex-shrink: 0;
 }
 
@@ -398,7 +464,7 @@ function switchFeed(mode: 'all' | 'collections') {
 
 .skeleton-line {
   height: 12px;
-  border-radius: 6px;
+  border-radius: 4px;
   background: var(--color-surface-elevated);
   animation: shimmer 1.5s ease-in-out infinite;
 }
@@ -419,16 +485,17 @@ function switchFeed(mode: 'all' | 'collections') {
   gap: 16px;
 }
 
-/* ── Empty State ── */
+/* ── Empty State — Bauhaus ── */
 .empty-state {
   display: grid;
   place-items: center;
   gap: 12px;
   padding: 48px 24px;
-  border-radius: 20px;
+  border-radius: var(--radius-lg);
   background: var(--color-surface);
-  border: 1px dashed var(--color-border-strong);
+  border: 2px dashed var(--color-border);
   text-align: center;
+  box-shadow: var(--shadow-md);
 }
 
 .empty-state__icon {
@@ -436,20 +503,22 @@ function switchFeed(mode: 'all' | 'collections') {
   place-items: center;
   width: 56px;
   height: 56px;
-  border-radius: 16px;
+  border-radius: 14px;
   background: var(--color-surface-elevated);
+  border: 2px solid var(--color-border);
   color: var(--color-text-muted);
 }
 
 .empty-state__icon svg {
-  width: 28px;
-  height: 28px;
+  width: 26px;
+  height: 26px;
 }
 
 .empty-state__title {
-  font-weight: 600;
+  font-weight: 800;
   font-size: 15px;
-  color: var(--color-text-secondary);
+  color: var(--color-text-primary);
+  letter-spacing: -0.01em;
 }
 
 .empty-state__text {
@@ -458,21 +527,22 @@ function switchFeed(mode: 'all' | 'collections') {
   color: var(--color-text-muted);
 }
 
-/* ── Load More ── */
+/* ── Load More — Bauhaus Button ── */
 .load-more {
   display: inline-flex;
   align-items: center;
   gap: 8px;
   justify-self: center;
-  border: 1px solid var(--color-border);
+  border: 2px solid var(--color-border);
   border-radius: 999px;
   padding: 10px 22px;
   background: var(--color-surface);
-  color: var(--color-text-secondary);
+  color: var(--color-text-primary);
   font: inherit;
   font-size: 13px;
-  font-weight: 500;
+  font-weight: 800;
   cursor: pointer;
+  box-shadow: var(--shadow-md);
   transition: border-color 0.15s ease, background 0.15s ease, color 0.15s ease, transform 0.15s ease;
 }
 
@@ -482,10 +552,11 @@ function switchFeed(mode: 'all' | 'collections') {
 }
 
 .load-more:hover {
-  border-color: var(--color-primary-border);
-  background: var(--color-primary-bg);
-  color: var(--color-primary-light);
-  transform: translateY(-1px);
+  border-color: var(--color-primary);
+  background: var(--color-primary);
+  color: #fff;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.08);
 }
 
 @keyframes spin {
@@ -504,6 +575,17 @@ function switchFeed(mode: 'all' | 'collections') {
   }
 
   .hero-decoration {
+    display: none;
+  }
+
+  .hero::before {
+    width: 100px;
+    height: 100px;
+    top: -30px;
+    right: -20px;
+  }
+
+  .hero::after {
     display: none;
   }
 }

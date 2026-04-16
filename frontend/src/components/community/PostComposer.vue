@@ -114,10 +114,35 @@ onMounted(() => {
   display: grid;
   gap: 16px;
   padding: 24px;
-  border: 1px solid var(--color-border);
-  border-radius: 20px;
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-lg);
   background: var(--color-surface);
   box-shadow: var(--shadow-lg);
+  position: relative;
+  overflow: hidden;
+}
+
+.composer-card::before {
+  content: "";
+  position: absolute;
+  width: 50px;
+  height: 50px;
+  background: var(--color-accent);
+  border-radius: 50%;
+  top: -16px;
+  left: -16px;
+  opacity: 0.9;
+}
+
+.composer-card::after {
+  content: "";
+  position: absolute;
+  height: 5px;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: var(--color-accent);
+  border-radius: 0 0 14px 14px;
 }
 
 .composer-header {
@@ -125,13 +150,16 @@ onMounted(() => {
   align-items: flex-start;
   justify-content: space-between;
   gap: 16px;
+  position: relative;
+  z-index: 1;
 }
 
 .composer-header h2 {
   margin: 0 0 6px;
   font-size: 18px;
-  font-weight: 700;
+  font-weight: 900;
   color: var(--color-text-primary);
+  letter-spacing: -0.01em;
 }
 
 .composer-header p {
@@ -150,6 +178,9 @@ onMounted(() => {
 
 .char-counter span {
   font-size: 11px;
+  font-weight: 700;
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
   color: var(--color-text-muted);
 }
 
@@ -164,7 +195,8 @@ onMounted(() => {
 }
 
 .char-ring__track {
-  stroke: var(--color-border-strong);
+  stroke: #e0e0dc;
+  stroke-width: 3;
 }
 
 .char-ring__fill {
@@ -183,10 +215,12 @@ onMounted(() => {
   gap: 8px;
   margin: 0;
   padding: 12px 16px;
-  border-radius: 12px;
+  border-radius: var(--radius-sm);
   background: var(--color-danger-bg);
+  border: 2px solid var(--color-danger);
   color: var(--color-danger);
   font-size: 13px;
+  font-weight: 600;
 }
 
 .error svg {
@@ -200,8 +234,8 @@ onMounted(() => {
   resize: vertical;
   min-height: 120px;
   padding: 14px 16px;
-  border: 1px solid var(--color-border);
-  border-radius: 14px;
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-md);
   background: var(--color-surface-elevated);
   font: inherit;
   font-size: 14px;
@@ -212,7 +246,7 @@ onMounted(() => {
 }
 
 .composer-input:focus {
-  border-color: var(--color-primary-border);
+  border-color: var(--color-primary);
   box-shadow: 0 0 0 3px var(--color-primary-bg);
 }
 
@@ -225,6 +259,8 @@ onMounted(() => {
   align-items: flex-end;
   justify-content: space-between;
   gap: 16px;
+  position: relative;
+  z-index: 1;
 }
 
 .strategy-picker {
@@ -237,7 +273,10 @@ onMounted(() => {
   align-items: center;
   gap: 6px;
   color: var(--color-text-muted);
-  font-size: 12px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
 }
 
 .picker-label svg {
@@ -248,35 +287,37 @@ onMounted(() => {
 .strategy-picker select {
   min-width: 200px;
   padding: 9px 12px;
-  border-radius: 10px;
-  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  border: 2px solid var(--color-border);
   background: var(--color-surface-elevated);
   color: var(--color-text-primary);
   font: inherit;
   font-size: 13px;
+  font-weight: 600;
   outline: none;
   cursor: pointer;
   transition: border-color 0.15s ease;
 }
 
 .strategy-picker select:focus {
-  border-color: var(--color-primary-border);
+  border-color: var(--color-primary);
 }
 
 .publish-button {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  border: 0;
+  border: 2px solid var(--color-border);
   border-radius: 999px;
   padding: 10px 20px;
   font: inherit;
-  font-weight: 600;
+  font-weight: 800;
   font-size: 14px;
-  background: linear-gradient(135deg, #0f766e, #0ea5e9);
-  color: #fff;
+  background: var(--color-accent);
+  color: var(--color-text-primary);
   cursor: pointer;
-  transition: opacity 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
+  box-shadow: var(--shadow-md);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
   white-space: nowrap;
 }
 
@@ -287,9 +328,8 @@ onMounted(() => {
 }
 
 .publish-button:hover:not(:disabled) {
-  opacity: 0.9;
-  transform: translateY(-1px);
-  box-shadow: 0 4px 16px rgba(14, 165, 233, 0.3);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
 }
 
 .publish-button:active:not(:disabled) {
