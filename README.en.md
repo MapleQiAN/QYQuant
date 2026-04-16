@@ -81,83 +81,9 @@ QYQuant is beyond a demo, but it should still be treated as a platform core movi
 
 QYQuant uses a decoupled frontend, API, and async execution model. The Vue 3 frontend acts as the unified workspace, Flask exposes application APIs, Celery + Redis runs queued backtests, `qysp` standardizes strategy packaging, and provider routing abstracts market data sources.
 
-```mermaid
-flowchart LR
-    user["User / Operator / Admin"]
-    cli["qys CLI / Strategy Package"]
+![framework](static/image/framework.png)
 
-    subgraph experience["Experience Layer · Vue 3"]
-        web["Dashboard / Learn / Strategies / Marketplace / Backtests / Bots / Forum / Pricing / Settings / Admin"]
-        client["Router / Stores / API Client"]
-    end
 
-    subgraph api["Application Layer · Flask"]
-        auth["Auth / Users"]
-        strategy["Strategies / Runtime Metadata / Presets"]
-        market["Marketplace / Payments / Integrations"]
-        execution["Backtests / Simulation / Bots"]
-        governance["Admin / Forum / Files / Notifications"]
-    end
-
-    subgraph runtime["Execution Layer"]
-        validator["qysp Validator"]
-        engine["Backtest Engine"]
-        runtimeSvc["Strategy Runtime"]
-        worker["Celery Worker"]
-        providerRouter["Provider Router / MarketDataService"]
-        report["Metrics / Report Builder"]
-    end
-
-    subgraph data["Data Layer"]
-        pg[("PostgreSQL")]
-        redis[("Redis")]
-        storage[("Local Storage")]
-        sinagold["SinaGold"]
-        binance["Binance"]
-        freegold["FreeGold"]
-        joinquant["JoinQuant"]
-        akshare["AkShare"]
-    end
-
-    user --> web --> client
-    client --> auth
-    client --> strategy
-    client --> market
-    client --> execution
-    client --> governance
-
-    cli --> validator
-    strategy --> validator
-    strategy --> storage
-    strategy --> pg
-
-    auth --> pg
-    auth --> redis
-    market --> pg
-    governance --> pg
-
-    execution -->|"sync latest"| engine
-    execution -->|"async job"| worker
-    execution --> pg
-
-    worker <--> redis
-    worker --> engine
-    worker --> report
-    worker --> storage
-    worker --> pg
-
-    engine --> runtimeSvc
-    engine --> providerRouter
-    runtimeSvc <--> storage
-    runtimeSvc <--> pg
-
-    providerRouter --> sinagold
-    providerRouter --> binance
-    providerRouter --> freegold
-    providerRouter --> joinquant
-    providerRouter --> akshare
-    providerRouter <--> pg
-```
 
 ## Workspace Map
 
