@@ -75,11 +75,11 @@ function formatMetric(value: string | number | boolean | null | undefined, perce
 <style scoped>
 .strategy-card {
   padding: var(--spacing-lg);
-  border: 1px solid var(--color-border);
+  border: 2px solid var(--color-border);
   border-radius: var(--radius-lg);
   background: var(--color-surface);
   transition: all var(--transition-normal);
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
+  box-shadow: var(--shadow-md);
   position: relative;
   overflow: hidden;
 }
@@ -90,14 +90,26 @@ function formatMetric(value: string | number | boolean | null | undefined, perce
   top: 0;
   left: 0;
   right: 0;
-  height: 1px;
-  background: linear-gradient(90deg, transparent, var(--color-primary), transparent);
+  height: 4px;
+  background: var(--color-primary);
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+}
+
+.strategy-card::after {
+  content: "";
+  position: absolute;
+  height: 4px;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: var(--color-accent);
+  border-radius: 0 0 14px 14px;
 }
 
 .strategy-card:hover {
-  transform: translateY(-4px);
+  transform: translateY(-3px);
   border-color: var(--color-primary-border);
-  box-shadow: 0 12px 32px rgba(30, 90, 168, 0.15);
+  box-shadow: var(--shadow-lg);
 }
 
 .card-head {
@@ -109,7 +121,7 @@ function formatMetric(value: string | number | boolean | null | undefined, perce
 
 .card-title {
   font-size: var(--font-size-lg);
-  font-weight: 700;
+  font-weight: 900;
   margin: 0;
   color: var(--color-text-primary);
   letter-spacing: -0.01em;
@@ -125,10 +137,10 @@ function formatMetric(value: string | number | boolean | null | undefined, perce
 
 .card-category {
   margin-top: var(--spacing-sm);
-  font-size: var(--font-size-xs);
+  font-size: 11px;
   color: var(--color-text-muted);
-  font-weight: 600;
-  letter-spacing: 0.05em;
+  font-weight: 800;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
 }
 
@@ -147,38 +159,52 @@ function formatMetric(value: string | number | boolean | null | undefined, perce
 }
 
 .metric-cell {
-  padding: var(--spacing-sm);
-  border-radius: var(--radius-md);
-  background: linear-gradient(135deg, var(--color-surface-elevated), var(--color-surface-active));
-  border: 1px solid var(--color-border);
+  padding: var(--spacing-sm) var(--spacing-sm);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-elevated);
+  border: 2px solid #eaeaea;
   transition: all var(--transition-fast);
+  position: relative;
+  overflow: hidden;
+}
+
+.metric-cell::after {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: var(--color-primary);
+  border-radius: 0 0 6px 6px;
 }
 
 .metric-cell:hover {
   border-color: var(--color-primary-border);
-  background: linear-gradient(135deg, var(--color-surface-elevated), var(--color-surface-hover));
+  background: var(--color-primary-bg);
 }
 
 .metric-cell dt {
-  font-size: var(--font-size-xs);
+  font-size: 10px;
   color: var(--color-text-muted);
-  font-weight: 700;
-  letter-spacing: 0.05em;
+  font-weight: 800;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
 }
 
 .metric-cell dd {
   margin-top: 4px;
   font-size: var(--font-size-md);
-  font-weight: 700;
+  font-weight: 800;
   color: var(--color-primary);
   font-variant-numeric: tabular-nums;
+  font-family: var(--font-mono);
 }
 
 .card-foot {
   margin-top: var(--spacing-lg);
   padding-top: var(--spacing-md);
-  border-top: 1px solid var(--color-border);
+  border-top: 2px dashed #e0e0dc;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -204,6 +230,6 @@ function formatMetric(value: string | number | boolean | null | undefined, perce
 .author-name {
   font-size: var(--font-size-sm);
   color: var(--color-text-secondary);
-  font-weight: 600;
+  font-weight: 700;
 }
 </style>

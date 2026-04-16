@@ -85,7 +85,33 @@ function formatMetric(value: string | number | boolean | null | undefined, perce
 .featured-card {
   width: min(100%, 560px);
   padding: var(--spacing-lg);
-  border: 1px solid var(--color-border);
+  border: 2px solid var(--color-border);
+  box-shadow: var(--shadow-lg);
+  position: relative;
+  overflow: hidden;
+}
+
+.featured-card::before {
+  content: "";
+  position: absolute;
+  width: 60px;
+  height: 60px;
+  background: var(--color-danger);
+  border-radius: 50%;
+  top: -20px;
+  right: -20px;
+  opacity: 0.88;
+}
+
+.featured-card::after {
+  content: "";
+  position: absolute;
+  height: 5px;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: var(--color-primary);
+  border-radius: 0 0 14px 14px;
 }
 
 .card-head {
@@ -93,24 +119,32 @@ function formatMetric(value: string | number | boolean | null | undefined, perce
   align-items: flex-start;
   justify-content: space-between;
   gap: var(--spacing-sm);
+  position: relative;
+  z-index: 1;
 }
 
 .card-kicker {
   margin: 0;
-  font-size: var(--font-size-xs);
+  font-size: 11px;
   color: var(--color-text-muted);
   text-transform: uppercase;
+  font-weight: 800;
+  letter-spacing: 0.08em;
 }
 
 .card-title {
   margin-top: var(--spacing-xs);
   font-size: var(--font-size-xl);
+  font-weight: 900;
+  letter-spacing: -0.01em;
 }
 
 .card-description {
   margin-top: var(--spacing-md);
   color: var(--color-text-secondary);
   min-height: 44px;
+  position: relative;
+  z-index: 1;
 }
 
 .metric-row {
@@ -118,23 +152,33 @@ function formatMetric(value: string | number | boolean | null | undefined, perce
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: var(--spacing-sm);
+  position: relative;
+  z-index: 1;
 }
 
 .metric-item {
   padding: var(--spacing-sm);
   border-radius: var(--radius-sm);
-  background: var(--color-background);
+  background: var(--color-surface-elevated);
+  border: 2px solid #eaeaea;
 }
 
 .metric-label {
   display: block;
-  font-size: var(--font-size-xs);
+  font-size: 10px;
   color: var(--color-text-muted);
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
 }
 
 .metric-value {
+  margin-top: 4px;
   font-size: var(--font-size-md);
-  color: var(--color-text-primary);
+  color: var(--color-primary);
+  font-weight: 800;
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
 }
 
 .card-foot {
@@ -143,6 +187,10 @@ function formatMetric(value: string | number | boolean | null | undefined, perce
   align-items: center;
   justify-content: space-between;
   gap: var(--spacing-sm);
+  border-top: 2px dashed #e0e0dc;
+  padding-top: var(--spacing-md);
+  position: relative;
+  z-index: 1;
 }
 
 .author {
@@ -157,12 +205,13 @@ function formatMetric(value: string | number | boolean | null | undefined, perce
   height: 28px;
   border-radius: 50%;
   object-fit: cover;
-  border: 1px solid var(--color-border);
+  border: 2px solid var(--color-border);
 }
 
 .author-name {
   color: var(--color-text-secondary);
   font-size: var(--font-size-sm);
+  font-weight: 700;
   overflow: hidden;
   text-overflow: ellipsis;
 }

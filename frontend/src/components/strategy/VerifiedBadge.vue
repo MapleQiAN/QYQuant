@@ -8,13 +8,14 @@
 .verified-badge {
   display: inline-flex;
   align-items: center;
-  padding: 6px 12px;
-  background: rgba(24, 144, 255, 0.1);
-  color: #1890ff;
+  padding: 4px 12px;
+  background: var(--color-primary-bg);
+  color: var(--color-primary);
+  border: 2px solid var(--color-primary);
   border-radius: 999px;
   font-size: var(--font-size-xs);
-  font-weight: var(--font-weight-semibold);
-  letter-spacing: 0.02em;
+  font-weight: 800;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
   white-space: nowrap;
 }

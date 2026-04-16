@@ -255,24 +255,56 @@ function openStrategyDetail(strategyId: string) {
   justify-content: space-between;
   gap: var(--spacing-lg);
   margin-bottom: var(--spacing-xl);
+  position: relative;
+  padding-bottom: var(--spacing-lg);
+}
+
+.page-header::after {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 80px;
+  height: 6px;
+  background: var(--color-accent);
+  border-radius: 3px;
 }
 
 .page-title {
   margin: 0;
-  font-size: var(--font-size-xxl);
+  font-size: var(--font-size-xxxl);
+  font-weight: 900;
+  letter-spacing: -0.02em;
 }
 
 .page-subtitle {
   margin: var(--spacing-xs) 0 0;
   color: var(--color-text-muted);
+  font-size: var(--font-size-md);
 }
 
+/* ── Toolbar ── */
 .toolbar-card {
   margin-bottom: var(--spacing-lg);
   padding: var(--spacing-lg);
   border-radius: var(--radius-lg);
-  border: 1px solid var(--color-border-light);
-  background: var(--color-surface-elevated);
+  border: 2px solid var(--color-border);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-md);
+  position: relative;
+  overflow: hidden;
+}
+
+.toolbar-card::before {
+  content: "";
+  position: absolute;
+  width: 40px;
+  height: 40px;
+  background: var(--color-accent);
+  border-radius: 50%;
+  top: -12px;
+  right: -12px;
+  opacity: 0.9;
 }
 
 .search-shell {
@@ -281,21 +313,30 @@ function openStrategyDetail(strategyId: string) {
   gap: var(--spacing-sm);
   padding: 0 var(--spacing-md);
   border-radius: 999px;
-  border: 1px solid var(--color-border);
-  background: var(--color-surface);
+  border: 2px solid var(--color-border);
+  background: var(--color-surface-elevated);
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.search-shell:focus-within {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px var(--color-primary-bg);
 }
 
 .search-icon {
   color: var(--color-text-muted);
   font-size: var(--font-size-md);
+  font-weight: 800;
 }
 
 .search-input {
   width: 100%;
-  padding: 14px 0;
+  padding: 12px 0;
   border: 0;
   background: transparent;
   color: var(--color-text-primary);
+  font: inherit;
+  font-size: var(--font-size-md);
 }
 
 .search-input:focus {
@@ -307,42 +348,75 @@ function openStrategyDetail(strategyId: string) {
   flex-wrap: wrap;
   gap: var(--spacing-sm);
   margin-top: var(--spacing-md);
+  position: relative;
+  z-index: 1;
 }
 
 .filter-chip {
-  padding: 8px 14px;
+  padding: 7px 14px;
   border-radius: 9999px;
-  border: 1px solid var(--color-border);
+  border: 2px solid var(--color-border);
   background: var(--color-surface);
   color: var(--color-text-secondary);
   font-size: 12px;
-  transition: background-color var(--transition-fast), border-color var(--transition-fast), color var(--transition-fast);
+  font-weight: 700;
+  cursor: pointer;
+  transition: background-color var(--transition-fast), border-color var(--transition-fast), color var(--transition-fast), transform var(--transition-fast);
+}
+
+.filter-chip:hover {
+  border-color: var(--color-border-hover);
+  background: var(--color-surface-hover);
+  color: var(--color-text-primary);
 }
 
 .filter-chip.active {
   background: var(--color-accent);
-  border-color: var(--color-accent);
+  border-color: var(--color-border);
   color: var(--color-text-primary);
+  font-weight: 800;
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-sm);
 }
 
+/* ── Section titles ── */
 .section-title-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: var(--spacing-sm);
   margin-bottom: var(--spacing-md);
+  position: relative;
+  padding-left: 14px;
+}
+
+.section-title-row::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 4px;
+  bottom: 4px;
+  width: 5px;
+  background: var(--color-primary);
+  border-radius: 3px;
 }
 
 .section-title {
   margin: 0;
-  font-size: var(--font-size-lg);
+  font-size: var(--font-size-xl);
+  font-weight: 900;
+  letter-spacing: -0.01em;
 }
 
 .section-meta {
   color: var(--color-text-muted);
   font-size: var(--font-size-sm);
+  font-weight: 600;
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
 }
 
+/* ── Featured ── */
 .featured-section {
   margin-bottom: var(--spacing-xl);
 }
@@ -354,37 +428,76 @@ function openStrategyDetail(strategyId: string) {
   padding-bottom: var(--spacing-xs);
 }
 
+/* ── Grid ── */
 .strategy-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: var(--spacing-md);
 }
 
+/* ── Empty / Messages ── */
 .empty-state {
   margin-top: var(--spacing-sm);
   padding: var(--spacing-lg);
   text-align: center;
   color: var(--color-text-muted);
-  border: 1px dashed var(--color-border);
-  border-radius: var(--radius-md);
+  border: 2px dashed var(--color-border);
+  border-radius: var(--radius-lg);
   background: var(--color-surface);
+  font-weight: 600;
 }
 
 .message.error {
   color: var(--color-danger);
+  font-weight: 700;
+  padding: var(--spacing-md);
+  border: 2px solid var(--color-danger);
+  border-radius: var(--radius-sm);
+  background: var(--color-danger-bg);
 }
 
 .message.warning {
   margin-bottom: var(--spacing-md);
   color: var(--color-warning);
+  font-weight: 700;
+  padding: var(--spacing-md);
+  border: 2px solid var(--color-warning);
+  border-radius: var(--radius-sm);
+  background: var(--color-warning-bg);
 }
 
+/* ── Pagination ── */
 .pagination {
   margin-top: var(--spacing-lg);
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: var(--spacing-sm);
+  font-weight: 700;
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.pagination .btn {
+  border: 2px solid var(--color-border);
+  border-radius: 999px;
+  padding: 8px 16px;
+  font-weight: 800;
+  font-size: var(--font-size-sm);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-sm);
+  transition: transform var(--transition-fast), box-shadow var(--transition-fast), background var(--transition-fast), border-color var(--transition-fast);
+}
+
+.pagination .btn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+  border-color: var(--color-primary);
+  background: var(--color-primary-bg);
+}
+
+.pagination .btn:disabled {
+  opacity: 0.35;
 }
 
 @media (max-width: 1024px) {
