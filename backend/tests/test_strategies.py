@@ -853,6 +853,9 @@ def test_list_strategies_returns_only_current_user_with_pagination(client, app):
                     symbol="ETHUSDT",
                     status="draft",
                     owner_id=user_id,
+                    source="marketplace",
+                    source_strategy_id="marketplace-origin",
+                    import_mode="sealed",
                     tags=["b"],
                     created_at=200,
                 ),
@@ -889,7 +892,9 @@ def test_list_strategies_returns_only_current_user_with_pagination(client, app):
     assert data["perPage"] == 1
     assert data["total"] == 2
     assert [item["id"] for item in data["items"]] == ["strategy-b"]
-    assert data["items"][0]["source"] == "upload"
+    assert data["items"][0]["source"] == "marketplace"
+    assert data["items"][0]["sourceStrategyId"] == "marketplace-origin"
+    assert data["items"][0]["importMode"] == "sealed"
 
 
 def test_delete_strategy_requires_owner_and_cleans_relations(client, app, tmp_path):

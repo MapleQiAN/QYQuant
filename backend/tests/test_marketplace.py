@@ -1,9 +1,12 @@
 import json
 import uuid
 import zipfile
+from datetime import datetime, timezone
+
+import pytest
 
 from app.extensions import db
-from app.models import AuditLog, BacktestJob, BacktestJobStatus, File, Strategy, StrategyVersion, User
+from app.models import AuditLog, BacktestJob, BacktestJobStatus, File, Post, Strategy, StrategyVersion, User
 
 
 def _create_user(user_id, nickname, avatar_url):
@@ -38,6 +41,11 @@ def _login_user(client, phone="13800138100", nickname="MarketplaceUser"):
 
 def _auth_headers(token):
     return {"Authorization": f"Bearer {token}"}
+
+
+def _require_postgres(app):
+    if not app.config["SQLALCHEMY_DATABASE_URI"].startswith("postgresql"):
+        pytest.skip("marketplace search coverage requires PostgreSQL")
 
 
 def _seed_owned_private_strategy(app, owner_id, *, strategy_id="owned-private-strategy", with_completed_job=True):
@@ -182,6 +190,28 @@ def _seed_marketplace_strategy(app, tmp_path):
     return strategy_id
 
 
+def _create_community_post(app, *, user_id, content, created_at, title="Community Post"):
+    with app.app_context():
+        post = Post(
+            title=title,
+            author="Trader",
+            avatar="https://example.com/avatar.png",
+            likes=0,
+            comments=0,
+            timestamp=1,
+            tags=[],
+            user_id=user_id,
+            content=content,
+            strategy_id=None,
+            likes_count=0,
+            comments_count=0,
+            created_at=created_at,
+        )
+        db.session.add(post)
+        db.session.commit()
+        return post.id
+
+
 def test_marketplace_list_returns_only_public_approved_strategies(client, app):
     with app.app_context():
         author = _create_user("author-1", "Market Author 1", "https://cdn.example.com/author-1.png")
@@ -306,6 +336,72 @@ def test_marketplace_featured_mode_returns_only_featured_public_approved_strateg
     assert all(item["id"].startswith("featured-") for item in response.json["data"])
 
 
+def test_marketplace_related_discussions_returns_strategy_linked_posts(client, app, tmp_path):
+    strategy_id = _seed_marketplace_strategy(app, tmp_path)
+    older_post_id = _create_community_post(
+        app,
+        user_id="marketplace-author",
+        content="Older breakout recap",
+        created_at=datetime(2026, 4, 17, 8, 0, 0, tzinfo=timezone.utc),
+    )
+    newer_post_id = _create_community_post(
+        app,
+        user_id="marketplace-author",
+        content="Newer breakout recap",
+        created_at=datetime(2026, 4, 17, 9, 0, 0, tzinfo=timezone.utc),
+    )
+
+    with app.app_context():
+        older_post = db.session.get(Post, older_post_id)
+        older_post.strategy_id = strategy_id
+
+        newer_post = db.session.get(Post, newer_post_id)
+        newer_post.strategy_id = strategy_id
+
+        db.session.add(
+            Post(
+                id="linked-legacy-row",
+                title="Legacy linked row",
+                author="Trader",
+                avatar="https://example.com/avatar.png",
+                likes=0,
+                comments=0,
+                timestamp=1,
+                tags=[],
+                user_id="marketplace-author",
+                content=None,
+                strategy_id=strategy_id,
+                likes_count=0,
+                comments_count=0,
+                created_at=None,
+            )
+        )
+        db.session.commit()
+
+    response = client.get(f"/api/v1/marketplace/strategies/{strategy_id}/posts")
+
+    assert response.status_code == 200
+    assert response.json["data"]["total"] == 2
+    assert response.json["data"]["page"] == 1
+    assert response.json["data"]["per_page"] == 5
+    assert [item["id"] for item in response.json["data"]["items"]] == [newer_post_id, older_post_id]
+    assert all(item["strategy_id"] == strategy_id for item in response.json["data"]["items"])
+    assert [item["content"] for item in response.json["data"]["items"]] == [
+        "Newer breakout recap",
+        "Older breakout recap",
+    ]
+    assert all(item["strategy"]["id"] == strategy_id for item in response.json["data"]["items"])
+
+
+def test_marketplace_related_discussions_rejects_private_strategy(client, app):
+    strategy_id = _seed_owned_private_strategy(app, owner_id="owner-1", with_completed_job=False)
+
+    response = client.get(f"/api/v1/marketplace/strategies/{strategy_id}/posts")
+
+    assert response.status_code == 404
+    assert response.json["error"]["code"] == "STRATEGY_NOT_FOUND"
+
+
 def test_marketplace_list_returns_meta_total_page_and_page_size(client, app):
     with app.app_context():
         author = _create_user("author-3", "Market Author 3", "https://cdn.example.com/author-3.png")
@@ -410,7 +506,7 @@ def test_marketplace_card_includes_author_and_excludes_encrypted_code(client, ap
 
 
 def test_marketplace_search_suite_requires_postgres(app):
-    assert app.config["SQLALCHEMY_DATABASE_URI"].startswith("postgresql")
+    _require_postgres(app)
 
 
 def test_publish_creates_review_submitted_notification(client, app):
@@ -595,6 +691,7 @@ def test_publish_writes_marketplace_audit_log(client, app):
 
 
 def test_marketplace_search_matches_chinese_title_and_description(client, app):
+    _require_postgres(app)
     with app.app_context():
         author = _create_user("search-author-1", "Search Author", "https://cdn.example.com/search-author-1.png")
         db.session.add(author)
@@ -646,6 +743,7 @@ def test_marketplace_search_matches_chinese_title_and_description(client, app):
 
 
 def test_marketplace_filters_combine_with_search(client, app):
+    _require_postgres(app)
     with app.app_context():
         author = _create_user("search-author-2", "Search Author 2", "https://cdn.example.com/search-author-2.png")
         db.session.add(author)
@@ -719,6 +817,7 @@ def test_marketplace_filters_combine_with_search(client, app):
 
 
 def test_marketplace_filter_drawdown_uses_absolute_threshold_rule(client, app):
+    _require_postgres(app)
     with app.app_context():
         author = _create_user("search-author-3", "Search Author 3", "https://cdn.example.com/search-author-3.png")
         db.session.add(author)
@@ -837,6 +936,78 @@ def test_get_marketplace_strategy_detail_returns_public_fields_and_hides_code(cl
     assert "code_encrypted" not in data
     assert "code_hash" not in data
     assert "result_storage_key" not in data
+
+
+def test_marketplace_detail_exposes_free_share_metadata(client, app, tmp_path):
+    strategy_id = _seed_marketplace_strategy(app, tmp_path)
+
+    with app.app_context():
+        strategy = db.session.get(Strategy, strategy_id)
+        strategy.share_mode = "free"
+        strategy.import_mode = "sealed"
+        strategy.trial_backtest_enabled = True
+        db.session.commit()
+
+        author = db.session.get(User, "marketplace-author")
+        db.session.add_all(
+            [
+                Post(
+                    id="marketplace-discussion-1",
+                    title="First discussion",
+                    author=author.nickname,
+                    avatar=author.avatar_url,
+                    likes=0,
+                    comments=0,
+                    timestamp=1700000001000,
+                    tags=[],
+                    user_id=author.id,
+                    content="Community discussion for the strategy.",
+                    strategy_id=strategy_id,
+                    likes_count=0,
+                    comments_count=0,
+                ),
+                Post(
+                    id="marketplace-discussion-2",
+                    title="Second discussion",
+                    author=author.nickname,
+                    avatar=author.avatar_url,
+                    likes=0,
+                    comments=0,
+                    timestamp=1700000002000,
+                    tags=[],
+                    user_id=author.id,
+                    content="Another discussion thread for the same strategy.",
+                    strategy_id=strategy_id,
+                    likes_count=0,
+                    comments_count=0,
+                ),
+                Post(
+                    id="marketplace-discussion-other",
+                    title="Other discussion",
+                    author=author.nickname,
+                    avatar=author.avatar_url,
+                    likes=0,
+                    comments=0,
+                    timestamp=1700000003000,
+                    tags=[],
+                    user_id=author.id,
+                    content="Discussion for a different strategy.",
+                    strategy_id="different-strategy",
+                    likes_count=0,
+                    comments_count=0,
+                ),
+            ]
+        )
+        db.session.commit()
+
+    response = client.get(f"/api/v1/marketplace/strategies/{strategy_id}")
+
+    assert response.status_code == 200
+    data = response.json["data"]
+    assert data["share_mode"] == "free"
+    assert data["import_mode"] == "sealed"
+    assert data["trial_backtest_enabled"] is True
+    assert data["discussion_count"] == 2
 
 
 def test_get_marketplace_strategy_detail_returns_imported_state_for_authenticated_user(client, app, tmp_path):
@@ -976,6 +1147,101 @@ def test_marketplace_import_status_reports_imported_state(client, app, tmp_path)
 
     assert response.status_code == 200
     assert response.json["data"] == {"imported": True, "user_strategy_id": imported_strategy_id}
+
+
+def test_trial_backtest_creates_job_without_importing_strategy(client, app, tmp_path):
+    token, user_id = _login_user(client, phone="13800138115", nickname="TrialBacktestUser")
+    strategy_id = _seed_marketplace_strategy(app, tmp_path)
+
+    with app.app_context():
+        strategy = db.session.get(Strategy, strategy_id)
+        strategy.trial_backtest_enabled = True
+        db.session.commit()
+
+    response = client.post(
+        f"/api/v1/marketplace/strategies/{strategy_id}/trial-backtest",
+        headers=_auth_headers(token),
+        json={
+            "params": {},
+            "time_range": {"start": "2024-01-01", "end": "2024-06-01"},
+        },
+    )
+
+    assert response.status_code == 200
+    assert response.json["data"]["job_id"]
+    assert response.json["data"]["mode"] == "trial"
+
+    with app.app_context():
+        jobs = BacktestJob.query.filter_by(user_id=user_id, strategy_id=strategy_id).all()
+        assert len(jobs) == 1
+        assert jobs[0].params["strategy_params"] == {}
+        assert jobs[0].params["start_time"] == "2024-01-01"
+        assert jobs[0].params["end_time"] == "2024-06-01"
+        assert Strategy.query.filter_by(owner_id=user_id, source_strategy_id=strategy_id).count() == 0
+
+
+def test_trial_backtest_reuses_preflight_for_non_object_strategy_params(client, app, tmp_path):
+    token, user_id = _login_user(client, phone="13800138117", nickname="TrialInvalidParamsUser")
+    strategy_id = _seed_marketplace_strategy(app, tmp_path)
+
+    with app.app_context():
+        strategy = db.session.get(Strategy, strategy_id)
+        strategy.trial_backtest_enabled = True
+        db.session.commit()
+
+    response = client.post(
+        f"/api/v1/marketplace/strategies/{strategy_id}/trial-backtest",
+        headers=_auth_headers(token),
+        json={"params": ["lookback", 20]},
+    )
+
+    assert response.status_code == 400
+    assert response.json["message"] == "invalid_strategy_params"
+
+    with app.app_context():
+        assert BacktestJob.query.filter_by(user_id=user_id, strategy_id=strategy_id).count() == 0
+
+
+def test_trial_backtest_reuses_preflight_for_missing_strategy_version(client, app, tmp_path):
+    token, user_id = _login_user(client, phone="13800138118", nickname="TrialMissingVersionUser")
+    strategy_id = _seed_marketplace_strategy(app, tmp_path)
+
+    with app.app_context():
+        strategy = db.session.get(Strategy, strategy_id)
+        strategy.trial_backtest_enabled = True
+        db.session.commit()
+
+    response = client.post(
+        f"/api/v1/marketplace/strategies/{strategy_id}/trial-backtest",
+        headers=_auth_headers(token),
+        json={"strategy_version": "9.9.9"},
+    )
+
+    assert response.status_code == 400
+    assert response.json["message"] == "strategy_version_not_found"
+
+    with app.app_context():
+        assert BacktestJob.query.filter_by(user_id=user_id, strategy_id=strategy_id).count() == 0
+
+
+def test_trial_backtest_requires_strategy_opt_in(client, app, tmp_path):
+    token, _ = _login_user(client, phone="13800138116", nickname="TrialDisabledUser")
+    strategy_id = _seed_marketplace_strategy(app, tmp_path)
+
+    with app.app_context():
+        strategy = db.session.get(Strategy, strategy_id)
+        strategy.trial_backtest_enabled = False
+        db.session.commit()
+
+    response = client.post(
+        f"/api/v1/marketplace/strategies/{strategy_id}/trial-backtest",
+        headers=_auth_headers(token),
+        json={"params": {"lookback": 20}},
+    )
+
+    assert response.status_code == 422
+    assert response.json["error"]["code"] == "TRIAL_BACKTEST_DISABLED"
+    assert response.json["error"]["message"] == "Trial backtest is not enabled for this strategy"
 
 
 def test_imported_marketplace_strategy_uses_source_package_for_parameter_loading(client, app, tmp_path):

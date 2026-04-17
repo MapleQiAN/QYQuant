@@ -71,6 +71,8 @@ class StrategySchema(Schema):
     lastUpdate = fields.Int(attribute='last_update')
     trades = fields.Int()
     createdAt = fields.Int(attribute='created_at')
+    sourceStrategyId = fields.Str(attribute='source_strategy_id', allow_none=True)
+    importMode = fields.Str(attribute='import_mode', allow_none=True)
     originalSourceFileId = fields.Str(attribute='original_source_file_id', allow_none=True)
     builtPackageFileId = fields.Str(attribute='built_package_file_id', allow_none=True)
 

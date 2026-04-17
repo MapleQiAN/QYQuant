@@ -10,9 +10,11 @@ from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.exc import IntegrityError
 
 from ..extensions import db
-from ..models import BacktestJob, BacktestJobStatus, File, Report, Strategy, StrategyVersion, User
+from ..models import BacktestJob, BacktestJobStatus, File, Post, Report, Strategy, StrategyVersion, User
 from ..schemas import StrategySchema
+from ..services.marketplace_trial_backtest import launch_marketplace_trial_backtest
 from ..services.notifications import create_notification
+from ..strategy_runtime import StrategyRuntimeError, as_response
 from ..utils.audit import log_audit
 from ..utils.response import error_response, ok
 from ..utils.storage import read_json
@@ -115,6 +117,10 @@ def get_marketplace_strategy_detail(strategy_id):
         "description": strategy.description,
         "category": strategy.category,
         "tags": strategy.tags or [],
+        "share_mode": strategy.share_mode,
+        "import_mode": strategy.import_mode,
+        "trial_backtest_enabled": bool(strategy.trial_backtest_enabled),
+        "discussion_count": _discussion_count_for_strategy(strategy.id),
         "display_metrics": strategy.display_metrics or {},
         "is_verified": bool(strategy.is_verified),
         "created_at": format_beijing_iso_ms(strategy.created_at),
@@ -144,6 +150,36 @@ def get_marketplace_strategy_equity_curve(strategy_id):
 
     dates, values = _extract_equity_curve(raw_points)
     return ok({"dates": dates, "values": values})
+
+
+@bp.get("/strategies/<strategy_id>/posts")
+def get_marketplace_strategy_posts(strategy_id):
+    strategy = _get_public_strategy(strategy_id)
+    if strategy is None:
+        return error_response("STRATEGY_NOT_FOUND", "Strategy not found", 404)
+
+    page = _int_arg("page", default=1, minimum=1)
+    per_page = _int_arg("per_page", default=5, minimum=1, maximum=20)
+    base_query = Post.query.filter(
+        Post.strategy_id == strategy_id,
+        Post.content.isnot(None),
+    )
+    total = base_query.count()
+    posts = (
+        base_query
+        .order_by(Post.created_at.desc(), Post.id.desc())
+        .offset((page - 1) * per_page)
+        .limit(per_page)
+        .all()
+    )
+
+    author_ids = {post.user_id for post in posts if post.user_id}
+    authors = {user.id: user for user in User.query.filter(User.id.in_(author_ids)).all()} if author_ids else {}
+    items = [
+        _serialize_marketplace_post(post, author=authors.get(post.user_id), strategy=strategy)
+        for post in posts
+    ]
+    return ok({"items": items, "total": total, "page": page, "per_page": per_page})
 
 
 @bp.post("/strategies")
@@ -247,6 +283,29 @@ def import_marketplace_strategy(strategy_id):
             "redirect_to": f"{BACKTEST_CONFIGURE_PATH}?strategy_id={imported_strategy.id}",
         }
     )
+
+
+@bp.post("/strategies/<strategy_id>/trial-backtest")
+@jwt_required()
+def launch_marketplace_strategy_trial_backtest(strategy_id):
+    user_id = get_jwt_identity()
+    strategy = _get_public_strategy(strategy_id)
+    if strategy is None:
+        return error_response("STRATEGY_NOT_FOUND", "Strategy not found", 404)
+    if not strategy.trial_backtest_enabled:
+        return error_response("TRIAL_BACKTEST_DISABLED", "Trial backtest is not enabled for this strategy", 422)
+
+    try:
+        job = launch_marketplace_trial_backtest(
+            strategy,
+            user_id=user_id,
+            payload=request.get_json(silent=True) or {},
+        )
+    except StrategyRuntimeError as exc:
+        if exc.message == "strategy_not_found":
+            return error_response("STRATEGY_NOT_FOUND", "Strategy not found", 404)
+        return as_response(exc), 400
+    return ok({"job_id": job.id, "mode": "trial"})
 
 
 @bp.get("/strategies/<strategy_id>/import-status")
@@ -468,6 +527,45 @@ def _get_public_strategy_with_author(strategy_id):
         .filter(Strategy.id == strategy_id, _marketplace_visibility_clause())
         .first()
     )
+
+
+def _discussion_count_for_strategy(strategy_id):
+    return Post.query.filter(Post.strategy_id == strategy_id).count()
+
+
+def _marketplace_post_author_payload(post, author):
+    return {
+        "nickname": getattr(author, "nickname", None) or post.author or "",
+        "avatar_url": getattr(author, "avatar_url", None) or post.avatar or "",
+    }
+
+
+def _marketplace_post_strategy_payload(strategy):
+    if strategy is None:
+        return None
+    return {
+        "id": strategy.id,
+        "name": strategy.name,
+        "category": strategy.category,
+        "returns": strategy.returns,
+        "max_drawdown": strategy.max_drawdown,
+    }
+
+
+def _serialize_marketplace_post(post, *, author=None, strategy=None):
+    return {
+        "id": post.id,
+        "content": post.content or "",
+        "user_id": post.user_id,
+        "strategy_id": post.strategy_id,
+        "likes_count": post.likes_count or 0,
+        "comments_count": post.comments_count or 0,
+        "created_at": format_beijing_iso_ms(post.created_at),
+        "author": _marketplace_post_author_payload(post, author),
+        "strategy": _marketplace_post_strategy_payload(strategy),
+        "liked": False,
+        "collected": False,
+    }
 
 
 def _find_latest_completed_job(strategy_id):

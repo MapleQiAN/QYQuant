@@ -11,6 +11,8 @@ import type {
   MarketplaceStrategyImportResult,
   MarketplaceStrategyReportResult,
   MarketplaceStrategyImportStatus,
+  MarketplaceTrialBacktestPayload,
+  MarketplaceTrialBacktestResult,
   AiStrategyDraftResult,
   AiStrategyMessage,
   Strategy,
@@ -23,6 +25,7 @@ import type {
   StrategyRuntimeDescriptor,
   MarketplaceStrategyListResult
 } from '../types/Strategy'
+import type { PaginatedCommunityPosts } from '../types/community'
 
 const client = createHttpClient()
 
@@ -71,6 +74,9 @@ interface MarketplaceStrategyDetailDto {
   description?: string | null
   category?: string | null
   tags?: string[]
+  share_mode?: string | null
+  import_mode?: string | null
+  trial_backtest_enabled?: boolean
   display_metrics?: MarketplaceDisplayMetrics
   is_verified?: boolean
   created_at?: string | null
@@ -103,6 +109,11 @@ interface MarketplaceStrategyImportDto {
 interface MarketplaceStrategyImportStatusDto {
   imported?: boolean
   user_strategy_id?: string | null
+}
+
+interface MarketplaceTrialBacktestDto {
+  job_id?: string
+  mode?: string
 }
 
 interface MarketplacePublishDto {
@@ -179,6 +190,20 @@ function toNumber(value: unknown, fallback: number): number {
   return fallback
 }
 
+function normalizeMarketplaceTrialBacktest(response: MarketplaceTrialBacktestDto): MarketplaceTrialBacktestResult {
+  if (typeof response.job_id !== 'string' || response.job_id.trim() === '') {
+    throw new Error('Invalid marketplace trial backtest response: missing job_id')
+  }
+  if (response.mode !== 'trial') {
+    throw new Error(`Invalid marketplace trial backtest response: unexpected mode "${String(response.mode)}"`)
+  }
+
+  return {
+    jobId: response.job_id,
+    mode: response.mode
+  }
+}
+
 function mapMarketplaceStrategy(item: MarketplaceStrategyDto): MarketplaceStrategy {
   return {
     id: item.id,
@@ -203,6 +228,9 @@ function mapMarketplaceStrategyDetail(item: MarketplaceStrategyDetailDto): Marke
     description: item.description ?? '',
     category: item.category ?? '',
     tags: Array.isArray(item.tags) ? item.tags : [],
+    shareMode: item.share_mode ?? null,
+    importMode: item.import_mode ?? null,
+    trialBacktestEnabled: Boolean(item.trial_backtest_enabled),
     displayMetrics: normalizeMarketplaceDisplayMetrics(item.display_metrics),
     isVerified: Boolean(item.is_verified),
     createdAt: item.created_at ?? null,
@@ -232,6 +260,13 @@ export function fetchMarketplaceStrategyEquityCurve(strategyId: string): Promise
   })
 }
 
+export function fetchMarketplaceStrategyPosts(strategyId: string): Promise<PaginatedCommunityPosts> {
+  return client.request({
+    method: 'get',
+    url: `/v1/marketplace/strategies/${strategyId}/posts`
+  })
+}
+
 export async function importMarketplaceStrategy(strategyId: string): Promise<MarketplaceStrategyImportResult> {
   const response = await client.request<MarketplaceStrategyImportDto>({
     method: 'post',
@@ -254,6 +289,32 @@ export async function fetchMarketplaceStrategyImportStatus(strategyId: string): 
     imported: Boolean(response.imported),
     userStrategyId: response.user_strategy_id ?? null
   }
+}
+
+export async function launchMarketplaceTrialBacktest(
+  strategyId: string,
+  payload: MarketplaceTrialBacktestPayload
+): Promise<MarketplaceTrialBacktestResult> {
+  const response = await client.request<MarketplaceTrialBacktestDto>({
+    method: 'post',
+    url: `/v1/marketplace/strategies/${strategyId}/trial-backtest`,
+    data: {
+      params: payload.params ?? {},
+      time_range: payload.timeRange
+        ? {
+            start: payload.timeRange.start ?? undefined,
+            end: payload.timeRange.end ?? undefined
+          }
+        : undefined,
+      interval: payload.interval ?? undefined,
+      limit: payload.limit ?? undefined,
+      symbol: payload.symbol ?? undefined,
+      strategy_version: payload.strategyVersion ?? undefined,
+      data_source: payload.dataSource ?? undefined
+    }
+  })
+
+  return normalizeMarketplaceTrialBacktest(response)
 }
 
 export async function publishMarketplaceStrategy(payload: MarketplacePublishPayload): Promise<MarketplacePublishResult> {

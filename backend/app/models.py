@@ -115,6 +115,8 @@ class Strategy(db.Model):
     __table_args__ = (
         db.UniqueConstraint('owner_id', 'source_strategy_id', name='uq_user_imported_strategy'),
         db.Index('ix_strategies_category', 'category'),
+        db.CheckConstraint("share_mode = 'free'", name='ck_strategies_share_mode_free'),
+        db.CheckConstraint("import_mode = 'sealed'", name='ck_strategies_import_mode_sealed'),
         db.Index(
             'ix_strategies_marketplace_public_verified',
             'is_public',
@@ -141,6 +143,9 @@ class Strategy(db.Model):
     is_public = db.Column(db.Boolean, nullable=False, default=False)
     is_featured = db.Column(db.Boolean, nullable=False, default=False)
     is_verified = db.Column(db.Boolean, nullable=False, default=False)
+    share_mode = db.Column(db.String(16), nullable=False, default="free")
+    import_mode = db.Column(db.String(16), nullable=False, default="sealed")
+    trial_backtest_enabled = db.Column(db.Boolean, nullable=False, default=True)
     review_status = db.Column(db.String(32), nullable=False, default='pending')
     display_metrics = db.Column(job_json_type, nullable=True, default=dict)
     title_tsv = db.Column(search_vector_type, nullable=True)

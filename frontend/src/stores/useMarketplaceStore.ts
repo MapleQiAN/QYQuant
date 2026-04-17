@@ -2,13 +2,16 @@ import { defineStore } from 'pinia'
 import {
   fetchMarketplaceStrategies,
   fetchMarketplaceStrategyDetail,
+  fetchMarketplaceStrategyPosts,
   fetchMarketplaceStrategyEquityCurve,
   fetchMarketplaceStrategyImportStatus,
   fetchMarketplacePublishStatus,
+  launchMarketplaceTrialBacktest,
   importMarketplaceStrategy,
   reportMarketplaceStrategy,
   publishMarketplaceStrategy
 } from '../api/strategies'
+import type { CommunityPost } from '../types/community'
 import type {
   MarketplaceFilters,
   MarketplacePublishPayload,
@@ -19,7 +22,9 @@ import type {
   MarketplaceStrategyEquityCurve,
   MarketplaceStrategyImportResult,
   MarketplaceStrategyReportResult,
-  MarketplaceStrategyImportStatus
+  MarketplaceStrategyImportStatus,
+  MarketplaceTrialBacktestPayload,
+  MarketplaceTrialBacktestResult
 } from '../types/Strategy'
 
 const DEFAULT_PAGE_SIZE = 20
@@ -43,11 +48,13 @@ export const useMarketplaceStore = defineStore('marketplace', {
     strategies: [] as MarketplaceStrategy[],
     featuredStrategies: [] as MarketplaceStrategy[],
     currentStrategy: null as MarketplaceStrategyDetail | null,
+    relatedPostsByStrategyId: {} as Record<string, CommunityPost[]>,
     equityCurve: { ...emptyEquityCurve } as MarketplaceStrategyEquityCurve,
     loading: false,
     featuredLoading: false,
     curveLoading: false,
     importLoading: false,
+    trialBacktestLoading: false,
     reportLoading: false,
     importStatusLoading: false,
     featuredError: null as string | null,
@@ -107,6 +114,17 @@ export const useMarketplaceStore = defineStore('marketplace', {
         this.loading = false
       }
     },
+    async fetchStrategyPosts(strategyId: string) {
+      this.error = null
+      try {
+        const response = await fetchMarketplaceStrategyPosts(strategyId)
+        this.relatedPostsByStrategyId[strategyId] = response.items
+        return response
+      } catch (error: any) {
+        this.error = error?.message || 'Failed to load related marketplace posts'
+        throw error
+      }
+    },
     async fetchEquityCurve(strategyId: string) {
       this.curveLoading = true
       this.curveError = null
@@ -160,6 +178,21 @@ export const useMarketplaceStore = defineStore('marketplace', {
         this.importLoading = false
       }
     },
+    async launchTrialBacktest(
+      strategyId: string,
+      payload: MarketplaceTrialBacktestPayload
+    ): Promise<MarketplaceTrialBacktestResult> {
+      this.trialBacktestLoading = true
+      this.error = null
+      try {
+        return await launchMarketplaceTrialBacktest(strategyId, payload)
+      } catch (error: any) {
+        this.error = error?.message || 'Failed to launch marketplace trial backtest'
+        throw error
+      } finally {
+        this.trialBacktestLoading = false
+      }
+    },
     async reportStrategy(strategyId: string, reason: string): Promise<MarketplaceStrategyReportResult> {
       this.reportLoading = true
       this.error = null
@@ -204,11 +237,13 @@ export const useMarketplaceStore = defineStore('marketplace', {
     },
     reset() {
       this.currentStrategy = null
+      this.relatedPostsByStrategyId = {}
       this.equityCurve = { ...emptyEquityCurve }
       this.loading = false
       this.featuredLoading = false
       this.curveLoading = false
       this.importLoading = false
+      this.trialBacktestLoading = false
       this.reportLoading = false
       this.importStatusLoading = false
       this.featuredError = null

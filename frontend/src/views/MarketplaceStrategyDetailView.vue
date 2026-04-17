@@ -22,20 +22,43 @@
           >
             {{ $t('marketplace.reportStrategy') }}
           </button>
-          <div v-if="strategy?.alreadyImported" class="import-state" data-test="imported-state">
-            {{ $t('marketplace.detail.alreadyImported') }}
-          </div>
-          <button
-            v-if="!strategy?.alreadyImported"
-            class="btn btn-primary detail-cta"
-            data-test="detail-cta"
-            type="button"
-            :disabled="busy"
-            @click="handleImport"
-          >
-            {{ ctaLabel }}
-          </button>
+          <template v-if="!strategy?.alreadyImported">
+            <button
+              class="btn btn-primary detail-cta"
+              data-test="detail-cta-trial"
+              type="button"
+              :disabled="busy"
+              @click="handleTrialBacktest"
+            >
+              {{ trialCtaLabel }}
+            </button>
+            <button
+              class="btn btn-secondary detail-cta"
+              data-test="detail-cta-import"
+              type="button"
+              :disabled="busy"
+              @click="handleImport"
+            >
+              {{ importCtaLabel }}
+            </button>
+            <button
+              class="btn btn-link detail-cta-link"
+              data-test="detail-cta-discussions"
+              type="button"
+              @click="scrollToDiscussions"
+            >
+              {{ $t('marketplace.detail.discussionsCta') }}
+            </button>
+          </template>
           <template v-else>
+            <div class="import-state" data-test="imported-state">
+              {{ $t('marketplace.detail.alreadyImported') }}
+            </div>
+            <div class="import-rights" data-test="detail-import-rights">
+              <div class="import-rights__title">{{ $t('marketplace.detail.importRightsTitle') }}</div>
+              <p>{{ $t('marketplace.detail.importRightsRuntimeOnly') }}</p>
+              <p>{{ $t('marketplace.detail.importRightsNoSource') }}</p>
+            </div>
             <button
               class="btn btn-secondary detail-cta imported-cta"
               data-test="detail-cta"
@@ -116,6 +139,15 @@
           </div>
         </div>
 
+        <div
+          ref="discussionsSection"
+          class="card detail-panel discussions-panel"
+          data-test="detail-discussions-section"
+        >
+          <div class="section-title">{{ $t('marketplace.detail.discussionsTitle') }}</div>
+          <p class="detail-description">{{ $t('marketplace.detail.discussionsHint') }}</p>
+        </div>
+
         <div v-if="reportDialogOpen" class="report-dialog">
           <div class="report-dialog__panel">
             <h3>{{ $t('marketplace.detail.reportDialogTitle') }}</h3>
@@ -188,18 +220,30 @@ onBeforeUnmount(() => {
 const strategy = computed(() => marketplaceStore.currentStrategy)
 const loading = computed(() => marketplaceStore.loading || marketplaceStore.curveLoading)
 const busy = computed(() =>
-  loading.value || marketplaceStore.importLoading || marketplaceStore.importStatusLoading || marketplaceStore.reportLoading
+  loading.value
+  || marketplaceStore.importLoading
+  || marketplaceStore.trialBacktestLoading
+  || marketplaceStore.importStatusLoading
+  || marketplaceStore.reportLoading
 )
 const error = computed(() => marketplaceStore.error)
 const reportReason = ref('')
 const reportDialogOpen = ref(false)
+const discussionsSection = ref<HTMLElement | null>(null)
 const canReport = computed(() => Boolean(strategy.value?.canReport))
 
-const ctaLabel = computed(() => {
+const trialCtaLabel = computed(() => {
+  if (marketplaceStore.trialBacktestLoading) {
+    return t('marketplace.detail.trialLaunching')
+  }
+  return t('marketplace.detail.freeBacktestTrial')
+})
+
+const importCtaLabel = computed(() => {
   if (marketplaceStore.importLoading) {
     return t('marketplace.detail.importing')
   }
-  return t('marketplace.detail.freeBacktestTrial')
+  return t('marketplace.importStrategy')
 })
 
 const authorInitial = computed(() => {
@@ -259,9 +303,22 @@ async function handleImport() {
   await router.push(result.redirectTo || buildBacktestConfigurePath(result.strategyId))
 }
 
+async function handleTrialBacktest() {
+  if (!strategy.value) return
+  const result = await marketplaceStore.launchTrialBacktest(strategy.value.id, { params: {} })
+  await router.push({
+    name: 'backtest-report',
+    params: { jobId: result.jobId },
+  })
+}
+
 async function goToBacktestConfiguration() {
   if (!strategy.value?.importedStrategyId) return
   await router.push(buildBacktestConfigurePath(strategy.value.importedStrategyId))
+}
+
+function scrollToDiscussions() {
+  discussionsSection.value?.scrollIntoView({ behavior: 'smooth', block: 'start' })
 }
 
 function openReportDialog() {
@@ -404,6 +461,14 @@ function getErrorMessage(error: unknown): string {
   text-decoration: underline;
 }
 
+.detail-cta-link {
+  min-width: auto;
+  padding: 0;
+  color: var(--color-text-primary);
+  text-decoration: underline;
+  background: transparent;
+}
+
 .feedback {
   padding: var(--spacing-lg);
   margin-bottom: var(--spacing-lg);
@@ -418,6 +483,24 @@ function getErrorMessage(error: unknown): string {
   grid-template-columns: minmax(0, 1.6fr) repeat(2, minmax(0, 1fr));
   gap: var(--spacing-md);
   margin-bottom: var(--spacing-lg);
+}
+
+.import-rights {
+  max-width: 280px;
+  padding: var(--spacing-md);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border-light);
+  color: var(--color-text-secondary);
+}
+
+.import-rights p {
+  margin: var(--spacing-xs) 0 0;
+}
+
+.import-rights__title {
+  color: var(--color-text-primary);
+  font-weight: var(--font-weight-semibold);
 }
 
 .author-chip,

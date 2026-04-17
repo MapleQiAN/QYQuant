@@ -50,3 +50,32 @@ def test_strategy_import_source_constraint_prevents_duplicate_marketplace_import
         with pytest.raises(IntegrityError):
             db.session.commit()
         db.session.rollback()
+
+
+def test_strategy_sharing_field_constraints_reject_invalid_values(app):
+    with app.app_context():
+        user = User(phone="13800138998", nickname="SharingConstraintUser")
+        strategy = Strategy(
+            id="sharing-constraint-strategy",
+            name="Sharing Constraint Strategy",
+            title="Sharing Constraint Strategy",
+            symbol="XAUUSD",
+            status="completed",
+            owner_id=None,
+            source="marketplace",
+            is_public=True,
+            review_status="approved",
+        )
+        db.session.add_all([user, strategy])
+        db.session.commit()
+
+        strategy.share_mode = "paid"
+        with pytest.raises(IntegrityError):
+            db.session.commit()
+        db.session.rollback()
+
+        strategy.share_mode = "free"
+        strategy.import_mode = "open"
+        with pytest.raises(IntegrityError):
+            db.session.commit()
+        db.session.rollback()
