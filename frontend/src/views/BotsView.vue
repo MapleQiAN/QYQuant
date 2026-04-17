@@ -1,57 +1,44 @@
 <template>
   <section class="view">
     <div class="container">
-      <h1 class="view-title">{{ $t('pages.botsTitle') }}</h1>
-      <p class="view-subtitle">{{ $t('pages.botsSubtitle') }}</p>
-
-      <SimulationDisclaimerModal
-        v-if="showDisclaimer"
-        @accepted="handleDisclaimerAccepted"
-      />
-
-      <div class="toolbar">
-        <button
-          class="create-button"
-          type="button"
-          @click="openCreateForm()"
-        >
-          Create Simulation Bot
-        </button>
+      <div class="hero">
+        <div>
+          <h1 class="view-title">{{ $t('pages.botsTitle') }}</h1>
+          <p class="view-subtitle">绑定券商账户，选择策略，设置托管金额，让机器人按策略执行买卖并持续跟踪收益。</p>
+        </div>
+        <button class="create-button" type="button" @click="openCreateForm()">创建托管机器人</button>
       </div>
 
-      <CreateBotModal
+      <CreateManagedBotModal
         v-if="showCreateForm"
         :initial-strategy-id="initialStrategyId"
         @close="handleCloseCreate"
         @created="handleCreated"
       />
 
-      <div v-if="simulationStore.isLoading" class="loading-hint">Loading bots...</div>
-
-      <div v-else-if="simulationStore.bots.length === 0" class="empty-hint">
-        No simulation bots yet. Use "Create Simulation Bot" to start paper trading.
+      <div v-if="botsStore.isLoading" class="loading-hint">加载托管机器人中...</div>
+      <div v-else-if="botsStore.items.length === 0" class="empty-hint">
+        暂无托管机器人。先绑定券商账户，再用策略创建第一个量化托管机器人。
       </div>
-
       <div v-else class="bot-list">
-        <BotCard
-          v-for="bot in simulationStore.bots"
+        <ManagedBotCard
+          v-for="bot in botsStore.items"
           :key="bot.id"
           :bot="bot"
           @view-positions="openPositions"
           @view-detail="openDetail"
           @pause="handlePause"
           @resume="handleResume"
-          @delete="handleDelete"
         />
       </div>
 
-      <BotPositionsModal
+      <ManagedBotPositionsModal
         v-if="selectedBotId"
         :bot-id="selectedBotId"
         @close="handleCloseModal"
       />
 
-      <BotDetailModal
+      <ManagedBotDetailModal
         v-if="selectedDetailBot"
         :bot="selectedDetailBot"
         @close="handleCloseModal"
@@ -61,57 +48,47 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue'
+import { onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import type { LocationQueryRaw } from 'vue-router'
-import BotCard from '../components/simulation/BotCard.vue'
-import BotDetailModal from '../components/simulation/BotDetailModal.vue'
-import BotPositionsModal from '../components/simulation/BotPositionsModal.vue'
-import CreateBotModal from '../components/simulation/CreateBotModal.vue'
-import SimulationDisclaimerModal from '../components/simulation/SimulationDisclaimerModal.vue'
-import { confirmDialog } from '../lib/toast'
-import { useSimulationStore } from '../stores/useSimulationStore'
-import { useUserStore } from '../stores/user'
-import type { SimulationBot } from '../types/Simulation'
+import CreateManagedBotModal from '../components/bots/CreateManagedBotModal.vue'
+import ManagedBotCard from '../components/bots/ManagedBotCard.vue'
+import ManagedBotDetailModal from '../components/bots/ManagedBotDetailModal.vue'
+import ManagedBotPositionsModal from '../components/bots/ManagedBotPositionsModal.vue'
+import { useBotsStore } from '../stores/bots'
+import type { ManagedBot } from '../types/Bot'
 
 const route = useRoute()
 const router = useRouter()
-const userStore = useUserStore()
-const simulationStore = useSimulationStore()
+const botsStore = useBotsStore()
 
 const showCreateForm = ref(false)
 const selectedBotId = ref<string | null>(null)
-const selectedDetailBot = ref<SimulationBot | null>(null)
+const selectedDetailBot = ref<ManagedBot | null>(null)
 const initialStrategyId = ref('')
 
-const showDisclaimer = computed(() => (
-  Boolean(userStore.profile.id) && !userStore.profile.sim_disclaimer_accepted
-))
-
 onMounted(async () => {
-  await userStore.loadProfile()
-  await simulationStore.fetchBots()
+  await Promise.all([
+    botsStore.loadBots(),
+    botsStore.loadRecent(),
+  ])
   syncRouteState()
 })
 
 watch(
-  () => [route.query.create, route.query.strategyId, route.query.botId, route.query.modal].join('|'),
+  () => [route.query.create, route.query.strategyId, route.query.botId, route.query.modal, botsStore.items.length].join('|'),
   () => {
     syncRouteState()
   }
 )
 
-async function handleDisclaimerAccepted() {
-  await userStore.refreshProfile()
-}
-
 async function handleCreated() {
   showCreateForm.value = false
   await replaceQuery({
     create: undefined,
-    strategyId: undefined
+    strategyId: undefined,
   })
-  await simulationStore.fetchBots()
+  await botsStore.loadRecent()
 }
 
 function openCreateForm(strategyId?: string) {
@@ -120,7 +97,7 @@ function openCreateForm(strategyId?: string) {
     create: '1',
     strategyId: strategyId || initialStrategyId.value || undefined,
     botId: undefined,
-    modal: undefined
+    modal: undefined,
   })
 }
 
@@ -128,7 +105,7 @@ function handleCloseCreate() {
   showCreateForm.value = false
   void replaceQuery({
     create: undefined,
-    strategyId: undefined
+    strategyId: undefined,
   })
 }
 
@@ -139,18 +116,18 @@ function openPositions(botId: string) {
     create: undefined,
     strategyId: undefined,
     botId,
-    modal: 'positions'
+    modal: 'positions',
   })
 }
 
 function openDetail(botId: string) {
-  selectedDetailBot.value = simulationStore.bots.find((bot) => bot.id === botId) ?? null
+  selectedDetailBot.value = botsStore.items.find((bot) => bot.id === botId) ?? null
   selectedBotId.value = null
   void replaceQuery({
     create: undefined,
     strategyId: undefined,
     botId,
-    modal: 'detail'
+    modal: 'detail',
   })
 }
 
@@ -159,42 +136,25 @@ function handleCloseModal() {
   selectedDetailBot.value = null
   void replaceQuery({
     botId: undefined,
-    modal: undefined
+    modal: undefined,
   })
 }
 
 async function handlePause(botId: string) {
   try {
-    await simulationStore.pauseBot(botId)
+    await botsStore.pauseBot(botId)
+    await botsStore.loadRecent()
   } catch {
-    // Reserved for toast integration.
+    // toast already handled in store
   }
 }
 
 async function handleResume(botId: string) {
   try {
-    await simulationStore.resumeBot(botId)
+    await botsStore.resumeBot(botId)
+    await botsStore.loadRecent()
   } catch {
-    // Reserved for toast integration.
-  }
-}
-
-async function handleDelete(botId: string) {
-  if (!await confirmDialog({
-    type: 'warning',
-    title: 'Delete Bot',
-    message: 'Historical data will be preserved, but the slot will be released.',
-    confirmText: 'Delete',
-    positive: false,
-  })) return
-
-  try {
-    await simulationStore.deleteBot(botId)
-    if (selectedBotId.value === botId || selectedDetailBot.value?.id === botId) {
-      handleCloseModal()
-    }
-  } catch {
-    // Reserved for toast integration.
+    // toast already handled in store
   }
 }
 
@@ -219,7 +179,7 @@ function syncRouteState() {
 
   if (modal === 'detail') {
     selectedBotId.value = null
-    selectedDetailBot.value = simulationStore.bots.find((bot) => bot.id === botId) ?? null
+    selectedDetailBot.value = botsStore.items.find((bot) => bot.id === botId) ?? null
     return
   }
 
@@ -246,6 +206,14 @@ function replaceQuery(patch: Record<string, string | undefined>) {
   width: 100%;
 }
 
+.hero {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 20px;
+  margin-bottom: 24px;
+}
+
 .view-title {
   margin: 0 0 var(--spacing-sm);
   font-size: var(--font-size-xl);
@@ -253,35 +221,43 @@ function replaceQuery(patch: Record<string, string | undefined>) {
 }
 
 .view-subtitle {
-  margin: 0 0 24px;
+  margin: 0;
   color: var(--color-text-muted);
-}
-
-.toolbar {
-  display: flex;
-  justify-content: flex-end;
-  margin-bottom: 20px;
+  max-width: 720px;
 }
 
 .create-button {
-  min-height: 44px;
+  min-height: 46px;
   padding: 0 18px;
   border: none;
   border-radius: 999px;
-  background: var(--color-text-primary);
+  background: linear-gradient(135deg, #111827 0%, #1f2937 100%);
   color: var(--color-text-inverse);
   cursor: pointer;
+  white-space: nowrap;
 }
 
 .loading-hint,
 .empty-hint {
-  padding: 24px;
+  padding: 28px;
   text-align: center;
   color: var(--color-text-muted);
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.7);
 }
 
 .bot-list {
   display: grid;
-  gap: 12px;
+  gap: 14px;
+}
+
+@media (max-width: 768px) {
+  .hero {
+    flex-direction: column;
+  }
+
+  .create-button {
+    width: 100%;
+  }
 }
 </style>

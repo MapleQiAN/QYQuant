@@ -9,12 +9,12 @@ from flask_smorest import Blueprint
 
 from ..extensions import db
 from ..models import SimulationBot, SimulationPosition, SimulationRecord, SimulationTrade, Strategy, User
+from ..quota import get_bot_slot_limit
 from ..utils.response import error_response, ok
 from ..utils.time import format_beijing_iso, now_utc
 
 bp = Blueprint('simulation', __name__, url_prefix='/api/v1/simulation')
 
-SLOT_LIMITS = {'free': 1, 'lite': 2, 'pro': 3, 'expert': 5}
 ACTIVE_STATUSES = {'active'}
 
 
@@ -172,7 +172,7 @@ def create_bot():
     if capital < 1000:
         return error_response('VALIDATION_ERROR', 'initial_capital must be at least 1000', 422)
 
-    slot_limit = SLOT_LIMITS.get(user.plan_level, SLOT_LIMITS['free'])
+    slot_limit = get_bot_slot_limit(user.plan_level)
     active_count = (
         SimulationBot.query
         .filter(

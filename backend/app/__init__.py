@@ -6,6 +6,7 @@ from .blueprints.admin import bp as admin_bp
 from .blueprints.backtests import bp as backtests_bp
 from .blueprints.bots import bp as bots_bp
 from .blueprints.community import bp as community_bp
+from .blueprints.dashboard import bp as dashboard_bp
 from .blueprints.files import bp as files_bp
 from .blueprints.forum import bp as forum_bp
 from .blueprints.health import bp as health_bp
@@ -57,6 +58,7 @@ def create_app(env=None):
     app.register_blueprint(admin_bp)
     app.register_blueprint(integrations_bp)
     app.register_blueprint(users_bp)
+    app.register_blueprint(dashboard_bp)
     if strategies_bp is not None:
         app.register_blueprint(strategies_bp)
     app.register_blueprint(marketplace_bp)

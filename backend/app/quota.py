@@ -22,6 +22,14 @@ PLAN_LEVEL_ALIASES = {
     "enterprise": "ultra",
 }
 
+BOT_SLOT_LIMITS = {
+    "free": 1,
+    "go": 1,
+    "plus": 2,
+    "pro": 3,
+    "ultra": 5,
+}
+
 
 def normalize_plan_level(plan_level):
     return PLAN_LEVEL_ALIASES.get(plan_level or "free", plan_level or "free")
@@ -30,6 +38,11 @@ def normalize_plan_level(plan_level):
 def get_plan_limit(plan_level):
     normalized_plan_level = normalize_plan_level(plan_level)
     return PLAN_LIMITS.get(normalized_plan_level, PLAN_LIMITS["free"])
+
+
+def get_bot_slot_limit(plan_level):
+    normalized_plan_level = normalize_plan_level(plan_level)
+    return BOT_SLOT_LIMITS.get(normalized_plan_level, BOT_SLOT_LIMITS["free"])
 
 
 def serialize_plan_limit(plan_level):
