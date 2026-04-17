@@ -45,12 +45,7 @@
           <div class="form-section">
             <div class="form-section__label">{{ $t('backtests.strategy') }}</div>
             <label class="field">
-              <select class="field-input" v-model="runForm.strategyId">
-                <option value="">{{ $t('backtests.selectStrategy') }}</option>
-                <option v-for="item in strategies" :key="item.id" :value="item.id">
-                  {{ item.name }} ({{ item.symbol }})
-                </option>
-              </select>
+              <QSelect v-model="runForm.strategyId" :options="strategySelectOptions" :placeholder="$t('backtests.selectStrategy')" searchable />
             </label>
             <div v-if="strategiesError" class="message error">{{ strategiesError }}</div>
 
@@ -77,11 +72,7 @@
 
             <label class="field">
               <span class="field-label">{{ $t('backtests.dataSource') }}</span>
-              <select v-model="runForm.dataSource" data-test="data-source-select" class="field-input">
-                <option v-for="option in dataSourceOptions" :key="option.value" :value="option.value">
-                  {{ option.label }}
-                </option>
-              </select>
+              <QSelect v-model="runForm.dataSource" data-test="data-source-select" :options="dataSourceOptions" />
               <span v-if="dataSourceHint" class="field-help">{{ dataSourceHint }}</span>
             </label>
 
@@ -99,11 +90,11 @@
             <div class="field-row">
               <label class="field">
                 <span class="field-label">{{ $t('backtests.startDate') }}</span>
-                <input v-model="runForm.startDate" class="field-input" type="date" />
+                <QDatePicker v-model="runForm.startDate" :placeholder="$t('backtests.startDate')" locale="zh" />
               </label>
               <label class="field">
                 <span class="field-label">{{ $t('backtests.endDate') }}</span>
-                <input v-model="runForm.endDate" class="field-input" type="date" />
+                <QDatePicker v-model="runForm.endDate" :placeholder="$t('backtests.endDate')" locale="zh" :min-date="runForm.startDate" />
               </label>
             </div>
           </div>
@@ -128,16 +119,12 @@
                 <label v-for="param in runtimeDescriptor.parameters" :key="param.key" class="field">
                   <span class="field-label field-label--mono">{{ param.key }}</span>
 
-                  <select
+                  <QSelect
                     v-if="param.type === 'enum'"
-                    class="field-input"
-                    :value="String(paramValues[param.key] ?? '')"
-                    @change="onParamInput(param.key, $event)"
-                  >
-                    <option v-for="option in param.enum || []" :key="String(option)" :value="String(option)">
-                      {{ option }}
-                    </option>
-                  </select>
+                    :model-value="String(paramValues[param.key] ?? '')"
+                    :options="(param.enum || []).map((o: any) => ({ label: String(o), value: String(o) }))"
+                    @update:model-value="onParamInput(param.key, $event)"
+                  />
 
                   <input
                     v-else-if="param.type === 'boolean'"
@@ -155,7 +142,7 @@
                     :max="param.max"
                     :step="param.step ?? (param.type === 'integer' ? 1 : 0.01)"
                     :value="paramValues[param.key]"
-                    @input="onParamInput(param.key, $event)"
+                    @input="onParamInputChange(param.key, $event)"
                   />
 
                   <input
@@ -163,7 +150,7 @@
                     class="field-input"
                     type="text"
                     :value="String(paramValues[param.key] ?? '')"
-                    @input="onParamInput(param.key, $event)"
+                    @input="onParamInputChange(param.key, $event)"
                   />
 
                   <span v-if="param.description" class="field-help">{{ param.description }}</span>
@@ -340,9 +327,13 @@ import { fetchMyQuota, type UserQuotaResponse } from '../api/users'
 import { confirmDialog, toast } from '../lib/toast'
 import type { BacktestHistoryItem, SubmitBacktestPayload } from '../types/Backtest'
 import type { Strategy, StrategyParameter, StrategyRuntimeDescriptor } from '../types/Strategy'
+import { QDatePicker, QSelect } from '../components/ui'
 
 const strategies = ref<Strategy[]>([])
 const strategiesError = ref('')
+const strategySelectOptions = computed(() =>
+  strategies.value.map((s) => ({ label: `${s.name} (${s.symbol})`, value: s.id }))
+)
 const quota = ref<UserQuotaResponse | null>(null)
 const quotaError = ref('')
 const runtimeDescriptor = ref<StrategyRuntimeDescriptor | null>(null)
@@ -525,8 +516,12 @@ function resetParamValues(params: StrategyParameter[]) {
   }
 }
 
-function onParamInput(key: string, event: Event) {
-  const target = event.target as HTMLInputElement | HTMLSelectElement
+function onParamInput(key: string, value: string) {
+  paramValues[key] = value
+}
+
+function onParamInputChange(key: string, event: Event) {
+  const target = event.target as HTMLInputElement
   paramValues[key] = target.value
 }
 

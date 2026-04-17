@@ -83,15 +83,7 @@
           <h2 class="panel-title">{{ $t('strategy.import.confirmImport') }}</h2>
           <label class="field">
             <span class="field-label">Entrypoint</span>
-            <select v-model="selectedEntrypointKey" class="field-input">
-              <option
-                v-for="candidate in analysis.entrypointCandidates"
-                :key="candidate.path + ':' + candidate.callable"
-                :value="candidate.path + ':' + candidate.callable"
-              >
-                {{ candidate.callable }} @ {{ candidate.path }}
-              </option>
-            </select>
+            <QSelect v-model="selectedEntrypointKey" :options="entrypointOptions" />
           </label>
 
           <label class="field">
@@ -145,6 +137,7 @@ import { RouterLink, useRoute, useRouter } from 'vue-router'
 import { confirmStrategyImport } from '../api/strategies'
 import { toast } from '../lib/toast'
 import type { StrategyImportAnalysis } from '../types/Strategy'
+import { QSelect } from '../components/ui'
 
 const route = useRoute()
 const router = useRouter()
@@ -179,6 +172,13 @@ const sourceLabel = computed(() => {
   if (source === 'ai') return 'AI draft'
   return 'Imported file'
 })
+
+const entrypointOptions = computed(() =>
+  (analysis.value?.entrypointCandidates || []).map((c) => ({
+    label: `${c.callable} @ ${c.path}`,
+    value: `${c.path}:${c.callable}`,
+  }))
+)
 
 const validationState = computed(() => {
   const base = analysis.value

@@ -211,11 +211,7 @@
                 <template v-if="aiIntegrations.length > 0">
                   <label class="field">
                     <span class="field-label">{{ $t('strategyNew.aiIntegrationLabel') }}</span>
-                    <select v-model="selectedAiIntegrationId" data-test="ai-integration-select" class="field-input">
-                      <option v-for="integration in aiIntegrations" :key="integration.id" :value="integration.id">
-                        {{ integration.displayName }}
-                      </option>
-                    </select>
+                    <QSelect v-model="selectedAiIntegrationId" :options="aiIntegrationOptions" data-test="ai-integration-select" />
                   </label>
                   <p class="field-hint">{{ $t('strategyNew.aiReuseHint') }}</p>
                 </template>
@@ -338,6 +334,7 @@ import { analyzeStrategyImport, generateAiStrategyDraft } from '../api/strategie
 import { toast } from '../lib/toast'
 import { strategyTemplates, type StrategyTemplateDefinition } from '../lib/strategyTemplates'
 import type { AiStrategyMessage, StrategyImportAnalysis } from '../types/Strategy'
+import { QSelect } from '../components/ui'
 
 const { t } = useI18n()
 const router = useRouter()
@@ -387,6 +384,10 @@ const aiCanAdopt = computed(() => {
       analysis.draftImportId
   )
 })
+
+const aiIntegrationOptions = computed(() =>
+  aiIntegrations.value.map((i) => ({ label: i.displayName, value: i.id }))
+)
 
 async function handleTemplateSelect(template: StrategyTemplateDefinition) {
   templateState.value = {

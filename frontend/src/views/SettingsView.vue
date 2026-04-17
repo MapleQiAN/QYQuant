@@ -113,11 +113,7 @@
         <form class="integration-form" data-action="connect-integration" @submit.prevent="submitIntegration">
           <label class="field">
             <span>{{ $t('settings.providerLabel') }}</span>
-            <select v-model="selectedProviderKey" data-provider-key="longport">
-              <option v-for="provider in providers" :key="provider.key" :value="provider.key">
-                {{ provider.name }}
-              </option>
-            </select>
+            <QSelect v-model="selectedProviderKey" :options="providerOptions" data-provider-key="longport" />
           </label>
           <label class="field">
             <span>{{ $t('settings.displayNameLabel') }}</span>
@@ -198,6 +194,7 @@ import { updateMyProfile } from '../api/users'
 import { toast } from '../lib/toast'
 import { useUserStore } from '../stores/user'
 import { useIntegrationsStore } from '../stores/useIntegrationsStore'
+import { QSelect } from '../components/ui'
 
 const userStore = useUserStore()
 const integrationsStore = useIntegrationsStore()
@@ -229,6 +226,10 @@ const providerSecretFieldNames = computed(() => {
   return Array.isArray(fields) ? fields.map((field) => String(field)) : []
 })
 const avatarFallback = computed(() => nickname.value.trim().slice(0, 1).toUpperCase() || 'Q')
+
+const providerOptions = computed(() =>
+  providers.value.map((p) => ({ label: p.name, value: p.key }))
+)
 
 function syncProfileForm() {
   nickname.value = userStore.profile.nickname || ''
