@@ -10,6 +10,8 @@ export interface Strategy {
   description?: string | null
   category?: string | null
   source?: string | null
+  sourceStrategyId?: string | null
+  importMode?: string | null
   reviewStatus?: MarketplaceReviewStatus
   isPublic?: boolean
   returns: number
@@ -185,6 +187,9 @@ export interface MarketplaceStrategyDetail {
   description?: string | null
   category?: string | null
   tags: string[]
+  shareMode?: string | null
+  importMode?: string | null
+  trialBacktestEnabled?: boolean
   displayMetrics: MarketplaceDisplayMetrics
   isVerified: boolean
   createdAt?: string | null
@@ -208,6 +213,24 @@ export interface MarketplaceStrategyImportStatus {
 export interface MarketplaceStrategyImportResult {
   strategyId: string
   redirectTo: string
+}
+
+export interface MarketplaceTrialBacktestPayload {
+  params?: Record<string, unknown>
+  timeRange?: {
+    start?: string | null
+    end?: string | null
+  }
+  interval?: string | null
+  limit?: number | null
+  symbol?: string | null
+  strategyVersion?: string | null
+  dataSource?: string | null
+}
+
+export interface MarketplaceTrialBacktestResult {
+  jobId: string
+  mode: 'trial'
 }
 
 export interface MarketplaceStrategyReportResult {

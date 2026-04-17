@@ -3,13 +3,32 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { flushPromises, mount } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import MarketplaceStrategyDetailView from './MarketplaceStrategyDetailView.vue'
+import { i18n } from '../i18n'
 import { useUserStore } from '../stores/user'
+
+vi.hoisted(() => {
+  Object.defineProperty(globalThis, 'localStorage', {
+    value: {
+      getItem: vi.fn(() => 'en'),
+      setItem: vi.fn(),
+      removeItem: vi.fn(),
+    },
+    configurable: true,
+  })
+  Object.defineProperty(HTMLElement.prototype, 'scrollIntoView', {
+    value: vi.fn(),
+    configurable: true,
+    writable: true,
+  })
+})
 
 const {
   pushMock,
   fetchMarketplaceStrategyDetailMock,
   fetchMarketplaceStrategyEquityCurveMock,
+  launchMarketplaceTrialBacktestMock,
   fetchMarketplaceStrategyImportStatusMock,
+  fetchMarketplaceStrategyPostsMock,
   importMarketplaceStrategyMock,
   reportMarketplaceStrategyMock,
   toastSuccessMock,
@@ -17,7 +36,9 @@ const {
   pushMock: vi.fn(),
   fetchMarketplaceStrategyDetailMock: vi.fn(),
   fetchMarketplaceStrategyEquityCurveMock: vi.fn(),
+  launchMarketplaceTrialBacktestMock: vi.fn(),
   fetchMarketplaceStrategyImportStatusMock: vi.fn(),
+  fetchMarketplaceStrategyPostsMock: vi.fn(),
   importMarketplaceStrategyMock: vi.fn(),
   reportMarketplaceStrategyMock: vi.fn(),
   toastSuccessMock: vi.fn(),
@@ -38,7 +59,9 @@ vi.mock('vue-router', () => ({
 vi.mock('../api/strategies', () => ({
   fetchMarketplaceStrategyDetail: fetchMarketplaceStrategyDetailMock,
   fetchMarketplaceStrategyEquityCurve: fetchMarketplaceStrategyEquityCurveMock,
+  launchMarketplaceTrialBacktest: launchMarketplaceTrialBacktestMock,
   fetchMarketplaceStrategyImportStatus: fetchMarketplaceStrategyImportStatusMock,
+  fetchMarketplaceStrategyPosts: fetchMarketplaceStrategyPostsMock,
   importMarketplaceStrategy: importMarketplaceStrategyMock,
   reportMarketplaceStrategy: reportMarketplaceStrategyMock,
 }))
@@ -66,21 +89,42 @@ describe('MarketplaceStrategyDetailView', () => {
     pushMock.mockReset()
     fetchMarketplaceStrategyDetailMock.mockReset()
     fetchMarketplaceStrategyEquityCurveMock.mockReset()
+    launchMarketplaceTrialBacktestMock.mockReset()
     fetchMarketplaceStrategyImportStatusMock.mockReset()
+    fetchMarketplaceStrategyPostsMock.mockReset()
     importMarketplaceStrategyMock.mockReset()
     reportMarketplaceStrategyMock.mockReset()
     toastSuccessMock.mockReset()
+    vi.restoreAllMocks()
     fetchMarketplaceStrategyEquityCurveMock.mockResolvedValue({
       dates: [1700000000000, 1700086400000],
       values: [100000, 101250.5],
+    })
+    launchMarketplaceTrialBacktestMock.mockResolvedValue({
+      jobId: 'trial-job-1',
+      mode: 'trial',
     })
     fetchMarketplaceStrategyImportStatusMock.mockResolvedValue({
       imported: false,
       userStrategyId: null,
     })
+    fetchMarketplaceStrategyPostsMock.mockResolvedValue({
+      items: [],
+      total: 0,
+      page: 1,
+      perPage: 20,
+    })
   })
 
-  it('renders marketplace strategy detail and imports on trial CTA click', async () => {
+  function mountView() {
+    return mount(MarketplaceStrategyDetailView, {
+      global: {
+        plugins: [createPinia(), i18n],
+      },
+    })
+  }
+
+  it('renders non-imported primary CTAs in order and wires trial import and discussions actions', async () => {
     fetchMarketplaceStrategyDetailMock.mockResolvedValue({
       id: 'strategy-1',
       title: 'Golden Breakout',
@@ -107,12 +151,10 @@ describe('MarketplaceStrategyDetailView', () => {
       strategyId: 'imported-1',
       redirectTo: '/backtest/configure?strategy_id=imported-1',
     })
+    const scrollIntoViewMock = vi.fn()
+    vi.spyOn(HTMLElement.prototype, 'scrollIntoView').mockImplementation(scrollIntoViewMock)
 
-    const wrapper = mount(MarketplaceStrategyDetailView, {
-      global: {
-        plugins: [createPinia()],
-      },
-    })
+    const wrapper = mountView()
     await flushPromises()
 
     expect(fetchMarketplaceStrategyDetailMock).toHaveBeenCalledWith('strategy-1')
@@ -122,16 +164,38 @@ describe('MarketplaceStrategyDetailView', () => {
     expect(wrapper.text()).toContain('QuantAlice')
     expect(wrapper.text()).toContain('18.6')
     expect(wrapper.get('[data-test="equity-chart"]').text()).toBe('2')
+    expect(fetchMarketplaceStrategyPostsMock).not.toHaveBeenCalled()
 
-    await wrapper.get('[data-test="detail-cta"]').trigger('click')
+    const primaryCtas = wrapper.findAll('[data-test^="detail-cta-"]')
+    expect(primaryCtas.map((button) => button.attributes('data-test'))).toEqual([
+      'detail-cta-trial',
+      'detail-cta-import',
+      'detail-cta-discussions',
+    ])
+    expect(wrapper.find('[data-test="detail-discussions-section"]').exists()).toBe(true)
+
+    await wrapper.get('[data-test="detail-cta-trial"]').trigger('click')
+    await flushPromises()
+
+    expect(launchMarketplaceTrialBacktestMock).toHaveBeenCalledWith('strategy-1', { params: {} })
+    expect(pushMock).toHaveBeenCalledWith({
+      name: 'backtest-report',
+      params: { jobId: 'trial-job-1' },
+    })
+
+    await wrapper.get('[data-test="detail-cta-discussions"]').trigger('click')
+
+    expect(scrollIntoViewMock).toHaveBeenCalledTimes(1)
+
+    await wrapper.get('[data-test="detail-cta-import"]').trigger('click')
     await flushPromises()
 
     expect(importMarketplaceStrategyMock).toHaveBeenCalledWith('strategy-1')
     expect(pushMock).toHaveBeenCalledWith('/backtest/configure?strategy_id=imported-1')
-    expect(toastSuccessMock).toHaveBeenCalledWith('策略已导入，即将跳转回测配置')
+    expect(toastSuccessMock).toHaveBeenCalledWith('Strategy imported, redirecting to backtest configuration')
   })
 
-  it('shows imported state and routes to the imported strategy configuration', async () => {
+  it('shows imported runtime-only messaging and routes to the imported strategy configuration', async () => {
     fetchMarketplaceStrategyDetailMock.mockResolvedValue({
       id: 'strategy-1',
       title: 'Golden Breakout',
@@ -156,15 +220,16 @@ describe('MarketplaceStrategyDetailView', () => {
       userStrategyId: 'imported-1',
     })
 
-    const wrapper = mount(MarketplaceStrategyDetailView, {
-      global: {
-        plugins: [createPinia()],
-      },
-    })
+    const wrapper = mountView()
     await flushPromises()
 
     expect(wrapper.text()).toContain('Already in strategy library')
+    expect(wrapper.get('[data-test="detail-import-rights"]').text()).toContain('Runtime, backtest, and hosting rights only')
+    expect(wrapper.get('[data-test="detail-import-rights"]').text()).toContain('Source viewing and export are not included')
     expect(wrapper.find('[data-test="direct-backtest-link"]').exists()).toBe(true)
+    expect(wrapper.find('[data-test="detail-cta-trial"]').exists()).toBe(false)
+    expect(wrapper.find('[data-test="detail-cta-import"]').exists()).toBe(false)
+    expect(wrapper.find('[data-test="detail-cta-discussions"]').exists()).toBe(false)
 
     await wrapper.get('[data-test="direct-backtest-link"]').trigger('click')
     await flushPromises()
@@ -196,11 +261,7 @@ describe('MarketplaceStrategyDetailView', () => {
       reportId: 'report-1',
     })
 
-    const wrapper = mount(MarketplaceStrategyDetailView, {
-      global: {
-        plugins: [createPinia()],
-      },
-    })
+    const wrapper = mountView()
     await flushPromises()
 
     expect(wrapper.find('[data-test="open-report"]').exists()).toBe(true)

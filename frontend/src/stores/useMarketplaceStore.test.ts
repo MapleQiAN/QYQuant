@@ -5,7 +5,9 @@ import { useMarketplaceStore } from './useMarketplaceStore'
 const {
   fetchMarketplaceStrategiesMock,
   fetchMarketplaceStrategyDetailMock,
+  fetchMarketplaceStrategyPostsMock,
   fetchMarketplaceStrategyEquityCurveMock,
+  launchMarketplaceTrialBacktestMock,
   importMarketplaceStrategyMock,
   fetchMarketplaceStrategyImportStatusMock,
   publishMarketplaceStrategyMock,
@@ -14,7 +16,9 @@ const {
 } = vi.hoisted(() => ({
   fetchMarketplaceStrategiesMock: vi.fn(),
   fetchMarketplaceStrategyDetailMock: vi.fn(),
+  fetchMarketplaceStrategyPostsMock: vi.fn(),
   fetchMarketplaceStrategyEquityCurveMock: vi.fn(),
+  launchMarketplaceTrialBacktestMock: vi.fn(),
   importMarketplaceStrategyMock: vi.fn(),
   fetchMarketplaceStrategyImportStatusMock: vi.fn(),
   publishMarketplaceStrategyMock: vi.fn(),
@@ -25,7 +29,9 @@ const {
 vi.mock('../api/strategies', () => ({
   fetchMarketplaceStrategies: fetchMarketplaceStrategiesMock,
   fetchMarketplaceStrategyDetail: fetchMarketplaceStrategyDetailMock,
+  fetchMarketplaceStrategyPosts: fetchMarketplaceStrategyPostsMock,
   fetchMarketplaceStrategyEquityCurve: fetchMarketplaceStrategyEquityCurveMock,
+  launchMarketplaceTrialBacktest: launchMarketplaceTrialBacktestMock,
   importMarketplaceStrategy: importMarketplaceStrategyMock,
   fetchMarketplaceStrategyImportStatus: fetchMarketplaceStrategyImportStatusMock,
   publishMarketplaceStrategy: publishMarketplaceStrategyMock,
@@ -38,7 +44,9 @@ describe('useMarketplaceStore', () => {
     setActivePinia(createPinia())
     fetchMarketplaceStrategiesMock.mockReset()
     fetchMarketplaceStrategyDetailMock.mockReset()
+    fetchMarketplaceStrategyPostsMock.mockReset()
     fetchMarketplaceStrategyEquityCurveMock.mockReset()
+    launchMarketplaceTrialBacktestMock.mockReset()
     importMarketplaceStrategyMock.mockReset()
     fetchMarketplaceStrategyImportStatusMock.mockReset()
     publishMarketplaceStrategyMock.mockReset()
@@ -174,6 +182,42 @@ describe('useMarketplaceStore', () => {
     expect(store.error).toBeNull()
   })
 
+  it('stores related strategy discussions for the detail page', async () => {
+    fetchMarketplaceStrategyPostsMock.mockResolvedValue({
+      items: [
+        {
+          id: 'post-1',
+          content: 'Breakout recap',
+          user_id: 'user-1',
+          strategy_id: 'strategy-1',
+          likes_count: 3,
+          comments_count: 1,
+          created_at: '2026-04-17T08:00:00+08:00',
+          author: { nickname: 'QuantAlice', avatar_url: 'https://example.com/avatar.png' },
+          strategy: {
+            id: 'strategy-1',
+            name: 'Golden Breakout',
+            category: 'trend-following',
+            returns: 18.6,
+            max_drawdown: -6.2
+          },
+          liked: false,
+          collected: false
+        }
+      ],
+      total: 1,
+      page: 1,
+      per_page: 5
+    })
+
+    const store = useMarketplaceStore()
+    await store.fetchStrategyPosts('strategy-1')
+
+    expect(fetchMarketplaceStrategyPostsMock).toHaveBeenCalledWith('strategy-1')
+    expect(store.relatedPostsByStrategyId['strategy-1']).toHaveLength(1)
+    expect(store.relatedPostsByStrategyId['strategy-1'][0].strategy_id).toBe('strategy-1')
+  })
+
   it('checks import status and merges it into the loaded strategy detail', async () => {
     fetchMarketplaceStrategyDetailMock.mockResolvedValue({
       id: 'strategy-1',
@@ -223,6 +267,57 @@ describe('useMarketplaceStore', () => {
     })
     expect(store.currentStrategy?.alreadyImported).toBe(true)
     expect(store.currentStrategy?.importedStrategyId).toBe('imported-1')
+  })
+
+  it('launches a marketplace trial backtest without changing alreadyImported state', async () => {
+    fetchMarketplaceStrategyDetailMock.mockResolvedValue({
+      id: 'strategy-1',
+      title: 'Golden Breakout',
+      author: { nickname: 'QuantAlice', avatarUrl: 'https://example.com/avatar.png' },
+      displayMetrics: {},
+      alreadyImported: false,
+      importedStrategyId: null
+    })
+    launchMarketplaceTrialBacktestMock.mockResolvedValue({
+      jobId: 'job-1',
+      mode: 'trial'
+    })
+
+    const store = useMarketplaceStore()
+    await store.fetchStrategyDetail('strategy-1')
+
+    const result = await store.launchTrialBacktest('strategy-1', { params: { lookback: 20 } })
+
+    expect(launchMarketplaceTrialBacktestMock).toHaveBeenCalledWith('strategy-1', {
+      params: { lookback: 20 }
+    })
+    expect(result.mode).toBe('trial')
+    expect(store.currentStrategy?.alreadyImported).toBe(false)
+    expect(store.currentStrategy?.importedStrategyId).toBeNull()
+  })
+
+  it('surfaces trial backtest API validation errors without changing alreadyImported state', async () => {
+    fetchMarketplaceStrategyDetailMock.mockResolvedValue({
+      id: 'strategy-1',
+      title: 'Golden Breakout',
+      author: { nickname: 'QuantAlice', avatarUrl: 'https://example.com/avatar.png' },
+      displayMetrics: {},
+      alreadyImported: false,
+      importedStrategyId: null
+    })
+    launchMarketplaceTrialBacktestMock.mockRejectedValue(
+      new Error('Invalid marketplace trial backtest response: missing job_id')
+    )
+
+    const store = useMarketplaceStore()
+    await store.fetchStrategyDetail('strategy-1')
+
+    await expect(store.launchTrialBacktest('strategy-1', { params: {} })).rejects.toThrow(
+      'Invalid marketplace trial backtest response: missing job_id'
+    )
+    expect(store.error).toBe('Invalid marketplace trial backtest response: missing job_id')
+    expect(store.currentStrategy?.alreadyImported).toBe(false)
+    expect(store.currentStrategy?.importedStrategyId).toBeNull()
   })
 
   it('forwards active filters when loading marketplace list', async () => {
