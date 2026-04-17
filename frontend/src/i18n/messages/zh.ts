@@ -548,6 +548,8 @@ const zh = {
     lowLabel: '低',
     closeLabel: '收',
     volumeLabel: '量',
+    changeLabel: '涨跌幅',
+    amplitudeLabel: '振幅',
     tradePriceLabel: '成交价',
     tradeQuantityLabel: '数量',
     tradePnlLabel: '盈亏',

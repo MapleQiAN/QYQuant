@@ -69,7 +69,7 @@ def run_backtest(
     symbol,
     strategy='sma',
     interval=None,
-    limit=120,
+    limit=500,
     start_time=None,
     end_time=None,
     strategy_id=None,

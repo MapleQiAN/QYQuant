@@ -1,6 +1,8 @@
 import json
 import logging
 import os
+import ssl
+import time
 from datetime import datetime, timezone
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
@@ -9,6 +11,9 @@ from ..utils.cache import cache_get_json, cache_set_json
 
 
 logger = logging.getLogger(__name__)
+
+_MAX_RETRIES = 3
+_RETRY_BACKOFF = 2  # seconds, doubles each retry
 
 
 class FreeGoldAPIError(RuntimeError):
@@ -60,27 +65,42 @@ def _date_to_millis(date_str):
 class FreeGoldClient:
     def __init__(self, base_url=None, timeout=None, data_cache_ttl=None):
         self.base_url = base_url or os.getenv('FREEGOLD_BASE_URL', 'https://freegoldapi.com')
-        self.timeout = float(timeout or os.getenv('FREEGOLD_API_TIMEOUT', '10'))
+        self.timeout = float(timeout or os.getenv('FREEGOLD_API_TIMEOUT', '30'))
         self.data_cache_ttl = int(data_cache_ttl or os.getenv('FREEGOLD_DATA_CACHE_TTL', '21600'))
 
     def _request(self, path):
         url = f"{self.base_url}{path}"
         request = Request(url, headers={'Accept': 'application/json'})
-        try:
-            with urlopen(request, timeout=self.timeout) as response:
-                body = response.read().decode('utf-8')
-                status = getattr(response, 'status', 200)
-                if status >= 400:
-                    raise FreeGoldAPIError(f"FreeGold API error {status}: {body}")
-        except HTTPError as exc:
-            body = ''
+        ssl_ctx = ssl.create_default_context()
+        last_exc = None
+        for attempt in range(1, _MAX_RETRIES + 1):
             try:
-                body = exc.read().decode('utf-8')
-            except Exception:
-                body = exc.reason
-            raise FreeGoldAPIError(f"FreeGold API error {exc.code}: {body}")
-        except URLError as exc:
-            raise FreeGoldAPIError(f"FreeGold API request failed: {exc.reason}")
+                with urlopen(request, timeout=self.timeout, context=ssl_ctx) as response:
+                    body = response.read().decode('utf-8')
+                    status = getattr(response, 'status', 200)
+                    if status >= 400:
+                        raise FreeGoldAPIError(f"FreeGold API error {status}: {body}")
+                    break
+            except HTTPError as exc:
+                body = ''
+                try:
+                    body = exc.read().decode('utf-8')
+                except Exception:
+                    body = exc.reason
+                raise FreeGoldAPIError(f"FreeGold API error {exc.code}: {body}")
+            except URLError as exc:
+                last_exc = exc
+                if attempt < _MAX_RETRIES:
+                    wait = _RETRY_BACKOFF * (2 ** (attempt - 1))
+                    logger.warning(
+                        "FreeGold API attempt %d/%d failed (%s), retrying in %ds",
+                        attempt, _MAX_RETRIES, exc.reason, wait,
+                    )
+                    time.sleep(wait)
+        else:
+            raise FreeGoldAPIError(
+                f"FreeGold API request failed after {_MAX_RETRIES} retries: {last_exc.reason}"
+            ) from last_exc
 
         try:
             payload = json.loads(body)

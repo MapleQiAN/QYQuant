@@ -110,7 +110,7 @@ function buildScatterSeries(side: Trade['side']) {
       .filter((signal) => signal.side === side)
       .map((signal) => ({
         name,
-        value: [signal.barTime, isBuy ? bar.low : bar.high],
+        value: [signal.barTime, isBuy ? bar.low : bar.high] as [string | number, number],
         marker: signal,
         symbol,
         symbolSize: 14,
@@ -124,13 +124,13 @@ function buildScatterSeries(side: Trade['side']) {
         label: {
           show: true,
           formatter: isBuy ? 'B' : 'S',
-          position: isBuy ? 'top' : 'bottom',
+          position: (isBuy ? 'top' : 'bottom') as any,
           distance: 8,
           color: accent,
           fontWeight: 800,
           fontSize: 11,
         },
-      })),
+      })) as any,
   )
 }
 
@@ -148,14 +148,24 @@ function buildTooltip(params: any[]) {
   const time = formatTime(candle?.axisValue ?? params[0]?.axisValue)
 
   let ohlc = ''
-  if (candle && Array.isArray(candle.data)) {
-    const [open, close, low, high] = candle.data as number[]
+  if (candle) {
+    const idx = candle.dataIndex as number
+    const bar = enrichedBars.value[idx]
+    if (!bar) return ''
+    const { open, high, low, close } = bar
+    const prevClose = idx > 0 ? enrichedBars.value[idx - 1]?.close ?? open : open
+    const change = prevClose !== 0 ? ((close - prevClose) / prevClose) * 100 : 0
+    const amplitude = prevClose !== 0 ? Math.abs((high - low) / prevClose) * 100 : 0
+    const changeColor = change >= 0 ? upColor() : downColor()
+    const ampColor = '#8888a0'
     ohlc = `
       <div style="display:grid;grid-template-columns:auto auto;gap:4px 12px;margin-top:8px;">
         <span style="color:#8888a0;">${t('backtestReport.openLabel')}</span><strong>${formatNumber(open)}</strong>
         <span style="color:#8888a0;">${t('backtestReport.highLabel')}</span><strong>${formatNumber(high)}</strong>
         <span style="color:#8888a0;">${t('backtestReport.lowLabel')}</span><strong>${formatNumber(low)}</strong>
         <span style="color:#8888a0;">${t('backtestReport.closeLabel')}</span><strong>${formatNumber(close)}</strong>
+        <span style="color:#8888a0;">${t('backtestReport.changeLabel')}</span><strong style="color:${changeColor};">${formatSignedNumber(change, 2)}%</strong>
+        <span style="color:${ampColor};">${t('backtestReport.amplitudeLabel')}</span><strong>${formatNumber(amplitude, 2)}%</strong>
       </div>
     `
   }
@@ -307,6 +317,11 @@ function buildOption(): EChartsOption {
           hideOverlap: true,
           formatter: (value: string | number) => formatTime(value)
         },
+        axisPointer: {
+          label: {
+            formatter: (params: any) => formatTime(params.value)
+          }
+        },
         min: 'dataMin',
         max: 'dataMax'
       },
@@ -353,7 +368,8 @@ function buildOption(): EChartsOption {
         start: 0,
         end: 100,
         borderColor: 'transparent',
-        textStyle: { color: getCssVar('--color-text-muted', '#94a3b8') }
+        textStyle: { color: getCssVar('--color-text-muted', '#94a3b8') },
+        labelFormatter: (value: string | number) => formatTime(value)
       }
     ],
     series: [

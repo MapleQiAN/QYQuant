@@ -214,7 +214,7 @@ def latest():
     symbol = request.args.get("symbol", "BTCUSDT")
     interval = request.args.get("interval")
     data_source = request.args.get("dataSource", request.args.get("data_source", request.args.get("provider")))
-    limit = request.args.get("limit", 120)
+    limit = request.args.get("limit", 500)
     start_time = request.args.get("startTime", request.args.get("start_time"))
     end_time = request.args.get("endTime", request.args.get("end_time"))
     strategy_id = request.args.get("strategyId", request.args.get("strategy_id"))

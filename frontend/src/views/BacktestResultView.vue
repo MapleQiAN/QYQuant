@@ -189,7 +189,7 @@
               <KlinePlaceholder
                 :data="report.kline || []"
                 :trades="report.trades || []"
-                :symbol="report.symbol || 'BTCUSDT'"
+                :symbol="report.symbol || ''"
                 :timeframe="report.interval || '1d'"
               />
               <TradeSignalList :signals="tradeMarkers" :holding-durations="tradeHoldingDurations" :cumulative-returns="cumulativeReturns" />

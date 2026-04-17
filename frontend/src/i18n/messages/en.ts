@@ -612,6 +612,8 @@ const en = {
     lowLabel: 'Low',
     closeLabel: 'Close',
     volumeLabel: 'Volume',
+    changeLabel: 'Change',
+    amplitudeLabel: 'Amplitude',
     tradePriceLabel: 'Price',
     tradeQuantityLabel: 'Quantity',
     tradePnlLabel: 'PnL',

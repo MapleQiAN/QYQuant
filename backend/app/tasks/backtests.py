@@ -44,7 +44,7 @@ def _run_job(job_id):
         result = run_backtest(
             params.get('symbol'),
             interval=params.get('interval'),
-            limit=params.get('limit', 120),
+            limit=params.get('limit') if params.get('start_time') is None else None,
             start_time=params.get('start_time'),
             end_time=params.get('end_time'),
             strategy_id=params.get('strategy_id'),

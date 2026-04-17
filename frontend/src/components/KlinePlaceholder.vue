@@ -77,12 +77,12 @@ const formatTime = (value: string | number, tf: string) => {
 
   const lower = tf.toLowerCase()
   if (lower.endsWith('d')) {
-    return date.toLocaleDateString(undefined, { month: '2-digit', day: '2-digit' })
+    return date.toLocaleDateString(undefined, { year: 'numeric', month: '2-digit', day: '2-digit' })
   }
   if (lower.endsWith('h')) {
-    return date.toLocaleString(undefined, { month: '2-digit', day: '2-digit', hour: '2-digit' })
+    return date.toLocaleString(undefined, { year: '2-digit', month: '2-digit', day: '2-digit', hour: '2-digit' })
   }
-  return date.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })
+  return date.toLocaleString(undefined, { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })
 }
 
 const getCssVar = (name: string, fallback: string) => {
@@ -91,10 +91,97 @@ const getCssVar = (name: string, fallback: string) => {
   return value || fallback
 }
 
+const formatNumber = (value: number, digits = 4): string => {
+  return Number(value).toLocaleString(undefined, {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: digits,
+  })
+}
+
+const formatSignedNumber = (value: number, digits = 2): string => {
+  if (!Number.isFinite(value)) return '--'
+  const prefix = value > 0 ? '+' : ''
+  return `${prefix}${formatNumber(value, digits)}`
+}
+
+function buildTooltip(params: any[]) {
+  if (!Array.isArray(params) || params.length === 0) return ''
+
+  const candle = params.find((item: any) => item.seriesName === t('kline.candles'))
+  const volume = params.find((item: any) => item.seriesName === t('kline.volume'))
+  const maItems = params.filter((item: any) => String(item.seriesName).startsWith('MA'))
+  const tradeItems = params.filter(
+    (item: any) => item.seriesName === t('kline.buySignal') || item.seriesName === t('kline.sellSignal'),
+  )
+  const time = formatTime(candle?.axisValue ?? params[0]?.axisValue, props.timeframe)
+
+  let ohlc = ''
+  if (candle) {
+    const idx = candle.dataIndex as number
+    const bar = bars.value[idx]
+    if (!bar) return ''
+    const { open, high, low, close } = bar
+    const prevClose = idx > 0 ? bars.value[idx - 1]?.close ?? open : open
+    const change = prevClose !== 0 ? ((close - prevClose) / prevClose) * 100 : 0
+    const amplitude = prevClose !== 0 ? Math.abs((high - low) / prevClose) * 100 : 0
+    const changeColor = change >= 0 ? upColor() : downColor()
+    ohlc = `
+      <div style="display:grid;grid-template-columns:auto auto;gap:4px 16px;margin-top:10px;font-family:'DM Sans','Noto Sans SC',sans-serif;">
+        <span style="color:#8a8a8a;font-size:12px;">${t('backtestReport.openLabel')}</span><strong style="color:#111;font-size:12px;">${formatNumber(open)}</strong>
+        <span style="color:#8a8a8a;font-size:12px;">${t('backtestReport.highLabel')}</span><strong style="color:#111;font-size:12px;">${formatNumber(high)}</strong>
+        <span style="color:#8a8a8a;font-size:12px;">${t('backtestReport.lowLabel')}</span><strong style="color:#111;font-size:12px;">${formatNumber(low)}</strong>
+        <span style="color:#8a8a8a;font-size:12px;">${t('backtestReport.closeLabel')}</span><strong style="color:#111;font-size:12px;">${formatNumber(close)}</strong>
+        <span style="color:#8a8a8a;font-size:12px;">${t('backtestReport.changeLabel')}</span><strong style="color:${changeColor};font-size:12px;">${formatSignedNumber(change, 2)}%</strong>
+        <span style="color:#8a8a8a;font-size:12px;">${t('backtestReport.amplitudeLabel')}</span><strong style="color:#111;font-size:12px;">${formatNumber(amplitude, 2)}%</strong>
+      </div>
+    `
+  }
+
+  const movingAverages = maItems
+    .map((item: any) => `<div style="display:flex;justify-content:space-between;gap:16px;font-family:'DM Sans','Noto Sans SC',sans-serif;">
+      <span style="color:${item.color};font-size:12px;font-weight:600;">${item.seriesName}</span>
+      <strong style="color:#111;font-size:12px;">${Number(item.data).toLocaleString(undefined, { maximumFractionDigits: 4 })}</strong>
+    </div>`)
+    .join('')
+
+  const volumeRow = volume
+    ? `<div style="display:flex;justify-content:space-between;gap:16px;margin-top:10px;font-family:'DM Sans','Noto Sans SC',sans-serif;">
+      <span style="color:#8a8a8a;font-size:12px;">${t('backtestReport.volumeLabel')}</span>
+      <strong style="color:#111;font-size:12px;">${formatNumber(Number(volume.data), 0)}</strong>
+    </div>`
+    : ''
+
+  const tradeRows = tradeItems
+    .map((item: any) => {
+      const marker = item.data?.marker
+      if (!marker) return ''
+      return `<div style="display:flex;justify-content:space-between;gap:16px;font-family:'DM Sans','Noto Sans SC',sans-serif;">
+        <strong style="color:${item.color};font-size:12px;">${item.seriesName}</strong>
+        <strong style="color:#111;font-size:12px;">${formatNumber(marker.price)}</strong>
+      </div>`
+    })
+    .join('')
+
+  const tradeBlock = tradeRows
+    ? `<div style="display:grid;gap:4px;margin-top:10px;padding-top:8px;border-top:1px solid #e0e0dc;">${tradeRows}</div>`
+    : ''
+
+  return `<div style="min-width:240px;font-family:'DM Sans','Noto Sans SC',sans-serif;">
+    <div style="margin-bottom:4px;color:#111;font-size:14px;font-weight:700;">${time}</div>
+    ${ohlc}
+    <div style="display:grid;gap:4px;margin-top:10px;padding-top:8px;border-top:1px solid #e0e0dc;">${movingAverages}</div>
+    ${volumeRow}
+    ${tradeBlock}
+  </div>`
+}
+
 const buildSignalSeries = (side: Trade['side']) => {
   const isBuy = side === 'buy'
   const name = isBuy ? t('kline.buySignal') : t('kline.sellSignal')
-  const accent = isBuy ? '#16a34a' : '#dc2626'
+  const accent = isBuy ? getCssVar('--color-primary', '#1976d2') : getCssVar('--color-accent', '#f9a825')
+  const shadowCol = isBuy
+    ? 'rgba(25, 118, 210, 0.24)'
+    : 'rgba(249, 168, 37, 0.24)'
 
   return tradeMarkers.value
     .filter((marker) => marker.side === side)
@@ -117,10 +204,10 @@ const buildSignalSeries = (side: Trade['side']) => {
         symbolSize: 14,
         itemStyle: {
           color: accent,
-          borderColor: '#0f172a',
+          borderColor: '#1a1a1a',
           borderWidth: 1.5,
           shadowBlur: 8,
-          shadowColor: isBuy ? 'rgba(22, 163, 74, 0.24)' : 'rgba(220, 38, 38, 0.24)',
+          shadowColor: shadowCol,
         },
         label: {
           show: true,
@@ -156,6 +243,9 @@ const buildOption = (): EChartsOption => {
   const ma5 = simpleMovingAverage(closes, 5)
   const ma10 = simpleMovingAverage(closes, 10)
   const ma20 = simpleMovingAverage(closes, 20)
+  const ma30 = simpleMovingAverage(closes, 30)
+  const ma60 = simpleMovingAverage(closes, 60)
+  const ma120 = simpleMovingAverage(closes, 120)
   const buySignals = buildSignalSeries('buy')
   const sellSignals = buildSignalSeries('sell')
 
@@ -163,12 +253,24 @@ const buildOption = (): EChartsOption => {
     animation: false,
     legend: {
       top: 4,
-      data: [t('kline.candles'), 'MA5', 'MA10', 'MA20', t('kline.volume'), t('kline.buySignal'), t('kline.sellSignal')],
+      data: [t('kline.candles'), 'MA5', 'MA10', 'MA20', 'MA30', 'MA60', 'MA120', t('kline.volume'), t('kline.buySignal'), t('kline.sellSignal')],
       textStyle: { color: getCssVar('--color-text-secondary', '#64748b') }
     },
     tooltip: {
       trigger: 'axis',
-      axisPointer: { type: 'cross' }
+      axisPointer: { type: 'cross' },
+      appendToBody: true,
+      backgroundColor: '#ffffff',
+      borderColor: '#1a1a1a',
+      borderWidth: 2,
+      padding: [12, 14],
+      textStyle: {
+        color: '#111111',
+        fontFamily: "'DM Sans', 'Noto Sans SC', sans-serif",
+        fontSize: 12,
+      },
+      extraCssText: 'border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.07);',
+      formatter: (params: any[]) => buildTooltip(params)
     },
     axisPointer: {
       link: [{ xAxisIndex: 'all' }]
@@ -187,6 +289,11 @@ const buildOption = (): EChartsOption => {
           color: getCssVar('--color-text-muted', '#94a3b8'),
           formatter: (value: string | number) => formatTime(value, props.timeframe),
         },
+        axisPointer: {
+          label: {
+            formatter: (params: any) => formatTime(params.value, props.timeframe)
+          }
+        },
         min: 'dataMin',
         max: 'dataMax'
       },
@@ -199,6 +306,11 @@ const buildOption = (): EChartsOption => {
         axisLabel: {
           color: getCssVar('--color-text-muted', '#94a3b8'),
           formatter: (value: string | number) => formatTime(value, props.timeframe),
+        },
+        axisPointer: {
+          label: {
+            formatter: (params: any) => formatTime(params.value, props.timeframe)
+          }
         }
       }
     ],
@@ -235,7 +347,8 @@ const buildOption = (): EChartsOption => {
         start: 60,
         end: 100,
         borderColor: 'transparent',
-        textStyle: { color: getCssVar('--color-text-muted', '#94a3b8') }
+        textStyle: { color: getCssVar('--color-text-muted', '#94a3b8') },
+        labelFormatter: (value: string | number) => formatTime(value, props.timeframe)
       }
     ],
     series: [
@@ -256,7 +369,8 @@ const buildOption = (): EChartsOption => {
         data: ma5,
         showSymbol: false,
         smooth: true,
-        lineStyle: { width: 1.2, color: '#f59e0b' }
+        lineStyle: { width: 1.2, color: '#f59e0b' },
+        itemStyle: { color: '#f59e0b' }
       },
       {
         name: 'MA10',
@@ -264,7 +378,8 @@ const buildOption = (): EChartsOption => {
         data: ma10,
         showSymbol: false,
         smooth: true,
-        lineStyle: { width: 1.2, color: '#3b82f6' }
+        lineStyle: { width: 1.2, color: '#3b82f6' },
+        itemStyle: { color: '#3b82f6' }
       },
       {
         name: 'MA20',
@@ -272,7 +387,35 @@ const buildOption = (): EChartsOption => {
         data: ma20,
         showSymbol: false,
         smooth: true,
-        lineStyle: { width: 1.2, color: '#8b5cf6' }
+        lineStyle: { width: 1.2, color: '#8b5cf6' },
+        itemStyle: { color: '#8b5cf6' }
+      },
+      {
+        name: 'MA30',
+        type: 'line',
+        data: ma30,
+        showSymbol: false,
+        smooth: true,
+        lineStyle: { width: 1.2, color: '#ec4899' },
+        itemStyle: { color: '#ec4899' }
+      },
+      {
+        name: 'MA60',
+        type: 'line',
+        data: ma60,
+        showSymbol: false,
+        smooth: true,
+        lineStyle: { width: 1.2, color: '#14b8a6' },
+        itemStyle: { color: '#14b8a6' }
+      },
+      {
+        name: 'MA120',
+        type: 'line',
+        data: ma120,
+        showSymbol: false,
+        smooth: true,
+        lineStyle: { width: 1.2, color: '#f97316' },
+        itemStyle: { color: '#f97316' }
       },
       {
         name: t('kline.volume'),
@@ -293,12 +436,14 @@ const buildOption = (): EChartsOption => {
         type: 'scatter',
         data: buySignals as any,
         z: 6,
+        itemStyle: { color: getCssVar('--color-primary', '#1976d2') },
       },
       {
         name: t('kline.sellSignal'),
         type: 'scatter',
         data: sellSignals as any,
         z: 6,
+        itemStyle: { color: getCssVar('--color-accent', '#f9a825') },
       }
     ]
   }
