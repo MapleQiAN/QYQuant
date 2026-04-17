@@ -200,6 +200,19 @@ async function handleSubmit() {
             @keyup.enter="handleSubmit"
           />
 
+          <template v-if="intent === 'register'">
+            <label class="field-label">{{ t('auth.nicknameLabel') }}</label>
+            <input
+              v-model="nickname"
+              type="text"
+              class="field-input"
+              :placeholder="t('auth.nicknamePlaceholder')"
+              maxlength="20"
+              data-test="nickname-input"
+              @keyup.enter="handleSubmit"
+            />
+          </template>
+
           <label class="field-label">{{ t('auth.passwordLabel') }}</label>
           <input
             v-model="password"
@@ -213,19 +226,6 @@ async function handleSubmit() {
 
           <template v-if="intent === 'register'">
             <PasswordStrengthBar :password="password" />
-          </template>
-
-          <template v-if="intent === 'register'">
-            <label class="field-label">{{ t('auth.nicknameLabel') }}</label>
-            <input
-              v-model="nickname"
-              type="text"
-              class="field-input"
-              :placeholder="t('auth.nicknamePlaceholder')"
-              maxlength="20"
-              data-test="nickname-input"
-              @keyup.enter="handleSubmit"
-            />
 
             <label class="field-label">{{ t('auth.confirmPasswordLabel') }}</label>
             <input
