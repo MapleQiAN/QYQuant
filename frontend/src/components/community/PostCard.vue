@@ -28,6 +28,17 @@ const props = defineProps<{
 const communityStore = useCommunityStore()
 
 const detailHref = computed(() => `/forum/posts/${props.post.id}`)
+const strategyDetailRoute = computed(() => {
+  if (!props.post.strategy) {
+    return null
+  }
+  return {
+    name: 'marketplace-strategy-detail',
+    params: {
+      strategyId: props.post.strategy.id,
+    },
+  }
+})
 
 async function toggleLike() {
   await communityStore.toggleLike(props.post.id)
@@ -67,7 +78,12 @@ async function toggleCollect() {
 
     <p class="content">{{ post.content }}</p>
 
-    <section v-if="post.strategy" class="strategy-card">
+    <RouterLink
+      v-if="post.strategy && strategyDetailRoute"
+      class="strategy-card strategy-card-link"
+      data-test="attached-strategy-link"
+      :to="strategyDetailRoute"
+    >
       <div class="strategy-header">
         <svg class="strategy-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/>
@@ -80,7 +96,14 @@ async function toggleCollect() {
         <span class="strategy-metric positive">收益 {{ post.strategy.returns }}</span>
         <span class="strategy-metric negative">回撤 {{ post.strategy.max_drawdown }}</span>
       </div>
-    </section>
+      <div class="strategy-cta">
+        <span>先看详情，再决定试用或导入</span>
+        <svg class="strategy-cta-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M5 12h14"/>
+          <path d="m12 5 7 7-7 7"/>
+        </svg>
+      </div>
+    </RouterLink>
 
     <footer class="actions">
       <button class="action" :class="{ active: post.liked }" @click.stop="toggleLike">
@@ -242,6 +265,18 @@ async function toggleCollect() {
   overflow: hidden;
 }
 
+.strategy-card-link {
+  text-decoration: none;
+  color: inherit;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
+}
+
+.strategy-card-link:hover {
+  border-color: var(--color-primary);
+  box-shadow: var(--shadow-md);
+  transform: translateY(-1px);
+}
+
 .strategy-card::before {
   content: "";
   position: absolute;
@@ -278,6 +313,23 @@ async function toggleCollect() {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
+}
+
+.strategy-cta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-top: 2px;
+  color: var(--color-primary);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.strategy-cta-icon {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
 }
 
 .strategy-tag {

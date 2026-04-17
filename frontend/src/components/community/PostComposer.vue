@@ -47,7 +47,8 @@ onMounted(() => {
     <header class="composer-header">
       <div>
         <h2>发布帖子</h2>
-        <p>分享你的策略心得、回测观察和交易复盘。</p>
+        <p>分享你的策略心得、回测观察和交易复盘，不是源码发布区。</p>
+        <p class="composer-subcopy" data-test="strategy-attachment-hint">如果想让大家先理解背景，也可以附上一个策略卡片。</p>
       </div>
       <div class="char-counter" :class="{ danger: characterCount > 2000 }">
         <svg class="char-ring" viewBox="0 0 32 32">
@@ -87,7 +88,7 @@ onMounted(() => {
           </svg>
           关联策略
         </span>
-        <select v-model="strategyId">
+        <select v-model="strategyId" data-test="strategy-attachment-select">
           <option value="">不关联</option>
           <option v-for="strategy in strategiesStore.library" :key="strategy.id" :value="strategy.id">
             {{ strategy.title || strategy.name }}
@@ -166,6 +167,11 @@ onMounted(() => {
   margin: 0;
   font-size: 13px;
   color: var(--color-text-muted);
+}
+
+.composer-subcopy {
+  margin-top: 6px;
+  max-width: 36ch;
 }
 
 .char-counter {
