@@ -71,3 +71,13 @@ export async function resetPassword(token: string, password: string): Promise<{ 
   const res = await instance.post('/v1/auth/reset-password', { token, password })
   return res.data.data
 }
+
+export async function initiateOAuth(provider: string): Promise<{ authorization_url: string }> {
+  const res = await instance.get(`/v1/auth/oauth/${provider}`)
+  return res.data.data
+}
+
+export async function completeOAuth(oauthToken: string): Promise<{ data: LoginResponse; access_token: string }> {
+  const res = await instance.post('/v1/auth/oauth/complete', { oauth_token: oauthToken })
+  return { data: res.data.data, access_token: res.data.access_token }
+}
