@@ -56,6 +56,13 @@ class BaseConfig:
         self.MAIL_USERNAME = os.getenv('MAIL_USERNAME')
         self.MAIL_PASSWORD = os.getenv('MAIL_PASSWORD')
         self.MAIL_DEFAULT_SENDER = os.getenv('MAIL_DEFAULT_SENDER', 'noreply@qyquant.com')
+        self.OAUTH_WECHAT_CLIENT_ID = os.getenv('OAUTH_WECHAT_CLIENT_ID', '')
+        self.OAUTH_WECHAT_CLIENT_SECRET = os.getenv('OAUTH_WECHAT_CLIENT_SECRET', '')
+        self.OAUTH_GITHUB_CLIENT_ID = os.getenv('OAUTH_GITHUB_CLIENT_ID', '')
+        self.OAUTH_GITHUB_CLIENT_SECRET = os.getenv('OAUTH_GITHUB_CLIENT_SECRET', '')
+        self.OAUTH_GOOGLE_CLIENT_ID = os.getenv('OAUTH_GOOGLE_CLIENT_ID', '')
+        self.OAUTH_GOOGLE_CLIENT_SECRET = os.getenv('OAUTH_GOOGLE_CLIENT_SECRET', '')
+        self.FRONTEND_BASE_URL = os.getenv('FRONTEND_BASE_URL', 'http://localhost:5173')
 
 
 class DevConfig(BaseConfig):

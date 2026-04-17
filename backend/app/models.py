@@ -378,18 +378,46 @@ class UserIntegrationSecret(db.Model):
 
 class BotInstance(db.Model):
     __tablename__ = 'bot_instances'
+    __table_args__ = (
+        db.Index('ix_bot_instances_user_status', 'user_id', 'status'),
+        db.Index('ix_bot_instances_strategy_id', 'strategy_id'),
+        db.Index('ix_bot_instances_integration_id', 'integration_id'),
+    )
     id = db.Column(db.String, primary_key=True, default=gen_id)
     name = db.Column(db.String, nullable=False)
     strategy = db.Column(db.String, nullable=False)
+    strategy_id = db.Column(db.String, db.ForeignKey('strategies.id'), nullable=True)
+    integration_id = db.Column(db.String, db.ForeignKey('user_integrations.id'), nullable=True)
     status = db.Column(db.String, nullable=False)
     profit = db.Column(db.Float, default=0)
     runtime = db.Column(db.String, default='0d')
     capital = db.Column(db.Float, default=0)
     tags = db.Column(db.JSON, default=list)
     paper = db.Column(db.Boolean, default=True)
+    last_error_message = db.Column(db.Text, nullable=True)
     user_id = db.Column(db.String, db.ForeignKey('users.id'))
     created_at = db.Column(db.BigInteger, default=now_ms)
     updated_at = db.Column(db.BigInteger, default=now_ms)
+    deleted_at = db.Column(db.DateTime(timezone=True), nullable=True)
+
+
+class BotEquitySnapshot(db.Model):
+    __tablename__ = 'bot_equity_snapshots'
+    __table_args__ = (
+        db.UniqueConstraint('bot_id', 'snapshot_date', name='uq_bot_equity_snapshot_date'),
+        db.Index('ix_bot_equity_snapshots_bot_date', 'bot_id', 'snapshot_date'),
+    )
+
+    id = db.Column(db.String, primary_key=True, default=gen_id)
+    bot_id = db.Column(db.String, db.ForeignKey('bot_instances.id', ondelete='CASCADE'), nullable=False)
+    snapshot_date = db.Column(db.Date, nullable=False)
+    equity = db.Column(db.Numeric(18, 2), nullable=False)
+    available_cash = db.Column(db.Numeric(18, 2), nullable=False)
+    position_value = db.Column(db.Numeric(18, 2), nullable=False)
+    total_profit = db.Column(db.Numeric(18, 2), nullable=False)
+    total_return_rate = db.Column(db.Numeric(12, 6), nullable=False)
+    created_at = db.Column(db.DateTime(timezone=True), nullable=False, default=now_utc, server_default=db.func.now())
+    updated_at = db.Column(db.DateTime(timezone=True), nullable=False, default=now_utc, onupdate=now_utc, server_default=db.func.now())
 
 
 class SimulationBot(db.Model):
@@ -598,3 +626,25 @@ class Subscription(db.Model):
     payment_provider = db.Column(db.String(20), nullable=False)
     payment_order_id = db.Column(db.String, db.ForeignKey('payment_orders.id'), nullable=True)
     created_at = db.Column(db.DateTime(timezone=True), nullable=False, default=now_utc)
+
+
+class OAuthIdentity(db.Model):
+    __tablename__ = 'oauth_identities'
+    __table_args__ = (
+        db.UniqueConstraint('provider', 'provider_user_id', name='uq_oauth_provider_user_id'),
+        db.Index('ix_oauth_identities_user_id', 'user_id'),
+    )
+
+    id = db.Column(db.String, primary_key=True, default=gen_id)
+    user_id = db.Column(db.String, db.ForeignKey('users.id'), nullable=False)
+    provider = db.Column(db.String(32), nullable=False)
+    provider_user_id = db.Column(db.String(255), nullable=False)
+    email = db.Column(db.String(255), nullable=True)
+    display_name = db.Column(db.String(200), nullable=True)
+    avatar_url = db.Column(db.String, nullable=True)
+    access_token = db.Column(db.Text, nullable=True)
+    refresh_token = db.Column(db.Text, nullable=True)
+    token_expires_at = db.Column(db.DateTime(timezone=True), nullable=True)
+    raw_profile = db.Column(db.JSON, nullable=True, default=dict)
+    created_at = db.Column(db.DateTime(timezone=True), nullable=False, default=now_utc)
+    updated_at = db.Column(db.DateTime(timezone=True), nullable=False, default=now_utc, onupdate=now_utc)

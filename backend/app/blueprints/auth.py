@@ -1,16 +1,17 @@
 import hashlib
+import json
 import re
 import secrets
 from datetime import datetime, timedelta, timezone
 
-from flask import current_app, request
+from flask import current_app, redirect, request, url_for
 from flask_jwt_extended import create_access_token, create_refresh_token, decode_token, get_jwt_identity, jwt_required
 from flask_mail import Message
 from flask_smorest import Blueprint
 from werkzeug.security import check_password_hash, generate_password_hash
 
 from ..extensions import db, mail
-from ..models import AuditLog, PasswordResetToken, RefreshToken, User
+from ..models import AuditLog, OAuthIdentity, PasswordResetToken, RefreshToken, User
 from ..quota import ensure_user_quota
 from ..schemas import UserPrivateSchema
 from ..utils.auth import (
@@ -23,7 +24,15 @@ from ..utils.auth import (
     revoke_token_record,
     seconds_until,
 )
+from ..utils.oauth import (
+    SUPPORTED_PROVIDERS,
+    build_authorization_url,
+    exchange_code_for_token,
+    fetch_user_profile,
+    get_oauth_config,
+)
 from ..utils.response import error_response, ok
+from ..utils.redis_client import get_auth_store
 from ..utils.time import now_utc
 
 
@@ -408,3 +417,155 @@ def logout():
     )
     clear_refresh_cookie(response)
     return response
+
+
+# ---------------------------------------------------------------------------
+# OAuth endpoints
+# ---------------------------------------------------------------------------
+
+OAUTH_STATE_TTL = 600  # 10 minutes
+OAUTH_TOKEN_TTL = 60   # 1 minute — one-time use
+
+
+@bp.get('/oauth/<provider>')
+def oauth_initiate(provider):
+    if provider not in SUPPORTED_PROVIDERS:
+        return error_response("UNSUPPORTED_PROVIDER", f"Unsupported OAuth provider: {provider}", 400)
+
+    client_id, _, _ = get_oauth_config(current_app, provider)
+    if not client_id:
+        return error_response("OAUTH_NOT_CONFIGURED", f"OAuth for {provider} is not configured", 503)
+
+    state = secrets.token_urlsafe(32)
+    store = get_auth_store()
+    store._backend.set(f"oauth:state:{state}", provider, ttl=OAUTH_STATE_TTL)
+
+    callback_url = current_app.config.get("FRONTEND_BASE_URL", "http://localhost:5173").rstrip("/")
+    redirect_uri = f"{current_app.config.get('SERVER_NAME', 'localhost')}/api/v1/auth/oauth/{provider}/callback"
+    if not redirect_uri.startswith("http"):
+        redirect_uri = f"http://{redirect_uri}"
+
+    authorization_url = build_authorization_url(current_app, provider, state, redirect_uri)
+    return ok({"authorization_url": authorization_url})
+
+
+@bp.get('/oauth/<provider>/callback')
+def oauth_callback(provider):
+    if provider not in SUPPORTED_PROVIDERS:
+        return error_response("UNSUPPORTED_PROVIDER", "Unsupported OAuth provider", 400)
+
+    code = request.args.get("code", "").strip()
+    state = request.args.get("state", "").strip()
+
+    if not code or not state:
+        return error_response("INVALID_OAUTH_RESPONSE", "Missing code or state", 400)
+
+    store = get_auth_store()
+    state_key = f"oauth:state:{state}"
+    stored_provider = store._backend.get(state_key)
+    if not stored_provider or stored_provider != provider:
+        return error_response("INVALID_STATE", "Invalid or expired OAuth state", 400)
+    store._backend.delete(state_key)
+
+    callback_url = current_app.config.get("FRONTEND_BASE_URL", "http://localhost:5173").rstrip("/")
+    redirect_uri = f"{current_app.config.get('SERVER_NAME', 'localhost')}/api/v1/auth/oauth/{provider}/callback"
+    if not redirect_uri.startswith("http"):
+        redirect_uri = f"http://{redirect_uri}"
+
+    try:
+        token_data = exchange_code_for_token(current_app, provider, code, redirect_uri)
+    except Exception:
+        return error_response("TOKEN_EXCHANGE_FAILED", "Failed to exchange OAuth code", 502)
+
+    access_token = token_data.get("access_token", "")
+    openid = token_data.get("openid") or token_data.get("sub")
+
+    try:
+        profile = fetch_user_profile(current_app, provider, access_token, openid=openid)
+    except Exception:
+        return error_response("PROFILE_FETCH_FAILED", "Failed to fetch user profile", 502)
+
+    provider_user_id = profile["provider_user_id"]
+    if not provider_user_id:
+        return error_response("INVALID_PROFILE", "Could not determine user identity", 502)
+
+    identity = OAuthIdentity.query.filter_by(provider=provider, provider_user_id=provider_user_id).one_or_none()
+
+    if identity is not None:
+        user = db.session.get(User, identity.user_id)
+        if user is None or user.deleted_at is not None:
+            return error_response("USER_NOT_FOUND", "User no longer exists", 404)
+        if user.is_banned:
+            return error_response("USER_BANNED", "账号已被封禁", 403)
+    else:
+        user_email = profile.get("email")
+        user = None
+        if user_email:
+            user = _find_active_user_by_email(user_email)
+
+        if user is None:
+            display_name = profile.get("display_name") or "OAuth User"
+            user = User(
+                email=user_email,
+                nickname=display_name,
+                avatar_url=profile.get("avatar_url", ""),
+            )
+            db.session.add(user)
+            db.session.flush()
+
+        identity = OAuthIdentity(
+            user_id=user.id,
+            provider=provider,
+            provider_user_id=provider_user_id,
+            email=profile.get("email"),
+            display_name=profile.get("display_name"),
+            avatar_url=profile.get("avatar_url"),
+            access_token=access_token,
+            raw_profile=profile.get("raw_profile"),
+        )
+        db.session.add(identity)
+        db.session.add(
+            AuditLog(
+                operator_id=user.id,
+                action='oauth_register',
+                target_type='user',
+                target_id=user.id,
+                details={"provider": provider, "email": _mask_email(profile.get("email") or "")},
+            )
+        )
+
+    identity.access_token = access_token
+    identity.updated_at = now_utc()
+    ensure_user_quota(user.id, plan_level=user.plan_level)
+    db.session.commit()
+
+    oauth_token = secrets.token_urlsafe(32)
+    payload = json.dumps({"user_id": user.id, "provider": provider})
+    store._backend.set(f"oauth:token:{oauth_token}", payload, ttl=OAUTH_TOKEN_TTL)
+
+    frontend_base = current_app.config.get("FRONTEND_BASE_URL", "http://localhost:5173").rstrip("/")
+    return redirect(f"{frontend_base}/auth/oauth/callback?oauth_token={oauth_token}")
+
+
+@bp.post('/oauth/complete')
+def oauth_complete():
+    payload_data = request.get_json() or {}
+    oauth_token = (payload_data.get("oauth_token") or "").strip()
+    if not oauth_token:
+        return error_response("MISSING_TOKEN", "Missing oauth_token", 400)
+
+    store = get_auth_store()
+    token_key = f"oauth:token:{oauth_token}"
+    stored = store._backend.get(token_key)
+    if not stored:
+        return error_response("INVALID_TOKEN", "Invalid or expired OAuth token", 401)
+
+    store._backend.delete(token_key)
+
+    data = json.loads(stored)
+    user_id = data.get("user_id")
+    user = db.session.get(User, user_id)
+    if user is None or user.deleted_at is not None:
+        return error_response("USER_NOT_FOUND", "User no longer exists", 401)
+
+    return _issue_auth_response(user)

@@ -415,3 +415,155 @@ def test_logout_revokes_current_device_refresh_token_only(client):
     surviving_refresh = device_b.post("/api/v1/auth/refresh")
     assert surviving_refresh.status_code == 200
     assert isinstance(surviving_refresh.json["data"]["access_token"], str)
+
+
+# ---------------------------------------------------------------------------
+# OAuth tests
+# ---------------------------------------------------------------------------
+
+
+def test_oauth_initiate_rejects_unsupported_provider(client):
+    response = client.get("/api/v1/auth/oauth/facebook")
+    assert response.status_code == 400
+    assert response.json["error"]["code"] == "UNSUPPORTED_PROVIDER"
+
+
+def test_oauth_initiate_returns_authorization_url(client, app, monkeypatch):
+    monkeypatch.setattr(app.config, "OAUTH_GITHUB_CLIENT_ID", "test-github-id", raising=False)
+    app.config["OAUTH_GITHUB_CLIENT_ID"] = "test-github-id"
+    app.config["FRONTEND_BASE_URL"] = "http://localhost:5173"
+    app.config["SERVER_NAME"] = "localhost"
+
+    response = client.get("/api/v1/auth/oauth/github")
+    assert response.status_code == 200
+    assert "authorization_url" in response.json["data"]
+    assert "github.com" in response.json["data"]["authorization_url"]
+
+
+def test_oauth_callback_creates_new_user_and_identity(client, app, monkeypatch):
+    from app.models import OAuthIdentity, User
+    from app.utils.redis_client import get_auth_store
+
+    app.config["FRONTEND_BASE_URL"] = "http://localhost:5173"
+    app.config["SERVER_NAME"] = "localhost"
+
+    monkeypatch.setattr(
+        "app.blueprints.auth.exchange_code_for_token",
+        lambda app, provider, code, redirect_uri: {"access_token": "gh-test-token"},
+    )
+    monkeypatch.setattr(
+        "app.blueprints.auth.fetch_user_profile",
+        lambda app, provider, access_token, openid=None: {
+            "provider_user_id": "gh-12345",
+            "email": "github-user@example.com",
+            "display_name": "GitHub User",
+            "avatar_url": "https://avatar.url",
+            "raw_profile": {"id": 12345},
+        },
+    )
+
+    with app.app_context():
+        store = get_auth_store()
+        state = "test-state-123"
+        store._backend.set(f"oauth:state:{state}", "github", ttl=600)
+
+    response = client.get(f"/api/v1/auth/oauth/github/callback?code=abc&state={state}", follow_redirects=False)
+    assert response.status_code == 302
+    location = response.headers.get("Location", "")
+    assert "oauth_token=" in location
+
+    with app.app_context():
+        identity = OAuthIdentity.query.filter_by(provider="github", provider_user_id="gh-12345").one_or_none()
+        assert identity is not None
+        user = User.query.get(identity.user_id)
+        assert user is not None
+        assert user.nickname == "GitHub User"
+
+
+def test_oauth_callback_logs_in_existing_identity(client, app, monkeypatch):
+    from app.extensions import db
+    from app.models import OAuthIdentity, User
+    from app.utils.redis_client import get_auth_store
+
+    app.config["FRONTEND_BASE_URL"] = "http://localhost:5173"
+    app.config["SERVER_NAME"] = "localhost"
+
+    with app.app_context():
+        user = User(email="existing-oauth@example.com", nickname="ExistingOAuth")
+        db.session.add(user)
+        db.session.flush()
+        identity = OAuthIdentity(
+            user_id=user.id,
+            provider="github",
+            provider_user_id="gh-existing",
+            display_name="ExistingOAuth",
+        )
+        db.session.add(identity)
+        db.session.commit()
+        existing_user_id = user.id
+
+    monkeypatch.setattr(
+        "app.blueprints.auth.exchange_code_for_token",
+        lambda app, provider, code, redirect_uri: {"access_token": "gh-token"},
+    )
+    monkeypatch.setattr(
+        "app.blueprints.auth.fetch_user_profile",
+        lambda app, provider, access_token, openid=None: {
+            "provider_user_id": "gh-existing",
+            "email": "existing-oauth@example.com",
+            "display_name": "ExistingOAuth",
+            "avatar_url": "",
+            "raw_profile": {},
+        },
+    )
+
+    with app.app_context():
+        state = "test-state-existing"
+        get_auth_store()._backend.set(f"oauth:state:{state}", "github", ttl=600)
+
+    response = client.get(f"/api/v1/auth/oauth/github/callback?code=abc&state={state}", follow_redirects=False)
+    assert response.status_code == 302
+
+    with app.app_context():
+        count = OAuthIdentity.query.filter_by(provider="github", provider_user_id="gh-existing").count()
+        assert count == 1
+
+
+def test_oauth_callback_rejects_invalid_state(client):
+    response = client.get("/api/v1/auth/oauth/github/callback?code=abc&state=bad-state", follow_redirects=False)
+    assert response.status_code == 400
+
+
+def test_oauth_complete_issues_auth_response(client, app):
+    import json
+    from app.models import User
+    from app.utils.redis_client import get_auth_store
+
+    with app.app_context():
+        user = User(email="oauth-complete@example.com", nickname="OAuthComplete")
+        db.session.add(user)
+        db.session.flush()
+        user_id = user.id
+        db.session.commit()
+
+        store = get_auth_store()
+        oauth_token = "test-oauth-token-123"
+        store._backend.set(
+            f"oauth:token:{oauth_token}",
+            json.dumps({"user_id": user_id, "provider": "github"}),
+            ttl=60,
+        )
+
+    from app.extensions import db as _db
+
+    response = client.post(
+        "/api/v1/auth/oauth/complete",
+        json={"oauth_token": oauth_token},
+    )
+    assert response.status_code == 200
+    assert isinstance(response.json["access_token"], str)
+    assert response.json["data"]["nickname"] == "OAuthComplete"
+
+    # Token should be consumed (one-time use)
+    second = client.post("/api/v1/auth/oauth/complete", json={"oauth_token": oauth_token})
+    assert second.status_code == 401
