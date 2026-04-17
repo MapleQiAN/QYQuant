@@ -7,26 +7,38 @@
 
     <div class="benchmark-grid">
       <article class="benchmark-tile">
-        <span class="benchmark-tile__label">{{ $t('backtestReport.benchmarkTotalReturn') }}</span>
+        <span class="benchmark-tile__label">
+          {{ $t('backtestReport.benchmarkTotalReturn') }}
+          <MetricTooltip metric-key="benchmark_total_return" />
+        </span>
         <strong :class="['benchmark-tile__value', 'mono', toneClass(data.benchmarkTotalReturn)]">
           {{ formatPct(data.benchmarkTotalReturn) }}
         </strong>
       </article>
 
       <article class="benchmark-tile">
-        <span class="benchmark-tile__label">{{ $t('backtestReport.excessReturn') }}</span>
+        <span class="benchmark-tile__label">
+          {{ $t('backtestReport.excessReturn') }}
+          <MetricTooltip metric-key="excess_return" />
+        </span>
         <strong :class="['benchmark-tile__value', 'mono', toneClass(data.excessReturn)]">
           {{ formatPct(data.excessReturn, true) }}
         </strong>
       </article>
 
       <article class="benchmark-tile">
-        <span class="benchmark-tile__label">{{ $t('backtestReport.trackingError') }}</span>
+        <span class="benchmark-tile__label">
+          {{ $t('backtestReport.trackingError') }}
+          <MetricTooltip metric-key="tracking_error" />
+        </span>
         <strong class="benchmark-tile__value mono">{{ formatPct(data.trackingError) }}</strong>
       </article>
 
       <article class="benchmark-tile">
-        <span class="benchmark-tile__label">{{ $t('backtestReport.informationRatio') }}</span>
+        <span class="benchmark-tile__label">
+          {{ $t('backtestReport.informationRatio') }}
+          <MetricTooltip metric-key="information_ratio" />
+        </span>
         <strong :class="['benchmark-tile__value', 'mono', toneClass(data.informationRatio)]">
           {{ formatVal(data.informationRatio) }}
         </strong>
@@ -37,6 +49,7 @@
 
 <script setup lang="ts">
 import type { BenchmarkComparison as BenchmarkData } from '../../lib/backtestComputed'
+import MetricTooltip from '../help/MetricTooltip.vue'
 
 defineProps<{
   data: BenchmarkData
@@ -127,6 +140,8 @@ function toneClass(value: number | null): string {
 }
 
 .benchmark-tile__label {
+  display: inline-flex;
+  align-items: center;
   font-size: var(--font-size-xs);
   font-weight: 800;
   color: var(--color-text-muted);

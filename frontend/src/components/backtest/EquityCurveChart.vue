@@ -2,8 +2,7 @@
   <div class="equity-chart">
     <div class="chart-meta">
       <div>
-        <h3 class="chart-title">{{ $t('equityChart.title') }}</h3>
-        <p class="chart-caption">{{ $t('equityChart.caption') }}</p>
+        <!-- <h3 class="chart-title">{{ $t('equityChart.title') }}</h3> -->
       </div>
     </div>
     <div ref="chartRef" class="chart-canvas"></div>

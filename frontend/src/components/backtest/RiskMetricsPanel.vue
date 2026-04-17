@@ -7,24 +7,36 @@
 
     <div class="risk-grid">
       <article class="risk-tile">
-        <span class="risk-tile__label">{{ $t('backtestReport.profitFactor') }}</span>
+        <span class="risk-tile__label">
+          {{ $t('backtestReport.profitFactor') }}
+          <MetricTooltip metric-key="profit_factor" />
+        </span>
         <strong class="risk-tile__value mono">{{ metrics.profitFactor }}</strong>
       </article>
 
       <article class="risk-tile">
-        <span class="risk-tile__label">{{ $t('backtestReport.expectancy') }}</span>
+        <span class="risk-tile__label">
+          {{ $t('backtestReport.expectancy') }}
+          <MetricTooltip metric-key="expectancy" />
+        </span>
         <strong :class="['risk-tile__value', 'mono', toneFromValue(metrics.expectancy)]">
           {{ metrics.expectancy }}
         </strong>
       </article>
 
       <article class="risk-tile">
-        <span class="risk-tile__label">{{ $t('backtestReport.maxConsecutiveWins') }}</span>
+        <span class="risk-tile__label">
+          {{ $t('backtestReport.maxConsecutiveWins') }}
+          <MetricTooltip metric-key="max_consecutive_wins" />
+        </span>
         <strong class="risk-tile__value mono">{{ metrics.maxConsecutiveWins }}</strong>
       </article>
 
       <article class="risk-tile">
-        <span class="risk-tile__label">{{ $t('backtestReport.valueAtRisk95') }}</span>
+        <span class="risk-tile__label">
+          {{ $t('backtestReport.valueAtRisk95') }}
+          <MetricTooltip metric-key="value_at_risk_95" />
+        </span>
         <strong class="risk-tile__value mono">{{ metrics.valueAtRisk95 }}</strong>
         <span v-if="metrics.varDisclaimer" class="risk-tile__disclaimer">
           {{ $t('backtestReport.varDisclaimer') }}
@@ -32,12 +44,18 @@
       </article>
 
       <article class="risk-tile">
-        <span class="risk-tile__label">{{ $t('backtestReport.avgWinningTrade') }}</span>
+        <span class="risk-tile__label">
+          {{ $t('backtestReport.avgWinningTrade') }}
+          <MetricTooltip metric-key="avg_winning_trade" />
+        </span>
         <strong class="risk-tile__value tone-positive mono">{{ metrics.avgWinningTrade }}</strong>
       </article>
 
       <article class="risk-tile">
-        <span class="risk-tile__label">{{ $t('backtestReport.avgLosingTrade') }}</span>
+        <span class="risk-tile__label">
+          {{ $t('backtestReport.avgLosingTrade') }}
+          <MetricTooltip metric-key="avg_losing_trade" />
+        </span>
         <strong class="risk-tile__value tone-negative mono">{{ metrics.avgLosingTrade }}</strong>
       </article>
     </div>
@@ -46,6 +64,7 @@
 
 <script setup lang="ts">
 import type { RiskMetrics as RiskMetricsData } from '../../lib/backtestComputed'
+import MetricTooltip from '../help/MetricTooltip.vue'
 
 defineProps<{
   metrics: RiskMetricsData
@@ -126,6 +145,8 @@ function toneFromValue(value: string): string {
 }
 
 .risk-tile__label {
+  display: inline-flex;
+  align-items: center;
   font-size: var(--font-size-xs);
   font-weight: 800;
   color: var(--color-text-muted);

@@ -819,7 +819,6 @@ const en = {
   },
   equityChart: {
     title: 'Equity Curve',
-    caption: 'Supports zoom, hover values and buy/sell markers',
     noData: 'No equity curve data',
     strategyEquity: 'Strategy Equity',
     benchmark: 'Benchmark'

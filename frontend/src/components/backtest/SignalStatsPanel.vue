@@ -7,62 +7,90 @@
 
     <div class="stats-grid">
       <article class="stat-tile">
-        <span class="stat-tile__label">{{ $t('backtestReport.buyCount') }}</span>
+        <span class="stat-tile__label">
+          {{ $t('backtestReport.buyCount') }}
+        </span>
         <strong class="stat-tile__value tone-positive">{{ stats.buyCount }}</strong>
       </article>
 
       <article class="stat-tile">
-        <span class="stat-tile__label">{{ $t('backtestReport.sellCount') }}</span>
+        <span class="stat-tile__label">
+          {{ $t('backtestReport.sellCount') }}
+        </span>
         <strong class="stat-tile__value tone-negative">{{ stats.sellCount }}</strong>
       </article>
 
       <article class="stat-tile">
-        <span class="stat-tile__label">{{ $t('backtestReport.buySellRatio') }}</span>
+        <span class="stat-tile__label">
+          {{ $t('backtestReport.buySellRatio') }}
+          <MetricTooltip metric-key="buy_sell_ratio" />
+        </span>
         <strong class="stat-tile__value mono">{{ stats.buySellRatio }}</strong>
       </article>
 
       <article class="stat-tile">
-        <span class="stat-tile__label">{{ $t('backtestReport.buyWinRate') }}</span>
+        <span class="stat-tile__label">
+          {{ $t('backtestReport.buyWinRate') }}
+        </span>
         <strong class="stat-tile__value mono">{{ stats.buyWinRate }}</strong>
       </article>
 
       <article class="stat-tile">
-        <span class="stat-tile__label">{{ $t('backtestReport.sellWinRate') }}</span>
+        <span class="stat-tile__label">
+          {{ $t('backtestReport.sellWinRate') }}
+        </span>
         <strong class="stat-tile__value mono">{{ stats.sellWinRate }}</strong>
       </article>
 
       <article class="stat-tile">
-        <span class="stat-tile__label">{{ $t('backtestReport.avgBuyPnl') }}</span>
+        <span class="stat-tile__label">
+          {{ $t('backtestReport.avgBuyPnl') }}
+        </span>
         <strong class="stat-tile__value mono">{{ stats.avgBuyPnl }}</strong>
       </article>
 
       <article class="stat-tile">
-        <span class="stat-tile__label">{{ $t('backtestReport.avgSellPnl') }}</span>
+        <span class="stat-tile__label">
+          {{ $t('backtestReport.avgSellPnl') }}
+        </span>
         <strong class="stat-tile__value mono">{{ stats.avgSellPnl }}</strong>
       </article>
 
       <article class="stat-tile">
-        <span class="stat-tile__label">{{ $t('backtestReport.bestTrade') }}</span>
+        <span class="stat-tile__label">
+          {{ $t('backtestReport.bestTrade') }}
+        </span>
         <strong class="stat-tile__value tone-positive mono">{{ stats.bestTrade ? `+${stats.bestTrade.pnl.toFixed(2)}` : '--' }}</strong>
       </article>
 
       <article class="stat-tile">
-        <span class="stat-tile__label">{{ $t('backtestReport.worstTrade') }}</span>
+        <span class="stat-tile__label">
+          {{ $t('backtestReport.worstTrade') }}
+        </span>
         <strong class="stat-tile__value tone-negative mono">{{ stats.worstTrade ? stats.worstTrade.pnl.toFixed(2) : '--' }}</strong>
       </article>
 
       <article class="stat-tile">
-        <span class="stat-tile__label">{{ $t('backtestReport.signalFrequencyDaily') }}</span>
+        <span class="stat-tile__label">
+          {{ $t('backtestReport.signalFrequencyDaily') }}
+          <MetricTooltip metric-key="signal_frequency" />
+        </span>
         <strong class="stat-tile__value mono">{{ stats.signalFrequencyDaily }}</strong>
       </article>
 
       <article class="stat-tile">
-        <span class="stat-tile__label">{{ $t('backtestReport.signalFrequencyWeekly') }}</span>
+        <span class="stat-tile__label">
+          {{ $t('backtestReport.signalFrequencyWeekly') }}
+          <MetricTooltip metric-key="signal_frequency" />
+        </span>
         <strong class="stat-tile__value mono">{{ stats.signalFrequencyWeekly }}</strong>
       </article>
 
       <article class="stat-tile">
-        <span class="stat-tile__label">{{ $t('backtestReport.avgHoldingPeriod') }}</span>
+        <span class="stat-tile__label">
+          {{ $t('backtestReport.avgHoldingPeriod') }}
+          <MetricTooltip metric-key="holding_period" />
+        </span>
         <strong class="stat-tile__value mono">{{ stats.avgHoldingPeriod }}</strong>
       </article>
     </div>
@@ -71,6 +99,7 @@
 
 <script setup lang="ts">
 import type { SignalStats } from '../../lib/backtestComputed'
+import MetricTooltip from '../help/MetricTooltip.vue'
 
 defineProps<{
   stats: SignalStats
@@ -143,6 +172,8 @@ defineProps<{
 }
 
 .stat-tile__label {
+  display: inline-flex;
+  align-items: center;
   font-size: var(--font-size-xs);
   font-weight: 800;
   color: var(--color-text-muted);

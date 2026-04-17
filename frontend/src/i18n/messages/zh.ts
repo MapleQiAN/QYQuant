@@ -822,7 +822,6 @@ const zh = {
   },
   equityChart: {
     title: '资产曲线',
-    caption: '支持缩放、悬停查看数值与买卖点标注',
     noData: '暂无权益曲线数据',
     strategyEquity: '策略权益',
     benchmark: '基准走势'
