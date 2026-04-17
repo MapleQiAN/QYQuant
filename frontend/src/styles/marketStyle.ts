@@ -3,7 +3,7 @@ export type MarketStyle = 'cn' | 'us'
 export const MARKET_STYLE_KEY = 'qyquant_market_style'
 
 export function resolveInitialMarketStyle(): MarketStyle {
-  if (typeof localStorage === 'undefined') {
+  if (typeof localStorage === 'undefined' || typeof localStorage.getItem !== 'function') {
     return 'cn'
   }
   const value = localStorage.getItem(MARKET_STYLE_KEY)
@@ -14,7 +14,7 @@ export function applyMarketStyle(style: MarketStyle) {
   if (typeof document !== 'undefined') {
     document.documentElement.dataset.marketStyle = style
   }
-  if (typeof localStorage !== 'undefined') {
+  if (typeof localStorage !== 'undefined' && typeof localStorage.setItem === 'function') {
     localStorage.setItem(MARKET_STYLE_KEY, style)
   }
 }

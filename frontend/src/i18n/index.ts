@@ -16,9 +16,11 @@ export function resolveInitialLocale(): Locale {
     return 'en'
   }
 
-  const stored = localStorage.getItem(LOCALE_KEY)
-  if (isLocale(stored)) {
-    return stored
+  if (typeof localStorage !== 'undefined' && typeof localStorage.getItem === 'function') {
+    const stored = localStorage.getItem(LOCALE_KEY)
+    if (isLocale(stored)) {
+      return stored
+    }
   }
 
   const browser = navigator.language.toLowerCase()
@@ -39,7 +41,7 @@ export const i18n = createI18n({
 
 export function setLocale(locale: Locale) {
   i18n.global.locale.value = locale
-  if (typeof window !== 'undefined') {
+  if (typeof window !== 'undefined' && typeof localStorage !== 'undefined' && typeof localStorage.setItem === 'function') {
     localStorage.setItem(LOCALE_KEY, locale)
   }
 }

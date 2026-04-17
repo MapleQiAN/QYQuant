@@ -3,7 +3,7 @@ export type Theme = 'dark' | 'light'
 export const THEME_KEY = 'qyquant_theme'
 
 export function resolveInitialTheme(): Theme {
-  if (typeof localStorage === 'undefined') {
+  if (typeof localStorage === 'undefined' || typeof localStorage.getItem !== 'function') {
     return 'dark'
   }
   const value = localStorage.getItem(THEME_KEY)
@@ -19,7 +19,7 @@ export function applyTheme(theme: Theme) {
   if (typeof document !== 'undefined') {
     document.documentElement.dataset.theme = theme
   }
-  if (typeof localStorage !== 'undefined') {
+  if (typeof localStorage !== 'undefined' && typeof localStorage.setItem === 'function') {
     localStorage.setItem(THEME_KEY, theme)
   }
 }

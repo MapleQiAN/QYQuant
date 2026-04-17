@@ -794,7 +794,7 @@ def test_list_strategies_excludes_soft_deleted(client, app):
     assert "strategy-active" in ids
 
 
-def test_get_my_quota_normalizes_legacy_plan_levels(client, app):
+def test_get_my_quota_preserves_basic_plan_snapshot(client, app):
     from app.models import User, UserQuota
 
     token, user_id = _login_user(client, phone="13900139103", nickname="LegacyPlanUser")
@@ -814,6 +814,6 @@ def test_get_my_quota_normalizes_legacy_plan_levels(client, app):
 
     assert response.status_code == 200
     data = response.json["data"]
-    assert data["plan_level"] == "lite"
-    assert data["plan_limit"] == 200
-    assert data["remaining"] == 188
+    assert data["plan_level"] == "basic"
+    assert data["plan_limit"] == 100
+    assert data["remaining"] == 88

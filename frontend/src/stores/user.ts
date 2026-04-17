@@ -44,6 +44,7 @@ export const useUserStore = defineStore('user', {
   getters: {
     token(): string | null {
       if (typeof window === 'undefined') return null
+      if (typeof window.localStorage?.getItem !== 'function') return null
       return window.localStorage.getItem('qyquant-token')
     },
   },
@@ -74,6 +75,9 @@ export const useUserStore = defineStore('user', {
       if (typeof window === 'undefined') {
         return
       }
+      if (typeof window.localStorage?.getItem !== 'function') {
+        return
+      }
       const token = window.localStorage.getItem('qyquant-token')
       if (!token) {
         return
@@ -92,6 +96,10 @@ export const useUserStore = defineStore('user', {
         return
       }
       if (typeof window === 'undefined') {
+        return
+      }
+      if (typeof window.localStorage?.getItem !== 'function') {
+        this.profileLoaded = true
         return
       }
       const token = window.localStorage.getItem('qyquant-token')
