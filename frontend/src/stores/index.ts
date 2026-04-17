@@ -1,5 +1,6 @@
 export { useBacktestsStore } from './backtests'
 export { useBotsStore } from './bots'
+export { useDashboardStore } from './dashboard'
 export { useForumStore } from './forum'
 export { useMarketplaceStore } from './useMarketplaceStore'
 export { useNotificationStore } from './useNotificationStore'
