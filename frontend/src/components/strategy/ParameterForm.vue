@@ -41,24 +41,16 @@
         </div>
       </div>
 
-      <select
+      <QSelect
         v-else-if="definition.type === 'enum'"
         :id="`parameter-${definition.name}`"
         :data-test="`parameter-${definition.name}-select`"
-        class="field-input"
         :class="{ invalid: Boolean(errors[definition.name]) }"
         :disabled="disabled"
-        :value="selectedOptionIndex(definition)"
-        @change="updateEnumValue(definition, Number(($event.target as HTMLSelectElement).value))"
-      >
-        <option
-          v-for="(option, index) in definition.options || []"
-          :key="`${definition.name}-${index}`"
-          :value="index"
-        >
-          {{ String(option) }}
-        </option>
-      </select>
+        :model-value="readValue(definition)"
+        :options="enumOptions(definition)"
+        @update:model-value="updateEnumValue(definition, $event)"
+      />
 
       <input
         v-else-if="definition.type === 'int' || definition.type === 'float'"
@@ -95,6 +87,7 @@
 <script setup lang="ts">
 import { computed, watch } from 'vue'
 import type { StrategyParameterDefinition, StrategyParameterValue } from '../../types/Strategy'
+import { QSelect } from '../ui'
 
 const props = withDefaults(defineProps<{
   definitions: StrategyParameterDefinition[]
@@ -188,19 +181,15 @@ function updateTextValue(definition: StrategyParameterDefinition, rawValue: stri
   })
 }
 
-function updateEnumValue(definition: StrategyParameterDefinition, optionIndex: number) {
-  const options = definition.options || []
+function updateEnumValue(definition: StrategyParameterDefinition, value: unknown) {
   emit('update:modelValue', {
     ...mergedValues.value,
-    [definition.name]: options[optionIndex],
+    [definition.name]: value,
   })
 }
 
-function selectedOptionIndex(definition: StrategyParameterDefinition) {
-  const options = definition.options || []
-  const current = readValue(definition)
-  const index = options.findIndex((option) => option === current)
-  return String(index >= 0 ? index : 0)
+function enumOptions(definition: StrategyParameterDefinition) {
+  return (definition.options || []).map((o) => ({ label: String(o), value: o }))
 }
 
 function validateDefinition(definition: StrategyParameterDefinition, value: unknown) {

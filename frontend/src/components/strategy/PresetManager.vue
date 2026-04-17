@@ -1,17 +1,13 @@
 <template>
   <section class="preset-manager">
     <div class="preset-toolbar">
-      <select
+      <QSelect
         data-test="preset-select"
-        class="preset-select"
-        :value="selectedPresetId"
-        @change="emit('select', ($event.target as HTMLSelectElement).value)"
-      >
-        <option value="">{{ t('strategy.presets.loadPreset') }}</option>
-        <option v-for="preset in presets" :key="preset.id" :value="preset.id">
-          {{ preset.name }}
-        </option>
-      </select>
+        :model-value="selectedPresetId"
+        :options="presetOptions"
+        :placeholder="t('strategy.presets.loadPreset')"
+        @update:model-value="emit('select', $event)"
+      />
 
       <div class="preset-actions">
         <button
@@ -66,13 +62,14 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import type { StrategyPreset } from '../../types/Strategy'
+import { QSelect } from '../ui'
 
 const { t } = useI18n()
 
-defineProps<{
+const props = defineProps<{
   presets: StrategyPreset[]
   selectedPresetId: string
   saving?: boolean
@@ -84,6 +81,10 @@ const emit = defineEmits<{
   (event: 'save', name: string): void
   (event: 'delete', presetId: string): void
 }>()
+
+const presetOptions = computed(() =>
+  props.presets.map((p) => ({ label: p.name, value: p.id }))
+)
 
 const dialogOpen = ref(false)
 const presetName = ref('')

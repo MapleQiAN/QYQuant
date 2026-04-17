@@ -9,16 +9,12 @@
       <div class="form-grid">
         <label class="field">
           <span>Strategy</span>
-          <select v-model="strategyId" class="field-control">
-            <option disabled value="">Select a strategy</option>
-            <option
-              v-for="strategy in strategiesStore.library"
-              :key="strategy.id"
-              :value="strategy.id"
-            >
-              {{ strategy.title || strategy.name }}
-            </option>
-          </select>
+          <QSelect
+            v-model="strategyId"
+            :options="strategyOptions"
+            placeholder="Select a strategy"
+            searchable
+          />
         </label>
 
         <label class="field">
@@ -56,6 +52,7 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import { useSimulationStore } from '../../stores/useSimulationStore'
 import { useStrategiesStore } from '../../stores/strategies'
+import { QSelect } from '../ui'
 
 const props = withDefaults(defineProps<{
   initialStrategyId?: string
@@ -75,6 +72,10 @@ const strategyId = ref(props.initialStrategyId)
 const initialCapital = ref(100000)
 const isSubmitting = ref(false)
 const errorMessage = ref('')
+
+const strategyOptions = computed(() =>
+  strategiesStore.library.map((s) => ({ label: s.title || s.name, value: s.id }))
+)
 
 const showUpgradeHint = computed(() => simulationStore.errorCode === 'SIMULATION_SLOT_LIMIT_REACHED')
 

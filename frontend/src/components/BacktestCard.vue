@@ -21,15 +21,12 @@
           <template v-if="!historical">
             <div class="data-source-control">
               <span class="data-source-label">{{ $t('backtest.dataSource') }}</span>
-              <select
-                class="data-source-select"
-                :value="selectedDataSource"
-                @change="handleDataSourceChange"
-              >
-                <option v-for="option in dataSourceOptions" :key="option.value" :value="option.value">
-                  {{ option.label }}
-                </option>
-              </select>
+              <QSelect
+                :model-value="selectedDataSource"
+                :options="dataSourceOptions"
+                size="sm"
+                @update:model-value="emit('data-source-change', $event)"
+              />
             </div>
           </template>
           <button v-if="!historical" class="btn btn-secondary" @click="emit('refresh')">
@@ -134,6 +131,7 @@ import ErrorState from './ErrorState.vue'
 import KlinePlaceholder from './KlinePlaceholder.vue'
 import SkeletonState from './SkeletonState.vue'
 import StatCard from './StatCard.vue'
+import { QSelect } from './ui'
 
 const emit = defineEmits<{
   (event: 'retry'): void
@@ -202,11 +200,6 @@ const dataSourceBadge = computed(() => {
   }
   return resolvedLabel
 })
-
-const handleDataSourceChange = (event: Event) => {
-  const target = event.target as HTMLSelectElement
-  emit('data-source-change', target.value)
-}
 
 const handleTimeframeChange = (value: string) => {
   emit('timeframe-change', value)

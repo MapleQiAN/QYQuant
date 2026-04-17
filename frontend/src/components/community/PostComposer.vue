@@ -3,6 +3,7 @@ import { computed, onMounted, ref } from 'vue'
 import { useCommunityStore } from '../../stores/useCommunityStore'
 import { useStrategiesStore } from '../../stores/strategies'
 import { useUserStore } from '../../stores/user'
+import { QSelect } from '../ui'
 
 const communityStore = useCommunityStore()
 const strategiesStore = useStrategiesStore()
@@ -13,6 +14,9 @@ const strategyId = ref('')
 
 const characterCount = computed(() => content.value.length)
 const charProgress = computed(() => Math.min((characterCount.value / 2000) * 100, 100))
+const strategyOptions = computed(() =>
+  strategiesStore.library.map((s) => ({ label: s.title || s.name, value: s.id }))
+)
 const canSubmit = computed(() => {
   const trimmed = content.value.trim()
   return Boolean(userStore.profile.id) && trimmed.length > 0 && trimmed.length <= 2000 && !communityStore.submittingPost
@@ -88,12 +92,15 @@ onMounted(() => {
           </svg>
           关联策略
         </span>
-        <select v-model="strategyId" data-test="strategy-attachment-select">
-          <option value="">不关联</option>
-          <option v-for="strategy in strategiesStore.library" :key="strategy.id" :value="strategy.id">
-            {{ strategy.title || strategy.name }}
-          </option>
-        </select>
+        <QSelect
+          v-model="strategyId"
+          class="strategy-select"
+          data-test="strategy-attachment-select"
+          :options="strategyOptions"
+          placeholder="不关联"
+          size="md"
+          searchable
+        />
       </label>
 
       <button class="publish-button" :disabled="!canSubmit" @click="submitPost">
@@ -272,6 +279,13 @@ onMounted(() => {
 .strategy-picker {
   display: grid;
   gap: 6px;
+  min-width: 260px;
+  flex: 1;
+  max-width: 400px;
+}
+
+.strategy-picker :deep(.strategy-select.q-select) {
+  width: 100%;
 }
 
 .picker-label {

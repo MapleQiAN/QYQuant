@@ -51,11 +51,7 @@
 
         <label class="field">
           <span>Category</span>
-          <select v-model="form.category" class="field-input">
-            <option v-for="option in categoryOptions" :key="option.value" :value="option.value">
-              {{ option.label }}
-            </option>
-          </select>
+          <QSelect v-model="form.category" :options="categoryOptions" />
         </label>
 
         <div class="metric-grid">
@@ -151,6 +147,7 @@
 <script setup lang="ts">
 import { computed, reactive, ref, watch } from 'vue'
 import type { MarketplacePublishPayload, Strategy } from '../../types/Strategy'
+import { QSelect } from '../ui'
 
 defineOptions({ name: 'StrategyPublishFlow' })
 
