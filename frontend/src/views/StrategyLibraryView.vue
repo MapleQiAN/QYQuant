@@ -142,6 +142,23 @@
                 <span class="meta-divider">·</span>
                 <span class="meta-item">{{ formatCreatedAt(strategy.createdAt) }}</span>
               </div>
+              <div
+                v-if="isRuntimeAsset(strategy)"
+                class="runtime-asset"
+              >
+                <span
+                  class="runtime-asset__badge"
+                  :data-test="`runtime-asset-badge-${strategy.id}`"
+                >
+                  运行副本
+                </span>
+                <p
+                  class="runtime-asset__note"
+                  :data-test="`runtime-asset-note-${strategy.id}`"
+                >
+                  可回测、可托管，不可查看源码。
+                </p>
+              </div>
               <p class="strategy-card__desc">{{ strategy.description || t('strategy.library.noDescription') }}</p>
               <div v-if="strategy.tags?.length" class="tag-row">
                 <span v-for="tag in strategy.tags" :key="tag" class="tag">{{ tag }}</span>
@@ -388,6 +405,10 @@ function formatCreatedAt(value?: string | number) {
   return new Date(numeric).toLocaleDateString()
 }
 
+function isRuntimeAsset(strategy: Strategy) {
+  return strategy.importMode === 'sealed' && Boolean(strategy.sourceStrategyId)
+}
+
 function publishStatusLabel(status?: MarketplaceReviewStatus) {
   if (status === 'pending') return t('strategy.library.pendingReview')
   if (status === 'approved') return t('strategy.library.approved')
@@ -519,6 +540,28 @@ function statusClass(status?: MarketplaceReviewStatus) {
 
 .import-strip:hover {
   border-color: var(--color-primary-border);
+}
+
+.runtime-asset {
+  margin-top: var(--spacing-sm);
+}
+
+.runtime-asset__badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: var(--color-primary-bg);
+  color: var(--color-accent);
+  font-size: var(--font-size-xs);
+  font-weight: 700;
+}
+
+.runtime-asset__note {
+  margin: 6px 0 0;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-xs);
+  line-height: 1.5;
 }
 
 .import-strip__info {

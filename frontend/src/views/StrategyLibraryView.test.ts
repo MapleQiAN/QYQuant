@@ -14,6 +14,7 @@ const {
   publishStrategyMock,
   getPublishStatusMock,
   toastSuccessMock,
+  confirmDialogMock,
 } = vi.hoisted(() => ({
   pushMock: vi.fn(),
   fetchStrategiesMock: vi.fn(),
@@ -23,6 +24,7 @@ const {
   publishStrategyMock: vi.fn(),
   getPublishStatusMock: vi.fn(),
   toastSuccessMock: vi.fn(),
+  confirmDialogMock: vi.fn().mockResolvedValue(true),
 }))
 
 vi.mock('vue-router', () => ({
@@ -58,6 +60,7 @@ vi.mock('../stores', () => ({
 }))
 
 vi.mock('../lib/toast', () => ({
+  confirmDialog: confirmDialogMock,
   toast: {
     success: toastSuccessMock,
     error: vi.fn(),
@@ -74,6 +77,8 @@ describe('StrategyLibraryView', () => {
     publishStrategyMock.mockReset()
     getPublishStatusMock.mockReset()
     toastSuccessMock.mockReset()
+    confirmDialogMock.mockReset()
+    confirmDialogMock.mockResolvedValue(true)
     vi.stubGlobal('confirm', vi.fn(() => true))
   })
 
@@ -210,6 +215,35 @@ describe('StrategyLibraryView', () => {
 
     expect(wrapper.get('[data-test="publish-status-strategy-1"]').text()).toContain('Pending review')
     expect(wrapper.get('[data-test="publish-open-strategy-1"]').attributes('disabled')).toBeDefined()
+  })
+
+  it('labels sealed marketplace imports as runtime-only copies', async () => {
+    fetchStrategiesMock.mockResolvedValue({
+      items: [
+        {
+          id: 'strategy-1',
+          name: 'Imported Runtime Copy',
+          description: 'Marketplace import',
+          tags: ['marketplace'],
+          category: 'trend-following',
+          source: 'marketplace',
+          sourceStrategyId: 'marketplace-origin',
+          importMode: 'sealed',
+          createdAt: 123,
+          reviewStatus: 'draft',
+          isPublic: false
+        }
+      ],
+      page: 1,
+      perPage: 10,
+      total: 1
+    })
+
+    const wrapper = mountView()
+    await flushPromises()
+
+    expect(wrapper.get('[data-test="runtime-asset-badge-strategy-1"]').text()).toContain('运行副本')
+    expect(wrapper.get('[data-test="runtime-asset-note-strategy-1"]').text()).toContain('可回测、可托管，不可查看源码。')
   })
 
   it('submits rejected strategies for republish and refreshes row status', async () => {
