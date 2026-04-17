@@ -415,7 +415,22 @@ const en = {
     passwordTooShort: 'Password must be at least 8 characters',
     emailRequired: 'Please enter email',
     passwordRequired: 'Please enter password',
-    nicknameRequired: 'Please enter nickname'
+    nicknameRequired: 'Please enter nickname',
+    confirmPasswordLabel: 'Confirm password',
+    confirmPasswordPlaceholder: 'Re-enter password',
+    passwordMismatch: 'Passwords do not match',
+    termsRequired: 'Please accept the terms',
+    termsPrefix: 'I have read and agree to the',
+    termsLink: 'Terms of Service & Privacy Policy',
+    strengthWeak: 'Weak',
+    strengthFair: 'Fair',
+    strengthGood: 'Good',
+    strengthStrong: 'Strong',
+    oauthTitle: 'Third-party login',
+    oauthWechat: 'WeChat',
+    oauthGithub: 'GitHub',
+    oauthGoogle: 'Google',
+    oauthSeparator: 'or'
   },
   forgotPassword: {
     title: 'Reset Password',
