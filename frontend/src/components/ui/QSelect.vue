@@ -26,8 +26,9 @@
       </svg>
     </button>
 
-    <Transition name="q-select-panel">
-      <div v-if="isOpen" class="q-select__panel" :style="panelStyle">
+    <Teleport to="body">
+      <Transition name="q-select-panel">
+        <div ref="panelRef" v-if="isOpen" class="q-select__panel" :style="panelStyle">
         <div v-if="searchable" class="q-select__search-wrap">
           <svg class="q-select__search-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <circle cx="11" cy="11" r="8" />
@@ -73,7 +74,8 @@
           </li>
         </ul>
       </div>
-    </Transition>
+      </Transition>
+    </Teleport>
   </div>
 </template>
 
@@ -120,9 +122,17 @@ const labelId = `${id}-label`
 const selectRef = ref<HTMLElement | null>(null)
 const triggerRef = ref<HTMLButtonElement | null>(null)
 const searchRef = ref<HTMLInputElement | null>(null)
+const panelRef = ref<HTMLElement | null>(null)
 const isOpen = ref(false)
 const searchQuery = ref('')
 const activeIndex = ref(-1)
+const positionTick = ref(0)
+
+function updatePosition() {
+  if (isOpen.value) positionTick.value++
+}
+function onScroll() { updatePosition() }
+function onResize() { updatePosition() }
 
 const filteredOptions = computed(() => {
   if (!searchQuery.value) return props.options
@@ -139,9 +149,15 @@ const activeDescendant = computed(() =>
   activeIndex.value >= 0 ? `${id}-option-${activeIndex.value}` : undefined
 )
 
-const panelStyle = computed(() =>
-  props.placement === 'top' ? { bottom: 'calc(100% + 6px)' } : { top: 'calc(100% + 6px)' }
-)
+const panelStyle = computed(() => {
+  void positionTick.value
+  if (!isOpen.value || !selectRef.value) return { display: 'none' }
+  const rect = selectRef.value.getBoundingClientRect()
+  if (props.placement === 'top') {
+    return { position: 'fixed', left: `${rect.left}px`, bottom: `${window.innerHeight - rect.top + 6}px`, width: `${rect.width}px` }
+  }
+  return { position: 'fixed', left: `${rect.left}px`, top: `${rect.bottom + 6}px`, width: `${rect.width}px` }
+})
 
 function getOptionLabel(option: SelectOption) {
   return option.label
@@ -232,13 +248,25 @@ function onSearchKeydown(e: KeyboardEvent) {
 }
 
 function handleClickOutside(e: MouseEvent) {
-  if (selectRef.value && !selectRef.value.contains(e.target as Node)) {
+  const target = e.target as Node
+  if (
+    selectRef.value && !selectRef.value.contains(target) &&
+    panelRef.value && !panelRef.value.contains(target)
+  ) {
     close()
   }
 }
 
-onMounted(() => document.addEventListener('click', handleClickOutside, true))
-onUnmounted(() => document.removeEventListener('click', handleClickOutside, true))
+onMounted(() => {
+  document.addEventListener('click', handleClickOutside, true)
+  window.addEventListener('scroll', onScroll, true)
+  window.addEventListener('resize', onResize)
+})
+onUnmounted(() => {
+  document.removeEventListener('click', handleClickOutside, true)
+  window.removeEventListener('scroll', onScroll, true)
+  window.removeEventListener('resize', onResize)
+})
 
 watch(isOpen, (val) => {
   if (!val) searchQuery.value = ''
@@ -271,7 +299,21 @@ watch(isOpen, (val) => {
   outline: none;
 }
 
-.q-select--sm .q-select__trigger { height: 32px; }
+.q-select--sm .q-select__trigger {
+  height: 30px;
+  padding: 0 10px;
+  font-size: 11px;
+  gap: 4px;
+}
+
+.q-select--sm { width: auto; min-width: unset; }
+
+.q-select--sm .q-select__chevron { width: 10px; height: 10px; }
+
+.q-select--sm .q-select__option {
+  padding: 4px 8px;
+  font-size: 11px;
+}
 .q-select--md .q-select__trigger { height: 38px; }
 .q-select--lg .q-select__trigger { height: 44px; }
 
@@ -325,10 +367,7 @@ watch(isOpen, (val) => {
 
 /* ── Panel ── */
 .q-select__panel {
-  position: absolute;
-  left: 0;
-  right: 0;
-  z-index: 50;
+  z-index: 90;
   min-width: 100%;
   background: var(--color-surface);
   border: 2px solid var(--color-border);
@@ -424,8 +463,8 @@ watch(isOpen, (val) => {
 .q-select__option-label {
   flex: 1;
   overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  word-break: break-word;
+  line-height: 1.4;
 }
 
 .q-select__check {

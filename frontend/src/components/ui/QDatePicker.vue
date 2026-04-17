@@ -31,8 +31,9 @@
       </svg>
     </button>
 
-    <Transition name="q-datepicker-panel">
-      <div v-if="isOpen" class="q-datepicker__panel" :style="panelStyle">
+    <Teleport to="body">
+      <Transition name="q-datepicker-panel">
+        <div v-if="isOpen" class="q-datepicker__panel" :style="panelStyle">
         <!-- Header -->
         <div class="q-datepicker__header">
           <button type="button" class="q-datepicker__nav-btn" @click="prevYear" :aria-label="'Previous year'">
@@ -94,6 +95,7 @@
         </div>
       </div>
     </Transition>
+    </Teleport>
   </div>
 </template>
 
@@ -133,6 +135,14 @@ const triggerRef = ref<HTMLButtonElement | null>(null)
 const isOpen = ref(false)
 const viewYear = ref(new Date().getFullYear())
 const viewMonth = ref(new Date().getMonth())
+const positionTick = ref(0)
+
+function updatePosition() {
+  if (isOpen.value) positionTick.value++
+}
+
+function onScroll() { updatePosition() }
+function onResize() { updatePosition() }
 
 // Locale-aware labels
 const months = computed(() =>
@@ -168,9 +178,16 @@ const formattedDate = computed(() => {
   return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
 })
 
-const panelStyle = computed(() =>
-  props.placement === 'top' ? { bottom: 'calc(100% + 6px)' } : { top: 'calc(100% + 6px)' }
-)
+const panelStyle = computed(() => {
+  // positionTick forces recalc on scroll/resize
+  void positionTick.value
+  if (!isOpen.value || !pickerRef.value) return { display: 'none' }
+  const rect = pickerRef.value.getBoundingClientRect()
+  if (props.placement === 'top') {
+    return { position: 'fixed', left: `${rect.left}px`, bottom: `${window.innerHeight - rect.top + 6}px` }
+  }
+  return { position: 'fixed', left: `${rect.left}px`, top: `${rect.bottom + 6}px` }
+})
 
 interface CalendarCell {
   day: number
@@ -337,13 +354,26 @@ function onTriggerKeydown(e: KeyboardEvent) {
 }
 
 function handleClickOutside(e: MouseEvent) {
-  if (pickerRef.value && !pickerRef.value.contains(e.target as Node)) {
+  const target = e.target as Node
+  const panel = document.querySelector('.q-datepicker__panel')
+  if (
+    pickerRef.value && !pickerRef.value.contains(target) &&
+    (!panel || !panel.contains(target))
+  ) {
     close()
   }
 }
 
-onMounted(() => document.addEventListener('click', handleClickOutside, true))
-onUnmounted(() => document.removeEventListener('click', handleClickOutside, true))
+onMounted(() => {
+  document.addEventListener('click', handleClickOutside, true)
+  window.addEventListener('scroll', onScroll, true)
+  window.addEventListener('resize', onResize)
+})
+onUnmounted(() => {
+  document.removeEventListener('click', handleClickOutside, true)
+  window.removeEventListener('scroll', onScroll, true)
+  window.removeEventListener('resize', onResize)
+})
 </script>
 
 <style scoped>
@@ -432,9 +462,7 @@ onUnmounted(() => document.removeEventListener('click', handleClickOutside, true
 
 /* ── Panel ── */
 .q-datepicker__panel {
-  position: absolute;
-  left: 0;
-  z-index: 50;
+  z-index: 90;
   width: 290px;
   background: var(--color-surface);
   border: 2px solid var(--color-border);
