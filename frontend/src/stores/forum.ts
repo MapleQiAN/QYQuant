@@ -1,10 +1,10 @@
 import { defineStore } from 'pinia'
-import { fetchHot } from '../api/forum'
-import type { Post } from '../types/Post'
+import { getPosts } from '../api/community'
+import type { CommunityPost } from '../types/community'
 
 export const useForumStore = defineStore('forum', {
   state: () => ({
-    posts: [] as Post[],
+    posts: [] as CommunityPost[],
     loading: false,
     error: null as string | null
   }),
@@ -13,7 +13,8 @@ export const useForumStore = defineStore('forum', {
       this.loading = true
       this.error = null
       try {
-        this.posts = await fetchHot()
+        const res = await getPosts({ page: 1, per_page: 5 })
+        this.posts = res.items
       } catch (error: any) {
         this.error = error?.message || 'Failed to load posts'
       } finally {

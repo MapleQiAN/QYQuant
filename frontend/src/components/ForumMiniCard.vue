@@ -28,27 +28,34 @@
         @click="emit('open-post', post.id)"
       >
         <div class="post-avatar">
-          <span>{{ post.avatar }}</span>
+          <img
+            v-if="post.author?.avatar_url"
+            :src="post.author.avatar_url"
+            :alt="post.author.nickname"
+            class="avatar-img"
+          />
+          <span v-else>{{ (post.author?.nickname || '?')[0] }}</span>
         </div>
         <div class="post-content">
-          <div class="post-title">{{ post.title }}</div>
+          <div class="post-title">{{ post.content }}</div>
           <div class="post-meta">
-            <span class="author">{{ post.author }}</span>
+            <span class="author">{{ post.author?.nickname || '' }}</span>
             <span class="separator">·</span>
-            <span class="time">{{ post.timestamp }}</span>
+            <span class="time">{{ post.created_at || '' }}</span>
           </div>
-          <div class="post-tags">
-            <span v-for="tag in post.tags" :key="tag" class="tag">{{ tag }}</span>
+          <div v-if="post.strategy" class="post-tags">
+            <span class="tag strategy-tag">{{ post.strategy.name }}</span>
+            <span v-if="post.strategy.category" class="tag">{{ post.strategy.category }}</span>
           </div>
         </div>
         <div class="post-stats">
-          <div class="stat">
+          <div class="stat" :class="{ active: post.liked }">
             <HeartIcon />
-            <span>{{ post.likes }}</span>
+            <span>{{ post.likes_count }}</span>
           </div>
           <div class="stat">
             <CommentIcon />
-            <span>{{ post.comments }}</span>
+            <span>{{ post.comments_count }}</span>
           </div>
         </div>
       </div>
@@ -74,7 +81,7 @@
 
 <script setup lang="ts">
 import { computed, h } from 'vue'
-import type { Post } from '../types/Post'
+import type { CommunityPost } from '../types/community'
 import EmptyState from './EmptyState.vue'
 import ErrorState from './ErrorState.vue'
 import SkeletonState from './SkeletonState.vue'
@@ -88,7 +95,7 @@ const emit = defineEmits<{
 }>()
 
 const props = withDefaults(defineProps<{
-  posts?: Post[]
+  posts?: CommunityPost[]
   loading?: boolean
   error?: string | null
 }>(), {
@@ -249,6 +256,13 @@ const BookmarkIcon = () => h('svg', {
   font-weight: var(--font-weight-semibold);
   border-radius: var(--radius-md);
   flex-shrink: 0;
+  overflow: hidden;
+}
+
+.avatar-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 .post-content {
@@ -291,6 +305,20 @@ const BookmarkIcon = () => h('svg', {
   background: var(--color-primary-bg);
   color: var(--color-primary);
   border-radius: var(--radius-sm);
+}
+
+.tag.strategy-tag {
+  background: var(--color-accent-bg, rgba(255, 152, 0, 0.1));
+  color: var(--color-accent, #ff9800);
+  font-weight: 600;
+}
+
+.stat.active {
+  color: var(--color-danger, #ef4444);
+}
+
+.stat.active svg {
+  fill: var(--color-danger, #ef4444);
 }
 
 .post-stats {

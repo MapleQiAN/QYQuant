@@ -2,8 +2,13 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { setActivePinia, createPinia } from 'pinia'
 import { useForumStore } from './forum'
 
-vi.mock('../api/forum', () => ({
-  fetchHot: vi.fn().mockResolvedValue([{ id: 'post-1' }])
+vi.mock('../api/community', () => ({
+  getPosts: vi.fn().mockResolvedValue({
+    items: [{ id: 'post-1', content: 'hello' }],
+    total: 1,
+    page: 1,
+    per_page: 5
+  })
 }))
 
 describe('forum store', () => {

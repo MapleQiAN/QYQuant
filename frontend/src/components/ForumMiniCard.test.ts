@@ -10,13 +10,16 @@ describe('ForumMiniCard', () => {
         posts: [
           {
             id: 'post-1',
-            title: 'Gold breakout setup',
-            author: 'Alice',
-            avatar: 'A',
-            likes: 12,
-            comments: 3,
-            timestamp: '2m ago',
-            tags: ['gold']
+            content: 'Gold breakout setup',
+            user_id: 'user-1',
+            strategy_id: null,
+            likes_count: 12,
+            comments_count: 3,
+            created_at: '2026-04-17T10:00:00+08:00',
+            author: { nickname: 'Alice', avatar_url: '' },
+            strategy: null,
+            liked: false,
+            collected: false
           }
         ]
       },
