@@ -160,6 +160,9 @@ defineExpose({ open, close, toggle })
   position: absolute;
   z-index: 50;
   min-width: 180px;
+  max-width: 320px;
+  max-height: 360px;
+  overflow-y: auto;
   padding: var(--spacing-xs);
   background: var(--color-surface);
   border: 2px solid var(--color-border);
