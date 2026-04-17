@@ -5,35 +5,41 @@
         <ChartIcon class="title-icon" />
         {{ $t('progress.title') }}
       </h3>
-      <select class="period-select">
-        <option value="7d">{{ $t('progress.period7') }}</option>
-        <option value="30d" selected>{{ $t('progress.period30') }}</option>
-        <option value="90d">{{ $t('progress.period90') }}</option>
-      </select>
+      <QSelect
+        v-model="selectedPeriod"
+        :options="periodOptions"
+        size="sm"
+      />
     </div>
 
     <div class="stats-grid">
       <div class="stat-block">
         <div class="stat-header">
           <span class="stat-label">{{ $t('progress.backtestCount') }}</span>
-          <span class="stat-value">{{ stats.backtestCount }}/{{ stats.backtestTarget }}</span>
+          <span class="stat-value">
+            <template v-if="isUnlimited">{{ backtestCount }}/∞</template>
+            <template v-else>{{ backtestCount }}/{{ backtestTarget }}</template>
+          </span>
         </div>
         <div class="progress-bar">
           <div
             class="progress-fill"
-            :style="{ width: backtestProgress + '%' }"
+            :style="{ width: (isUnlimited ? Math.min(backtestCount / 10 * 100, 100) : backtestProgress) + '%' }"
           ></div>
         </div>
         <div class="stat-footer">
           <span>{{ $t('progress.monthlyQuota') }}</span>
-          <span class="highlight">{{ backtestProgress.toFixed(0) }}%</span>
+          <span class="highlight">
+            <template v-if="isUnlimited">∞</template>
+            <template v-else>{{ backtestProgress.toFixed(0) }}%</template>
+          </span>
         </div>
       </div>
 
       <div class="stat-block">
         <div class="stat-header">
           <span class="stat-label">{{ $t('progress.robotRuntime') }}</span>
-          <span class="stat-value">{{ stats.robotRuntime }} {{ $t('progress.runtimeUnit') }}</span>
+          <span class="stat-value">{{ totalBots }} {{ $t('progress.runtimeUnit') }}</span>
         </div>
         <div class="runtime-visual">
           <div class="runtime-bar">
@@ -46,19 +52,19 @@
         </div>
         <div class="stat-footer">
           <span>{{ $t('progress.activeBots') }}</span>
-          <span class="highlight">{{ stats.activeBots }}</span>
+          <span class="highlight">{{ activeBots }}</span>
         </div>
       </div>
 
       <div class="stat-block profit-block">
         <div class="stat-header">
           <span class="stat-label">{{ $t('progress.totalProfit') }}</span>
-          <span :class="['profit-change', { positive: stats.profitChange >= 0 }]">
-            {{ stats.profitChange >= 0 ? '+' : '' }}{{ stats.profitChange }}%
+          <span :class="['profit-change', { positive: profitChange >= 0 }]">
+            {{ profitChange >= 0 ? '+' : '' }}{{ profitChange }}%
           </span>
         </div>
         <div class="profit-value">
-          {{ formatCurrency(stats.totalProfit, true) }}
+          {{ formatCurrency(totalProfit, true) }}
         </div>
         <div class="profit-chart">
           <svg class="mini-chart" viewBox="0 0 120 40" preserveAspectRatio="none">
@@ -88,7 +94,7 @@
           <TrendUpIcon />
         </div>
         <div class="quick-stat-content">
-          <span class="quick-stat-value">68%</span>
+          <span class="quick-stat-value">{{ winRate ? (winRate * 100).toFixed(0) + '%' : '--' }}</span>
           <span class="quick-stat-label">{{ $t('progress.avgWinRate') }}</span>
         </div>
       </div>
@@ -97,7 +103,7 @@
           <ClockIcon />
         </div>
         <div class="quick-stat-content">
-          <span class="quick-stat-value">2.3</span>
+          <span class="quick-stat-value">{{ avgHolding ? avgHolding.toFixed(1) : '--' }}</span>
           <span class="quick-stat-label">{{ $t('progress.avgHolding') }}</span>
         </div>
       </div>
@@ -106,7 +112,7 @@
           <TargetIcon />
         </div>
         <div class="quick-stat-content">
-          <span class="quick-stat-value">1.85</span>
+          <span class="quick-stat-value">{{ sharpeRatio ? sharpeRatio.toFixed(2) : '--' }}</span>
           <span class="quick-stat-label">{{ $t('progress.sharpeRatio') }}</span>
         </div>
       </div>
@@ -115,44 +121,76 @@
 </template>
 
 <script setup lang="ts">
-import { computed, h } from 'vue'
+import { computed, h, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { QSelect } from './ui'
+import type { DashboardStats } from '../api/dashboard'
 
-const { locale } = useI18n()
+const props = defineProps<{
+  stats?: DashboardStats | null
+  loading?: boolean
+}>()
 
-const stats = {
-  backtestCount: 45,
-  backtestTarget: 100,
-  robotRuntime: 892,
-  activeBots: 4,
-  totalProfit: 28650.8,
-  profitChange: 12.5
-}
+const { locale, t } = useI18n()
 
-const backtestProgress = computed(() => (stats.backtestCount / stats.backtestTarget) * 100)
-const activeSegments = computed(() => Math.ceil((stats.robotRuntime / 1000) * 7))
+const selectedPeriod = ref('30d')
+const periodOptions = computed(() => [
+  { label: t('progress.period7'), value: '7d' },
+  { label: t('progress.period30'), value: '30d' },
+  { label: t('progress.period90'), value: '90d' },
+])
 
-const chartData = [20, 25, 22, 30, 28, 35, 32, 38, 36, 40]
+const quota = computed(() => props.stats?.backtest_quota)
+const summary = computed(() => props.stats?.latest_summary)
+
+const isUnlimited = computed(() => quota.value?.limit === 'unlimited')
+const backtestCount = computed(() => quota.value?.used ?? 0)
+const backtestTarget = computed(() => {
+  const limit = quota.value?.limit
+  return typeof limit === 'number' ? limit : 0
+})
+const activeBots = computed(() => props.stats?.active_bots ?? 0)
+const totalBots = computed(() => props.stats?.total_bots ?? 0)
+const totalProfit = computed(() => summary.value?.total_return ?? 0)
+const profitChange = computed(() => props.stats?.profit_change ?? 0)
+const winRate = computed(() => summary.value?.win_rate ?? 0)
+const avgHolding = computed(() => summary.value?.avg_holding_days ?? 0)
+const sharpeRatio = computed(() => summary.value?.sharpe_ratio ?? 0)
+
+const backtestProgress = computed(() => {
+  if (isUnlimited.value || backtestTarget.value <= 0) return 0
+  return Math.min((backtestCount.value / backtestTarget.value) * 100, 100)
+})
+const activeSegments = computed(() => Math.min(7, Math.ceil((totalBots.value / 7) * 7)))
+
+const chartData = computed(() => props.stats?.profit_history ?? [])
+
 const linePath = computed(() => {
+  const data = chartData.value
+  if (data.length < 2) return ''
   const width = 120
   const height = 40
-  const step = width / (chartData.length - 1)
+  const maxVal = Math.max(...data.map(Math.abs), 1)
+  const step = width / (data.length - 1)
 
-  return chartData.map((value, index) => {
+  return data.map((value, index) => {
     const x = index * step
-    const y = height - (value / 50) * height
+    const y = height / 2 - (value / maxVal) * (height / 2)
     return index === 0 ? `M ${x} ${y}` : `L ${x} ${y}`
   }).join(' ')
 })
 
 const areaPath = computed(() => {
+  const data = chartData.value
+  if (data.length < 2) return ''
   const width = 120
   const height = 40
-  const step = width / (chartData.length - 1)
+  const maxVal = Math.max(...data.map(Math.abs), 1)
+  const step = width / (data.length - 1)
 
-  const points = chartData.map((value, index) => {
+  const points = data.map((value, index) => {
     const x = index * step
-    const y = height - (value / 50) * height
+    const y = height / 2 - (value / maxVal) * (height / 2)
     return index === 0 ? `M ${x} ${y}` : `L ${x} ${y}`
   }).join(' ')
 

@@ -112,7 +112,10 @@
 
       <div class="grid-area-sidebar">
         <UpgradeCard v-if="isFreePlan" @upgrade="handleOpenPricing" />
-        <ProgressCard />
+        <ProgressCard
+          :stats="dashboardStore.stats"
+          :loading="dashboardStore.loading"
+        />
       </div>
     </div>
   </div>
@@ -128,8 +131,7 @@ import ProgressCard from '../components/ProgressCard.vue'
 import RecentList from '../components/RecentList.vue'
 import UpgradeCard from '../components/UpgradeCard.vue'
 import { PLAN_TIER_ORDER } from '../data/plans'
-import { useBacktestsStore, useBotsStore, useForumStore, useStrategiesStore, useUserStore } from '../stores'
-import { useSimulationStore } from '../stores/useSimulationStore'
+import { useBacktestsStore, useBotsStore, useDashboardStore, useForumStore, useStrategiesStore, useUserStore } from '../stores'
 
 const router = useRouter()
 const userStore = useUserStore()
@@ -142,18 +144,13 @@ const backtestsStore = useBacktestsStore()
 const botsStore = useBotsStore()
 const strategiesStore = useStrategiesStore()
 const forumStore = useForumStore()
-const simulationStore = useSimulationStore()
+const dashboardStore = useDashboardStore()
 
-// KPI computed values
-const kpiReturn = computed(() => {
-  const latest = backtestsStore.latestReport
-  return latest?.summary?.totalReturn ?? 0
-})
-const activeBotCount = computed(() => {
-  return botsStore.recent?.filter((b: any) => b.status === 'running').length ?? 0
-})
-const strategyCount = computed(() => strategiesStore.recent?.length ?? 0)
-const backtestCount = computed(() => backtestsStore.latestReport ? 1 : 0)
+// KPI computed values — sourced from aggregated dashboard stats
+const kpiReturn = computed(() => dashboardStore.stats?.latest_summary?.total_return ?? 0)
+const activeBotCount = computed(() => dashboardStore.stats?.active_bots ?? 0)
+const strategyCount = computed(() => dashboardStore.stats?.strategy_count ?? 0)
+const backtestCount = computed(() => dashboardStore.stats?.completed_backtests ?? 0)
 
 const isFreePlan = computed(() => {
   const tier = PLAN_TIER_ORDER[user.value.plan_level] ?? 0
@@ -166,6 +163,7 @@ onMounted(() => {
   botsStore.loadRecent()
   strategiesStore.loadRecent()
   forumStore.loadHot()
+  dashboardStore.loadStats()
 })
 
 async function handleSkipOnboarding() {
@@ -188,9 +186,9 @@ async function handleOpenBot(botId: string) {
 async function handleToggleBot(botId: string, action: 'pause' | 'resume') {
   try {
     if (action === 'pause') {
-      await simulationStore.pauseBot(botId)
+      await botsStore.pauseBot(botId)
     } else {
-      await simulationStore.resumeBot(botId)
+      await botsStore.resumeBot(botId)
     }
     await botsStore.loadRecent()
   } catch {
