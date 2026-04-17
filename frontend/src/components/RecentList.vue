@@ -66,7 +66,7 @@
               </div>
               <div class="detail-item">
                 <span class="detail-label">{{ $t('recent.updatedAt') }}</span>
-                <span class="detail-value">{{ strategy.lastUpdate }}</span>
+                <span class="detail-value">{{ formatDateTime(strategy.lastUpdate) }}</span>
               </div>
             </div>
             <div class="tags-row">
@@ -263,6 +263,21 @@ function formatCurrency(value: number) {
   return value.toLocaleString(localeValue, { minimumFractionDigits: 0 })
 }
 
+function formatDateTime(value: string | undefined | null): string {
+  if (!value) return ''
+  const d = new Date(value)
+  if (isNaN(d.getTime())) return value
+  const pad = (n: number) => String(n).padStart(2, '0')
+  const y = d.getFullYear()
+  const mo = pad(d.getMonth() + 1)
+  const day = pad(d.getDate())
+  const hh = pad(d.getHours())
+  const mm = pad(d.getMinutes())
+  return locale.value === 'zh'
+    ? `${y}年${mo}月${day}日 ${hh}:${mm}`
+    : `${y}/${mo}/${day} ${hh}:${mm}`
+}
+
 const ExpandIcon = () => h('svg', {
   width: 16,
   height: 16,
@@ -322,6 +337,7 @@ const ArrowRightIcon = () => h('svg', {
   border: 2px solid var(--color-border);
   border-radius: var(--radius-full);
   padding: 2px;
+  overflow: hidden;
 }
 
 .tab-btn {
@@ -344,6 +360,7 @@ const ArrowRightIcon = () => h('svg', {
   background: var(--color-surface);
   color: var(--color-primary);
   font-weight: 700;
+  border-radius: var(--radius-full);
   box-shadow: var(--shadow-sm);
 }
 

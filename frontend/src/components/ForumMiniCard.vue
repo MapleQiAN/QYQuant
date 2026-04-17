@@ -41,7 +41,7 @@
           <div class="post-meta">
             <span class="author">{{ post.author?.nickname || '' }}</span>
             <span class="separator">·</span>
-            <span class="time">{{ post.created_at || '' }}</span>
+            <span class="time">{{ formatDateTime(post.created_at) }}</span>
           </div>
           <div v-if="post.strategy" class="post-tags">
             <span class="tag strategy-tag">{{ post.strategy.name }}</span>
@@ -81,10 +81,28 @@
 
 <script setup lang="ts">
 import { computed, h } from 'vue'
+import { useI18n } from 'vue-i18n'
 import type { CommunityPost } from '../types/community'
 import EmptyState from './EmptyState.vue'
 import ErrorState from './ErrorState.vue'
 import SkeletonState from './SkeletonState.vue'
+
+const { locale } = useI18n()
+
+function formatDateTime(value: string | undefined | null): string {
+  if (!value) return ''
+  const d = new Date(value)
+  if (isNaN(d.getTime())) return value
+  const pad = (n: number) => String(n).padStart(2, '0')
+  const y = d.getFullYear()
+  const mo = pad(d.getMonth() + 1)
+  const day = pad(d.getDate())
+  const hh = pad(d.getHours())
+  const mm = pad(d.getMinutes())
+  return locale.value === 'zh'
+    ? `${y}年${mo}月${day}日 ${hh}:${mm}`
+    : `${y}/${mo}/${day} ${hh}:${mm}`
+}
 
 const emit = defineEmits<{
   (event: 'retry'): void
