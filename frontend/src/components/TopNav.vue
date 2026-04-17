@@ -43,45 +43,40 @@
             <NotificationPanel v-if="isNotificationPanelOpen" />
           </div>
 
-          <div class="user-menu-shell">
-            <button class="user-trigger" type="button" @click="handleAvatarClick">
-              <img
-                v-if="userStore.token && profile.avatar_url"
-                :src="profile.avatar_url"
-                :alt="profile.name || 'User avatar'"
-                class="user-avatar user-avatar--image"
-                data-test="topnav-avatar-image"
-              />
-              <span
-                v-else
-                class="user-avatar"
-                :class="{ 'user-avatar--guest': !userStore.token }"
-                data-test="topnav-avatar-fallback"
-              >
-                {{ userStore.token ? profile.avatar : '?' }}
-              </span>
-            </button>
-            <div v-if="isUserMenuOpen" class="user-dropdown">
+          <QDropdown
+            v-if="userStore.token"
+            ref="userDropdownRef"
+            :items="userMenuItems"
+            @select="handleMenuSelect"
+          >
+            <template #trigger>
+              <button class="user-trigger" type="button">
+                <img
+                  v-if="profile.avatar_url"
+                  :src="profile.avatar_url"
+                  :alt="profile.name || 'User avatar'"
+                  class="user-avatar user-avatar--image"
+                  data-test="topnav-avatar-image"
+                />
+                <span
+                  v-else
+                  class="user-avatar"
+                  data-test="topnav-avatar-fallback"
+                >
+                  {{ profile.avatar || '?' }}
+                </span>
+              </button>
+            </template>
+            <template #header>
               <div class="dropdown-header">
                 <span class="dropdown-name">{{ profile.name || 'User' }}</span>
                 <span class="dropdown-email">{{ profile.level }}</span>
               </div>
-              <div class="dropdown-divider" />
-              <RouterLink class="dropdown-item" :to="`/users/${profile.id}`" @click="isUserMenuOpen = false">
-                <UserIcon class="dropdown-icon" />
-                {{ $t('common.userProfile') }}
-              </RouterLink>
-              <RouterLink class="dropdown-item" to="/settings" @click="isUserMenuOpen = false">
-                <SettingsSmIcon class="dropdown-icon" />
-                {{ $t('common.settings') }}
-              </RouterLink>
-              <div class="dropdown-divider" />
-              <button class="dropdown-item danger" type="button" @click="handleLogout">
-                <LogoutIcon class="dropdown-icon" />
-                {{ $t('common.logout') }}
-              </button>
-            </div>
-          </div>
+            </template>
+          </QDropdown>
+          <button v-else class="user-trigger" type="button" @click="handleAvatarClick">
+            <span class="user-avatar user-avatar--guest" data-test="topnav-avatar-fallback">?</span>
+          </button>
         </div>
       </div>
     </div>
@@ -91,23 +86,32 @@
 <script setup lang="ts">
 import { computed, h, onMounted, onUnmounted, ref } from 'vue'
 import { storeToRefs } from 'pinia'
-import { RouterLink, useRoute, useRouter } from 'vue-router'
+import { RouterLink, useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import NotificationPanel from './NotificationPanel.vue'
 import { useNotificationStore } from '../stores/useNotificationStore'
 import { useUserStore } from '../stores/user'
+import { QDropdown } from './ui'
+import type { DropdownItem } from './ui'
 
 defineEmits<{ 'toggle-sidebar': [] }>()
 
 const route = useRoute()
-const router = useRouter()
 const { t } = useI18n()
 const userStore = useUserStore()
 const notificationStore = useNotificationStore()
 const { profile } = storeToRefs(userStore)
 const notificationCount = computed(() => notificationStore.unreadCount)
 const isNotificationPanelOpen = ref(false)
-const isUserMenuOpen = ref(false)
+const userDropdownRef = ref<InstanceType<typeof QDropdown> | null>(null)
+
+const userMenuItems = computed<DropdownItem[]>(() => [
+  { type: 'divider' },
+  { key: 'profile', label: t('common.userProfile'), to: `/users/${profile.value.id}`, icon: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>' },
+  { key: 'settings', label: t('common.settings'), to: '/settings', icon: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>' },
+  { type: 'divider' },
+  { key: 'logout', label: t('common.logout'), danger: true, icon: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>' },
+])
 
 interface NavTab {
   path: string
@@ -130,25 +134,19 @@ function isTabActive(tab: NavTab) {
 }
 
 function handleAvatarClick() {
-  if (!userStore.token) {
-    window.location.href = '/login'
-    return
-  }
-  isUserMenuOpen.value = !isUserMenuOpen.value
+  window.location.href = '/login'
 }
 
-function handleLogout() {
-  isUserMenuOpen.value = false
-  localStorage.removeItem('qyquant-token')
-  userStore.$reset()
-  window.location.href = '/login'
+function handleMenuSelect(item: DropdownItem) {
+  if (item.key === 'logout') {
+    localStorage.removeItem('qyquant-token')
+    userStore.$reset()
+    window.location.href = '/login'
+  }
 }
 
 function handleClickOutside(e: MouseEvent) {
   const target = e.target as HTMLElement
-  if (!target.closest('.user-menu-shell')) {
-    isUserMenuOpen.value = false
-  }
   if (!target.closest('.notification-shell')) {
     isNotificationPanelOpen.value = false
   }
@@ -207,21 +205,6 @@ const HelpIcon = () => h('svg', { width: 16, height: 16, viewBox: '0 0 24 24', f
   h('line', { x1: 12, y1: 17, x2: 12.01, y2: 17 }),
 ])
 
-const UserIcon = () => h('svg', { width: 14, height: 14, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', 'stroke-width': 2, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }, [
-  h('path', { d: 'M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2' }),
-  h('circle', { cx: 12, cy: 7, r: 4 }),
-])
-
-const SettingsSmIcon = () => h('svg', { width: 14, height: 14, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', 'stroke-width': 2, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }, [
-  h('circle', { cx: 12, cy: 12, r: 3 }),
-  h('path', { d: 'M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z' }),
-])
-
-const LogoutIcon = () => h('svg', { width: 14, height: 14, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', 'stroke-width': 2, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }, [
-  h('path', { d: 'M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4' }),
-  h('polyline', { points: '16 17 21 12 16 7' }),
-  h('line', { x1: 21, y1: 12, x2: 9, y2: 12 }),
-])
 </script>
 
 <style scoped>
