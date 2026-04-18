@@ -215,22 +215,66 @@ const displayName = ref('')
 const configPublic = reactive<Record<string, string>>({})
 const secretPayload = reactive<Record<string, string>>({})
 
+const dsSelectedProviderKey = ref('')
+const dsDisplayName = ref('')
+const dsConfigPublic = reactive<Record<string, string>>({})
+const dsSecretPayload = reactive<Record<string, string>>({})
+
+const aiSelectedProviderKey = ref('')
+const aiDisplayName = ref('')
+const aiConfigPublic = reactive<Record<string, string>>({})
+const aiSecretPayload = reactive<Record<string, string>>({})
+
 const selectedProvider = computed(() => providers.value.find((provider) => provider.key === selectedProviderKey.value) ?? null)
 const providerByKey = computed(() =>
   Object.fromEntries(providers.value.map((provider) => [provider.key, provider]))
 )
-const providerPublicFieldNames = computed(() => {
-  const fields = selectedProvider.value?.configSchema?.public_fields
-  return Array.isArray(fields) ? fields.map((field) => String(field)) : []
-})
-const providerSecretFieldNames = computed(() => {
-  const fields = selectedProvider.value?.configSchema?.secret_fields ?? selectedProvider.value?.configSchema?.fields
-  return Array.isArray(fields) ? fields.map((field) => String(field)) : []
-})
+
+function fieldNamesFor(providerKey: string, field: 'public_fields' | 'secret_fields' | 'fields'): string[] {
+  const provider = providerByKey.value[providerKey]
+  if (!provider) return []
+  const schema = provider.configSchema ?? {}
+  if (field === 'public_fields') {
+    const fields = schema.public_fields
+    return Array.isArray(fields) ? fields.map((f) => String(f)) : []
+  }
+  const fields = schema.secret_fields ?? schema.fields
+  return Array.isArray(fields) ? fields.map((f) => String(f)) : []
+}
+
+const dsSelectedProvider = computed(() => providerByKey.value[dsSelectedProviderKey.value] ?? null)
+const dsPublicFieldNames = computed(() => fieldNamesFor(dsSelectedProviderKey.value, 'public_fields'))
+const dsSecretFieldNames = computed(() => fieldNamesFor(dsSelectedProviderKey.value, 'secret_fields'))
+
+const aiSelectedProvider = computed(() => providerByKey.value[aiSelectedProviderKey.value] ?? null)
+const aiPublicFieldNames = computed(() => fieldNamesFor(aiSelectedProviderKey.value, 'public_fields'))
+const aiSecretFieldNames = computed(() => fieldNamesFor(aiSelectedProviderKey.value, 'secret_fields'))
 const avatarFallback = computed(() => nickname.value.trim().slice(0, 1).toUpperCase() || 'Q')
 
 const providerOptions = computed(() =>
   providers.value.map((p) => ({ label: p.name, value: p.key }))
+)
+
+const dataSourceProviders = computed(() =>
+  providers.value.filter((p) => p.type === 'market_data' || p.type === 'broker_account')
+)
+const aiProviders = computed(() =>
+  providers.value.filter((p) => p.type === 'llm')
+)
+const dataSourceProviderOptions = computed(() =>
+  dataSourceProviders.value.map((p) => ({ label: p.name, value: p.key }))
+)
+const aiProviderOptions = computed(() =>
+  aiProviders.value.map((p) => ({ label: p.name, value: p.key }))
+)
+const dataSourceIntegrations = computed(() =>
+  integrations.value.filter((i) => {
+    const type = providerByKey.value[i.providerKey]?.type
+    return type === 'market_data' || type === 'broker_account'
+  })
+)
+const aiIntegrations = computed(() =>
+  integrations.value.filter((i) => providerByKey.value[i.providerKey]?.type === 'llm')
 )
 
 function syncProfileForm() {
