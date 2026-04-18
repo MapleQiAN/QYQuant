@@ -260,6 +260,7 @@ class BacktestJob(db.Model):
     created_at = db.Column(db.DateTime(timezone=True), nullable=False, default=now_utc)
 
     trades = db.relationship('BacktestTrade', backref='job', cascade='all, delete-orphan')
+    report = db.relationship('BacktestReport', backref='job', uselist=False, cascade='all, delete-orphan')
 
 
 class BacktestTrade(db.Model):
@@ -272,6 +273,72 @@ class BacktestTrade(db.Model):
     quantity = db.Column(db.Float, nullable=False)
     pnl = db.Column(db.Float, nullable=True)
     timestamp = db.Column(db.BigInteger, nullable=False)
+
+
+class BacktestReport(db.Model):
+    __tablename__ = 'backtest_reports'
+    __table_args__ = (
+        db.UniqueConstraint('backtest_job_id', name='uq_report_job'),
+        db.Index('ix_backtest_reports_user_id_created_at', 'user_id', 'created_at'),
+        db.Index('ix_backtest_reports_status', 'status'),
+    )
+
+    id = db.Column(db.String, primary_key=True, default=gen_id)
+    backtest_job_id = db.Column(db.String, db.ForeignKey('backtest_jobs.id', ondelete='CASCADE'), nullable=False)
+    user_id = db.Column(db.String, db.ForeignKey('users.id'), nullable=False)
+    status = db.Column(db.String(32), nullable=False, default='pending')
+    metrics = db.Column(job_json_type, nullable=True, default=dict)
+    equity_curve = db.Column(job_json_type, nullable=True, default=list)
+    drawdown_series = db.Column(job_json_type, nullable=True, default=list)
+    monthly_returns = db.Column(job_json_type, nullable=True, default=list)
+    trade_details = db.Column(job_json_type, nullable=True, default=list)
+    anomalies = db.Column(job_json_type, nullable=True, default=list)
+    parameter_sensitivity = db.Column(job_json_type, nullable=True, default=list)
+    monte_carlo = db.Column(job_json_type, nullable=True, default=dict)
+    regime_analysis = db.Column(job_json_type, nullable=True, default=list)
+    metric_narrations = db.Column(job_json_type, nullable=True, default=dict)
+    executive_summary = db.Column(db.Text, nullable=True)
+    diagnosis_narration = db.Column(db.Text, nullable=True)
+    advisor_narration = db.Column(db.Text, nullable=True)
+    failure_reason = db.Column(db.Text, nullable=True)
+    created_at = db.Column(db.DateTime(timezone=True), nullable=False, default=now_utc)
+    updated_at = db.Column(db.DateTime(timezone=True), nullable=False, default=now_utc, onupdate=now_utc)
+
+    chat_messages = db.relationship('ReportChatMessage', backref='report', cascade='all, delete-orphan')
+    alerts = db.relationship('ReportAlert', backref='report', cascade='all, delete-orphan')
+
+
+class ReportChatMessage(db.Model):
+    __tablename__ = 'report_chat_messages'
+    __table_args__ = (
+        db.Index('ix_report_chat_messages_report_id_created_at', 'report_id', 'created_at'),
+    )
+
+    id = db.Column(db.String, primary_key=True, default=gen_id)
+    report_id = db.Column(db.String, db.ForeignKey('backtest_reports.id', ondelete='CASCADE'), nullable=False)
+    user_id = db.Column(db.String, db.ForeignKey('users.id'), nullable=True)
+    role = db.Column(db.String(16), nullable=False)
+    message = db.Column(db.Text, nullable=False)
+    message_metadata = db.Column('metadata', job_json_type, nullable=True, default=dict)
+    created_at = db.Column(db.DateTime(timezone=True), nullable=False, default=now_utc)
+
+
+class ReportAlert(db.Model):
+    __tablename__ = 'report_alerts'
+    __table_args__ = (
+        db.Index('ix_report_alerts_report_id_status', 'report_id', 'status'),
+    )
+
+    id = db.Column(db.String, primary_key=True, default=gen_id)
+    report_id = db.Column(db.String, db.ForeignKey('backtest_reports.id', ondelete='CASCADE'), nullable=False)
+    user_id = db.Column(db.String, db.ForeignKey('users.id'), nullable=False)
+    level = db.Column(db.String(16), nullable=False, default='info')
+    title = db.Column(db.String(255), nullable=False)
+    message = db.Column(db.Text, nullable=False)
+    status = db.Column(db.String(32), nullable=False, default='active')
+    alert_metadata = db.Column('metadata', job_json_type, nullable=True, default=dict)
+    created_at = db.Column(db.DateTime(timezone=True), nullable=False, default=now_utc)
+    updated_at = db.Column(db.DateTime(timezone=True), nullable=False, default=now_utc, onupdate=now_utc)
 
 
 class UserQuota(db.Model):
