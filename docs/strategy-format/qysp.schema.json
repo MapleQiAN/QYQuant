@@ -192,7 +192,26 @@
         "step": { "type": "number" },
         "enum": { "type": "array" },
         "description": { "type": "string" },
-        "ui": { "type": "object" }
+        "ui": { "type": "object" },
+        "user_facing": {
+          "type": "object",
+          "required": ["question", "options"],
+          "properties": {
+            "question": { "type": "string", "minLength": 1 },
+            "options": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": ["label", "value"],
+                "properties": {
+                  "label": { "type": "string", "minLength": 1 },
+                  "value": {},
+                  "desc": { "type": "string" }
+                }
+              }
+            }
+          }
+        }
       }
     }
   }

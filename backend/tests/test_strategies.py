@@ -501,7 +501,20 @@ def test_generate_ai_strategy_creates_import_draft_from_user_integration(client,
                     "symbol": "BTCUSDT",
                     "tags": ["ai", "momentum"],
                     "parameters": [
-                        {"key": "fast_period", "type": "integer", "default": 10, "min": 2, "max": 50},
+                        {
+                            "key": "fast_period",
+                            "type": "integer",
+                            "default": 10,
+                            "min": 2,
+                            "max": 50,
+                            "user_facing": {
+                                "question": "How sensitive should the fast EMA be?",
+                                "options": [
+                                    {"label": "Fast", "value": 8},
+                                    {"label": "Balanced", "value": 10},
+                                ],
+                            },
+                        },
                         {"key": "slow_period", "type": "integer", "default": 30, "min": 5, "max": 120},
                     ],
                     "code": (
@@ -541,7 +554,20 @@ def test_generate_ai_strategy_creates_import_draft_from_user_integration(client,
     assert data["analysis"]["metadataCandidates"]["name"] == "AI Momentum Draft"
     assert data["analysis"]["metadataCandidates"]["symbol"] == "BTCUSDT"
     assert data["analysis"]["parameterCandidates"] == [
-        {"key": "fast_period", "type": "integer", "default": 10, "min": 2, "max": 50},
+        {
+            "key": "fast_period",
+            "type": "integer",
+            "default": 10,
+            "min": 2,
+            "max": 50,
+            "user_facing": {
+                "question": "How sensitive should the fast EMA be?",
+                "options": [
+                    {"label": "Fast", "value": 8},
+                    {"label": "Balanced", "value": 10},
+                ],
+            },
+        },
         {"key": "slow_period", "type": "integer", "default": 30, "min": 5, "max": 120},
     ]
     assert data["analysis"]["errors"] == []
@@ -656,7 +682,20 @@ def test_confirm_strategy_import_fills_missing_metadata_from_payload(client, app
                 "symbol": "XAUUSD",
                 "version": "2.1.0",
             },
-            "parameterDefinitions": [{"key": "threshold", "type": "number", "default": 1.5}],
+            "parameterDefinitions": [
+                {
+                    "key": "threshold",
+                    "type": "number",
+                    "default": 1.5,
+                    "user_facing": {
+                        "question": "How aggressive should entries be?",
+                        "options": [
+                            {"label": "Conservative", "value": 1.0},
+                            {"label": "Balanced", "value": 1.5},
+                        ],
+                    },
+                }
+            ],
         },
     )
 
@@ -679,7 +718,20 @@ def test_confirm_strategy_import_fills_missing_metadata_from_payload(client, app
         assert manifest["name"] == "Zip Confirmed Strategy"
         assert manifest["description"] == "Filled in at confirmation time"
         assert manifest["version"] == "2.1.0"
-        assert manifest["parameters"] == [{"key": "threshold", "type": "number", "default": 1.5}]
+        assert manifest["parameters"] == [
+            {
+                "key": "threshold",
+                "type": "number",
+                "default": 1.5,
+                "user_facing": {
+                    "question": "How aggressive should entries be?",
+                    "options": [
+                        {"label": "Conservative", "value": 1.0},
+                        {"label": "Balanced", "value": 1.5},
+                    ],
+                },
+            }
+        ]
 
 def test_get_strategy_parameters_returns_normalized_manifest_parameters(client, app, tmp_path):
     token, user_id = _login_user(client, phone="13800138026", nickname="ParameterOwner")
@@ -696,6 +748,13 @@ def test_get_strategy_parameters_returns_normalized_manifest_parameters(client, 
                 "max": 200,
                 "step": 1,
                 "description": "Lookback period",
+                "user_facing": {
+                    "question": "How quickly should the signal react?",
+                    "options": [
+                        {"label": "Fast", "value": 10},
+                        {"label": "Standard", "value": 20},
+                    ],
+                },
             },
             {
                 "name": "trade_direction",
@@ -725,6 +784,13 @@ def test_get_strategy_parameters_returns_normalized_manifest_parameters(client, 
             "description": "Lookback period",
             "options": None,
             "required": False,
+            "userFacing": {
+                "question": "How quickly should the signal react?",
+                "options": [
+                    {"label": "Fast", "value": 10},
+                    {"label": "Standard", "value": 20},
+                ],
+            },
         },
         {
             "name": "trade_direction",
@@ -736,6 +802,7 @@ def test_get_strategy_parameters_returns_normalized_manifest_parameters(client, 
             "description": "Trade direction",
             "options": ["long", "short", "both"],
             "required": False,
+            "userFacing": None,
         },
     ]
 

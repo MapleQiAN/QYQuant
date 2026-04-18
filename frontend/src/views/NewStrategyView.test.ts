@@ -92,14 +92,8 @@ describe('NewStrategyView', () => {
                   aiConnectionTitle: 'AI connection',
                   aiIntegrationLabel: 'Saved AI connection',
                   aiReuseHint: 'Reuse',
-                  aiSetupHint: 'Setup',
-                  aiDisplayNameLabel: 'Connection name',
-                  aiBaseUrlLabel: 'Base URL',
-                  aiModelLabel: 'Model',
-                  aiApiKeyLabel: 'API key',
-                  aiConnectAction: 'Save AI connection',
-                  aiConnectSuccess: 'Saved',
-                  aiConfigRequired: 'Required',
+                  aiSetupHint: 'Configure your AI connection in Settings before using AI generation.',
+                  aiOpenSettingsAction: 'Open Settings',
                   aiSelectIntegration: 'Select integration',
                   aiDraftTitle: 'Latest draft',
                   aiAdoptAction: 'Use this draft',
@@ -250,5 +244,27 @@ describe('NewStrategyView', () => {
       name: 'strategy-import-confirm',
       query: { draftImportId: 'draft-ai-1', source: 'ai' },
     })
+  })
+
+  it('redirects to settings when no AI integration is configured', async () => {
+    fetchIntegrationsMock.mockResolvedValue([])
+
+    const wrapper = mountView()
+    await wrapper.get('[data-test="open-ai-builder"]').trigger('click')
+    await flushPromises()
+
+    expect(wrapper.text()).toContain('Configure your AI connection in Settings before using AI generation.')
+    expect(wrapper.find('[data-test="ai-connect-integration"]').exists()).toBe(false)
+
+    await wrapper.get('[data-test="ai-open-settings"]').trigger('click')
+
+    expect(pushMock).toHaveBeenCalledWith({
+      path: '/settings',
+      query: {
+        provider: 'openai_compatible',
+        redirect: '/strategies/new',
+      },
+    })
+    expect(createIntegrationMock).not.toHaveBeenCalled()
   })
 })

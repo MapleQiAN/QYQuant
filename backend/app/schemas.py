@@ -117,6 +117,7 @@ class StrategyParameterSchema(Schema):
     step = fields.Float(allow_none=True)
     description = fields.Str(allow_none=True)
     options = fields.List(fields.Raw(), allow_none=True)
+    userFacing = fields.Dict(allow_none=True)
 
 
 class StrategyParameterPresetSchema(Schema):

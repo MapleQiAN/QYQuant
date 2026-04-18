@@ -254,6 +254,11 @@ def _normalize_parameter_definition(item):
         enum_values = item.get("options")
     if isinstance(enum_values, list):
         payload["enum"] = enum_values
+    user_facing = item.get("user_facing")
+    if not isinstance(user_facing, dict):
+        user_facing = item.get("userFacing")
+    if isinstance(user_facing, dict):
+        payload["user_facing"] = user_facing
     return payload
 
 

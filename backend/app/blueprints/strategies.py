@@ -312,6 +312,7 @@ def _normalize_parameter_definition(definition):
         "step": definition.get("step"),
         "description": definition.get("description"),
         "options": options,
+        "userFacing": definition.get("user_facing") or definition.get("userFacing"),
     }
 
 

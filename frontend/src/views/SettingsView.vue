@@ -189,6 +189,7 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { storeToRefs } from 'pinia'
+import { useRoute } from 'vue-router'
 import { uploadPublicImage } from '../api/files'
 import { updateMyProfile } from '../api/users'
 import { toast } from '../lib/toast'
@@ -198,6 +199,7 @@ import { QSelect } from '../components/ui'
 
 const userStore = useUserStore()
 const integrationsStore = useIntegrationsStore()
+const route = useRoute()
 const { locale, marketStyle } = storeToRefs(userStore)
 const { providers, integrations, validationState, accountById, positionsById } = storeToRefs(integrationsStore)
 
@@ -344,6 +346,11 @@ onMounted(async () => {
   }
   await integrationsStore.loadProviders()
   await integrationsStore.loadIntegrations()
+  const requestedProvider = String(route.query.provider || '').trim()
+  if (requestedProvider && providers.value.some((provider) => provider.key === requestedProvider)) {
+    selectedProviderKey.value = requestedProvider
+    return
+  }
   if (!selectedProviderKey.value && providers.value.length > 0) {
     selectedProviderKey.value = providers.value[0].key
   }

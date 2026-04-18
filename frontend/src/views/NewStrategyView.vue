@@ -218,29 +218,13 @@
 
                 <template v-else>
                   <p class="field-hint">{{ $t('strategyNew.aiSetupHint') }}</p>
-                  <label class="field">
-                    <span class="field-label">{{ $t('strategyNew.aiDisplayNameLabel') }}</span>
-                    <input v-model="aiSetup.displayName" class="field-input" type="text" />
-                  </label>
-                  <label class="field">
-                    <span class="field-label">{{ $t('strategyNew.aiBaseUrlLabel') }}</span>
-                    <input v-model="aiSetup.baseUrl" class="field-input" type="text" />
-                  </label>
-                  <label class="field">
-                    <span class="field-label">{{ $t('strategyNew.aiModelLabel') }}</span>
-                    <input v-model="aiSetup.model" class="field-input" type="text" />
-                  </label>
-                  <label class="field">
-                    <span class="field-label">{{ $t('strategyNew.aiApiKeyLabel') }}</span>
-                    <input v-model="aiSetup.apiKey" class="field-input" type="password" />
-                  </label>
                   <button
-                    data-test="ai-connect-integration"
+                    data-test="ai-open-settings"
                     class="btn btn-primary"
                     type="button"
-                    @click="handleCreateAiIntegration"
+                    @click="openAiSettings"
                   >
-                    {{ $t('strategyNew.aiConnectAction') }}
+                    {{ $t('strategyNew.aiOpenSettingsAction') }}
                   </button>
                 </template>
               </div>
@@ -326,12 +310,11 @@
 </template>
 
 <script setup lang="ts">
-import { computed, h, reactive, ref } from 'vue'
+import { computed, h, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { RouterLink, useRouter } from 'vue-router'
-import { createIntegration, fetchIntegrations, type UserIntegration } from '../api/integrations'
+import { fetchIntegrations, type UserIntegration } from '../api/integrations'
 import { analyzeStrategyImport, generateAiStrategyDraft } from '../api/strategies'
-import { toast } from '../lib/toast'
 import { strategyTemplates, type StrategyTemplateDefinition } from '../lib/strategyTemplates'
 import type { AiStrategyMessage, StrategyImportAnalysis } from '../types/Strategy'
 import { QSelect } from '../components/ui'
@@ -356,12 +339,6 @@ const aiPrompt = ref('')
 const aiSubmitting = ref(false)
 const aiError = ref('')
 const aiLatestAnalysis = ref<StrategyImportAnalysis | null>(null)
-const aiSetup = reactive({
-  displayName: 'My Strategy AI',
-  baseUrl: 'https://api.openai.com/v1',
-  model: 'gpt-4.1-mini',
-  apiKey: '',
-})
 
 const minimalGuideCode = computed(() => `from qysp import Order
 
@@ -449,32 +426,14 @@ async function loadAiIntegrations() {
   }
 }
 
-async function handleCreateAiIntegration() {
-  if (!aiSetup.displayName.trim() || !aiSetup.baseUrl.trim() || !aiSetup.model.trim() || !aiSetup.apiKey.trim()) {
-    aiError.value = t('strategyNew.aiConfigRequired')
-    return
-  }
-
-  aiError.value = ''
-  try {
-    const integration = await createIntegration({
-      providerKey: 'openai_compatible',
-      displayName: aiSetup.displayName.trim(),
-      configPublic: {
-        base_url: aiSetup.baseUrl.trim(),
-        model: aiSetup.model.trim(),
-      },
-      secretPayload: {
-        api_key: aiSetup.apiKey.trim(),
-      },
-    })
-    aiIntegrations.value = [integration, ...aiIntegrations.value]
-    selectedAiIntegrationId.value = integration.id
-    aiSetup.apiKey = ''
-    toast.success(t('strategyNew.aiConnectSuccess'))
-  } catch (error: any) {
-    aiError.value = error?.message || t('strategyNew.aiError')
-  }
+function openAiSettings() {
+  router.push({
+    path: '/settings',
+    query: {
+      provider: 'openai_compatible',
+      redirect: '/strategies/new',
+    },
+  })
 }
 
 async function handleAiSend() {

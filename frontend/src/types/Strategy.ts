@@ -118,6 +118,7 @@ export interface StrategyParameterDefinition {
   step?: number | null
   description?: string | null
   options?: StrategyParameterValue[] | null
+  userFacing?: Record<string, unknown> | null
 }
 
 export interface StrategyPreset {
@@ -141,6 +142,7 @@ export interface StrategyParameter {
   step?: number
   enum?: Array<string | number | boolean>
   description?: string
+  user_facing?: Record<string, unknown>
 }
 
 export interface StrategyRuntimeDescriptor {

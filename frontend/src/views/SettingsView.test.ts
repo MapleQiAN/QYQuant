@@ -5,6 +5,12 @@ import { createPinia, setActivePinia } from 'pinia'
 import SettingsView from './SettingsView.vue'
 import { useUserStore } from '../stores/user'
 
+vi.mock('vue-router', () => ({
+  useRoute: () => ({
+    query: {},
+  }),
+}))
+
 const {
   updateMyProfileMock,
   fetchIntegrationProvidersMock,

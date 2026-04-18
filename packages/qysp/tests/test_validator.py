@@ -101,6 +101,28 @@ class TestValidateSchema:
         errors = validate_schema(data)
         assert errors == []
 
+    def test_valid_with_user_facing_parameter(self):
+        """参数可包含 user_facing 引导元数据。"""
+        data = _minimal_strategy()
+        data["parameters"] = [
+            {
+                "key": "atr_multiplier",
+                "type": "number",
+                "default": 2.0,
+                "min": 0.5,
+                "max": 5.0,
+                "user_facing": {
+                    "question": "How much volatility can you accept?",
+                    "options": [
+                        {"label": "Tight", "value": 1.0, "desc": "Exit quickly"},
+                        {"label": "Balanced", "value": 2.0},
+                    ],
+                },
+            }
+        ]
+        errors = validate_schema(data)
+        assert errors == []
+
     def test_missing_required(self):
         """缺少 required 字段时报错并指明字段名。"""
         data = _minimal_strategy()
