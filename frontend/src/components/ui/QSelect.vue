@@ -368,7 +368,7 @@ watch(isOpen, (val) => {
 /* ── Panel ── */
 .q-select__panel {
   z-index: 90;
-  min-width: 100%;
+  box-sizing: border-box;
   background: var(--color-surface);
   border: 2px solid var(--color-border);
   border-radius: var(--radius-lg);

@@ -14,12 +14,16 @@
     <Transition name="q-dropdown-panel">
       <div
         v-if="isOpen"
+        ref="panelRef"
         class="q-dropdown__panel"
         :class="[
           `q-dropdown__panel--${placement}`,
-          { 'q-dropdown__panel--compact': compact }
+          {
+            'q-dropdown__panel--compact': compact,
+            'q-dropdown__panel--match-width': matchWidth,
+          }
         ]"
-        :style="{ minWidth: minWidth || undefined }"
+        :style="panelStyle"
         role="menu"
         aria-orientation="vertical"
       >
@@ -62,7 +66,7 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, onUnmounted, ref } from 'vue'
+import { nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 
 export interface DropdownItem {
   type?: 'item' | 'divider' | 'group'
@@ -78,14 +82,16 @@ export interface DropdownItem {
   [key: string]: unknown
 }
 
-withDefaults(defineProps<{
+const props = withDefaults(defineProps<{
   items: DropdownItem[]
   placement?: 'bottom-start' | 'bottom-end' | 'top-start' | 'top-end'
   minWidth?: string
   compact?: boolean
+  matchWidth?: boolean
 }>(), {
   placement: 'bottom-end',
   compact: false,
+  matchWidth: false,
 })
 
 const emit = defineEmits<{
@@ -95,16 +101,58 @@ const emit = defineEmits<{
 }>()
 
 const dropdownRef = ref<HTMLElement | null>(null)
+const panelRef = ref<HTMLElement | null>(null)
 const isOpen = ref(false)
+const panelStyle = ref<Record<string, string>>({})
 
-function toggle() {
-  isOpen.value = !isOpen.value
-  isOpen.value ? emit('open') : emit('close')
+const VIEWPORT_MARGIN = 12
+const PANEL_MAX_WIDTH = 320
+
+function updatePanelPosition() {
+  if (!dropdownRef.value || !panelRef.value) return
+
+  // matchWidth: CSS handles width via left:0 + right:0, no JS needed
+  if (props.matchWidth) {
+    panelStyle.value = {}
+    return
+  }
+
+  const triggerRect = dropdownRef.value.getBoundingClientRect()
+  const panelRect = panelRef.value.getBoundingClientRect()
+  const viewportWidth = window.innerWidth
+
+  if (!viewportWidth) return
+
+  const maxViewportWidth = Math.max(viewportWidth - VIEWPORT_MARGIN * 2, 0)
+  const maxWidth = Math.min(PANEL_MAX_WIDTH, maxViewportWidth)
+  const measuredWidth = panelRect.width || maxWidth
+  const effectiveWidth = Math.min(measuredWidth, maxWidth || measuredWidth)
+  const alignsToEnd = props.placement.endsWith('end')
+  const baseLeft = alignsToEnd ? triggerRect.right - effectiveWidth : triggerRect.left
+  const minLeft = VIEWPORT_MARGIN
+  const maxLeft = Math.max(minLeft, viewportWidth - VIEWPORT_MARGIN - effectiveWidth)
+  const clampedLeft = Math.min(Math.max(baseLeft, minLeft), maxLeft)
+
+  panelStyle.value = {
+    ...(props.minWidth ? { minWidth: props.minWidth } : {}),
+    maxWidth: `${maxWidth}px`,
+    '--q-dropdown-offset-x': `${clampedLeft - baseLeft}px`,
+  }
 }
 
-function open() {
+async function toggle() {
+  if (isOpen.value) {
+    close()
+    return
+  }
+  await open()
+}
+
+async function open() {
   isOpen.value = true
   emit('open')
+  await nextTick()
+  updatePanelPosition()
 }
 
 function close() {
@@ -132,13 +180,28 @@ function handleKeydown(e: KeyboardEvent) {
   }
 }
 
+function handleResize() {
+  if (isOpen.value) {
+    updatePanelPosition()
+  }
+}
+
+watch(() => [props.placement, props.minWidth, props.matchWidth], async () => {
+  if (!isOpen.value) return
+  await nextTick()
+  updatePanelPosition()
+})
+
 onMounted(() => {
   document.addEventListener('click', handleClickOutside, true)
   document.addEventListener('keydown', handleKeydown)
+  window.addEventListener('resize', handleResize)
 })
+
 onUnmounted(() => {
   document.removeEventListener('click', handleClickOutside, true)
   document.removeEventListener('keydown', handleKeydown)
+  window.removeEventListener('resize', handleResize)
 })
 
 defineExpose({ open, close, toggle })
@@ -162,12 +225,23 @@ defineExpose({ open, close, toggle })
   min-width: 180px;
   max-width: 320px;
   max-height: 360px;
+  box-sizing: border-box;
   overflow-y: auto;
+  overflow-x: hidden;
   padding: var(--spacing-xs);
   background: var(--color-surface);
   border: 2px solid var(--color-border);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-lg);
+  transform: translateX(var(--q-dropdown-offset-x, 0px));
+}
+
+/* matchWidth: stretch panel to trigger width via CSS, no JS needed */
+.q-dropdown__panel--match-width {
+  left: 0;
+  right: 0;
+  min-width: 0;
+  max-width: none;
 }
 
 .q-dropdown__panel--bottom-start {
@@ -199,13 +273,15 @@ defineExpose({ open, close, toggle })
 .q-dropdown-panel-enter-active {
   transition: opacity 0.15s ease, transform 0.2s var(--ease-out-expo);
 }
+
 .q-dropdown-panel-leave-active {
   transition: opacity 0.1s ease, transform 0.1s ease;
 }
+
 .q-dropdown-panel-enter-from,
 .q-dropdown-panel-leave-to {
   opacity: 0;
-  transform: translateY(-4px) scale(0.97);
+  transform: translate3d(var(--q-dropdown-offset-x, 0px), -4px, 0) scale(0.97);
 }
 
 /* ── Divider ── */
@@ -231,6 +307,10 @@ defineExpose({ open, close, toggle })
   align-items: center;
   gap: var(--spacing-sm);
   width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  overflow: hidden;
   padding: var(--spacing-sm) var(--spacing-md);
   font-family: var(--font-family);
   font-size: var(--font-size-sm);
@@ -244,6 +324,7 @@ defineExpose({ open, close, toggle })
   text-align: left;
   transition: background var(--transition-fast), color var(--transition-fast);
   outline: none;
+  white-space: nowrap;
 }
 
 .q-dropdown__item:hover:not(.q-dropdown__item--disabled) {
@@ -286,9 +367,14 @@ defineExpose({ open, close, toggle })
 
 .q-dropdown__item-label {
   flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .q-dropdown__item-shortcut {
+  flex-shrink: 0;
+  white-space: nowrap;
   font-family: var(--font-mono);
   font-size: 10px;
   color: var(--color-text-muted);
