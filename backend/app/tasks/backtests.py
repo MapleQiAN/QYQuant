@@ -108,6 +108,11 @@ def _run_job(job_id):
     job.completed_at = now_utc()
     db.session.commit()
 
+    if job.user_id:
+        from .report_generation import generate_backtest_report
+
+        generate_backtest_report.delay(job.id, job.user_id)
+
     result["summary"] = report["result_summary"]
     result["equity_curve"] = report["equity_curve"]
     result["trades"] = report["trades"]

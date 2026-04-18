@@ -182,3 +182,45 @@ def test_filter_report_for_free_tier_hides_ai_and_diagnostics():
     assert "anomalies" not in filtered
     assert "metric_narrations" not in filtered
     assert "executive_summary" in filtered
+
+
+def test_generate_report_upserts_existing_report_row(app, monkeypatch, tmp_path):
+    from app.extensions import db
+    from app.models import BacktestJob, BacktestJobStatus, BacktestReport, User
+    from app.utils.storage import build_backtest_storage_key, write_json
+
+    monkeypatch.setenv("BACKTEST_STORAGE_DIR", tmp_path.as_posix())
+
+    with app.app_context():
+        user = User(phone="13800138902", nickname="AsyncOwner")
+        db.session.add(user)
+        db.session.flush()
+        user_id = user.id
+
+        job = BacktestJob(
+            user_id=user_id,
+            status=BacktestJobStatus.COMPLETED.value,
+            params={"symbol": "BTCUSDT"},
+            result_storage_key=build_backtest_storage_key("async-job"),
+        )
+        job.id = "async-job"
+        db.session.add(job)
+        db.session.commit()
+
+    bars, trades = _build_report_fixture()
+    storage_key = build_backtest_storage_key("async-job")
+    write_json(f"{storage_key}/kline.json", bars)
+    write_json(f"{storage_key}/trades.json", trades)
+
+    from app.report_agent.orchestrator import generate_report
+
+    with app.app_context():
+        first = generate_report("async-job", user_id)
+        second = generate_report("async-job", user_id, force=True)
+
+        stored = BacktestReport.query.filter_by(backtest_job_id="async-job").all()
+        assert len(stored) == 1
+        assert first.id == second.id
+        assert stored[0].status == "ready"
+        assert stored[0].metrics["totalReturn"] is not None
+        assert stored[0].equity_curve

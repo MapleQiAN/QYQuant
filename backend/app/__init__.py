@@ -15,6 +15,7 @@ from .blueprints.marketplace import bp as marketplace_bp
 from .blueprints.notifications import bp as notifications_bp
 from .blueprints.payments import bp as payments_bp
 from .blueprints.presets import bp as presets_bp
+from .blueprints.reports import bp as reports_bp
 from .blueprints.simulation import bp as simulation_bp
 from .blueprints.users import bp as users_bp
 from .config import get_config
@@ -65,6 +66,7 @@ def create_app(env=None):
     app.register_blueprint(notifications_bp)
     app.register_blueprint(presets_bp)
     app.register_blueprint(backtests_bp)
+    app.register_blueprint(reports_bp)
     app.register_blueprint(simulation_bp)
     app.register_blueprint(bots_bp)
     app.register_blueprint(community_bp)

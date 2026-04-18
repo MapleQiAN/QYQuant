@@ -34,7 +34,7 @@ def _build_eager_celery_app():
         result_backend='cache+memory://',
         task_always_eager=True,
         task_eager_propagates=False,
-        task_store_eager_result=True,
+        task_store_eager_result=False,
     )
     return app
 
@@ -54,6 +54,7 @@ celery_app.conf.update(
         'app.tasks.backtests',
         'app.tasks.data_source_tasks',
         'app.tasks.notification_tasks',
+        'app.tasks.report_generation',
         'app.tasks.simulation_tasks',
         'app.tasks.quota_tasks',
     ),
@@ -66,6 +67,7 @@ celery_app.conf.update(
     task_routes={
         'app.tasks.backtests.*': {'queue': 'backtest'},
         'app.tasks.notification_tasks.*': {'queue': 'notification'},
+        'app.tasks.report_generation.*': {'queue': 'backtest'},
         'app.tasks.simulation_tasks.*': {'queue': 'simulation'},
     },
     timezone='UTC',

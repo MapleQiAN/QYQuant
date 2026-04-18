@@ -1128,6 +1128,56 @@ def test_worker_generates_report_summary_and_storage_artifacts(monkeypatch, app,
     assert (storage_dir / "backtest-results" / job_id / "trades.json").exists()
 
 
+def test_completed_backtest_queues_report_generation(monkeypatch, app, tmp_path):
+    from app.extensions import db
+    from app.models import BacktestJob, Strategy, User, UserQuota
+    from app.tasks.backtests import _run_job
+
+    queued = {}
+    storage_dir = tmp_path / "storage"
+    monkeypatch.setenv("BACKTEST_STORAGE_DIR", storage_dir.as_posix())
+
+    with app.app_context():
+        user = User(phone="13800138045", nickname="QueueOwner")
+        db.session.add(user)
+        db.session.flush()
+        user_id = user.id
+        db.session.add(
+            Strategy(
+                id="queue-report-strategy",
+                name="Queue Report Strategy",
+                symbol="BTCUSDT",
+                status="draft",
+                owner_id=user_id,
+            )
+        )
+        db.session.add(UserQuota(user_id=user_id, plan_level="free", used_count=0))
+        job = BacktestJob(
+            user_id=user_id,
+            strategy_id="queue-report-strategy",
+            params={"symbol": "BTCUSDT"},
+        )
+        db.session.add(job)
+        db.session.commit()
+        job_id = job.id
+
+    monkeypatch.setattr("app.tasks.backtests.run_backtest", lambda *args, **kwargs: _build_report_fixture())
+
+    def _fake_delay(job_id, user_id):
+        queued["job_id"] = job_id
+        queued["user_id"] = user_id
+
+    monkeypatch.setattr("app.tasks.report_generation.generate_backtest_report.delay", _fake_delay)
+
+    with app.app_context():
+        _run_job(job_id)
+
+    assert queued == {
+        "job_id": job_id,
+        "user_id": user_id,
+    }
+
+
 def test_get_backtest_report_returns_saved_artifacts_for_owner(client, app, tmp_path, monkeypatch):
     import json
 
