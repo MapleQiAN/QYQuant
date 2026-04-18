@@ -106,36 +106,36 @@
       <div class="card setting-card integrations-card">
         <div class="setting-header integrations-header">
           <div>
-            <h3>{{ $t('settings.integrationsTitle') }}</h3>
-            <p class="hint">{{ $t('settings.integrationsHint') }}</p>
+            <h3>{{ $t('settings.dataSourceTitle') }}</h3>
+            <p class="hint">{{ $t('settings.dataSourceHint') }}</p>
           </div>
         </div>
-        <form class="integration-form" data-action="connect-integration" @submit.prevent="submitIntegration">
+        <form class="integration-form" data-action="connect-datasource" @submit.prevent="submitDsIntegration">
           <label class="field">
             <span>{{ $t('settings.providerLabel') }}</span>
-            <QSelect v-model="selectedProviderKey" :options="providerOptions" data-provider-key="longport" />
+            <QSelect v-model="dsSelectedProviderKey" :options="dataSourceProviderOptions" data-provider-key="datasource" />
           </label>
           <label class="field">
             <span>{{ $t('settings.displayNameLabel') }}</span>
-            <input v-model="displayName" data-display-name="integration-display-name" type="text" />
+            <input v-model="dsDisplayName" data-display-name="ds-display-name" type="text" />
           </label>
-          <label v-for="fieldName in providerPublicFieldNames" :key="`public-${fieldName}`" class="field">
+          <label v-for="fieldName in dsPublicFieldNames" :key="`ds-public-${fieldName}`" class="field">
             <span>{{ fieldName }}</span>
-            <input v-model="configPublic[fieldName]" :data-public-field="fieldName" type="text" />
+            <input v-model="dsConfigPublic[fieldName]" :data-public-field="fieldName" type="text" />
           </label>
-          <label v-for="fieldName in providerSecretFieldNames" :key="`secret-${fieldName}`" class="field">
+          <label v-for="fieldName in dsSecretFieldNames" :key="`ds-secret-${fieldName}`" class="field">
             <span>{{ fieldName }}</span>
-            <input v-model="secretPayload[fieldName]" :data-secret-field="fieldName" type="text" />
+            <input v-model="dsSecretPayload[fieldName]" :data-secret-field="fieldName" type="text" />
           </label>
           <button class="primary-btn" type="submit">
             {{ $t('settings.connectAction') }}
           </button>
         </form>
-        <div v-if="integrations.length === 0" class="empty-state">
-          {{ $t('settings.emptyIntegrations') }}
+        <div v-if="dataSourceIntegrations.length === 0" class="empty-state">
+          {{ $t('settings.emptyDataSources') }}
         </div>
         <div v-else class="integration-list">
-          <article v-for="integration in integrations" :key="integration.id" class="integration-item">
+          <article v-for="integration in dataSourceIntegrations" :key="integration.id" class="integration-item">
             <div class="integration-meta">
               <strong>{{ integration.displayName }}</strong>
               <span>{{ integration.providerKey }}</span>
@@ -182,6 +182,59 @@
           </article>
         </div>
       </div>
+
+      <div class="card setting-card integrations-card">
+        <div class="setting-header integrations-header">
+          <div>
+            <h3>{{ $t('settings.aiSettingsTitle') }}</h3>
+            <p class="hint">{{ $t('settings.aiSettingsHint') }}</p>
+          </div>
+        </div>
+        <form class="integration-form" data-action="connect-ai" @submit.prevent="submitAiIntegration">
+          <label class="field">
+            <span>{{ $t('settings.providerLabel') }}</span>
+            <QSelect v-model="aiSelectedProviderKey" :options="aiProviderOptions" data-provider-key="ai" />
+          </label>
+          <label class="field">
+            <span>{{ $t('settings.displayNameLabel') }}</span>
+            <input v-model="aiDisplayName" data-display-name="ai-display-name" type="text" />
+          </label>
+          <label v-for="fieldName in aiPublicFieldNames" :key="`ai-public-${fieldName}`" class="field">
+            <span>{{ fieldName }}</span>
+            <input v-model="aiConfigPublic[fieldName]" :data-public-field="fieldName" type="text" />
+          </label>
+          <label v-for="fieldName in aiSecretFieldNames" :key="`ai-secret-${fieldName}`" class="field">
+            <span>{{ fieldName }}</span>
+            <input v-model="aiSecretPayload[fieldName]" :data-secret-field="fieldName" type="text" />
+          </label>
+          <button class="primary-btn" type="submit">
+            {{ $t('settings.connectAction') }}
+          </button>
+        </form>
+        <div v-if="aiIntegrations.length === 0" class="empty-state">
+          {{ $t('settings.emptyAiConnections') }}
+        </div>
+        <div v-else class="integration-list">
+          <article v-for="integration in aiIntegrations" :key="integration.id" class="integration-item">
+            <div class="integration-meta">
+              <strong>{{ integration.displayName }}</strong>
+              <span>{{ integration.providerKey }}</span>
+            </div>
+            <div class="integration-actions">
+              <button
+                type="button"
+                :data-action="`validate-integration-${integration.id}`"
+                @click="validateExistingIntegration(integration.id)"
+              >
+                {{ $t('settings.validateAction') }}
+              </button>
+            </div>
+            <p v-if="validationState[integration.id]" class="integration-feedback">
+              {{ validationState[integration.id]?.status }} {{ validationState[integration.id]?.message || '' }}
+            </p>
+          </article>
+        </div>
+      </div>
     </div>
   </section>
 </template>
@@ -210,11 +263,6 @@ const selectedAvatarFile = ref<File | null>(null)
 const savingProfile = ref(false)
 const profileDirty = ref(false)
 
-const selectedProviderKey = ref('')
-const displayName = ref('')
-const configPublic = reactive<Record<string, string>>({})
-const secretPayload = reactive<Record<string, string>>({})
-
 const dsSelectedProviderKey = ref('')
 const dsDisplayName = ref('')
 const dsConfigPublic = reactive<Record<string, string>>({})
@@ -225,7 +273,6 @@ const aiDisplayName = ref('')
 const aiConfigPublic = reactive<Record<string, string>>({})
 const aiSecretPayload = reactive<Record<string, string>>({})
 
-const selectedProvider = computed(() => providers.value.find((provider) => provider.key === selectedProviderKey.value) ?? null)
 const providerByKey = computed(() =>
   Object.fromEntries(providers.value.map((provider) => [provider.key, provider]))
 )
@@ -242,18 +289,12 @@ function fieldNamesFor(providerKey: string, field: 'public_fields' | 'secret_fie
   return Array.isArray(fields) ? fields.map((f) => String(f)) : []
 }
 
-const dsSelectedProvider = computed(() => providerByKey.value[dsSelectedProviderKey.value] ?? null)
 const dsPublicFieldNames = computed(() => fieldNamesFor(dsSelectedProviderKey.value, 'public_fields'))
 const dsSecretFieldNames = computed(() => fieldNamesFor(dsSelectedProviderKey.value, 'secret_fields'))
 
-const aiSelectedProvider = computed(() => providerByKey.value[aiSelectedProviderKey.value] ?? null)
 const aiPublicFieldNames = computed(() => fieldNamesFor(aiSelectedProviderKey.value, 'public_fields'))
 const aiSecretFieldNames = computed(() => fieldNamesFor(aiSelectedProviderKey.value, 'secret_fields'))
 const avatarFallback = computed(() => nickname.value.trim().slice(0, 1).toUpperCase() || 'Q')
-
-const providerOptions = computed(() =>
-  providers.value.map((p) => ({ label: p.name, value: p.key }))
-)
 
 const dataSourceProviders = computed(() =>
   providers.value.filter((p) => p.type === 'market_data' || p.type === 'broker_account')
@@ -336,21 +377,41 @@ async function submitProfile() {
   }
 }
 
-async function submitIntegration() {
-  if (!selectedProviderKey.value || !displayName.value.trim()) {
+async function submitDsIntegration() {
+  if (!dsSelectedProviderKey.value || !dsDisplayName.value.trim()) {
     return
   }
   const publicPayload: Record<string, string> = {}
-  for (const fieldName of providerPublicFieldNames.value) {
-    publicPayload[fieldName] = configPublic[fieldName] ?? ''
+  for (const fieldName of dsPublicFieldNames.value) {
+    publicPayload[fieldName] = dsConfigPublic[fieldName] ?? ''
   }
   const secretFieldPayload: Record<string, string> = {}
-  for (const fieldName of providerSecretFieldNames.value) {
-    secretFieldPayload[fieldName] = secretPayload[fieldName] ?? ''
+  for (const fieldName of dsSecretFieldNames.value) {
+    secretFieldPayload[fieldName] = dsSecretPayload[fieldName] ?? ''
   }
   await integrationsStore.createIntegration({
-    providerKey: selectedProviderKey.value,
-    displayName: displayName.value.trim(),
+    providerKey: dsSelectedProviderKey.value,
+    displayName: dsDisplayName.value.trim(),
+    configPublic: publicPayload,
+    secretPayload: secretFieldPayload
+  })
+}
+
+async function submitAiIntegration() {
+  if (!aiSelectedProviderKey.value || !aiDisplayName.value.trim()) {
+    return
+  }
+  const publicPayload: Record<string, string> = {}
+  for (const fieldName of aiPublicFieldNames.value) {
+    publicPayload[fieldName] = aiConfigPublic[fieldName] ?? ''
+  }
+  const secretFieldPayload: Record<string, string> = {}
+  for (const fieldName of aiSecretFieldNames.value) {
+    secretFieldPayload[fieldName] = aiSecretPayload[fieldName] ?? ''
+  }
+  await integrationsStore.createIntegration({
+    providerKey: aiSelectedProviderKey.value,
+    displayName: aiDisplayName.value.trim(),
     configPublic: publicPayload,
     secretPayload: secretFieldPayload
   })
@@ -392,11 +453,19 @@ onMounted(async () => {
   await integrationsStore.loadIntegrations()
   const requestedProvider = String(route.query.provider || '').trim()
   if (requestedProvider && providers.value.some((provider) => provider.key === requestedProvider)) {
-    selectedProviderKey.value = requestedProvider
+    const type = providerByKey.value[requestedProvider]?.type
+    if (type === 'llm') {
+      aiSelectedProviderKey.value = requestedProvider
+    } else {
+      dsSelectedProviderKey.value = requestedProvider
+    }
     return
   }
-  if (!selectedProviderKey.value && providers.value.length > 0) {
-    selectedProviderKey.value = providers.value[0].key
+  if (dataSourceProviders.value.length > 0) {
+    dsSelectedProviderKey.value = dataSourceProviders.value[0].key
+  }
+  if (aiProviders.value.length > 0) {
+    aiSelectedProviderKey.value = aiProviders.value[0].key
   }
 })
 </script>

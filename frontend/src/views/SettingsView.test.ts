@@ -89,13 +89,18 @@ function buildI18n() {
           marketStyleUs: 'US style',
           integrationsTitle: 'Integrations',
           integrationsHint: 'Connect broker APIs and market data providers.',
+          dataSourceTitle: 'Data Sources & Brokers',
+          dataSourceHint: 'Connect broker APIs and market data providers.',
+          aiSettingsTitle: 'AI Settings',
+          aiSettingsHint: 'Configure AI model endpoints.',
           providerLabel: 'Provider',
           displayNameLabel: 'Display name',
           connectAction: 'Connect',
           validateAction: 'Validate',
           loadAccountAction: 'Load account',
           loadPositionsAction: 'Load positions',
-          emptyIntegrations: 'No integrations yet.'
+          emptyDataSources: 'No data source connections yet.',
+          emptyAiConnections: 'No AI connections yet.'
         }
       },
       zh: {
@@ -118,13 +123,18 @@ function buildI18n() {
           marketStyleUs: '美股风格',
           integrationsTitle: '数据源与券商连接',
           integrationsHint: '连接你的券商 API 和市场数据源。',
+          dataSourceTitle: '数据源与券商',
+          dataSourceHint: '连接券商 API 和市场数据源。',
+          aiSettingsTitle: 'AI 设置',
+          aiSettingsHint: '配置 AI 模型端点。',
           providerLabel: 'Provider',
           displayNameLabel: 'Display name',
           connectAction: 'Connect',
           validateAction: 'Validate',
           loadAccountAction: 'Load account',
           loadPositionsAction: 'Load positions',
-          emptyIntegrations: 'No integrations yet.'
+          emptyDataSources: 'No data source connections yet.',
+          emptyAiConnections: 'No AI connections yet.'
         }
       }
     }
@@ -242,11 +252,11 @@ describe('SettingsView', () => {
     })
     await flushPromises()
 
-    await wrapper.find('[data-provider-key="longport"]').setValue('longport')
-    await wrapper.find('[data-display-name="integration-display-name"]').setValue('New Account')
+    await wrapper.findComponent('[data-provider-key="datasource"]').vm.$emit('update:modelValue', 'longport')
+    await wrapper.find('[data-display-name="ds-display-name"]').setValue('New Account')
     await wrapper.find('[data-public-field="region"]').setValue('hk')
     await wrapper.find('[data-secret-field="access_token"]').setValue('token-1')
-    await wrapper.find('[data-action="connect-integration"]').trigger('submit')
+    await wrapper.find('[data-action="connect-datasource"]').trigger('submit')
 
     expect(createIntegrationMock).toHaveBeenCalledWith({
       providerKey: 'longport',
