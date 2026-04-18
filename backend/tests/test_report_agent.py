@@ -1,3 +1,31 @@
+import json
+
+
+def _seed_code(app, phone, code="123456", ttl=300):
+    from app.utils.redis_client import get_auth_store
+
+    with app.app_context():
+        get_auth_store().set_verification_code(phone, code, ttl=ttl)
+
+
+def _login_user(client, phone="13800138900", nickname="ReportUser"):
+    _seed_code(client.application, phone)
+    response = client.post(
+        "/api/v1/auth/login",
+        json={
+            "phone": phone,
+            "code": "123456",
+            "nickname": nickname,
+        },
+    )
+    assert response.status_code == 200
+    return response.json["access_token"], response.json["data"]["user_id"]
+
+
+def _auth_headers(token):
+    return {"Authorization": f"Bearer {token}"}
+
+
 def test_backtest_report_row_belongs_to_completed_job(app):
     from app.extensions import db
     from app.models import BacktestJob, BacktestJobStatus, BacktestReport, User
@@ -224,3 +252,204 @@ def test_generate_report_upserts_existing_report_row(app, monkeypatch, tmp_path)
         assert stored[0].status == "ready"
         assert stored[0].metrics["totalReturn"] is not None
         assert stored[0].equity_curve
+
+
+def test_post_backtest_report_creates_regeneration_request(client, app, monkeypatch):
+    from app.extensions import db
+    from app.models import BacktestJob, BacktestJobStatus
+
+    token, user_id = _login_user(client, phone="13800138903", nickname="ReportPoster")
+    queued = {}
+
+    with app.app_context():
+        job = BacktestJob(
+            user_id=user_id,
+            status=BacktestJobStatus.COMPLETED.value,
+            params={"symbol": "BTCUSDT"},
+        )
+        db.session.add(job)
+        db.session.commit()
+        job_id = job.id
+
+    def _fake_delay(job_id, user_id, force=False):
+        queued["job_id"] = job_id
+        queued["user_id"] = user_id
+        queued["force"] = force
+
+    monkeypatch.setattr("app.tasks.report_generation.generate_backtest_report.delay", _fake_delay)
+
+    response = client.post(f"/api/backtests/{job_id}/report", headers=_auth_headers(token))
+
+    assert response.status_code == 200
+    assert response.json["data"]["job_id"] == job_id
+    assert response.json["data"]["status"] == "pending"
+    assert response.json["data"]["report_id"] is not None
+    assert queued == {
+        "job_id": job_id,
+        "user_id": user_id,
+        "force": True,
+    }
+
+
+def test_get_report_returns_tier_filtered_payload(client, app):
+    from app.extensions import db
+    from app.models import BacktestJob, BacktestJobStatus, BacktestReport, User
+
+    token, user_id = _login_user(client, phone="13800138904", nickname="TierReader")
+
+    with app.app_context():
+        user = db.session.get(User, user_id)
+        user.plan_level = "free"
+        job = BacktestJob(
+            user_id=user_id,
+            status=BacktestJobStatus.COMPLETED.value,
+            params={"symbol": "BTCUSDT"},
+        )
+        db.session.add(job)
+        db.session.flush()
+        report = BacktestReport(
+            backtest_job_id=job.id,
+            user_id=user_id,
+            status="ready",
+            metrics={
+                "totalReturn": 12.5,
+                "annualizedReturn": 10.2,
+                "maxDrawdown": -3.0,
+                "sharpeRatio": 1.6,
+                "volatility": 8.5,
+                "winRate": 55,
+                "totalTrades": 24,
+                "alpha": 1.1,
+            },
+            equity_curve=[{"timestamp": 1, "equity": 101000.0, "benchmark_equity": 100500.0}],
+            drawdown_series=[{"timestamp": 1, "drawdown": -1.2}],
+            monthly_returns=[{"month": "2024-01", "return": 3.2}],
+            trade_details=[{"symbol": "BTCUSDT", "side": "buy", "price": 100.0, "quantity": 1.0, "timestamp": 1}],
+            executive_summary="summary",
+            metric_narrations={"sharpeRatio": "good"},
+            anomalies=[{"title": "outlier"}],
+            advisor_narration="upgrade",
+        )
+        db.session.add(report)
+        db.session.commit()
+        report_id = report.id
+
+    response = client.get(f"/api/reports/{report_id}", headers=_auth_headers(token))
+
+    assert response.status_code == 200
+    data = response.json["data"]
+    assert data["id"] == report_id
+    assert data["status"] == "ready"
+    assert data["payload"]["metrics"]["totalReturn"] == 12.5
+    assert "alpha" not in data["payload"]["metrics"]
+    assert "anomalies" not in data["payload"]
+    assert "advisor_narration" not in data["payload"]
+    assert data["payload"]["executive_summary"] == "summary"
+
+
+def test_get_report_status_returns_report_state(client, app):
+    from app.extensions import db
+    from app.models import BacktestJob, BacktestJobStatus, BacktestReport
+
+    token, user_id = _login_user(client, phone="13800138905", nickname="StatusReader")
+
+    with app.app_context():
+        job = BacktestJob(
+            user_id=user_id,
+            status=BacktestJobStatus.COMPLETED.value,
+            params={"symbol": "BTCUSDT"},
+        )
+        db.session.add(job)
+        db.session.flush()
+        job_id = job.id
+        report = BacktestReport(
+            backtest_job_id=job.id,
+            user_id=user_id,
+            status="computing",
+        )
+        db.session.add(report)
+        db.session.commit()
+        report_id = report.id
+
+    response = client.get(f"/api/reports/{report_id}/status", headers=_auth_headers(token))
+
+    assert response.status_code == 200
+    assert response.json["data"] == {
+        "id": report_id,
+        "job_id": job_id,
+        "status": "computing",
+    }
+
+
+def test_report_status_stream_emits_sse_frame(client, app):
+    from app.extensions import db
+    from app.models import BacktestJob, BacktestJobStatus, BacktestReport
+
+    token, user_id = _login_user(client, phone="13800138906", nickname="StreamReader")
+
+    with app.app_context():
+        job = BacktestJob(
+            user_id=user_id,
+            status=BacktestJobStatus.COMPLETED.value,
+            params={"symbol": "BTCUSDT"},
+        )
+        db.session.add(job)
+        db.session.flush()
+        report = BacktestReport(
+            backtest_job_id=job.id,
+            user_id=user_id,
+            status="ready",
+        )
+        db.session.add(report)
+        db.session.commit()
+        report_id = report.id
+
+    response = client.get(f"/api/reports/{report_id}/status/stream?token={token}")
+
+    assert response.status_code == 200
+    body = response.get_data(as_text=True)
+    assert "data:" in body
+    assert '"status": "ready"' in body
+
+
+def test_legacy_report_route_exposes_async_report_compat_fields(client, app, tmp_path, monkeypatch):
+    from app.extensions import db
+    from app.models import BacktestJob, BacktestJobStatus, BacktestReport
+
+    monkeypatch.setenv("BACKTEST_STORAGE_DIR", tmp_path.as_posix())
+    token, user_id = _login_user(client, phone="13800138907", nickname="CompatReader")
+
+    with app.app_context():
+        job = BacktestJob(
+            user_id=user_id,
+            status=BacktestJobStatus.COMPLETED.value,
+            params={"symbol": "BTCUSDT"},
+            result_summary={"totalReturn": 5.5},
+            result_storage_key="backtest-results/compat-job",
+        )
+        db.session.add(job)
+        db.session.flush()
+        report = BacktestReport(
+            backtest_job_id=job.id,
+            user_id=user_id,
+            status="ready",
+        )
+        db.session.add(report)
+        db.session.commit()
+        job_id = job.id
+        report_id = report.id
+
+    root = tmp_path / "backtest-results" / "compat-job"
+    root.mkdir(parents=True)
+    (root / "equity_curve.json").write_text(
+        json.dumps([{"timestamp": 1, "equity": 100000.0, "benchmark_equity": 100000.0}], ensure_ascii=False),
+        encoding="utf-8",
+    )
+    (root / "trades.json").write_text(json.dumps([], ensure_ascii=False), encoding="utf-8")
+    (root / "kline.json").write_text(json.dumps([], ensure_ascii=False), encoding="utf-8")
+
+    response = client.get(f"/api/v1/backtest/{job_id}/report", headers=_auth_headers(token))
+
+    assert response.status_code == 200
+    assert response.json["data"]["report_id"] == report_id
+    assert response.json["data"]["report_status"] == "ready"

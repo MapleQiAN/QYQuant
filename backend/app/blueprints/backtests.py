@@ -8,7 +8,7 @@ from flask_smorest import Blueprint
 from ..backtest.engine import run_backtest
 from ..celery_app import celery_app
 from ..extensions import db
-from ..models import BacktestJob, BacktestJobStatus, Strategy
+from ..models import BacktestJob, BacktestJobStatus, BacktestReport, Strategy
 from ..quota import ensure_user_quota, has_remaining_quota, reserve_backtest_quota, serialize_plan_limit
 from ..services.backtest_report_export import render_backtest_report_pdf
 from ..services.error_parser import load_execution_error
@@ -352,6 +352,7 @@ def get_backtest_report(job_id):
     job_record = db.session.get(BacktestJob, job_id)
     if job_record is None or job_record.user_id != user_id:
         return error_response("JOB_NOT_FOUND", "回测任务不存在", 404)
+    report_record = BacktestReport.query.filter_by(backtest_job_id=job_record.id).one_or_none()
     if job_record.status == BacktestJobStatus.FAILED.value:
         return ok(
             {
@@ -360,6 +361,8 @@ def get_backtest_report(job_id):
                 "params": job_record.params,
                 "error": load_execution_error(job_record.error_message),
                 "completed_at": format_beijing_iso(job_record.completed_at),
+                "report_id": report_record.id if report_record else None,
+                "report_status": report_record.status if report_record else None,
             }
         )
     if job_record.status != BacktestJobStatus.COMPLETED.value:
@@ -384,6 +387,8 @@ def get_backtest_report(job_id):
             "kline": kline,
             "completed_at": format_beijing_iso(job_record.completed_at),
             "disclaimer": REPORT_DISCLAIMER,
+            "report_id": report_record.id if report_record else None,
+            "report_status": report_record.status if report_record else None,
         }
     )
 
