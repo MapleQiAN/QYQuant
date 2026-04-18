@@ -1051,6 +1051,24 @@ def _build_report_fixture():
     }
 
 
+def test_build_backtest_report_keeps_legacy_shape():
+    from app.services.metrics import build_backtest_report
+
+    fixture = _build_report_fixture()
+
+    report = build_backtest_report(fixture["kline"], fixture["trades"])
+
+    assert set(report.keys()) == {"equity_curve", "trades", "result_summary"}
+    assert report["equity_curve"][0]["timestamp"] == fixture["kline"][0]["time"]
+    assert report["trades"][0]["side"] == "buy"
+    assert {
+        "totalReturn",
+        "annualizedReturn",
+        "maxDrawdown",
+        "sharpeRatio",
+    }.issubset(set(report["result_summary"].keys()))
+
+
 def test_worker_generates_report_summary_and_storage_artifacts(monkeypatch, app, tmp_path):
     from app.extensions import db
     from app.models import BacktestJob, Strategy, User, UserQuota
