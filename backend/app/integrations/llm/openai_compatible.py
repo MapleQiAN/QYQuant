@@ -21,7 +21,7 @@ class OpenAICompatibleLLMAdapter:
         if not base_url:
             return {"status": "invalid", "message": "Base URL is required"}
 
-        url = f"{base_url.rstrip('/')}/v1/chat/completions"
+        url = f"{base_url.rstrip('/')}/chat/completions"
         headers = {
             "Authorization": f"Bearer {api_key}",
             "Content-Type": "application/json",
