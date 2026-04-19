@@ -3,48 +3,6 @@
     <div class="container">
       <h1 class="view-title">{{ $t('settings.title') }}</h1>
 
-      <div class="card setting-card profile-card">
-        <div class="setting-header profile-header">
-          <div>
-            <h3>{{ $t('settings.profileTitle') }}</h3>
-            <p class="hint">{{ $t('settings.profileHint') }}</p>
-          </div>
-        </div>
-
-        <form class="profile-form" data-action="save-profile" @submit.prevent="submitProfile">
-          <div class="profile-preview">
-            <img v-if="avatarPreview" :src="avatarPreview" alt="avatar preview" class="profile-avatar" />
-            <div v-else class="profile-avatar profile-avatar-fallback">
-              {{ nickname.trim().slice(0, 1).toUpperCase() || 'Q' }}
-            </div>
-          </div>
-
-          <label class="field">
-            <span>{{ $t('settings.nicknameLabel') }}</span>
-            <input v-model="nickname" data-profile-field="nickname" type="text" maxlength="30" @input="profileDirty = true" />
-          </label>
-
-          <label class="field">
-            <span>{{ $t('settings.bioLabel') }}</span>
-            <textarea v-model="bio" data-profile-field="bio" rows="4" maxlength="200" @input="profileDirty = true"></textarea>
-          </label>
-
-          <label class="field">
-            <span>{{ $t('settings.avatarLabel') }}</span>
-            <input
-              data-profile-field="avatar"
-              type="file"
-              accept="image/png,image/jpeg,image/webp,image/gif"
-              @change="handleAvatarChange"
-            />
-          </label>
-
-          <button class="primary-btn" type="submit" :disabled="savingProfile">
-            {{ $t('settings.saveProfileAction') }}
-          </button>
-        </form>
-      </div>
-
       <div class="card setting-card">
         <div class="setting-header">
           <div>
@@ -318,12 +276,9 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref, watch } from 'vue'
+import { computed, onMounted, reactive, ref } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useRoute } from 'vue-router'
-import { uploadPublicImage } from '../api/files'
-import { updateMyProfile } from '../api/users'
-import { toast } from '../lib/toast'
 import { useUserStore } from '../stores/user'
 import { useIntegrationsStore } from '../stores/useIntegrationsStore'
 import { QSelect } from '../components/ui'
@@ -333,13 +288,6 @@ const integrationsStore = useIntegrationsStore()
 const route = useRoute()
 const { locale, marketStyle } = storeToRefs(userStore)
 const { providers, integrations, validationState, accountById, positionsById, activeAiIntegrationId } = storeToRefs(integrationsStore)
-
-const nickname = ref('')
-const bio = ref('')
-const avatarPreview = ref('')
-const selectedAvatarFile = ref<File | null>(null)
-const savingProfile = ref(false)
-const profileDirty = ref(false)
 
 const dsSelectedProviderKey = ref('')
 const dsDisplayName = ref('')
@@ -406,53 +354,6 @@ function setLocale(next: 'en' | 'zh') {
 
 function setMarketStyle(next: 'cn' | 'us') {
   userStore.setMarketStyle(next)
-}
-
-function syncProfileForm() {
-  nickname.value = userStore.profile.nickname || ''
-  bio.value = userStore.profile.bio || ''
-  avatarPreview.value = userStore.profile.avatar_url || ''
-}
-
-function handleAvatarChange(event: Event) {
-  const input = event.target as HTMLInputElement
-  const file = input.files?.[0] || null
-  selectedAvatarFile.value = file
-  profileDirty.value = true
-  const previewUrl = file && typeof URL !== 'undefined' && typeof URL.createObjectURL === 'function'
-    ? URL.createObjectURL(file)
-    : ''
-  avatarPreview.value = previewUrl || userStore.profile.avatar_url || ''
-}
-
-async function submitProfile() {
-  if (savingProfile.value) {
-    return
-  }
-
-  savingProfile.value = true
-  try {
-    let avatarUrl = userStore.profile.avatar_url || ''
-    if (selectedAvatarFile.value) {
-      const uploaded = await uploadPublicImage(selectedAvatarFile.value)
-      avatarUrl = uploaded.url
-    }
-
-    const profile = await updateMyProfile({
-      nickname: nickname.value.trim(),
-      bio: bio.value.trim(),
-      avatar_url: avatarUrl,
-    })
-    userStore.applyRemoteProfile(profile)
-    selectedAvatarFile.value = null
-    profileDirty.value = false
-    syncProfileForm()
-    toast.success('资料已保存')
-  } catch (error: any) {
-    toast.error(error?.message || '保存失败')
-  } finally {
-    savingProfile.value = false
-  }
 }
 
 async function submitDsIntegration() {
@@ -551,22 +452,6 @@ async function saveEditAi(integration: { id: string; providerKey: string }) {
   editingAiId.value = ''
 }
 
-watch(
-  () => [
-    userStore.profileLoaded,
-    userStore.profile.id,
-    userStore.profile.nickname,
-    userStore.profile.bio,
-    userStore.profile.avatar_url,
-  ],
-  () => {
-    if (!profileDirty.value) {
-      syncProfileForm()
-    }
-  },
-  { immediate: true }
-)
-
 onMounted(async () => {
   if (userStore.token && !userStore.profileLoaded && !userStore.profileLoading) {
     await userStore.loadProfile()
@@ -624,40 +509,14 @@ onMounted(async () => {
   color: var(--color-text-muted);
 }
 
-.profile-card,
-.profile-form,
 .integrations-card,
 .integration-form {
   display: grid;
   gap: var(--spacing-md);
 }
 
-.profile-header,
 .integrations-header {
   align-items: flex-start;
-}
-
-.profile-preview {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-md);
-}
-
-.profile-avatar {
-  width: 88px;
-  height: 88px;
-  border-radius: 50%;
-  object-fit: cover;
-  border: 1px solid var(--color-border);
-}
-
-.profile-avatar-fallback {
-  display: grid;
-  place-items: center;
-  background: linear-gradient(135deg, #0f766e, #0ea5e9);
-  color: #fff;
-  font-size: 32px;
-  font-weight: 700;
 }
 
 .toggle {

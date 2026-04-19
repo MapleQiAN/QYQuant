@@ -10,6 +10,7 @@ import BotsView from '../views/BotsView.vue'
 import ForumView from '../views/ForumView.vue'
 import PostDetailView from '../views/PostDetailView.vue'
 import SettingsView from '../views/SettingsView.vue'
+import ProfileView from '../views/ProfileView.vue'
 import NewStrategyView from '../views/NewStrategyView.vue'
 import StrategyLibraryView from '../views/StrategyLibraryView.vue'
 import StrategyImportView from '../views/StrategyImportView.vue'
@@ -76,7 +77,8 @@ const router = createRouter({
     { path: '/forum', name: 'forum', component: ForumView },
     { path: '/forum/posts/:postId', name: 'forum-post-detail', component: PostDetailView },
     { path: '/users/:id', name: 'user-profile', component: UserProfileView },
-    { path: '/settings', name: 'settings', component: SettingsView }
+    { path: '/settings', name: 'settings', component: SettingsView },
+    { path: '/profile', name: 'profile', component: ProfileView }
   ]
 })
 

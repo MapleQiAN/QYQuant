@@ -30,6 +30,10 @@ class UserPrivateSchema(Schema):
     is_banned = fields.Bool(required=True)
     onboarding_completed = fields.Bool(required=True)
     sim_disclaimer_accepted = fields.Bool(required=True)
+    location = fields.Str()
+    website_url = fields.Str()
+    trading_experience = fields.Str()
+    preferred_markets = fields.Str()
     created_at = fields.Function(lambda obj: format_beijing_iso(_value(obj, "created_at")))
     updated_at = fields.Function(lambda obj: format_beijing_iso(_value(obj, "updated_at")))
 
@@ -40,6 +44,10 @@ class UserPublicSchema(Schema):
     avatar_url = fields.Str(required=True)
     bio = fields.Str(required=True)
     is_banned = fields.Bool(required=True)
+    location = fields.Str()
+    website_url = fields.Str()
+    trading_experience = fields.Str()
+    preferred_markets = fields.Str()
     created_at = fields.Function(lambda obj: format_beijing_iso(_value(obj, "created_at")))
 
 
@@ -47,6 +55,10 @@ class UserUpdateSchema(Schema):
     nickname = fields.Str(validate=validate.Length(min=2, max=30))
     bio = fields.Str(validate=validate.Length(max=200))
     avatar_url = fields.Str()
+    location = fields.Str(validate=validate.Length(max=100), allow_none=True)
+    website_url = fields.Str(validate=validate.Length(max=500), allow_none=True)
+    trading_experience = fields.Str(validate=validate.OneOf(['beginner', 'intermediate', 'advanced', 'professional']), allow_none=True)
+    preferred_markets = fields.Str(validate=validate.Length(max=200), allow_none=True)
 
 
 class UserSchema(UserPrivateSchema):

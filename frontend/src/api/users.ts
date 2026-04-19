@@ -71,6 +71,10 @@ export function updateMyProfile(payload: {
   nickname?: string
   bio?: string
   avatar_url?: string
+  location?: string
+  website_url?: string
+  trading_experience?: string
+  preferred_markets?: string
 }): Promise<UserProfileResponse> {
   return client.request({
     method: 'patch',

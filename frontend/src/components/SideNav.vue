@@ -29,6 +29,17 @@
 
     <div class="sidebar-footer">
       <RouterLink
+        to="/profile"
+        :class="['nav-item', { active: route.path === '/profile' }]"
+        :title="collapsed ? t('common.profile') : undefined"
+      >
+        <ProfileIcon class="nav-item-icon" />
+        <Transition name="fade">
+          <span v-if="!collapsed" class="nav-item-label">{{ $t('common.profile') }}</span>
+        </Transition>
+      </RouterLink>
+
+      <RouterLink
         to="/settings"
         :class="['nav-item', { active: route.path === '/settings' }]"
         :title="collapsed ? t('common.settings') : undefined"
@@ -182,6 +193,13 @@ function ChevronIcon() {
 function CrownIcon() {
   return h('svg', { width: 20, height: 20, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', 'stroke-width': 1.75, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }, [
     h('path', { d: 'M2 4l3 12h14l3-12-6 7-4-7-4 7-6-7zm3 16h14' }),
+  ])
+}
+
+function ProfileIcon() {
+  return h('svg', { width: 20, height: 20, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', 'stroke-width': 1.75, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }, [
+    h('path', { d: 'M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2' }),
+    h('circle', { cx: 12, cy: 7, r: 4 }),
   ])
 }
 </script>

@@ -22,6 +22,10 @@ const defaultUser: User = {
   sim_disclaimer_accepted: false,
   phone: '',
   email: '',
+  location: '',
+  website_url: '',
+  trading_experience: '',
+  preferred_markets: '',
   created_at: undefined,
   updated_at: undefined,
 }
@@ -66,6 +70,10 @@ export const useUserStore = defineStore('user', {
         sim_disclaimer_accepted: profile.sim_disclaimer_accepted,
         phone: profile.phone,
         email: profile.email,
+        location: profile.location,
+        website_url: profile.website_url,
+        trading_experience: profile.trading_experience,
+        preferred_markets: profile.preferred_markets,
         created_at: profile.created_at,
         updated_at: profile.updated_at,
       }

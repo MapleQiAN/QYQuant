@@ -46,7 +46,7 @@ const initial = computed(() => props.profile.nickname?.slice(0, 1)?.toUpperCase(
       </div>
     </div>
 
-    <RouterLink v-if="editable" class="edit-link" to="/settings">编辑资料</RouterLink>
+    <RouterLink v-if="editable" class="edit-link" to="/profile">编辑资料</RouterLink>
   </article>
 </template>
 

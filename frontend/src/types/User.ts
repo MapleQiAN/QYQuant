@@ -14,6 +14,10 @@ export interface User {
   sim_disclaimer_accepted: boolean
   phone?: string
   email?: string
+  location?: string
+  website_url?: string
+  trading_experience?: string
+  preferred_markets?: string
   created_at?: string
   updated_at?: string
 }
@@ -30,6 +34,10 @@ export interface UserProfileResponse {
   is_banned?: boolean
   onboarding_completed: boolean
   sim_disclaimer_accepted: boolean
+  location?: string
+  website_url?: string
+  trading_experience?: string
+  preferred_markets?: string
   created_at?: string
   updated_at?: string
 }
@@ -40,6 +48,10 @@ export interface UserPublicProfile {
   avatar_url: string
   bio: string
   is_banned: boolean
+  location?: string
+  website_url?: string
+  trading_experience?: string
+  preferred_markets?: string
   created_at: string | null
 }
 
