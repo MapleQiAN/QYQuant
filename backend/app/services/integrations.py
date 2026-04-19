@@ -2,6 +2,7 @@ import json
 
 from ..extensions import db
 from ..integrations.brokers import GMTradeBrokerAdapter, LongPortBrokerAdapter, XtQuantBrokerAdapter
+from ..integrations.llm import OpenAICompatibleLLMAdapter
 from ..integrations.registry import get_provider, list_providers
 from ..models import IntegrationProvider, UserIntegration, UserIntegrationSecret
 from ..utils.crypto import decrypt_text, encrypt_text
@@ -189,3 +190,28 @@ def get_broker_adapter(_provider_key):
     if adapter_cls is None:
         return BrokerAdapterNotImplemented()
     return adapter_cls()
+
+
+def get_adapter_for_provider(provider_key):
+    provider = get_provider(provider_key)
+    if provider.type == "broker_account":
+        return get_broker_adapter(provider_key)
+    if provider.type == "llm":
+        mapping = {
+            "openai_compatible": OpenAICompatibleLLMAdapter,
+        }
+        adapter_cls = mapping.get(provider_key)
+        if adapter_cls:
+            return adapter_cls()
+    return _UnsupportedAdapter()
+
+
+class _UnsupportedAdapter:
+    def validate_credentials(self, _config):
+        return {"status": "unsupported", "message": "Validation not implemented for this provider type"}
+
+    def get_account_summary(self, _integration):
+        return {}
+
+    def get_positions(self, _integration):
+        return []

@@ -72,7 +72,7 @@ def validate_integration(integration_id):
     if error:
         return error
 
-    adapter = integrations_service.get_broker_adapter(integration.provider_key)
+    adapter = integrations_service.get_adapter_for_provider(integration.provider_key)
     result = adapter.validate_credentials(
         {
             "config_public": dict(integration.config_public or {}),
