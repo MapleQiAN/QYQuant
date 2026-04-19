@@ -55,6 +55,7 @@ export interface RunBacktestPayload {
   strategyId?: string
   strategyVersion?: string
   strategyParams?: Record<string, unknown>
+  enableAi?: boolean
 }
 
 export interface RunBacktestResponse {
@@ -74,6 +75,7 @@ export interface SubmitBacktestPayload {
   data_source?: string
   name?: string
   parameters?: Record<string, unknown>
+  enable_ai?: boolean
 }
 
 export interface BacktestStatusResponse {

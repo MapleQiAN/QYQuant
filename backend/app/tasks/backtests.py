@@ -108,7 +108,7 @@ def _run_job(job_id):
     job.completed_at = now_utc()
     db.session.commit()
 
-    if job.user_id:
+    if job.user_id and params.get("enable_ai", True):
         from .report_generation import generate_backtest_report
 
         generate_backtest_report.delay(job.id, job.user_id)

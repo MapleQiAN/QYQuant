@@ -101,6 +101,7 @@ def _build_v1_job_params(payload):
         "strategy_id": payload.get("strategy_id"),
         "strategy_params": parameters,
         "parameters": parameters,
+        "enable_ai": payload.get("enable_ai", True),
     }
 
 
@@ -183,6 +184,7 @@ def run():
             "strategy_version": strategy_version,
             "strategy_params": strategy_params,
             "data_source": data_source,
+            "enable_ai": payload.get("enableAi", payload.get("enable_ai", True)),
         },
     )
     db.session.add(job_record)
