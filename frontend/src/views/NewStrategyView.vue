@@ -245,6 +245,26 @@
                     <span class="summary-value">{{ String(aiLatestMetadata.category || '-') }}</span>
                   </div>
                 </div>
+
+                <div v-if="aiLatestAnalysis.fileSummary" class="preview-file">
+                  <span class="preview-file__label">{{ $t('strategyNew.aiPreviewSource') }}</span>
+                  <code class="preview-file__name">{{ aiLatestAnalysis.fileSummary.filename }}</code>
+                </div>
+
+                <div class="validation-block">
+                  <h4 class="validation-title">{{ $t('strategyNew.aiValidationTitle') }}</h4>
+                  <div class="validation-list">
+                    <div class="validation-item">
+                      <span>{{ $t('strategy.import.validationEntrypoint') }}</span>
+                      <strong :class="validationClass(aiLatestAnalysis.entrypointCandidates.length > 0)">{{ validationLabel(aiLatestAnalysis.entrypointCandidates.length > 0) }}</strong>
+                    </div>
+                    <div v-if="aiLatestAnalysis.parameterCandidates.length" class="validation-item">
+                      <span>{{ $t('strategyNew.aiParamsDetected') }}</span>
+                      <strong class="validation-state validation-state--pass">{{ aiLatestAnalysis.parameterCandidates.length }}</strong>
+                    </div>
+                  </div>
+                </div>
+
                 <div v-if="aiLatestAnalysis.warnings.length" class="summary-alert summary-alert--warning">
                   {{ aiLatestAnalysis.warnings.join(', ') }}
                 </div>
@@ -264,7 +284,7 @@
             </section>
 
             <section class="card ai-chat">
-              <div class="ai-chat__messages">
+              <div ref="aiChatMessages" class="ai-chat__messages">
                 <div v-if="aiMessages.length === 0" class="empty-panel">
                   {{ $t('strategyNew.aiEmptyState') }}
                 </div>
@@ -277,6 +297,14 @@
                   <p class="chat-bubble__role">{{ message.role === 'user' ? $t('strategyNew.aiUserRole') : $t('strategyNew.aiAssistantRole') }}</p>
                   <p class="chat-bubble__content">{{ message.content }}</p>
                 </article>
+                <div v-if="aiSubmitting" class="chat-bubble chat-bubble--assistant chat-bubble--thinking">
+                  <p class="chat-bubble__role">{{ $t('strategyNew.aiAssistantRole') }}</p>
+                  <div class="thinking-dots">
+                    <span class="thinking-dot"></span>
+                    <span class="thinking-dot"></span>
+                    <span class="thinking-dot"></span>
+                  </div>
+                </div>
               </div>
 
               <label class="field ai-chat__composer">
@@ -310,7 +338,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, h, ref } from 'vue'
+import { computed, h, nextTick, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { RouterLink, useRouter } from 'vue-router'
 import { fetchIntegrations, type UserIntegration } from '../api/integrations'
@@ -339,6 +367,22 @@ const aiPrompt = ref('')
 const aiSubmitting = ref(false)
 const aiError = ref('')
 const aiLatestAnalysis = ref<StrategyImportAnalysis | null>(null)
+const aiChatMessages = ref<HTMLElement | null>(null)
+
+function scrollToBottom() {
+  nextTick(() => {
+    const el = aiChatMessages.value
+    if (el) el.scrollTop = el.scrollHeight
+  })
+}
+
+function validationLabel(value: boolean) {
+  return value ? 'Passed' : 'Needs review'
+}
+
+function validationClass(value: boolean) {
+  return value ? 'validation-state validation-state--pass' : 'validation-state validation-state--warn'
+}
 
 const minimalGuideCode = computed(() => `from qysp import Order
 
@@ -451,6 +495,7 @@ async function handleAiSend() {
   aiMessages.value = pendingMessages
   const currentPrompt = aiPrompt.value
   aiPrompt.value = ''
+  scrollToBottom()
 
   try {
     const result = await generateAiStrategyDraft({
@@ -459,6 +504,7 @@ async function handleAiSend() {
     })
     aiMessages.value = [...pendingMessages, { role: 'assistant', content: result.reply }]
     aiLatestAnalysis.value = result.analysis
+    scrollToBottom()
   } catch (error: any) {
     aiPrompt.value = currentPrompt
     aiError.value = error?.message || t('strategyNew.aiError')
@@ -736,6 +782,7 @@ const ArrowLeftIcon = () => h('svg', {
   max-height: calc(100vh - 48px);
   overflow: auto;
   padding: var(--spacing-lg);
+  font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', 'Noto Sans SC', sans-serif;
 }
 
 .template-picker__header {
@@ -808,6 +855,9 @@ const ArrowLeftIcon = () => h('svg', {
   border-radius: var(--radius-lg);
   display: grid;
   gap: 6px;
+  font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', 'Noto Sans SC', sans-serif;
+  line-height: 1.6;
+  letter-spacing: 0.01em;
 }
 
 .chat-bubble--user {
@@ -827,6 +877,14 @@ const ArrowLeftIcon = () => h('svg', {
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--color-text-muted);
+  font-weight: 600;
+}
+
+.chat-bubble__content {
+  font-size: var(--font-size-md);
+  line-height: 1.7;
+  white-space: pre-wrap;
+  word-break: break-word;
 }
 
 .empty-panel {
@@ -925,6 +983,97 @@ const ArrowLeftIcon = () => h('svg', {
   to {
     transform: rotate(360deg);
   }
+}
+
+@keyframes thinking-bounce {
+  0%, 80%, 100% {
+    transform: translateY(0);
+    opacity: 0.4;
+  }
+  40% {
+    transform: translateY(-6px);
+    opacity: 1;
+  }
+}
+
+.chat-bubble--thinking {
+  min-width: 80px;
+}
+
+.thinking-dots {
+  display: flex;
+  gap: 5px;
+  padding: 6px 0;
+}
+
+.thinking-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: var(--color-text-muted);
+  animation: thinking-bounce 1.4s ease-in-out infinite;
+}
+
+.thinking-dot:nth-child(2) {
+  animation-delay: 0.16s;
+}
+
+.thinking-dot:nth-child(3) {
+  animation-delay: 0.32s;
+}
+
+.preview-file {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  margin-top: var(--spacing-sm);
+  padding: var(--spacing-xs) var(--spacing-sm);
+  border-radius: var(--radius-md);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.preview-file__label {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+}
+
+.preview-file__name {
+  font-family: var(--font-mono, 'SF Mono', 'Cascadia Code', 'Fira Code', Consolas, monospace);
+  font-size: var(--font-size-xs);
+  color: var(--color-accent);
+}
+
+.validation-block {
+  margin-top: var(--spacing-md);
+  padding-top: var(--spacing-sm);
+  border-top: 1px solid var(--color-border);
+}
+
+.validation-title {
+  margin: 0 0 var(--spacing-xs);
+  font-size: var(--font-size-sm);
+}
+
+.validation-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.validation-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-sm);
+  font-size: var(--font-size-sm);
+}
+
+.validation-state--pass {
+  color: #2a9d65;
+}
+
+.validation-state--warn {
+  color: #c87a00;
 }
 
 @media (max-width: 1100px) {
