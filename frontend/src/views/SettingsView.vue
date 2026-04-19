@@ -15,18 +15,18 @@
           <div class="profile-preview">
             <img v-if="avatarPreview" :src="avatarPreview" alt="avatar preview" class="profile-avatar" />
             <div v-else class="profile-avatar profile-avatar-fallback">
-              {{ avatarFallback }}
+              {{ nickname.trim().slice(0, 1).toUpperCase() || 'Q' }}
             </div>
           </div>
 
           <label class="field">
             <span>{{ $t('settings.nicknameLabel') }}</span>
-            <input v-model="nickname" data-profile-field="nickname" type="text" maxlength="30" @input="markProfileDirty" />
+            <input v-model="nickname" data-profile-field="nickname" type="text" maxlength="30" @input="profileDirty = true" />
           </label>
 
           <label class="field">
             <span>{{ $t('settings.bioLabel') }}</span>
-            <textarea v-model="bio" data-profile-field="bio" rows="4" maxlength="200" @input="markProfileDirty"></textarea>
+            <textarea v-model="bio" data-profile-field="bio" rows="4" maxlength="200" @input="profileDirty = true"></textarea>
           </label>
 
           <label class="field">
@@ -208,30 +208,108 @@
             <input v-model="aiSecretPayload[fieldName]" :data-secret-field="fieldName" type="text" />
           </label>
           <button class="primary-btn" type="submit">
-            {{ $t('settings.connectAction') }}
+            {{ $t('settings.addConfigAction') }}
           </button>
         </form>
         <div v-if="aiIntegrations.length === 0" class="empty-state">
           {{ $t('settings.emptyAiConnections') }}
         </div>
         <div v-else class="integration-list">
-          <article v-for="integration in aiIntegrations" :key="integration.id" class="integration-item">
-            <div class="integration-meta">
-              <strong>{{ integration.displayName }}</strong>
-              <span>{{ integration.providerKey }}</span>
-            </div>
-            <div class="integration-actions">
-              <button
-                type="button"
-                :data-action="`validate-integration-${integration.id}`"
-                @click="validateExistingIntegration(integration.id)"
-              >
-                {{ $t('settings.validateAction') }}
-              </button>
-            </div>
-            <p v-if="validationState[integration.id]" class="integration-feedback">
-              {{ validationState[integration.id]?.status }} {{ validationState[integration.id]?.message || '' }}
-            </p>
+          <article
+            v-for="integration in aiIntegrations"
+            :key="integration.id"
+            class="integration-item"
+            :class="{ 'ai-active': activeAiIntegrationId === integration.id }"
+          >
+            <template v-if="editingAiId === integration.id">
+              <div class="edit-form">
+                <label class="field">
+                  <span>{{ $t('settings.displayNameLabel') }}</span>
+                  <input v-model="editDisplayName" type="text" />
+                </label>
+                <label
+                  v-for="fieldName in editAiFieldNames(integration).publicFields"
+                  :key="`edit-pub-${fieldName}`"
+                  class="field"
+                >
+                  <span>{{ fieldName }}</span>
+                  <input v-model="editConfigPublic[fieldName]" type="text" />
+                </label>
+                <label
+                  v-for="fieldName in editAiFieldNames(integration).secretFields"
+                  :key="`edit-sec-${fieldName}`"
+                  class="field"
+                >
+                  <span>{{ fieldName }}</span>
+                  <input v-model="editSecretPayload[fieldName]" type="text" :placeholder="$t('settings.secretPlaceholder')" />
+                </label>
+                <div class="edit-actions">
+                  <button class="primary-btn" type="button" @click="saveEditAi(integration)">
+                    {{ $t('settings.saveAction') }}
+                  </button>
+                  <button type="button" @click="cancelEditAi">
+                    {{ $t('settings.cancelAction') }}
+                  </button>
+                </div>
+              </div>
+            </template>
+            <template v-else>
+              <div class="integration-meta">
+                <div class="integration-name-row">
+                  <strong>{{ integration.displayName }}</strong>
+                  <span v-if="activeAiIntegrationId === integration.id" class="ai-active-badge">
+                    {{ $t('settings.connectedStatus') }}
+                  </span>
+                </div>
+                <span>{{ integration.providerKey }}</span>
+              </div>
+              <div class="integration-actions">
+                <button
+                  v-if="activeAiIntegrationId !== integration.id"
+                  type="button"
+                  class="connect-btn"
+                  :data-action="`connect-integration-${integration.id}`"
+                  @click="connectAiIntegration(integration.id)"
+                >
+                  {{ $t('settings.connectAction') }}
+                </button>
+                <button
+                  v-else
+                  type="button"
+                  class="disconnect-btn"
+                  :data-action="`disconnect-integration-${integration.id}`"
+                  @click="connectAiIntegration('')"
+                >
+                  {{ $t('settings.disconnectAction') }}
+                </button>
+                <button
+                  type="button"
+                  :data-action="`validate-integration-${integration.id}`"
+                  @click="validateExistingIntegration(integration.id)"
+                >
+                  {{ $t('settings.validateAction') }}
+                </button>
+                <button
+                  type="button"
+                  class="edit-btn"
+                  :data-action="`edit-integration-${integration.id}`"
+                  @click="startEditAi(integration)"
+                >
+                  {{ $t('settings.editAction') }}
+                </button>
+                <button
+                  type="button"
+                  class="delete-btn"
+                  :data-action="`delete-integration-${integration.id}`"
+                  @click="deleteAiIntegration(integration.id)"
+                >
+                  {{ $t('settings.deleteAction') }}
+                </button>
+              </div>
+              <p v-if="validationState[integration.id]" class="integration-feedback">
+                {{ validationState[integration.id]?.status }} {{ validationState[integration.id]?.message || '' }}
+              </p>
+            </template>
           </article>
         </div>
       </div>
@@ -254,7 +332,7 @@ const userStore = useUserStore()
 const integrationsStore = useIntegrationsStore()
 const route = useRoute()
 const { locale, marketStyle } = storeToRefs(userStore)
-const { providers, integrations, validationState, accountById, positionsById } = storeToRefs(integrationsStore)
+const { providers, integrations, validationState, accountById, positionsById, activeAiIntegrationId } = storeToRefs(integrationsStore)
 
 const nickname = ref('')
 const bio = ref('')
@@ -272,6 +350,11 @@ const aiSelectedProviderKey = ref('')
 const aiDisplayName = ref('')
 const aiConfigPublic = reactive<Record<string, string>>({})
 const aiSecretPayload = reactive<Record<string, string>>({})
+
+const editingAiId = ref('')
+const editDisplayName = ref('')
+const editConfigPublic = reactive<Record<string, string>>({})
+const editSecretPayload = reactive<Record<string, string>>({})
 
 const providerByKey = computed(() =>
   Object.fromEntries(providers.value.map((provider) => [provider.key, provider]))
@@ -294,7 +377,6 @@ const dsSecretFieldNames = computed(() => fieldNamesFor(dsSelectedProviderKey.va
 
 const aiPublicFieldNames = computed(() => fieldNamesFor(aiSelectedProviderKey.value, 'public_fields'))
 const aiSecretFieldNames = computed(() => fieldNamesFor(aiSelectedProviderKey.value, 'secret_fields'))
-const avatarFallback = computed(() => nickname.value.trim().slice(0, 1).toUpperCase() || 'Q')
 
 const dataSourceProviders = computed(() =>
   providers.value.filter((p) => p.type === 'market_data' || p.type === 'broker_account')
@@ -318,22 +400,18 @@ const aiIntegrations = computed(() =>
   integrations.value.filter((i) => providerByKey.value[i.providerKey]?.type === 'llm')
 )
 
-function syncProfileForm() {
-  nickname.value = userStore.profile.nickname || ''
-  bio.value = userStore.profile.bio || ''
-  avatarPreview.value = userStore.profile.avatar_url || ''
-}
-
-function markProfileDirty() {
-  profileDirty.value = true
-}
-
 function setLocale(next: 'en' | 'zh') {
   userStore.setLocale(next)
 }
 
 function setMarketStyle(next: 'cn' | 'us') {
   userStore.setMarketStyle(next)
+}
+
+function syncProfileForm() {
+  nickname.value = userStore.profile.nickname || ''
+  bio.value = userStore.profile.bio || ''
+  avatarPreview.value = userStore.profile.avatar_url || ''
 }
 
 function handleAvatarChange(event: Event) {
@@ -427,6 +505,50 @@ async function loadAccount(integrationId: string) {
 
 async function loadPositions(integrationId: string) {
   await integrationsStore.loadPositions(integrationId)
+}
+
+function connectAiIntegration(integrationId: string) {
+  integrationsStore.setActiveAiIntegration(integrationId)
+}
+
+async function deleteAiIntegration(integrationId: string) {
+  await integrationsStore.deleteIntegration(integrationId)
+}
+
+function editAiFieldNames(integration: { providerKey: string }) {
+  return {
+    publicFields: fieldNamesFor(integration.providerKey, 'public_fields'),
+    secretFields: fieldNamesFor(integration.providerKey, 'secret_fields'),
+  }
+}
+
+function startEditAi(integration: { id: string; providerKey: string; displayName: string; configPublic: Record<string, unknown> }) {
+  editingAiId.value = integration.id
+  editDisplayName.value = integration.displayName
+  const fields = editAiFieldNames(integration)
+  for (const key of Object.keys(editConfigPublic)) delete editConfigPublic[key]
+  for (const key of Object.keys(editSecretPayload)) delete editSecretPayload[key]
+  for (const f of fields.publicFields) editConfigPublic[f] = String(integration.configPublic[f] ?? '')
+  for (const f of fields.secretFields) editSecretPayload[f] = ''
+}
+
+function cancelEditAi() {
+  editingAiId.value = ''
+}
+
+async function saveEditAi(integration: { id: string; providerKey: string }) {
+  const fields = editAiFieldNames(integration)
+  const publicPayload: Record<string, string> = {}
+  for (const f of fields.publicFields) publicPayload[f] = editConfigPublic[f] ?? ''
+  const secretPayload: Record<string, string> = {}
+  const hasSecret = fields.secretFields.some((f) => editSecretPayload[f]?.trim())
+  for (const f of fields.secretFields) secretPayload[f] = editSecretPayload[f] ?? ''
+  await integrationsStore.updateIntegration(integration.id, {
+    displayName: editDisplayName.value.trim(),
+    configPublic: publicPayload,
+    ...(hasSecret ? { secretPayload } : {}),
+  })
+  editingAiId.value = ''
 }
 
 watch(
@@ -654,5 +776,66 @@ onMounted(async () => {
 
 .empty-state {
   color: var(--color-text-muted);
+}
+
+.ai-active {
+  border-color: #10b981;
+  background: color-mix(in srgb, #10b981 8%, var(--color-surface));
+}
+
+.integration-name-row {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+}
+
+.ai-active-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+  background: #10b981;
+  color: #fff;
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.connect-btn {
+  background: #10b981 !important;
+  color: #fff !important;
+}
+
+.disconnect-btn {
+  background: var(--color-primary-bg) !important;
+  color: var(--color-text-secondary) !important;
+}
+
+.delete-btn {
+  color: #ef4444 !important;
+  background: color-mix(in srgb, #ef4444 10%, var(--color-surface)) !important;
+}
+
+.edit-btn {
+  color: var(--color-primary) !important;
+}
+
+.edit-form {
+  display: grid;
+  gap: var(--spacing-sm);
+}
+
+.edit-actions {
+  display: flex;
+  gap: var(--spacing-sm);
+}
+
+.edit-actions button {
+  border: none;
+  border-radius: var(--radius-full);
+  padding: var(--spacing-xs) var(--spacing-md);
+  font: inherit;
+  cursor: pointer;
+  background: var(--color-primary-bg);
+  color: var(--color-primary);
 }
 </style>

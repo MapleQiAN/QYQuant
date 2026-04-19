@@ -33,6 +33,12 @@ export interface CreateIntegrationPayload {
   secretPayload: Record<string, unknown>
 }
 
+export interface UpdateIntegrationPayload {
+  displayName?: string
+  configPublic?: Record<string, unknown>
+  secretPayload?: Record<string, unknown>
+}
+
 interface IntegrationProviderDto {
   key: string
   name?: string | null
@@ -80,6 +86,25 @@ export function createIntegration(payload: CreateIntegrationPayload): Promise<Us
       display_name: payload.displayName,
       config_public: payload.configPublic,
       secret_payload: payload.secretPayload
+    }
+  }).then(normalizeIntegration)
+}
+
+export function deleteIntegration(integrationId: string): Promise<void> {
+  return client.request<void>({
+    method: 'delete',
+    url: `/v1/integrations/${integrationId}`
+  })
+}
+
+export function updateIntegration(integrationId: string, payload: UpdateIntegrationPayload): Promise<UserIntegration> {
+  return client.request<UserIntegrationDto>({
+    method: 'patch',
+    url: `/v1/integrations/${integrationId}`,
+    data: {
+      display_name: payload.displayName,
+      config_public: payload.configPublic,
+      secret_payload: payload.secretPayload,
     }
   }).then(normalizeIntegration)
 }

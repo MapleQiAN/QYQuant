@@ -65,6 +65,46 @@ def _integration_or_404(integration_id):
     return integration, None
 
 
+@bp.delete("/<integration_id>")
+@jwt_required()
+def delete_integration(integration_id):
+    integration, error = _integration_or_404(integration_id)
+    if error:
+        return error
+    integrations_service.soft_delete_integration(integration)
+    return ok({"message": "Integration deleted"})
+
+
+@bp.patch("/<integration_id>")
+@jwt_required()
+def update_integration(integration_id):
+    integration, error = _integration_or_404(integration_id)
+    if error:
+        return error
+
+    payload = request.get_json() or {}
+    display_name = payload.get("display_name")
+    config_public = payload.get("config_public")
+    secret_payload = payload.get("secret_payload")
+
+    if display_name is not None:
+        display_name = str(display_name).strip()
+        if not display_name:
+            return error_response("VALIDATION_ERROR", "display_name must not be empty", 422)
+
+    try:
+        updated = integrations_service.update_integration(
+            integration,
+            display_name=display_name,
+            config_public=config_public,
+            secret_payload=secret_payload,
+        )
+    except ValueError as exc:
+        return error_response("VALIDATION_ERROR", str(exc), 422)
+
+    return ok(integrations_service.serialize_integration(updated))
+
+
 @bp.post("/<integration_id>/validate")
 @jwt_required()
 def validate_integration(integration_id):

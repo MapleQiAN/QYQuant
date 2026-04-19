@@ -159,6 +159,34 @@ def get_user_integration(integration_id, user_id, session=None):
     )
 
 
+def soft_delete_integration(integration, session=None):
+    session = session or db.session
+    integration.deleted_at = now_utc()
+    session.commit()
+
+
+def update_integration(integration, *, display_name=None, config_public=None, secret_payload=None, session=None):
+    session = session or db.session
+    if display_name is not None:
+        integration.display_name = display_name
+    if config_public is not None:
+        integration.config_public = config_public
+    if secret_payload is not None:
+        secret = session.get(UserIntegrationSecret, integration.id)
+        if secret is None:
+            session.add(
+                UserIntegrationSecret(
+                    integration_id=integration.id,
+                    encrypted_payload=encrypt_secret_payload(secret_payload),
+                    schema_version=1,
+                )
+            )
+        else:
+            secret.encrypted_payload = encrypt_secret_payload(secret_payload)
+    session.commit()
+    return integration
+
+
 def mark_validation_result(integration, result, session=None):
     session = session or db.session
     status = result.get("status") or "invalid"
