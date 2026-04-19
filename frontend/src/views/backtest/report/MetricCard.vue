@@ -5,7 +5,7 @@
       <MetricTooltip :metric-key="metricKey" />
     </span>
     <strong :class="['metric-tile__value', toneClass]">{{ value }}</strong>
-    <span class="metric-tile__caption">{{ caption }}</span>
+    <span v-if="caption" :class="['metric-tile__caption', { 'metric-tile__caption--ai': aiCaption }]">{{ caption }}</span>
   </article>
 </template>
 
@@ -19,6 +19,7 @@ const props = defineProps<{
   caption: string
   tone: 'positive' | 'negative' | 'warning' | 'neutral'
   metricKey: string
+  aiCaption?: boolean
 }>()
 
 const toneClass = computed(() => `tone-${props.tone}`)
@@ -66,6 +67,13 @@ const toneClass = computed(() => `tone-${props.tone}`)
 .metric-tile__caption {
   font-size: var(--font-size-sm);
   font-weight: 700;
+}
+
+.metric-tile__caption--ai {
+  color: var(--color-primary);
+  font-style: italic;
+  padding-top: 4px;
+  border-top: 1px dashed var(--color-border-light);
 }
 
 .tone-positive {

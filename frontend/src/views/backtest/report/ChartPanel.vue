@@ -41,6 +41,30 @@
       <DrawdownChart :points="report.equity_curve || []" />
     </div>
 
+    <div v-if="aiChartNarration" class="chart-ai-narration">
+      <p>{{ aiChartNarration }}</p>
+    </div>
+
+    <section v-if="hasComparisonData" class="chart-comparison">
+      <div class="chart-section__header">
+        <span class="chart-section__title">{{ $t('backtestReport.comparisonTitle') }}</span>
+      </div>
+      <div class="chart-comparison__body">
+        <div v-if="parameterSensitivity && parameterSensitivity.length" class="comparison-block">
+          <h4>Parameter Sensitivity</h4>
+          <pre>{{ JSON.stringify(parameterSensitivity, null, 2) }}</pre>
+        </div>
+        <div v-if="regimeAnalysis && regimeAnalysis.length" class="comparison-block">
+          <h4>Regime Analysis</h4>
+          <pre>{{ JSON.stringify(regimeAnalysis, null, 2) }}</pre>
+        </div>
+        <div v-if="monteCarlo && Object.keys(monteCarlo).length" class="comparison-block">
+          <h4>Monte Carlo</h4>
+          <pre>{{ JSON.stringify(monteCarlo, null, 2) }}</pre>
+        </div>
+      </div>
+    </section>
+
     <TradeTable :trades="report.trades || []" />
     <TradeDetailTable :trades="report.trades || []" />
     <TradeDistributionCharts :distribution="tradeDistribution" />
@@ -48,6 +72,7 @@
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue'
 import KlinePlaceholder from '../../../components/KlinePlaceholder.vue'
 import DrawdownChart from '../../../components/backtest/DrawdownChart.vue'
 import EquityCurveChart from '../../../components/backtest/EquityCurveChart.vue'
@@ -59,7 +84,7 @@ import type { BacktestReportResponse } from '../../../types/Backtest'
 import type { TradeMarker } from '../../../lib/chartIndicators'
 import type { TradeDistribution } from '../../../lib/backtestComputed'
 
-defineProps<{
+const props = defineProps<{
   report: BacktestReportResponse
   hasKlineData: boolean
   hasDrawdownData: boolean
@@ -67,7 +92,17 @@ defineProps<{
   tradeHoldingDurations: Map<number, number>
   cumulativeReturns: number[]
   tradeDistribution: TradeDistribution
+  aiChartNarration?: string
+  parameterSensitivity?: Array<Record<string, unknown>>
+  regimeAnalysis?: Array<Record<string, unknown>>
+  monteCarlo?: Record<string, unknown> | null
 }>()
+
+const hasComparisonData = computed(() =>
+  (props.parameterSensitivity && props.parameterSensitivity.length > 0)
+  || (props.regimeAnalysis && props.regimeAnalysis.length > 0)
+  || (props.monteCarlo && Object.keys(props.monteCarlo).length > 0)
+)
 </script>
 
 <style scoped>
@@ -120,5 +155,47 @@ defineProps<{
 .chart-block--stacked {
   display: grid;
   gap: var(--spacing-md);
+}
+
+.chart-ai-narration {
+  padding: 12px 16px;
+  background: var(--color-surface-elevated);
+  border: 1px dashed var(--color-border);
+  border-radius: var(--radius-sm);
+}
+
+.chart-ai-narration p {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
+  line-height: 1.6;
+}
+
+.chart-comparison {
+  background: var(--color-surface);
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  box-shadow: var(--shadow-md);
+}
+
+.chart-comparison__body {
+  padding: var(--spacing-md);
+  display: grid;
+  gap: var(--spacing-md);
+}
+
+.comparison-block h4 {
+  margin: 0 0 var(--spacing-sm);
+  font-size: var(--font-size-sm);
+}
+
+.comparison-block pre {
+  margin: 0;
+  padding: var(--spacing-sm);
+  background: var(--color-surface-elevated);
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-xs);
+  overflow-x: auto;
 }
 </style>

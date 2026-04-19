@@ -56,30 +56,9 @@
                 :summary-tags="summaryTags"
                 :symbol-label="symbolLabel"
                 :time-range-label="timeRangeLabel"
-              />
-
-              <AISummaryPanel
-                v-if="aiExecutiveSummary"
-                :metric-narrations="aiMetricNarrations"
-                :summary="aiExecutiveSummary"
-              />
-
-              <DiagnosisPanel
-                v-if="hasDiagnosisPanel"
-                :diagnosis="aiDiagnosisNarration"
-                :metric-narrations="aiMetricNarrations"
-              />
-
-              <ComparisonPanel
-                v-if="hasComparisonPanel"
-                :monte-carlo="aiMonteCarlo"
-                :parameter-sensitivity="aiParameterSensitivity"
-                :regime-analysis="aiRegimeAnalysis"
-              />
-
-              <AlertsPanel
-                v-if="hasAlertsPanel"
-                :anomalies="aiAnomalies"
+                :ai-summary="aiExecutiveSummary"
+                :diagnosis-narration="aiDiagnosisNarration"
+                :anomaly-alerts="aiAnomalies"
               />
 
               <section class="support-grid">
@@ -104,6 +83,10 @@
                 :trade-distribution="tradeDistribution"
                 :trade-holding-durations="tradeHoldingDurations"
                 :trade-markers="tradeMarkers"
+                :ai-chart-narration="aiChartNarration"
+                :parameter-sensitivity="aiParameterSensitivity"
+                :regime-analysis="aiRegimeAnalysis"
+                :monte-carlo="aiMonteCarlo"
               />
 
               <DisclaimerFooter />
@@ -133,12 +116,8 @@ import StrategyParamsPanel from '../components/backtest/StrategyParamsPanel.vue'
 import SignalStatsPanel from '../components/backtest/SignalStatsPanel.vue'
 import BenchmarkComparison from '../components/backtest/BenchmarkComparison.vue'
 import RiskMetricsPanel from '../components/backtest/RiskMetricsPanel.vue'
-import AlertsPanel from './backtest/report/AlertsPanel.vue'
-import AISummaryPanel from './backtest/report/AISummaryPanel.vue'
 import ChartPanel from './backtest/report/ChartPanel.vue'
 import ChatSidebar from './backtest/report/ChatSidebar.vue'
-import ComparisonPanel from './backtest/report/ComparisonPanel.vue'
-import DiagnosisPanel from './backtest/report/DiagnosisPanel.vue'
 import MetricsPanel from './backtest/report/MetricsPanel.vue'
 import ReportHeader from './backtest/report/ReportHeader.vue'
 import { useUserStore } from '../stores'
@@ -232,17 +211,10 @@ const aiRegimeAnalysis = computed<Array<Record<string, unknown>>>(() => {
   return Array.isArray(regimeAnalysis) ? regimeAnalysis as Array<Record<string, unknown>> : []
 })
 
-const hasDiagnosisPanel = computed(() =>
-  !!aiDiagnosisNarration.value || Object.keys(aiMetricNarrations.value).length > 0
-)
-
-const hasComparisonPanel = computed(() =>
-  aiParameterSensitivity.value.length > 0
-  || aiRegimeAnalysis.value.length > 0
-  || (!!aiMonteCarlo.value && Object.keys(aiMonteCarlo.value).length > 0)
-)
-
-const hasAlertsPanel = computed(() => aiAnomalies.value.length > 0)
+const aiChartNarration = computed(() => {
+  const narrations = aiMetricNarrations.value
+  return narrations['equity_curve'] || narrations['chart_overview'] || ''
+})
 
 const isReportChatEnabled = computed(() => {
   const level = userStore.profile?.plan_level || 'free'

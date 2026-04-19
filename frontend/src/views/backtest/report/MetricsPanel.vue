@@ -49,6 +49,11 @@
           </span>
         </div>
       </article>
+
+      <div v-if="aiSummary" class="ai-summary-block">
+        <span class="analysis-panel__eyebrow">AI Insight</span>
+        <p class="ai-summary-block__text">{{ aiSummary }}</p>
+      </div>
     </section>
 
     <div class="metrics-grid">
@@ -83,6 +88,13 @@
               <p>{{ item.body }}</p>
             </div>
           </article>
+          <div v-if="diagnosisNarration" class="insight-row tone-warning">
+            <span class="insight-row__dot"></span>
+            <div class="insight-row__content">
+              <strong>{{ $t('backtestReport.aiDiagnosis') }}</strong>
+              <p>{{ diagnosisNarration }}</p>
+            </div>
+          </div>
         </div>
       </article>
 
@@ -100,6 +112,22 @@
         </div>
       </article>
     </section>
+
+    <article v-if="anomalyAlerts && anomalyAlerts.length" class="analysis-panel analysis-panel--alerts" data-test="report-alerts">
+      <div class="analysis-panel__header">
+        <span class="analysis-panel__eyebrow">{{ $t('backtestReport.alertsTitle') }}</span>
+        <h3 class="analysis-panel__title">{{ $t('backtestReport.alertsTitle') }}</h3>
+      </div>
+      <div class="analysis-panel__body">
+        <div v-for="(alert, i) in anomalyAlerts" :key="i" class="insight-row tone-negative">
+          <span class="insight-row__dot"></span>
+          <div class="insight-row__content">
+            <strong>{{ alert.title }}</strong>
+            <p>{{ alert.description }}</p>
+          </div>
+        </div>
+      </div>
+    </article>
 
     <section class="metrics-board">
       <div class="metrics-board__header">
@@ -180,6 +208,9 @@ defineProps<{
   diagnosticRows: LabeledToneValue[]
   coreMetrics: CoreMetric[]
   detailedMetrics: MetricRow[]
+  aiSummary?: string
+  diagnosisNarration?: string
+  anomalyAlerts?: Array<{ title: string; description: string; severity?: string }>
 }>()
 
 function toneClass(tone: Tone): string {
@@ -528,6 +559,26 @@ function toneClass(tone: Tone): string {
 
 .tone-neutral {
   color: var(--color-text-secondary);
+}
+
+.ai-summary-block {
+  display: grid;
+  gap: 8px;
+  padding: 18px 24px;
+  border-top: 2px solid var(--color-border);
+  position: relative;
+  z-index: 1;
+}
+
+.ai-summary-block__text {
+  margin: 0;
+  color: var(--color-text-secondary);
+  line-height: 1.7;
+  font-size: var(--font-size-md);
+}
+
+.analysis-panel--alerts .insight-row__dot {
+  background: var(--color-negative);
 }
 
 @media (max-width: 900px) {
