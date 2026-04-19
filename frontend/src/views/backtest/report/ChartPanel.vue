@@ -1,6 +1,6 @@
 <template>
   <section class="chart-panel" data-test="chart-panel">
-    <div v-if="hasKlineData" class="chart-section">
+    <div v-if="hasKlineData" class="chart-section" @click="handleChartFocus">
       <div class="chart-section__header">
         <div class="chart-section__title-group">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="4" height="16"/><rect x="10" y="8" width="4" height="8"/><rect x="18" y="2" width="4" height="12"/></svg>
@@ -19,7 +19,7 @@
       </div>
     </div>
 
-    <div class="chart-section">
+    <div class="chart-section" @click="handleChartFocus">
       <div class="chart-section__header">
         <div class="chart-section__title-group">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
@@ -30,7 +30,7 @@
       <EquityCurveChart class="chart-block" :points="report.equity_curve || []" :trades="report.trades || []" />
     </div>
 
-    <div v-if="hasDrawdownData" class="chart-section">
+    <div v-if="hasDrawdownData" class="chart-section" @click="handleChartFocus">
       <div class="chart-section__header">
         <div class="chart-section__title-group">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 18 13.5 8.5 8.5 13.5 1 6"/><polyline points="17 18 23 18 23 12"/></svg>
@@ -72,7 +72,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, inject } from 'vue'
 import KlinePlaceholder from '../../../components/KlinePlaceholder.vue'
 import DrawdownChart from '../../../components/backtest/DrawdownChart.vue'
 import EquityCurveChart from '../../../components/backtest/EquityCurveChart.vue'
@@ -103,6 +103,16 @@ const hasComparisonData = computed(() =>
   || (props.regimeAnalysis && props.regimeAnalysis.length > 0)
   || (props.monteCarlo && Object.keys(props.monteCarlo).length > 0)
 )
+
+const aiContext = inject<{
+  activeSection: string
+}>('aiContext', { activeSection: 'charts' })
+
+function handleChartFocus() {
+  if (aiContext) {
+    aiContext.activeSection = 'charts'
+  }
+}
 </script>
 
 <style scoped>

@@ -1,5 +1,5 @@
 <template>
-  <article class="metric-tile">
+  <article class="metric-tile" @click="handleClick">
     <span class="metric-tile__label">
       {{ label }}
       <MetricTooltip :metric-key="metricKey" />
@@ -10,7 +10,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, inject } from 'vue'
 import MetricTooltip from '../../../components/help/MetricTooltip.vue'
 
 const props = defineProps<{
@@ -23,6 +23,18 @@ const props = defineProps<{
 }>()
 
 const toneClass = computed(() => `tone-${props.tone}`)
+
+const aiContext = inject<{
+  focusedMetric: string | null
+  activeSection: string
+}>('aiContext', { focusedMetric: null, activeSection: 'metrics' })
+
+function handleClick() {
+  if (aiContext) {
+    aiContext.focusedMetric = props.metricKey
+    aiContext.activeSection = 'metrics'
+  }
+}
 </script>
 
 <style scoped>
@@ -37,6 +49,7 @@ const toneClass = computed(() => `tone-${props.tone}`)
   position: relative;
   overflow: hidden;
   transition: transform var(--transition-fast), box-shadow var(--transition-fast);
+  cursor: pointer;
 }
 
 .metric-tile:hover {
