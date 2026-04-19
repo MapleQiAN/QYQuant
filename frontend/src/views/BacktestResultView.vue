@@ -39,78 +39,84 @@
         />
 
         <template v-else>
-          <MetricsPanel
-            :completed-at-label="completedAtLabel"
-            :core-metrics="coreMetrics"
-            :detailed-metrics="detailedMetrics"
-            :diagnostic-rows="diagnosticRows"
-            :insight-items="insightItems"
-            :quality-label="qualityLabel"
-            :quality-score="qualityScore"
-            :quality-tone="qualityTone"
-            :snapshot-facts="snapshotFacts"
-            :summary-body="summaryBody"
-            :summary-headline="summaryHeadline"
-            :summary-tags="summaryTags"
-            :symbol-label="symbolLabel"
-            :time-range-label="timeRangeLabel"
-          />
+          <div class="report-layout">
+            <div class="report-body">
+              <MetricsPanel
+                :completed-at-label="completedAtLabel"
+                :core-metrics="coreMetrics"
+                :detailed-metrics="detailedMetrics"
+                :diagnostic-rows="diagnosticRows"
+                :insight-items="insightItems"
+                :quality-label="qualityLabel"
+                :quality-score="qualityScore"
+                :quality-tone="qualityTone"
+                :snapshot-facts="snapshotFacts"
+                :summary-body="summaryBody"
+                :summary-headline="summaryHeadline"
+                :summary-tags="summaryTags"
+                :symbol-label="symbolLabel"
+                :time-range-label="timeRangeLabel"
+              />
 
-          <AISummaryPanel
-            v-if="aiExecutiveSummary"
-            :metric-narrations="aiMetricNarrations"
-            :summary="aiExecutiveSummary"
-          />
+              <AISummaryPanel
+                v-if="aiExecutiveSummary"
+                :metric-narrations="aiMetricNarrations"
+                :summary="aiExecutiveSummary"
+              />
 
-          <DiagnosisPanel
-            v-if="hasDiagnosisPanel"
-            :diagnosis="aiDiagnosisNarration"
-            :metric-narrations="aiMetricNarrations"
-          />
+              <DiagnosisPanel
+                v-if="hasDiagnosisPanel"
+                :diagnosis="aiDiagnosisNarration"
+                :metric-narrations="aiMetricNarrations"
+              />
 
-          <ComparisonPanel
-            v-if="hasComparisonPanel"
-            :monte-carlo="aiMonteCarlo"
-            :parameter-sensitivity="aiParameterSensitivity"
-            :regime-analysis="aiRegimeAnalysis"
-          />
+              <ComparisonPanel
+                v-if="hasComparisonPanel"
+                :monte-carlo="aiMonteCarlo"
+                :parameter-sensitivity="aiParameterSensitivity"
+                :regime-analysis="aiRegimeAnalysis"
+              />
 
-          <AlertsPanel
-            v-if="hasAlertsPanel"
-            :anomalies="aiAnomalies"
-          />
+              <AlertsPanel
+                v-if="hasAlertsPanel"
+                :anomalies="aiAnomalies"
+              />
 
-          <ChatPanel
-            v-if="aiReport?.id"
-            :enabled="isReportChatEnabled"
-            :report-id="aiReport.id"
-          />
+              <section class="support-grid">
+                <StrategyParamsPanel
+                  :strategy-id="strategyId"
+                  :version="strategyVersion"
+                  :symbols="strategySymbols"
+                  :interval="strategyInterval"
+                  :data-source="strategyDataSource"
+                  :params="strategyParamsFiltered"
+                />
+                <SignalStatsPanel :stats="signalStats" />
+                <BenchmarkComparison :data="benchmarkComparison" />
+                <RiskMetricsPanel :metrics="riskMetrics" />
+              </section>
 
-          <section class="support-grid">
-            <StrategyParamsPanel
-              :strategy-id="strategyId"
-              :version="strategyVersion"
-              :symbols="strategySymbols"
-              :interval="strategyInterval"
-              :data-source="strategyDataSource"
-              :params="strategyParamsFiltered"
+              <ChartPanel
+                :cumulative-returns="cumulativeReturns"
+                :has-drawdown-data="hasDrawdownData"
+                :has-kline-data="hasKlineData"
+                :report="report"
+                :trade-distribution="tradeDistribution"
+                :trade-holding-durations="tradeHoldingDurations"
+                :trade-markers="tradeMarkers"
+              />
+
+              <DisclaimerFooter />
+            </div>
+
+            <ChatSidebar
+              v-if="aiReport?.id"
+              :enabled="isReportChatEnabled"
+              :report-id="aiReport.id"
+              :context-hint="contextHint"
+              @clear-context="clearAiContext"
             />
-            <SignalStatsPanel :stats="signalStats" />
-            <BenchmarkComparison :data="benchmarkComparison" />
-            <RiskMetricsPanel :metrics="riskMetrics" />
-          </section>
-
-          <ChartPanel
-            :cumulative-returns="cumulativeReturns"
-            :has-drawdown-data="hasDrawdownData"
-            :has-kline-data="hasKlineData"
-            :report="report"
-            :trade-distribution="tradeDistribution"
-            :trade-holding-durations="tradeHoldingDurations"
-            :trade-markers="tradeMarkers"
-          />
-
-          <DisclaimerFooter />
+          </div>
         </template>
       </template>
     </div>
@@ -118,7 +124,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, provide, reactive, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import ErrorDisplay from '../components/backtest/ErrorDisplay.vue'
@@ -130,7 +136,7 @@ import RiskMetricsPanel from '../components/backtest/RiskMetricsPanel.vue'
 import AlertsPanel from './backtest/report/AlertsPanel.vue'
 import AISummaryPanel from './backtest/report/AISummaryPanel.vue'
 import ChartPanel from './backtest/report/ChartPanel.vue'
-import ChatPanel from './backtest/report/ChatPanel.vue'
+import ChatSidebar from './backtest/report/ChatSidebar.vue'
 import ComparisonPanel from './backtest/report/ComparisonPanel.vue'
 import DiagnosisPanel from './backtest/report/DiagnosisPanel.vue'
 import MetricsPanel from './backtest/report/MetricsPanel.vue'
@@ -163,6 +169,28 @@ const userStore = useUserStore()
 const jobId = String(route.params.jobId || '')
 const isGuidedMode = route.query.guided === 'true'
 const exportRoot = ref<HTMLElement | null>(null)
+
+const aiContext = reactive({
+  activeSection: 'metrics' as 'metrics' | 'charts' | 'params',
+  focusedMetric: null as string | null,
+  focusedChartRange: null as { start: number; end: number } | null,
+})
+provide('aiContext', aiContext)
+
+const contextHint = computed(() => {
+  if (aiContext.focusedMetric) {
+    return `${t('backtestReport.contextMetric')}: ${aiContext.focusedMetric}`
+  }
+  if (aiContext.focusedChartRange) {
+    return t('backtestReport.contextChartRange')
+  }
+  return ''
+})
+
+function clearAiContext() {
+  aiContext.focusedMetric = null
+  aiContext.focusedChartRange = null
+}
 
 const report = computed(() => store.legacyReport ?? store.report)
 const aiReport = computed(() => store.aiReport)
@@ -1699,6 +1727,24 @@ onMounted(() => {
   .guided-success {
     flex-direction: column;
     align-items: flex-start;
+  }
+}
+
+.report-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 340px;
+  gap: 0;
+}
+
+.report-body {
+  min-width: 0;
+  display: grid;
+  gap: var(--spacing-xl);
+}
+
+@media (max-width: 768px) {
+  .report-layout {
+    grid-template-columns: 1fr;
   }
 }
 </style>
