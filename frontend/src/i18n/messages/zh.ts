@@ -558,7 +558,8 @@ const zh = {
     batchDeleteConfirm: '确定删除所有失败的回测记录？',
     batchDeleteTitle: '清除失败记录',
     deleting: '删除中...',
-    deleteFailed: '删除失败'
+    deleteFailed: '删除失败',
+    enableAI: 'AI 增强报告'
   },
   backtestReport: {
     eyebrow: '回测报告',
@@ -700,6 +701,14 @@ const zh = {
     analysisTimingTitle: '样本长度影响结论可信度',
     analysisTimingBody: '当前样本区间为 {range}，覆盖约 {days} 天。样本越完整，结论越适合继续拿去比较和迭代。',
     noCompletedAt: '未记录',
+    chatTitle: '报告问答',
+    chatPlaceholder: '围绕本次回测提问...',
+    chatSend: '发送',
+    contextMetric: '当前关注',
+    contextChartRange: '正在查看图表区间',
+    aiDiagnosis: 'AI 诊断',
+    alertsTitle: '异常告警',
+    comparisonTitle: '高级分析',
     noSymbol: '未提供标的',
     metrics: {
       totalReturn: '总收益率',

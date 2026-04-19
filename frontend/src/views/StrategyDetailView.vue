@@ -151,6 +151,10 @@
             {{ submitSuccess }}
           </p>
         </div>
+        <label v-if="userStore.profile?.plan_level && userStore.profile.plan_level !== 'free'" class="field field--checkbox">
+          <input type="checkbox" v-model="enableAI" />
+          <span>{{ $t('backtests.enableAI') }}</span>
+        </label>
         <button
           data-test="start-backtest"
           :class="['btn btn-run', { 'onboarding-highlight': userStore.onboardingHighlightTarget === 'guided-run-button', 'btn-run--active': submitting }]"
@@ -199,6 +203,7 @@ const submitting = ref(false)
 const submitError = ref('')
 const submitSuccess = ref('')
 const formValid = ref(true)
+const enableAI = ref(true)
 
 const runForm = reactive({
   symbols: '',
@@ -334,6 +339,7 @@ async function handleSubmit() {
       end_date: runForm.endDate,
       data_source: effectiveDataSource.value,
       parameters: sanitizeParameters(definitions.value, parameterValues.value),
+      enable_ai: enableAI.value,
     })
 
     if (isGuidedMode) {

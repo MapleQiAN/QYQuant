@@ -558,7 +558,8 @@ const en = {
     batchDeleteConfirm: 'Delete all failed backtest records?',
     batchDeleteTitle: 'Clear Failed Records',
     deleting: 'Deleting...',
-    deleteFailed: 'Delete failed'
+    deleteFailed: 'Delete failed',
+    enableAI: 'AI Enhanced Report'
   },
   backtestReport: {
     eyebrow: 'Backtest Report',
@@ -622,6 +623,14 @@ const en = {
     analysisTimingTitle: 'Sample length changes confidence',
     analysisTimingBody: 'The current sample spans {range}, covering about {days} days. The broader the sample, the more comparable the conclusion becomes.',
     noCompletedAt: 'Not recorded',
+    chatTitle: 'Report Q&A',
+    chatPlaceholder: 'Ask about this backtest...',
+    chatSend: 'Send',
+    contextMetric: 'Focused on',
+    contextChartRange: 'Viewing chart range',
+    aiDiagnosis: 'AI Diagnosis',
+    alertsTitle: 'Anomaly Alerts',
+    comparisonTitle: 'Advanced Analysis',
     noSymbol: 'No symbol',
     viewAllMetrics: 'View all 11 metrics',
     metrics: {

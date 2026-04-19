@@ -160,6 +160,10 @@
           </div>
 
           <div class="actions">
+            <label v-if="quota && quota.plan_level && quota.plan_level !== 'free'" class="field field--checkbox">
+              <input type="checkbox" v-model="enableAI" />
+              <span>{{ $t('backtests.enableAI') }}</span>
+            </label>
             <button
               v-if="!isQuotaExhausted"
               :class="['btn btn-run', { 'btn-run--active': runState.running }]"
@@ -344,6 +348,7 @@ const historyLoading = ref(false)
 const historyError = ref('')
 const historySearch = ref('')
 const deleting = ref(false)
+const enableAI = ref(true)
 const router = useRouter()
 const instance = getCurrentInstance()
 
@@ -734,6 +739,7 @@ async function handleRun() {
       end_date: runForm.endDate,
       data_source: effectiveDataSource.value,
       name: buildBacktestName(),
+      enable_ai: enableAI.value,
     }
 
     if (runtimeDescriptor.value) {
