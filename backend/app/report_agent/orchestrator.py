@@ -1,7 +1,9 @@
 from ..extensions import db
-from ..models import BacktestJob, BacktestJobStatus, BacktestReport, User
+from ..models import BacktestJob, BacktestJobStatus, BacktestReport, ReportAlert, User
 from ..utils.storage import build_backtest_storage_key, read_json
+from . import advisor, diagnostician, narrator
 from .quant_engine import build_report_payload
+from .tier_filter import normalize_report_plan_level
 
 
 def generate_report(backtest_job_id, user_id, force=False):
@@ -33,6 +35,8 @@ def generate_report(backtest_job_id, user_id, force=False):
         bars = read_json(f"{storage_key}/kline.json")
         trades = read_json(f"{storage_key}/trades.json")
         payload = build_report_payload(bars, trades)
+        user = db.session.get(User, user_id)
+        tier = normalize_report_plan_level(getattr(user, "plan_level", "free"))
 
         report.status = "narrating"
         report.metrics = payload["metrics"]
@@ -45,6 +49,31 @@ def generate_report(backtest_job_id, user_id, force=False):
         report.monte_carlo = payload["monte_carlo"]
         report.regime_analysis = payload["regime_analysis"]
         report.metric_narrations = payload["metric_narrations"]
+        report.executive_summary = narrator.generate_summary(payload["metrics"], tier)
+        if tier in {"go", "plus", "pro", "ultra"}:
+            report.metric_narrations = narrator.annotate_metrics(payload["metrics"])
+        if tier in {"plus", "pro", "ultra"}:
+            report.diagnosis_narration = diagnostician.generate_diagnosis(payload, tier)
+        else:
+            report.diagnosis_narration = None
+        if tier in {"pro", "ultra"}:
+            report.advisor_narration = advisor.generate_suggestions(payload, tier)
+            alert_specs = advisor.generate_alerts(payload, tier)
+            report.anomalies = alert_specs
+            ReportAlert.query.filter_by(report_id=report.id).delete()
+            for alert in alert_specs:
+                db.session.add(
+                    ReportAlert(
+                        report_id=report.id,
+                        user_id=user_id,
+                        level=alert.get("level", "info"),
+                        title=alert.get("title", "Report alert"),
+                        message=alert.get("message", ""),
+                        alert_metadata=alert.get("metadata", {}),
+                    )
+                )
+        else:
+            report.advisor_narration = None
         report.status = "ready"
         db.session.commit()
     except Exception as exc:

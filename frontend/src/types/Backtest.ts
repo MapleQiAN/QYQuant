@@ -118,12 +118,21 @@ export interface BacktestAiChatMessage {
   created_at?: string | null
 }
 
+export interface BacktestAiChatHistoryResponse {
+  messages: BacktestAiChatMessage[]
+}
+
 export interface BacktestAiAlert {
   id: string
   level: string
   title: string
   message: string
   status?: string
+  created_at?: string | null
+}
+
+export interface BacktestAiAlertsResponse {
+  alerts: BacktestAiAlert[]
 }
 
 export interface BacktestAiReportPayload {

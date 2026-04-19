@@ -453,3 +453,258 @@ def test_legacy_report_route_exposes_async_report_compat_fields(client, app, tmp
     assert response.status_code == 200
     assert response.json["data"]["report_id"] == report_id
     assert response.json["data"]["report_status"] == "ready"
+
+
+def test_generate_report_uses_narrator_stub(app, monkeypatch, tmp_path):
+    from app.extensions import db
+    from app.models import BacktestJob, BacktestJobStatus, BacktestReport, User
+    from app.utils.storage import build_backtest_storage_key, write_json
+
+    monkeypatch.setenv("BACKTEST_STORAGE_DIR", tmp_path.as_posix())
+    monkeypatch.setattr("app.report_agent.narrator.generate_summary", lambda metrics, tier: f"{tier} summary")
+    monkeypatch.setattr("app.report_agent.narrator.annotate_metrics", lambda metrics: {"sharpeRatio": "stub metric"})
+
+    with app.app_context():
+        user = User(phone="13800138908", nickname="NarratorOwner", plan_level="go")
+        db.session.add(user)
+        db.session.flush()
+        user_id = user.id
+
+        job = BacktestJob(
+            user_id=user_id,
+            status=BacktestJobStatus.COMPLETED.value,
+            params={"symbol": "BTCUSDT"},
+            result_storage_key=build_backtest_storage_key("narrator-job"),
+        )
+        job.id = "narrator-job"
+        db.session.add(job)
+        db.session.commit()
+
+    bars, trades = _build_report_fixture()
+    storage_key = build_backtest_storage_key("narrator-job")
+    write_json(f"{storage_key}/kline.json", bars)
+    write_json(f"{storage_key}/trades.json", trades)
+
+    from app.report_agent.orchestrator import generate_report
+
+    with app.app_context():
+        report = generate_report("narrator-job", user_id, force=True)
+        stored = db.session.get(BacktestReport, report.id)
+
+        assert stored.executive_summary == "go summary"
+        assert stored.metric_narrations == {"sharpeRatio": "stub metric"}
+
+
+def test_generate_report_uses_diagnostician_for_plus_tier(app, monkeypatch, tmp_path):
+    from app.extensions import db
+    from app.models import BacktestJob, BacktestJobStatus, BacktestReport, User
+    from app.utils.storage import build_backtest_storage_key, write_json
+
+    monkeypatch.setenv("BACKTEST_STORAGE_DIR", tmp_path.as_posix())
+    monkeypatch.setattr("app.report_agent.diagnostician.generate_diagnosis", lambda payload, tier: "diagnosis stub")
+
+    with app.app_context():
+        user = User(phone="13800138909", nickname="DiagnosisOwner", plan_level="plus")
+        db.session.add(user)
+        db.session.flush()
+        user_id = user.id
+
+        job = BacktestJob(
+            user_id=user_id,
+            status=BacktestJobStatus.COMPLETED.value,
+            params={"symbol": "BTCUSDT"},
+            result_storage_key=build_backtest_storage_key("diagnosis-job"),
+        )
+        job.id = "diagnosis-job"
+        db.session.add(job)
+        db.session.commit()
+
+    bars, trades = _build_report_fixture()
+    storage_key = build_backtest_storage_key("diagnosis-job")
+    write_json(f"{storage_key}/kline.json", bars)
+    write_json(f"{storage_key}/trades.json", trades)
+
+    from app.report_agent.orchestrator import generate_report
+
+    with app.app_context():
+        report = generate_report("diagnosis-job", user_id, force=True)
+        stored = db.session.get(BacktestReport, report.id)
+
+        assert stored.diagnosis_narration == "diagnosis stub"
+
+
+def test_generate_report_uses_advisor_and_creates_alerts_for_pro_tier(app, monkeypatch, tmp_path):
+    from app.extensions import db
+    from app.models import BacktestJob, BacktestJobStatus, BacktestReport, ReportAlert, User
+    from app.utils.storage import build_backtest_storage_key, write_json
+
+    monkeypatch.setenv("BACKTEST_STORAGE_DIR", tmp_path.as_posix())
+    monkeypatch.setattr("app.report_agent.advisor.generate_suggestions", lambda payload, tier: "advisor stub")
+    monkeypatch.setattr(
+        "app.report_agent.advisor.generate_alerts",
+        lambda payload, tier: [{"level": "warning", "title": "Drawdown cluster", "message": "Watch recent losses"}],
+    )
+
+    with app.app_context():
+        user = User(phone="13800138910", nickname="AdvisorOwner", plan_level="pro")
+        db.session.add(user)
+        db.session.flush()
+        user_id = user.id
+
+        job = BacktestJob(
+            user_id=user_id,
+            status=BacktestJobStatus.COMPLETED.value,
+            params={"symbol": "BTCUSDT"},
+            result_storage_key=build_backtest_storage_key("advisor-job"),
+        )
+        job.id = "advisor-job"
+        db.session.add(job)
+        db.session.commit()
+
+    bars, trades = _build_report_fixture()
+    storage_key = build_backtest_storage_key("advisor-job")
+    write_json(f"{storage_key}/kline.json", bars)
+    write_json(f"{storage_key}/trades.json", trades)
+
+    from app.report_agent.orchestrator import generate_report
+
+    with app.app_context():
+        report = generate_report("advisor-job", user_id, force=True)
+        stored = db.session.get(BacktestReport, report.id)
+        alert = ReportAlert.query.filter_by(report_id=report.id).one()
+
+        assert stored.advisor_narration == "advisor stub"
+        assert alert.level == "warning"
+        assert alert.title == "Drawdown cluster"
+
+
+def test_report_chat_persists_question_and_answer(client, app, monkeypatch):
+    from app.extensions import db
+    from app.models import BacktestJob, BacktestJobStatus, BacktestReport, ReportChatMessage, User
+
+    token, user_id = _login_user(client, phone="13800138911", nickname="ChatOwner")
+
+    with app.app_context():
+        user = db.session.get(User, user_id)
+        user.plan_level = "plus"
+        job = BacktestJob(
+            user_id=user_id,
+            status=BacktestJobStatus.COMPLETED.value,
+            params={"symbol": "BTCUSDT"},
+        )
+        db.session.add(job)
+        db.session.flush()
+        report = BacktestReport(
+            backtest_job_id=job.id,
+            user_id=user_id,
+            status="ready",
+            metrics={"totalReturn": 12.5},
+            executive_summary="summary",
+        )
+        db.session.add(report)
+        db.session.commit()
+        report_id = report.id
+
+    monkeypatch.setattr("app.report_agent.chat_router.route_chat_question", lambda message, report: "answer stub")
+
+    response = client.post(
+        f"/api/reports/{report_id}/chat",
+        headers=_auth_headers(token),
+        json={"message": "What is the main risk?"},
+    )
+
+    assert response.status_code == 200
+    assert response.json["data"]["message"] == "answer stub"
+
+    with app.app_context():
+        rows = ReportChatMessage.query.filter_by(report_id=report_id).order_by(ReportChatMessage.created_at.asc()).all()
+        assert [row.role for row in rows] == ["user", "assistant"]
+        assert rows[0].message == "What is the main risk?"
+        assert rows[1].message == "answer stub"
+
+    history = client.get(f"/api/reports/{report_id}/chat/history", headers=_auth_headers(token))
+
+    assert history.status_code == 200
+    assert [item["role"] for item in history.json["data"]["messages"]] == ["user", "assistant"]
+
+
+def test_report_chat_rejects_free_tier(client, app):
+    from app.extensions import db
+    from app.models import BacktestJob, BacktestJobStatus, BacktestReport
+
+    token, user_id = _login_user(client, phone="13800138912", nickname="FreeChatOwner")
+
+    with app.app_context():
+        job = BacktestJob(
+            user_id=user_id,
+            status=BacktestJobStatus.COMPLETED.value,
+            params={"symbol": "BTCUSDT"},
+        )
+        db.session.add(job)
+        db.session.flush()
+        report = BacktestReport(
+            backtest_job_id=job.id,
+            user_id=user_id,
+            status="ready",
+        )
+        db.session.add(report)
+        db.session.commit()
+        report_id = report.id
+
+    response = client.post(
+        f"/api/reports/{report_id}/chat",
+        headers=_auth_headers(token),
+        json={"message": "Can I chat?"},
+    )
+
+    assert response.status_code == 403
+
+
+def test_report_alerts_can_be_listed_and_dismissed(client, app):
+    from app.extensions import db
+    from app.models import BacktestJob, BacktestJobStatus, BacktestReport, ReportAlert
+
+    token, user_id = _login_user(client, phone="13800138913", nickname="AlertOwner")
+
+    with app.app_context():
+        job = BacktestJob(
+            user_id=user_id,
+            status=BacktestJobStatus.COMPLETED.value,
+            params={"symbol": "BTCUSDT"},
+        )
+        db.session.add(job)
+        db.session.flush()
+        report = BacktestReport(
+            backtest_job_id=job.id,
+            user_id=user_id,
+            status="ready",
+        )
+        db.session.add(report)
+        db.session.flush()
+        alert = ReportAlert(
+            report_id=report.id,
+            user_id=user_id,
+            level="warning",
+            title="Risk spike",
+            message="Drawdown increased",
+        )
+        db.session.add(alert)
+        db.session.commit()
+        report_id = report.id
+        alert_id = alert.id
+
+    list_response = client.get(f"/api/reports/{report_id}/alerts", headers=_auth_headers(token))
+
+    assert list_response.status_code == 200
+    assert list_response.json["data"]["alerts"][0]["title"] == "Risk spike"
+
+    dismiss_response = client.post(
+        f"/api/reports/{report_id}/alerts/{alert_id}/dismiss",
+        headers=_auth_headers(token),
+    )
+
+    assert dismiss_response.status_code == 200
+
+    with app.app_context():
+        stored = db.session.get(ReportAlert, alert_id)
+        assert stored.status == "dismissed"

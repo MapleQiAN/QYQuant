@@ -80,6 +80,12 @@
             :anomalies="aiAnomalies"
           />
 
+          <ChatPanel
+            v-if="aiReport?.id"
+            :enabled="isReportChatEnabled"
+            :report-id="aiReport.id"
+          />
+
           <section class="support-grid">
             <StrategyParamsPanel
               :strategy-id="strategyId"
@@ -124,6 +130,7 @@ import RiskMetricsPanel from '../components/backtest/RiskMetricsPanel.vue'
 import AlertsPanel from './backtest/report/AlertsPanel.vue'
 import AISummaryPanel from './backtest/report/AISummaryPanel.vue'
 import ChartPanel from './backtest/report/ChartPanel.vue'
+import ChatPanel from './backtest/report/ChatPanel.vue'
 import ComparisonPanel from './backtest/report/ComparisonPanel.vue'
 import DiagnosisPanel from './backtest/report/DiagnosisPanel.vue'
 import MetricsPanel from './backtest/report/MetricsPanel.vue'
@@ -208,6 +215,18 @@ const hasComparisonPanel = computed(() =>
 )
 
 const hasAlertsPanel = computed(() => aiAnomalies.value.length > 0)
+
+const isReportChatEnabled = computed(() => {
+  const level = userStore.profile?.plan_level || 'free'
+  const normalized = level === 'lite'
+    ? 'plus'
+    : level === 'expert' || level === 'enterprise'
+      ? 'ultra'
+      : level === 'basic'
+        ? 'free'
+        : level
+  return new Set(['go', 'plus', 'pro', 'ultra']).has(normalized)
+})
 
 const hasKlineData = computed(() => (report.value?.kline?.length ?? 0) > 0)
 const hasDrawdownData = computed(() =>

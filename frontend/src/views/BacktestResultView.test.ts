@@ -60,6 +60,15 @@ const storeState = {
   supportedPackagesLoading: false,
 }
 
+const userState = {
+  profile: {
+    plan_level: 'free',
+  },
+  onboardingHighlightTarget: null,
+  markOnboardingCompleted: vi.fn(),
+  finishGuidedBacktest: vi.fn(),
+}
+
 vi.mock('vue-router', () => ({
   useRouter: () => ({
     push: vi.fn(),
@@ -73,11 +82,7 @@ vi.mock('vue-router', () => ({
 }))
 
 vi.mock('../stores', () => ({
-  useUserStore: () => ({
-    onboardingHighlightTarget: null,
-    markOnboardingCompleted: vi.fn(),
-    finishGuidedBacktest: vi.fn(),
-  }),
+  useUserStore: () => userState,
 }))
 
 vi.mock('../stores/backtests', () => ({
@@ -153,6 +158,13 @@ vi.mock('./backtest/report/ComparisonPanel.vue', () => ({
 vi.mock('./backtest/report/AlertsPanel.vue', () => ({
   default: {
     template: '<div data-test="alerts-panel" />',
+  },
+}))
+
+vi.mock('./backtest/report/ChatPanel.vue', () => ({
+  default: {
+    props: ['enabled', 'reportId'],
+    template: '<div data-test="chat-panel" :data-enabled="enabled ? \'true\' : \'false\'">{{ reportId }}</div>',
   },
 }))
 
@@ -281,6 +293,7 @@ describe('BacktestResultView', () => {
     storeState.reportError = null
     storeState.supportedPackages = []
     storeState.supportedPackagesLoading = false
+    userState.profile.plan_level = 'free'
   })
 
   it('renders legacy metrics and charts when no ai report exists', () => {
@@ -330,5 +343,23 @@ describe('BacktestResultView', () => {
     expect(wrapper.get('[data-test="diagnosis-panel"]').text()).toContain('Risk concentration is elevated.')
     expect(wrapper.find('[data-test="comparison-panel"]').exists()).toBe(true)
     expect(wrapper.find('[data-test="alerts-panel"]').exists()).toBe(true)
+  })
+
+  it('renders chat panel with tier-gated enabled state', () => {
+    storeState.aiReport = {
+      id: 'report-1',
+      job_id: 'job-1',
+      status: 'ready',
+      payload: {
+        executive_summary: 'AI summary',
+      },
+    }
+
+    const freeWrapper = mountView()
+    expect(freeWrapper.get('[data-test="chat-panel"]').attributes('data-enabled')).toBe('false')
+
+    userState.profile.plan_level = 'plus'
+    const plusWrapper = mountView()
+    expect(plusWrapper.get('[data-test="chat-panel"]').attributes('data-enabled')).toBe('true')
   })
 })

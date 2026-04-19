@@ -7,7 +7,8 @@ from flask_jwt_extended import decode_token, get_jwt_identity, jwt_required
 from flask_smorest import Blueprint
 
 from ..extensions import db
-from ..models import BacktestJob, BacktestJobStatus, BacktestReport, User
+from ..models import BacktestJob, BacktestJobStatus, BacktestReport, ReportAlert, ReportChatMessage, User
+from ..report_agent import chat_router
 from ..report_agent.tier_filter import filter_report_for_tier
 from ..tasks.report_generation import generate_backtest_report
 from ..utils.response import error_response, ok
@@ -54,6 +55,26 @@ def _serialize_report_status(report):
         "id": report.id,
         "job_id": report.backtest_job_id,
         "status": report.status,
+    }
+
+
+def _serialize_chat_message(message):
+    return {
+        "id": message.id,
+        "role": message.role,
+        "message": message.message,
+        "created_at": message.created_at.isoformat() if message.created_at else None,
+    }
+
+
+def _serialize_alert(alert):
+    return {
+        "id": alert.id,
+        "level": alert.level,
+        "title": alert.title,
+        "message": alert.message,
+        "status": alert.status,
+        "created_at": alert.created_at.isoformat() if alert.created_at else None,
     }
 
 
@@ -141,6 +162,94 @@ def get_report_status(report_id):
     if report is None:
         return error_response("REPORT_NOT_FOUND", "报告不存在", 404)
     return ok(_serialize_report_status(report))
+
+
+@bp.post("/reports/<report_id>/chat")
+@jwt_required()
+def post_report_chat(report_id):
+    user_id = get_jwt_identity()
+    report = _get_report_for_user(report_id, user_id)
+    if report is None:
+        return error_response("REPORT_NOT_FOUND", "报告不存在", 404)
+
+    user = db.session.get(User, user_id)
+    if not chat_router.is_chat_available(getattr(user, "plan_level", "free")):
+        return error_response("REPORT_CHAT_UNAVAILABLE", "当前套餐暂未开放报告对话", 403)
+
+    message = (request.get_json(silent=True) or {}).get("message", "")
+    message = str(message).strip()
+    if not message:
+        return error_response("INVALID_MESSAGE", "请输入问题", 400)
+
+    user_message = ReportChatMessage(
+        report_id=report.id,
+        user_id=user_id,
+        role="user",
+        message=message,
+    )
+    db.session.add(user_message)
+    db.session.flush()
+
+    answer = chat_router.route_chat_question(message, report)
+    assistant_message = ReportChatMessage(
+        report_id=report.id,
+        user_id=None,
+        role="assistant",
+        message=answer,
+    )
+    db.session.add(assistant_message)
+    db.session.commit()
+
+    return ok(_serialize_chat_message(assistant_message))
+
+
+@bp.get("/reports/<report_id>/chat/history")
+@jwt_required()
+def get_report_chat_history(report_id):
+    user_id = get_jwt_identity()
+    report = _get_report_for_user(report_id, user_id)
+    if report is None:
+        return error_response("REPORT_NOT_FOUND", "报告不存在", 404)
+
+    messages = (
+        ReportChatMessage.query.filter_by(report_id=report.id)
+        .order_by(ReportChatMessage.created_at.asc())
+        .all()
+    )
+    return ok({"messages": [_serialize_chat_message(message) for message in messages]})
+
+
+@bp.get("/reports/<report_id>/alerts")
+@jwt_required()
+def get_report_alerts(report_id):
+    user_id = get_jwt_identity()
+    report = _get_report_for_user(report_id, user_id)
+    if report is None:
+        return error_response("REPORT_NOT_FOUND", "报告不存在", 404)
+
+    alerts = (
+        ReportAlert.query.filter_by(report_id=report.id, user_id=user_id)
+        .order_by(ReportAlert.created_at.asc())
+        .all()
+    )
+    return ok({"alerts": [_serialize_alert(alert) for alert in alerts]})
+
+
+@bp.post("/reports/<report_id>/alerts/<alert_id>/dismiss")
+@jwt_required()
+def dismiss_report_alert(report_id, alert_id):
+    user_id = get_jwt_identity()
+    report = _get_report_for_user(report_id, user_id)
+    if report is None:
+        return error_response("REPORT_NOT_FOUND", "报告不存在", 404)
+
+    alert = ReportAlert.query.filter_by(id=alert_id, report_id=report.id, user_id=user_id).one_or_none()
+    if alert is None:
+        return error_response("ALERT_NOT_FOUND", "提醒不存在", 404)
+
+    alert.status = "dismissed"
+    db.session.commit()
+    return ok(_serialize_alert(alert))
 
 
 @bp.get("/reports/<report_id>/status/stream")

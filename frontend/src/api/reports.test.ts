@@ -37,6 +37,30 @@ describe('reports api', () => {
     expect(requestMock).toHaveBeenCalledWith({ method: 'get', url: '/reports/report-1/status' })
   })
 
+  it('sends ai report chat messages', async () => {
+    await reports.sendReportChatMessage('report-1', 'What is the main risk?')
+
+    expect(requestMock).toHaveBeenCalledWith({
+      method: 'post',
+      url: '/reports/report-1/chat',
+      data: { message: 'What is the main risk?' },
+    })
+  })
+
+  it('fetches ai report chat history', async () => {
+    await reports.fetchReportChatHistory('report-1')
+
+    expect(requestMock).toHaveBeenCalledWith({ method: 'get', url: '/reports/report-1/chat/history' })
+  })
+
+  it('fetches and dismisses ai report alerts', async () => {
+    await reports.fetchReportAlerts('report-1')
+    await reports.dismissReportAlert('report-1', 'alert-1')
+
+    expect(requestMock).toHaveBeenNthCalledWith(1, { method: 'get', url: '/reports/report-1/alerts' })
+    expect(requestMock).toHaveBeenNthCalledWith(2, { method: 'post', url: '/reports/report-1/alerts/alert-1/dismiss' })
+  })
+
   it('opens ai report status stream with auth token', () => {
     const onMessage = vi.fn()
 
