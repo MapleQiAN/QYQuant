@@ -426,6 +426,114 @@ export function deleteStrategy(strategyId: string): Promise<{ deletedId: string 
   })
 }
 
+export interface IntentClassificationResult {
+  strategy_type: string
+  direction: string
+  timeframe: string
+  confidence: number
+}
+
+export function classifyStrategyIntent(payload: {
+  integrationId: string
+  description: string
+}): Promise<IntentClassificationResult> {
+  return client.request({
+    method: 'post',
+    url: '/v1/strategy-ai/classify',
+    data: payload
+  })
+}
+
+export interface RiskProfileResult {
+  profile: {
+    max_single_loss_pct: number
+    position_ratio: number
+    drawdown_tolerance: string
+    consecutive_loss_patience: number
+    style: string
+  }
+  generatorContext: Record<string, unknown>
+}
+
+export function buildRiskProfile(payload: {
+  max_single_loss_pct: number
+  position_ratio: number
+  drawdown_tolerance: string
+  consecutive_loss_patience: number
+  style: string
+}): Promise<RiskProfileResult> {
+  return client.request({
+    method: 'post',
+    url: '/v1/strategy-risk-profile',
+    data: payload
+  })
+}
+
+export interface StrategySummaryResult {
+  summary: string
+  explanation: string
+  parameters: Array<{ key: string; label: string; purpose: string }>
+}
+
+export function fetchStrategySummary(payload: {
+  integrationId: string
+  code: string
+  parameters: Array<Record<string, unknown>>
+}): Promise<StrategySummaryResult> {
+  return client.request({
+    method: 'post',
+    url: '/v1/strategy-ai/summary',
+    data: payload
+  })
+}
+
+export interface OptimizationResult {
+  topResults: Array<{
+    params: Record<string, unknown>
+    inSampleScore: number
+    outOfSampleScore: number
+    combinedScore: number
+    summary: Record<string, unknown>
+    outOfSampleSummary?: Record<string, unknown>
+  }>
+  overfittingRisk: string
+  searchSpaceSize: number
+  evaluations: number
+}
+
+export function optimizeStrategy(
+  strategyId: string,
+  payload: {
+    parameters: Array<Record<string, unknown>>
+    level?: 'quick' | 'standard' | 'deep'
+    riskStyle?: string
+    symbol?: string
+    interval?: string
+    limit?: number
+    startTime?: number
+    endTime?: number
+    strategyVersion?: string
+    dataSource?: string
+  }
+): Promise<OptimizationResult> {
+  return client.request({
+    method: 'post',
+    url: `/v1/strategies/${strategyId}/optimize`,
+    data: payload
+  })
+}
+
+export function generateUserFacing(payload: {
+  integrationId: string
+  parameters: Array<Record<string, unknown>>
+}): Promise<{ parameters: Array<Record<string, unknown>> }> {
+  return client.request({
+    method: 'post',
+    url: '/v1/strategy-ai/user-facing',
+    data: payload
+  })
+}
+
 export function fetchRuntimeDescriptor(strategyId: string, version?: string): Promise<StrategyRuntimeDescriptor> {
   const params = version ? { version } : undefined
   return client.request({ method: 'get', url: `/strategies/${strategyId}/runtime`, params })

@@ -6,6 +6,7 @@ from pathlib import Path
 
 from ..extensions import db
 from ..services.integrations import decrypt_secret_payload, get_user_integration
+from .qysp_docs import get_api_reference
 from .strategy_import_analysis import analyze_strategy_import
 
 
@@ -290,19 +291,7 @@ def _system_prompt():
 
 
 def _load_reference_material():
-    repo_root = Path(__file__).resolve().parents[3]
-    files = [
-        repo_root / "docs" / "strategy-format" / "README.md",
-        repo_root / "docs" / "strategy-format" / "examples" / "GoldStepByStep" / "README.md",
-        repo_root / "packages" / "qysp" / "src" / "qysp" / "context.py",
-    ]
-    parts = []
-    for path in files:
-        try:
-            parts.append(f"[{path.name}]\n{path.read_text(encoding='utf-8')}\n")
-        except FileNotFoundError:
-            continue
-    return "\n".join(parts)[:16000]
+    return get_api_reference()
 
 
 class _BufferedGeneratedUpload:

@@ -16,6 +16,14 @@ from ..services.ai_strategy_generation import (
     AIStrategyGenerationError,
     generate_strategy_draft,
 )
+from ..services.intent_classifier import (
+    IntentClassificationError,
+    classify_intent,
+)
+from ..services.risk_profile import build_risk_profile
+from ..services.strategy_summary import format_strategy_summary
+from ..services.optimizer import optimize_parameters
+from ..services.user_facing_generator import generate_user_facing, UserFacingGenerationError
 from ..services.strategy_import_confirm import (
     StrategyImportConfirmError,
     confirm_strategy_import,
@@ -224,6 +232,131 @@ def generate_ai_strategy_v1():
         return error_response(exc.code, exc.message, exc.status, details=exc.details)
 
     return ok(result)
+
+
+@bp.post("/v1/strategy-ai/classify")
+@jwt_required()
+def classify_strategy_intent():
+    payload = request.get_json() or {}
+    integration_id = str(payload.get("integrationId") or "").strip()
+    if not integration_id:
+        return error_response("INTEGRATION_ID_REQUIRED", "AI integration id is required", 400)
+    description = str(payload.get("description") or "").strip()
+    if not description:
+        return error_response("DESCRIPTION_REQUIRED", "Strategy description is required", 400)
+
+    try:
+        result = classify_intent(
+            user_id=get_jwt_identity(),
+            integration_id=integration_id,
+            description=description,
+        )
+    except IntentClassificationError as exc:
+        return error_response(exc.code, exc.message, exc.status, details=exc.details)
+
+    return ok(result)
+
+
+@bp.post("/v1/strategy-risk-profile")
+@jwt_required()
+def build_risk_profile_endpoint():
+    payload = request.get_json() or {}
+    required_fields = ("max_single_loss_pct", "position_ratio", "drawdown_tolerance",
+                       "consecutive_loss_patience", "style")
+    missing = [f for f in required_fields if f not in payload and f not in (payload or {})]
+    if missing:
+        return error_response("FIELDS_REQUIRED", f"Missing fields: {', '.join(missing)}", 400)
+
+    profile = build_risk_profile(
+        max_single_loss_pct=payload.get("max_single_loss_pct", 5.0),
+        position_ratio=payload.get("position_ratio", 0.5),
+        drawdown_tolerance=payload.get("drawdown_tolerance", "medium"),
+        consecutive_loss_patience=payload.get("consecutive_loss_patience", 3),
+        style=payload.get("style", "balanced"),
+    )
+    from ..services.risk_profile import risk_profile_to_generator_context
+    return ok({
+        "profile": profile.to_dict(),
+        "generatorContext": risk_profile_to_generator_context(profile),
+    })
+
+
+@bp.post("/v1/strategy-ai/summary")
+@jwt_required()
+def strategy_summary_endpoint():
+    payload = request.get_json() or {}
+    integration_id = str(payload.get("integrationId") or "").strip()
+    if not integration_id:
+        return error_response("INTEGRATION_ID_REQUIRED", "AI integration id is required", 400)
+    code = str(payload.get("code") or "").strip()
+    if not code:
+        return error_response("CODE_REQUIRED", "Strategy code is required", 400)
+
+    result = format_strategy_summary(
+        user_id=get_jwt_identity(),
+        integration_id=integration_id,
+        code=code,
+        parameters=payload.get("parameters") or [],
+    )
+    return ok(result)
+
+
+@bp.post("/v1/strategies/<strategy_id>/optimize")
+@jwt_required()
+def optimize_strategy_parameters(strategy_id):
+    user_id = get_jwt_identity()
+    strategy = _get_accessible_strategy(strategy_id, user_id)
+    if strategy is None:
+        return error_response("STRATEGY_NOT_FOUND", "Strategy not found", 404)
+
+    payload = request.get_json() or {}
+    level = payload.get("level", "standard")
+    if level not in ("quick", "standard", "deep"):
+        level = "standard"
+
+    try:
+        result = optimize_parameters(
+            strategy_id=strategy_id,
+            strategy_version=payload.get("strategyVersion"),
+            parameters=payload.get("parameters", []),
+            symbol=payload.get("symbol", strategy.symbol),
+            interval=payload.get("interval"),
+            limit=payload.get("limit", 500),
+            start_time=payload.get("startTime"),
+            end_time=payload.get("endTime"),
+            data_source=payload.get("dataSource"),
+            user_id=user_id,
+            level=level,
+            risk_style=payload.get("riskStyle", "balanced"),
+        )
+    except Exception as exc:
+        return error_response("OPTIMIZATION_FAILED", str(exc), 500)
+
+    return ok({
+        "topResults": result.top_results,
+        "overfittingRisk": result.overfitting_risk,
+        "searchSpaceSize": result.search_space_size,
+        "evaluations": result.evaluations,
+    })
+
+
+@bp.post("/v1/strategy-ai/user-facing")
+@jwt_required()
+def generate_user_facing_endpoint():
+    payload = request.get_json() or {}
+    integration_id = str(payload.get("integrationId") or "").strip()
+    if not integration_id:
+        return error_response("INTEGRATION_ID_REQUIRED", "AI integration id is required", 400)
+    parameters = payload.get("parameters")
+    if not isinstance(parameters, list) or not parameters:
+        return error_response("PARAMETERS_REQUIRED", "Parameters list is required", 400)
+
+    result = generate_user_facing(
+        user_id=get_jwt_identity(),
+        integration_id=integration_id,
+        parameters=parameters,
+    )
+    return ok({"parameters": result})
 
 
 @bp.delete("/v1/strategies/<strategy_id>")
