@@ -17,7 +17,7 @@ const props = defineProps<{
   label: string
   value: string
   caption: string
-  tone: string
+  tone: 'positive' | 'negative' | 'warning' | 'neutral'
   metricKey: string
 }>()
 
@@ -33,6 +33,14 @@ const toneClass = computed(() => `tone-${props.tone}`)
   border-radius: var(--radius-sm);
   background: var(--color-surface);
   box-shadow: var(--shadow-sm);
+  position: relative;
+  overflow: hidden;
+  transition: transform var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.metric-tile:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
 }
 
 .metric-tile__label {

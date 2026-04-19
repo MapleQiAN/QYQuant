@@ -205,6 +205,18 @@ function toneClass(tone: Tone): string {
   overflow: hidden;
 }
 
+.report-summary::before {
+  content: "";
+  position: absolute;
+  width: 96px;
+  height: 96px;
+  border-radius: 50%;
+  background: var(--color-accent);
+  top: -28px;
+  left: clamp(18px, 4vw, 48px);
+  opacity: 0.22;
+}
+
 .report-summary::after {
   content: "";
   position: absolute;
@@ -215,7 +227,7 @@ function toneClass(tone: Tone): string {
   right: -50px;
   transform: rotate(25deg);
   border-radius: 22px;
-  opacity: 0.12;
+  opacity: 0.2;
 }
 
 .report-summary__hero {
@@ -276,6 +288,20 @@ function toneClass(tone: Tone): string {
   border: 2px solid var(--color-border);
   background: var(--color-surface);
   text-align: center;
+  position: relative;
+  overflow: hidden;
+}
+
+.quality-score-card::before {
+  content: "";
+  position: absolute;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: var(--color-primary);
+  right: -12px;
+  top: -12px;
+  opacity: 0.9;
 }
 
 .quality-score-card__label,
@@ -310,6 +336,12 @@ function toneClass(tone: Tone): string {
   line-height: 1;
 }
 
+.quality-score-card__unit {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+  font-weight: 700;
+}
+
 .summary-facts,
 .analysis-grid,
 .metrics-grid,
@@ -321,6 +353,7 @@ function toneClass(tone: Tone): string {
 .summary-facts {
   grid-template-columns: repeat(4, minmax(0, 1fr));
   border-top: 2px solid var(--color-border);
+  border-bottom: 2px solid var(--color-border);
   position: relative;
   z-index: 1;
 }
@@ -357,6 +390,11 @@ function toneClass(tone: Tone): string {
   line-height: 1.7;
 }
 
+.summary-conclusion__tag {
+  border-style: dashed;
+  border-color: #d0d0cc;
+}
+
 .metrics-grid {
   grid-template-columns: repeat(4, minmax(0, 1fr));
 }
@@ -372,6 +410,32 @@ function toneClass(tone: Tone): string {
   background: var(--color-surface);
   overflow: hidden;
   box-shadow: var(--shadow-md);
+  position: relative;
+}
+
+.analysis-panel:first-child::before {
+  content: "";
+  position: absolute;
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  background: var(--color-accent);
+  top: -18px;
+  left: -18px;
+  opacity: 0.18;
+}
+
+.analysis-panel:last-child::before {
+  content: "";
+  position: absolute;
+  width: 52px;
+  height: 52px;
+  border-radius: 10px;
+  background: var(--color-primary);
+  bottom: -16px;
+  right: -16px;
+  transform: rotate(20deg);
+  opacity: 0.16;
 }
 
 .analysis-panel__header,
@@ -388,6 +452,8 @@ function toneClass(tone: Tone): string {
   display: grid;
   gap: 0;
   padding: 4px var(--spacing-md) var(--spacing-md);
+  position: relative;
+  z-index: 1;
 }
 
 .insight-row {
@@ -412,6 +478,18 @@ function toneClass(tone: Tone): string {
   color: var(--color-text-primary);
 }
 
+.insight-row.tone-positive .insight-row__dot {
+  background: var(--color-positive);
+}
+
+.insight-row.tone-negative .insight-row__dot {
+  background: var(--color-negative);
+}
+
+.insight-row.tone-warning .insight-row__dot {
+  background: var(--color-warning);
+}
+
 .diagnostic-row {
   padding: 10px var(--spacing-sm);
   border-bottom: 2px dashed var(--color-border-light);
@@ -429,6 +507,11 @@ function toneClass(tone: Tone): string {
 .metrics-board__grid {
   grid-template-columns: repeat(3, minmax(0, 1fr));
   padding: var(--spacing-md) var(--spacing-lg) var(--spacing-lg);
+}
+
+.metrics-board__header-main {
+  display: grid;
+  gap: 4px;
 }
 
 .tone-positive {

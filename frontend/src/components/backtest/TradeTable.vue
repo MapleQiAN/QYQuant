@@ -41,11 +41,21 @@
           </tbody>
         </table>
         <div v-if="trades.length > pageSize" class="pagination">
-          <button class="page-btn" :disabled="page <= 1" @click="page--">
+          <button
+            class="page-btn"
+            :disabled="page <= 1"
+            :aria-label="$t('common.previousPage')"
+            @click="page--"
+          >
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
           </button>
           <span class="page-info">{{ page }} / {{ totalPages }}</span>
-          <button class="page-btn" :disabled="page >= totalPages" @click="page++">
+          <button
+            class="page-btn"
+            :disabled="page >= totalPages"
+            :aria-label="$t('common.nextPage')"
+            @click="page++"
+          >
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
           </button>
         </div>
@@ -114,6 +124,20 @@ function pnlClass(pnl?: number): string {
   overflow: hidden;
   box-shadow: var(--shadow-md);
   margin-bottom: var(--spacing-lg);
+  position: relative;
+}
+
+.trade-table-card::before {
+  content: "";
+  position: absolute;
+  width: 52px;
+  height: 52px;
+  border-radius: 10px;
+  right: -14px;
+  top: -14px;
+  transform: rotate(18deg);
+  background: var(--color-primary);
+  opacity: 0.14;
 }
 
 .trade-summary {
@@ -130,6 +154,8 @@ function pnlClass(pnl?: number): string {
   color: var(--color-text-primary);
   font-weight: 800;
   font-size: var(--font-size-sm);
+  position: relative;
+  z-index: 1;
 }
 
 .trade-summary::-webkit-details-marker {
@@ -142,6 +168,11 @@ function pnlClass(pnl?: number): string {
 
 .trade-summary:hover {
   background: var(--color-surface-hover);
+}
+
+.trade-summary:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: -2px;
 }
 
 .trade-summary__left {
@@ -167,6 +198,8 @@ function pnlClass(pnl?: number): string {
 
 .trade-content {
   padding: var(--spacing-md) var(--spacing-lg);
+  position: relative;
+  z-index: 1;
 }
 
 .trade-empty {
@@ -227,6 +260,7 @@ function pnlClass(pnl?: number): string {
 .side-badge {
   display: inline-flex;
   align-items: center;
+  gap: 5px;
   padding: 2px 8px;
   border-radius: 999px;
   font-size: var(--font-size-xs);
@@ -236,16 +270,32 @@ function pnlClass(pnl?: number): string {
   border: 2px solid transparent;
 }
 
+.side-badge::before {
+  content: "";
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  border: 2px solid var(--color-border);
+}
+
 .side-badge.buy {
   background: var(--color-positive-bg);
   color: var(--color-positive);
   border-color: var(--color-positive);
 }
 
+.side-badge.buy::before {
+  background: var(--color-positive);
+}
+
 .side-badge.sell {
   background: var(--color-negative-bg);
   color: var(--color-negative);
   border-color: var(--color-negative);
+}
+
+.side-badge.sell::before {
+  background: var(--color-negative);
 }
 
 .positive {
@@ -286,6 +336,11 @@ function pnlClass(pnl?: number): string {
   border-color: var(--color-primary);
 }
 
+.page-btn:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
 .page-btn:disabled {
   opacity: 0.3;
   cursor: not-allowed;
@@ -300,6 +355,15 @@ function pnlClass(pnl?: number): string {
 }
 
 @media (max-width: 640px) {
+  .trade-summary {
+    flex-wrap: wrap;
+    gap: var(--spacing-sm);
+  }
+
+  .trade-count {
+    margin-left: auto;
+  }
+
   .trade-content {
     padding: var(--spacing-sm);
   }
