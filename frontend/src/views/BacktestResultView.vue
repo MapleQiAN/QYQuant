@@ -1,27 +1,12 @@
 <template>
   <section ref="exportRoot" class="view">
     <div class="container">
-      <div class="page-header">
-        <div class="header-left">
-          <div class="header-badges">
-            <span class="eyebrow">{{ $t('backtestReport.eyebrow') }}</span>
-            <span class="job-chip">
-              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
-              JOB&nbsp;<span class="job-chip__id">{{ jobId }}</span>
-            </span>
-          </div>
-          <h1 class="page-title">{{ $t('backtestReport.title') }}</h1>
-          <p class="page-subtitle">{{ $t('backtestReport.subtitle', { jobId }) }}</p>
-        </div>
-        <div v-if="report && report.status !== 'failed'" class="header-actions" data-export-ignore="true">
-          <button class="btn btn-secondary" type="button" data-test="export-html" @click="exportReportAsHtml">
-            {{ $t('backtestReport.exportHtml') }}
-          </button>
-          <button class="btn btn-primary" type="button" data-test="export-pdf" @click="exportReportAsPdf">
-            {{ $t('backtestReport.exportPdf') }}
-          </button>
-        </div>
-      </div>
+      <ReportHeader
+        :can-export="!!report && report.status !== 'failed'"
+        :job-id="jobId"
+        @export-html="exportReportAsHtml"
+        @export-pdf="exportReportAsPdf"
+      />
 
       <div v-if="store.reportLoading" class="state-block">
         <div class="state-block__spinner"></div>
@@ -54,110 +39,46 @@
         />
 
         <template v-else>
-          <section class="report-summary">
-            <div class="report-summary__hero">
-              <div class="report-summary__copy">
-                <div class="report-summary__meta">
-                  <span class="summary-chip">{{ $t('backtestReport.generatedAt') }} · {{ completedAtLabel }}</span>
-                  <span class="summary-chip">{{ $t('backtestReport.symbol') }} · {{ symbolLabel }}</span>
-                  <span class="summary-chip">{{ $t('backtestReport.timeRange') }} · {{ timeRangeLabel }}</span>
-                </div>
-                <h2 class="report-summary__title">{{ $t('backtestReport.reportSummary') }}</h2>
-                <p class="report-summary__subtitle">{{ $t('backtestReport.reportSummarySubtitle') }}</p>
-              </div>
+          <MetricsPanel
+            :completed-at-label="completedAtLabel"
+            :core-metrics="coreMetrics"
+            :detailed-metrics="detailedMetrics"
+            :diagnostic-rows="diagnosticRows"
+            :insight-items="insightItems"
+            :quality-label="qualityLabel"
+            :quality-score="qualityScore"
+            :quality-tone="qualityTone"
+            :snapshot-facts="snapshotFacts"
+            :summary-body="summaryBody"
+            :summary-headline="summaryHeadline"
+            :summary-tags="summaryTags"
+            :symbol-label="symbolLabel"
+            :time-range-label="timeRangeLabel"
+          />
 
-              <div class="quality-score-card">
-                <span class="quality-score-card__label">{{ $t('backtestReport.qualityScore') }}</span>
-                <div class="quality-score-card__value-row">
-                  <strong class="quality-score-card__value">{{ qualityScore }}</strong>
-                  <span class="quality-score-card__unit">{{ $t('backtestReport.scoreOutOf') }}</span>
-                </div>
-                <span :class="['quality-score-card__tone', toneClass(qualityTone)]">{{ qualityLabel }}</span>
-              </div>
-            </div>
+          <AISummaryPanel
+            v-if="aiExecutiveSummary"
+            :metric-narrations="aiMetricNarrations"
+            :summary="aiExecutiveSummary"
+          />
 
-            <div class="summary-facts">
-              <article v-for="fact in snapshotFacts" :key="fact.label" class="summary-fact">
-                <span class="summary-fact__label">{{ fact.label }}</span>
-                <strong class="summary-fact__value">{{ fact.value }}</strong>
-                <span :class="['summary-fact__note', toneClass(fact.tone)]">{{ fact.note }}</span>
-              </article>
-            </div>
+          <DiagnosisPanel
+            v-if="hasDiagnosisPanel"
+            :diagnosis="aiDiagnosisNarration"
+            :metric-narrations="aiMetricNarrations"
+          />
 
-            <article class="summary-conclusion">
-              <div class="summary-conclusion__header">
-                <div>
-                  <span class="analysis-panel__eyebrow">{{ $t('backtestReport.executiveSummary') }}</span>
-                  <h3 class="summary-conclusion__title">{{ summaryHeadline }}</h3>
-                </div>
-                <span :class="['summary-conclusion__pill', toneClass(qualityTone)]">{{ qualityLabel }}</span>
-              </div>
-              <p class="summary-conclusion__body">{{ summaryBody }}</p>
-              <div class="summary-conclusion__tags">
-                <span
-                  v-for="tag in summaryTags"
-                  :key="tag.label"
-                  :class="['summary-conclusion__tag', toneClass(tag.tone)]"
-                >
-                  {{ tag.label }} · {{ tag.value }}
-                </span>
-              </div>
-            </article>
-          </section>
+          <ComparisonPanel
+            v-if="hasComparisonPanel"
+            :monte-carlo="aiMonteCarlo"
+            :parameter-sensitivity="aiParameterSensitivity"
+            :regime-analysis="aiRegimeAnalysis"
+          />
 
-          <!-- Core Metrics Grid -->
-          <div
-            :class="['metrics-grid', { 'onboarding-highlight': userStore.onboardingHighlightTarget === 'backtest-results-section' }]"
-            data-onboarding-target="backtest-results-section"
-          >
-            <StatCard
-              v-for="metric in coreMetrics"
-              :key="metric.label"
-              :label="metric.label"
-              :show-disclaimer="metric.showDisclaimer"
-              :show-sign="metric.showSign"
-              :suffix="metric.suffix"
-              :value="metric.value"
-              :variant="metric.variant"
-            >
-              <template #label-extra>
-                <MetricTooltip :metric-key="metric.metricKey" />
-              </template>
-            </StatCard>
-          </div>
-
-          <section class="analysis-grid">
-            <article class="analysis-panel" data-test="report-insights">
-              <div class="analysis-panel__header">
-                <span class="analysis-panel__eyebrow">{{ $t('backtestReport.keyObservationsTitle') }}</span>
-                <h3 class="analysis-panel__title">{{ $t('backtestReport.reportSummary') }}</h3>
-                <p class="analysis-panel__subtitle">{{ $t('backtestReport.keyObservationsSubtitle') }}</p>
-              </div>
-              <div class="analysis-panel__body">
-                <article v-for="item in insightItems" :key="item.title" :class="['insight-row', toneClass(item.tone)]">
-                  <span class="insight-row__dot"></span>
-                  <div class="insight-row__content">
-                    <strong>{{ item.title }}</strong>
-                    <p>{{ item.body }}</p>
-                  </div>
-                </article>
-              </div>
-            </article>
-
-            <article class="analysis-panel" data-test="report-diagnostics">
-              <div class="analysis-panel__header">
-                <span class="analysis-panel__eyebrow">{{ $t('backtestReport.diagnosticsTitle') }}</span>
-                <h3 class="analysis-panel__title">{{ $t('backtestReport.qualityScore') }}</h3>
-                <p class="analysis-panel__subtitle">{{ $t('backtestReport.diagnosticsSubtitle') }}</p>
-              </div>
-              <div class="diagnostic-grid">
-                <div v-for="row in diagnosticRows" :key="row.label" class="diagnostic-row">
-                  <span class="diagnostic-row__label">{{ row.label }}</span>
-                  <strong :class="['diagnostic-row__value', toneClass(row.tone)]">{{ row.value }}</strong>
-                </div>
-              </div>
-            </article>
-          </section>
+          <AlertsPanel
+            v-if="hasAlertsPanel"
+            :anomalies="aiAnomalies"
+          />
 
           <section class="support-grid">
             <StrategyParamsPanel
@@ -168,87 +89,20 @@
               :data-source="strategyDataSource"
               :params="strategyParamsFiltered"
             />
-
             <SignalStatsPanel :stats="signalStats" />
-
             <BenchmarkComparison :data="benchmarkComparison" />
-
             <RiskMetricsPanel :metrics="riskMetrics" />
           </section>
 
-          <!-- K-line Chart -->
-          <div v-if="hasKlineData" class="chart-section">
-            <div class="chart-section__header">
-              <div class="chart-section__title-group">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="4" height="16"/><rect x="10" y="8" width="4" height="8"/><rect x="18" y="2" width="4" height="12"/></svg>
-                <span class="chart-section__title">{{ $t('backtestReport.klineTitle') }}</span>
-              </div>
-              <span class="chart-section__subtitle">{{ $t('backtestReport.klineSubtitle') }}</span>
-            </div>
-            <div class="chart-block chart-block--stacked">
-              <KlinePlaceholder
-                :data="report.kline || []"
-                :trades="report.trades || []"
-                :symbol="report.symbol || ''"
-                :timeframe="report.interval || '1d'"
-              />
-              <TradeSignalList :signals="tradeMarkers" :holding-durations="tradeHoldingDurations" :cumulative-returns="cumulativeReturns" />
-            </div>
-          </div>
-
-          <!-- Equity Curve -->
-          <div class="chart-section">
-            <div class="chart-section__header">
-              <div class="chart-section__title-group">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
-                <span class="chart-section__title">{{ $t('backtestReport.equityCurveTitle') }}</span>
-              </div>
-              <span class="chart-section__subtitle">{{ $t('backtestReport.equityCurveSubtitle') }}</span>
-            </div>
-            <EquityCurveChart class="chart-block" :points="report.equity_curve || []" :trades="report.trades || []" />
-          </div>
-
-          <!-- Drawdown Chart -->
-          <div v-if="hasDrawdownData" class="chart-section">
-            <div class="chart-section__header">
-              <div class="chart-section__title-group">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 18 13.5 8.5 8.5 13.5 1 6"/><polyline points="17 18 23 18 23 12"/></svg>
-                <span class="chart-section__title">{{ $t('backtestReport.drawdownTitle') }}</span>
-              </div>
-              <span class="chart-section__subtitle">{{ $t('backtestReport.drawdownSubtitle') }}</span>
-            </div>
-            <DrawdownChart :points="report.equity_curve || []" />
-          </div>
-
-          <!-- Trade List -->
-          <TradeTable :trades="report.trades || []" />
-
-          <!-- Trade Detail (Paired) -->
-          <TradeDetailTable :trades="report.trades || []" />
-
-          <!-- Trade Distribution Charts -->
-          <TradeDistributionCharts :distribution="tradeDistribution" />
-
-          <!-- Detailed Metrics -->
-          <section class="metrics-board">
-            <div class="metrics-board__header">
-              <div class="metrics-board__header-main">
-                <span class="analysis-panel__eyebrow">{{ $t('backtestReport.metricsCount', { count: detailedMetrics.length }) }}</span>
-                <h3 class="analysis-panel__title">{{ $t('backtestReport.metricBoardTitle') }}</h3>
-              </div>
-              <p class="metrics-board__subtitle">{{ $t('backtestReport.metricBoardSubtitle') }}</p>
-            </div>
-            <div class="metrics-board__grid">
-              <article v-for="metric in detailedMetrics" :key="metric.label" class="metric-tile">
-                <span class="metric-tile__label">
-                  {{ metric.label }}
-                  <MetricTooltip :metric-key="metric.metricKey" />
-                </span>
-                <strong :class="['metric-tile__value', toneClass(metric.tone)]">{{ metric.value }}</strong>
-                <span class="metric-tile__caption">{{ metric.caption }}</span>
-              </article>
-            </div>
-          </section>
+          <ChartPanel
+            :cumulative-returns="cumulativeReturns"
+            :has-drawdown-data="hasDrawdownData"
+            :has-kline-data="hasKlineData"
+            :report="report"
+            :trade-distribution="tradeDistribution"
+            :trade-holding-durations="tradeHoldingDurations"
+            :trade-markers="tradeMarkers"
+          />
 
           <DisclaimerFooter />
         </template>
@@ -261,21 +115,19 @@
 import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
-import StatCard from '../components/StatCard.vue'
-import EquityCurveChart from '../components/backtest/EquityCurveChart.vue'
-import DrawdownChart from '../components/backtest/DrawdownChart.vue'
-import TradeSignalList from '../components/backtest/TradeSignalList.vue'
-import TradeTable from '../components/backtest/TradeTable.vue'
-import TradeDetailTable from '../components/backtest/TradeDetailTable.vue'
-import KlinePlaceholder from '../components/KlinePlaceholder.vue'
 import ErrorDisplay from '../components/backtest/ErrorDisplay.vue'
 import DisclaimerFooter from '../components/disclaimer/DisclaimerFooter.vue'
-import MetricTooltip from '../components/help/MetricTooltip.vue'
 import StrategyParamsPanel from '../components/backtest/StrategyParamsPanel.vue'
 import SignalStatsPanel from '../components/backtest/SignalStatsPanel.vue'
 import BenchmarkComparison from '../components/backtest/BenchmarkComparison.vue'
 import RiskMetricsPanel from '../components/backtest/RiskMetricsPanel.vue'
-import TradeDistributionCharts from '../components/backtest/TradeDistributionCharts.vue'
+import AlertsPanel from './backtest/report/AlertsPanel.vue'
+import AISummaryPanel from './backtest/report/AISummaryPanel.vue'
+import ChartPanel from './backtest/report/ChartPanel.vue'
+import ComparisonPanel from './backtest/report/ComparisonPanel.vue'
+import DiagnosisPanel from './backtest/report/DiagnosisPanel.vue'
+import MetricsPanel from './backtest/report/MetricsPanel.vue'
+import ReportHeader from './backtest/report/ReportHeader.vue'
 import { useUserStore } from '../stores'
 import { mapTradesToMarkers, toEpochMs } from '../lib/chartIndicators'
 import type { BacktestSummary } from '../types/Backtest'
@@ -305,8 +157,57 @@ const jobId = String(route.params.jobId || '')
 const isGuidedMode = route.query.guided === 'true'
 const exportRoot = ref<HTMLElement | null>(null)
 
-const report = computed(() => store.report)
+const report = computed(() => store.legacyReport ?? store.report)
+const aiReport = computed(() => store.aiReport)
+const aiPayload = computed(() => aiReport.value?.payload ?? null)
 const summary = computed<Partial<BacktestSummary>>(() => report.value?.result_summary ?? {})
+
+const aiExecutiveSummary = computed(() => {
+  const summaryText = aiPayload.value?.executive_summary
+  return typeof summaryText === 'string' ? summaryText : ''
+})
+
+const aiMetricNarrations = computed<Record<string, string>>(() => {
+  const narrations = aiPayload.value?.metric_narrations
+  return narrations && typeof narrations === 'object' ? narrations as Record<string, string> : {}
+})
+
+const aiDiagnosisNarration = computed(() => {
+  const narration = aiPayload.value?.diagnosis_narration
+  return typeof narration === 'string' ? narration : ''
+})
+
+const aiAnomalies = computed<Array<Record<string, unknown>>>(() => {
+  const anomalies = aiPayload.value?.anomalies
+  return Array.isArray(anomalies) ? anomalies as Array<Record<string, unknown>> : []
+})
+
+const aiParameterSensitivity = computed<Array<Record<string, unknown>>>(() => {
+  const sensitivity = aiPayload.value?.parameter_sensitivity
+  return Array.isArray(sensitivity) ? sensitivity as Array<Record<string, unknown>> : []
+})
+
+const aiMonteCarlo = computed<Record<string, unknown> | null>(() => {
+  const monteCarlo = aiPayload.value?.monte_carlo
+  return monteCarlo && typeof monteCarlo === 'object' ? monteCarlo as Record<string, unknown> : null
+})
+
+const aiRegimeAnalysis = computed<Array<Record<string, unknown>>>(() => {
+  const regimeAnalysis = aiPayload.value?.regime_analysis
+  return Array.isArray(regimeAnalysis) ? regimeAnalysis as Array<Record<string, unknown>> : []
+})
+
+const hasDiagnosisPanel = computed(() =>
+  !!aiDiagnosisNarration.value || Object.keys(aiMetricNarrations.value).length > 0
+)
+
+const hasComparisonPanel = computed(() =>
+  aiParameterSensitivity.value.length > 0
+  || aiRegimeAnalysis.value.length > 0
+  || (!!aiMonteCarlo.value && Object.keys(aiMonteCarlo.value).length > 0)
+)
+
+const hasAlertsPanel = computed(() => aiAnomalies.value.length > 0)
 
 const hasKlineData = computed(() => (report.value?.kline?.length ?? 0) > 0)
 const hasDrawdownData = computed(() =>
@@ -359,10 +260,6 @@ function formatPlain(value: number | null | undefined, digits = 2): string {
 function formatInteger(value: number | null | undefined): string {
   if (value === null || value === undefined || Number.isNaN(value)) return '--'
   return Math.round(Number(value)).toString()
-}
-
-function toneClass(tone: Tone): string {
-  return `tone-${tone}`
 }
 
 function toneFromSignedValue(value: number | null | undefined, invert = false): Tone {

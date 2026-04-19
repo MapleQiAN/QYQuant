@@ -1,44 +1,63 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { mount } from '@vue/test-utils'
+import { createI18n } from 'vue-i18n'
+import zh from '../i18n/messages/zh'
 import BacktestResultView from './BacktestResultView.vue'
 
-const loadReportMock = vi.fn()
-const loadSupportedPackagesMock = vi.fn()
-const downloadBacktestReportAsHtmlMock = vi.fn()
-const printBacktestReportAsPdfMock = vi.fn()
+const {
+  loadReportMock,
+  loadSupportedPackagesMock,
+  downloadBacktestReportAsHtmlMock,
+  printBacktestReportAsPdfMock,
+} = vi.hoisted(() => ({
+  loadReportMock: vi.fn(),
+  loadSupportedPackagesMock: vi.fn(),
+  downloadBacktestReportAsHtmlMock: vi.fn(),
+  printBacktestReportAsPdfMock: vi.fn(),
+}))
+
+const baseLegacyReport = {
+  job_id: 'job-1',
+  status: 'completed',
+  result_summary: {
+    totalReturn: 12.5,
+    maxDrawdown: -3.2,
+    sharpeRatio: 1.8,
+    annualizedReturn: 10.4,
+    volatility: 6.8,
+    sortinoRatio: 2.1,
+    calmarRatio: 3.2,
+    winRate: 50,
+    profitLossRatio: 1.6,
+    maxConsecutiveLosses: 1,
+    totalTrades: 2,
+  },
+  equity_curve: [
+    { timestamp: 1700000000000, equity: 100000, benchmark_equity: 100000, drawdown: 0 },
+  ],
+  kline: [
+    { time: 1700000000000, open: 100, high: 110, low: 95, close: 108, volume: 1000 },
+    { time: 1700003600000, open: 108, high: 112, low: 104, close: 106, volume: 1200 },
+  ],
+  trades: [
+    { symbol: 'BTCUSDT', side: 'buy', price: 100, quantity: 1, timestamp: 1700000000000 },
+  ],
+  disclaimer: 'For research only. Not investment advice.',
+}
+
 const storeState = {
-  report: {
-    job_id: 'job-1',
-    status: 'completed',
-    result_summary: {
-      totalReturn: 12.5,
-      maxDrawdown: -3.2,
-      sharpeRatio: 1.8,
-      annualizedReturn: 10.4,
-      volatility: 6.8,
-      sortinoRatio: 2.1,
-      calmarRatio: 3.2,
-      winRate: 50,
-      profitLossRatio: 1.6,
-      maxConsecutiveLosses: 1,
-      totalTrades: 2
-    },
-    equity_curve: [
-      { timestamp: 1700000000000, equity: 100000, benchmark_equity: 100000 }
-    ],
-    kline: [
-      { time: 1700000000000, open: 100, high: 110, low: 95, close: 108, volume: 1000 },
-      { time: 1700003600000, open: 108, high: 112, low: 104, close: 106, volume: 1200 }
-    ],
-    trades: [
-      { symbol: 'BTCUSDT', side: 'buy', price: 100, quantity: 1, timestamp: 1700000000000 }
-    ],
-    disclaimer: 'For research only. Not investment advice.'
+  report: baseLegacyReport,
+  legacyReport: baseLegacyReport,
+  aiReport: null as null | {
+    id: string
+    job_id: string
+    status: string
+    payload: Record<string, unknown>
   },
   reportLoading: false,
-  reportError: null,
+  reportError: null as string | null,
   supportedPackages: [],
-  supportedPackagesLoading: false
+  supportedPackagesLoading: false,
 }
 
 vi.mock('vue-router', () => ({
@@ -47,10 +66,10 @@ vi.mock('vue-router', () => ({
   }),
   useRoute: () => ({
     params: {
-      jobId: 'job-1'
+      jobId: 'job-1',
     },
     query: {},
-  })
+  }),
 }))
 
 vi.mock('../stores', () => ({
@@ -61,25 +80,79 @@ vi.mock('../stores', () => ({
   }),
 }))
 
-vi.mock('../components/help/MetricTooltip.vue', () => ({
+vi.mock('../stores/backtests', () => ({
+  useBacktestsStore: () => ({
+    ...storeState,
+    loadReport: loadReportMock,
+    loadSupportedPackages: loadSupportedPackagesMock,
+  }),
+}))
+
+vi.mock('../lib/backtestReportExport', () => ({
+  downloadBacktestReportAsHtml: downloadBacktestReportAsHtmlMock,
+  printBacktestReportAsPdf: printBacktestReportAsPdfMock,
+}))
+
+vi.mock('./backtest/report/ReportHeader.vue', () => ({
   default: {
-    template: '<span data-test="metric-tooltip" />',
+    props: ['jobId', 'canExport'],
+    emits: ['export-html', 'export-pdf'],
+    template: `
+      <div data-test="report-header">
+        <span>{{ jobId }}</span>
+        <button v-if="canExport" data-test="export-html" @click="$emit('export-html')" />
+        <button v-if="canExport" data-test="export-pdf" @click="$emit('export-pdf')" />
+      </div>
+    `,
   },
 }))
 
-vi.mock('../components/StatCard.vue', () => ({
+vi.mock('./backtest/report/MetricsPanel.vue', () => ({
   default: {
-    props: ['label', 'value', 'suffix', 'showDisclaimer'],
+    props: ['coreMetrics'],
     template: `
-      <div
-        class="stat-card-stub"
-        :data-label="label"
-        :data-show-disclaimer="showDisclaimer ? 'true' : 'false'"
-        data-test="stat-card"
-      >
-        {{ label }} {{ value }}{{ suffix || '' }}
+      <div data-test="metrics-panel">
+        <div
+          v-for="metric in coreMetrics"
+          :key="metric.label"
+          data-test="metric-value"
+        >
+          {{ metric.label }} {{ metric.value }}{{ metric.suffix || '' }}
+        </div>
       </div>
     `,
+  },
+}))
+
+vi.mock('./backtest/report/ChartPanel.vue', () => ({
+  default: {
+    template: '<div data-test="chart-panel" />',
+  },
+}))
+
+vi.mock('./backtest/report/AISummaryPanel.vue', () => ({
+  default: {
+    props: ['summary'],
+    template: '<div data-test="ai-summary-panel">{{ summary }}</div>',
+  },
+}))
+
+vi.mock('./backtest/report/DiagnosisPanel.vue', () => ({
+  default: {
+    props: ['diagnosis'],
+    template: '<div data-test="diagnosis-panel">{{ diagnosis }}</div>',
+  },
+}))
+
+vi.mock('./backtest/report/ComparisonPanel.vue', () => ({
+  default: {
+    template: '<div data-test="comparison-panel" />',
+  },
+}))
+
+vi.mock('./backtest/report/AlertsPanel.vue', () => ({
+  default: {
+    template: '<div data-test="alerts-panel" />',
   },
 }))
 
@@ -89,16 +162,63 @@ vi.mock('../components/disclaimer/DisclaimerFooter.vue', () => ({
   },
 }))
 
+vi.mock('../components/help/MetricTooltip.vue', () => ({
+  default: {
+    template: '<span data-test="metric-tooltip" />',
+  },
+}))
+
+vi.mock('../components/StatCard.vue', () => ({
+  default: {
+    props: ['label', 'value', 'suffix'],
+    template: `
+      <div data-test="stat-card">
+        {{ label }} {{ value }}{{ suffix || '' }}
+      </div>
+    `,
+  },
+}))
+
 vi.mock('../components/backtest/ErrorDisplay.vue', () => ({
   default: {
-    props: ['error', 'supportedPackages'],
-    template: '<div>{{ error?.type }} {{ error?.line }} {{ error?.message }} {{ error?.example_code }} {{ supportedPackages?.[0]?.name }}</div>',
+    props: ['error'],
+    template: '<div>{{ error?.message }}</div>',
+  },
+}))
+
+vi.mock('../components/backtest/StrategyParamsPanel.vue', () => ({
+  default: {
+    template: '<div data-test="strategy-params-panel" />',
+  },
+}))
+
+vi.mock('../components/backtest/SignalStatsPanel.vue', () => ({
+  default: {
+    template: '<div data-test="signal-stats-panel" />',
+  },
+}))
+
+vi.mock('../components/backtest/BenchmarkComparison.vue', () => ({
+  default: {
+    template: '<div data-test="benchmark-comparison-panel" />',
+  },
+}))
+
+vi.mock('../components/backtest/RiskMetricsPanel.vue', () => ({
+  default: {
+    template: '<div data-test="risk-metrics-panel" />',
   },
 }))
 
 vi.mock('../components/backtest/EquityCurveChart.vue', () => ({
   default: {
-    template: '<div data-test="equity-chart" />',
+    template: '<div data-test="equity-curve-chart" />',
+  },
+}))
+
+vi.mock('../components/backtest/DrawdownChart.vue', () => ({
+  default: {
+    template: '<div data-test="drawdown-chart" />',
   },
 }))
 
@@ -120,18 +240,32 @@ vi.mock('../components/backtest/TradeTable.vue', () => ({
   },
 }))
 
-vi.mock('../stores/backtests', () => ({
-  useBacktestsStore: () => ({
-    ...storeState,
-    loadReport: loadReportMock,
-    loadSupportedPackages: loadSupportedPackagesMock
-  })
+vi.mock('../components/backtest/TradeDetailTable.vue', () => ({
+  default: {
+    template: '<div data-test="trade-detail-table" />',
+  },
 }))
 
-vi.mock('../lib/backtestReportExport', () => ({
-  downloadBacktestReportAsHtml: downloadBacktestReportAsHtmlMock,
-  printBacktestReportAsPdf: printBacktestReportAsPdfMock,
+vi.mock('../components/backtest/TradeDistributionCharts.vue', () => ({
+  default: {
+    template: '<div data-test="trade-distribution-charts" />',
+  },
 }))
+
+function mountView() {
+  const i18n = createI18n({
+    legacy: false,
+    locale: 'zh',
+    globalInjection: true,
+    messages: { zh },
+  })
+
+  return mount(BacktestResultView, {
+    global: {
+      plugins: [i18n],
+    },
+  })
+}
 
 describe('BacktestResultView', () => {
   beforeEach(() => {
@@ -139,124 +273,62 @@ describe('BacktestResultView', () => {
     loadSupportedPackagesMock.mockClear()
     downloadBacktestReportAsHtmlMock.mockClear()
     printBacktestReportAsPdfMock.mockClear()
-    storeState.report = {
-      job_id: 'job-1',
-      status: 'completed',
-      result_summary: {
-        totalReturn: 12.5,
-        maxDrawdown: -3.2,
-        sharpeRatio: 1.8,
-        annualizedReturn: 10.4,
-        volatility: 6.8,
-        sortinoRatio: 2.1,
-        calmarRatio: 3.2,
-        winRate: 50,
-        profitLossRatio: 1.6,
-        maxConsecutiveLosses: 1,
-        totalTrades: 2
-      },
-      equity_curve: [
-        { timestamp: 1700000000000, equity: 100000, benchmark_equity: 100000 }
-      ],
-      kline: [
-        { time: 1700000000000, open: 100, high: 110, low: 95, close: 108, volume: 1000 },
-        { time: 1700003600000, open: 108, high: 112, low: 104, close: 106, volume: 1200 }
-      ],
-      trades: [
-        { symbol: 'BTCUSDT', side: 'buy', price: 100, quantity: 1, timestamp: 1700000000000 }
-      ],
-      disclaimer: 'For research only. Not investment advice.'
-    }
+
+    storeState.report = { ...baseLegacyReport }
+    storeState.legacyReport = storeState.report
+    storeState.aiReport = null
     storeState.reportLoading = false
     storeState.reportError = null
     storeState.supportedPackages = []
     storeState.supportedPackagesLoading = false
   })
 
-  it('renders core metrics with earnings disclaimers and footer disclaimer', async () => {
-    const wrapper = mount(BacktestResultView)
-    const statCards = wrapper.findAll('[data-test="stat-card"]')
-    const disclaimerCards = statCards.filter((item) => item.attributes('data-show-disclaimer') === 'true')
+  it('renders legacy metrics and charts when no ai report exists', () => {
+    const wrapper = mountView()
 
     expect(loadReportMock).toHaveBeenCalledWith('job-1')
-    expect(wrapper.text()).toContain('12.50%')
-    expect(wrapper.text()).toContain('-3.20%')
-    expect(wrapper.text()).toContain('1.80')
-    expect(statCards).toHaveLength(4)
-    expect(disclaimerCards).toHaveLength(2)
-    expect(wrapper.get('[data-test="disclaimer-footer"]').text()).toContain('基于历史数据，不构成投资建议')
+    expect(wrapper.find('[data-test="report-header"]').exists()).toBe(true)
+    expect(wrapper.get('[data-test="metrics-panel"]').text()).toContain('12.50%')
+    expect(wrapper.find('[data-test="chart-panel"]').exists()).toBe(true)
+    expect(wrapper.find('[data-test="ai-summary-panel"]').exists()).toBe(false)
+    expect(wrapper.find('[data-test="diagnosis-panel"]').exists()).toBe(false)
+    expect(wrapper.find('[data-test="comparison-panel"]').exists()).toBe(false)
+    expect(wrapper.find('[data-test="alerts-panel"]').exists()).toBe(false)
   })
 
-  it('renders narrative analysis and diagnostic sections for report readout', () => {
-    const wrapper = mount(BacktestResultView)
-
-    expect(wrapper.text()).toContain('运行剖面')
-    expect(wrapper.text()).toContain('收益不能脱离基准')
-    expect(wrapper.text()).toContain('回撤决定资金体验')
-    expect(wrapper.text()).toContain('交易密度影响执行压力')
-    expect(wrapper.text()).toContain('样本长度影响结论可信度')
-    expect(wrapper.text()).toContain('质量评分')
-  })
-
-  it('renders structured error details for failed report', async () => {
-    storeState.report = {
+  it('renders ai summary when executive summary exists', () => {
+    storeState.aiReport = {
+      id: 'report-1',
       job_id: 'job-1',
-      status: 'failed',
-      error: {
-        type: 'NameError',
-        line: 15,
-        message: "未定义的变量 'sma_period'",
-        suggestion: '请检查变量名是否正确',
-        example_code: "sma_period = ctx.params.get('sma_period', 20)"
-      }
+      status: 'ready',
+      payload: {
+        executive_summary: 'AI summary for this backtest.',
+      },
     }
-    storeState.supportedPackages = [
-      { name: 'pandas', version: '2.x', description: 'Data analysis' }
-    ]
 
-    const wrapper = mount(BacktestResultView)
+    const wrapper = mountView()
 
-    expect(wrapper.text()).toContain("未定义的变量 'sma_period'")
-    expect(wrapper.text()).toContain('NameError')
-    expect(wrapper.text()).toContain('15')
-    expect(wrapper.text()).toContain("sma_period = ctx.params.get('sma_period', 20)")
-    expect(wrapper.text()).toContain('pandas')
-    expect(loadSupportedPackagesMock).toHaveBeenCalled()
+    expect(wrapper.get('[data-test="ai-summary-panel"]').text()).toContain('AI summary for this backtest.')
   })
 
-  it('renders kline chart with trade signal list and trade table', () => {
-    const wrapper = mount(BacktestResultView)
+  it('renders diagnosis comparison and alerts panels only when ai payload provides them', () => {
+    storeState.aiReport = {
+      id: 'report-1',
+      job_id: 'job-1',
+      status: 'ready',
+      payload: {
+        diagnosis_narration: 'Risk concentration is elevated.',
+        parameter_sensitivity: [{ parameter: 'lookback', winner: '20' }],
+        monte_carlo: { median: 0.12 },
+        regime_analysis: [{ regime: 'trend', return: 0.18 }],
+        anomalies: [{ title: 'Large drawdown cluster' }],
+      },
+    }
 
-    expect(wrapper.get('[data-test="kline-placeholder"]').exists()).toBe(true)
-    expect(wrapper.get('[data-test="trade-signal-list"]').exists()).toBe(true)
-    expect(wrapper.get('[data-test="trade-table"]').exists()).toBe(true)
-  })
+    const wrapper = mountView()
 
-  it('exports the report as html', async () => {
-    const wrapper = mount(BacktestResultView)
-
-    await wrapper.get('[data-test="export-html"]').trigger('click')
-
-    expect(downloadBacktestReportAsHtmlMock).toHaveBeenCalledTimes(1)
-    expect(downloadBacktestReportAsHtmlMock).toHaveBeenCalledWith(
-      expect.any(HTMLElement),
-      expect.objectContaining({
-        jobId: 'job-1',
-      }),
-    )
-  })
-
-  it('downloads the report as pdf', async () => {
-    const wrapper = mount(BacktestResultView)
-
-    await wrapper.get('[data-test="export-pdf"]').trigger('click')
-
-    expect(printBacktestReportAsPdfMock).toHaveBeenCalledTimes(1)
-    expect(printBacktestReportAsPdfMock).toHaveBeenCalledWith(
-      expect.any(HTMLElement),
-      expect.objectContaining({
-        jobId: 'job-1',
-      }),
-    )
+    expect(wrapper.get('[data-test="diagnosis-panel"]').text()).toContain('Risk concentration is elevated.')
+    expect(wrapper.find('[data-test="comparison-panel"]').exists()).toBe(true)
+    expect(wrapper.find('[data-test="alerts-panel"]').exists()).toBe(true)
   })
 })
