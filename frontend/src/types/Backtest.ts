@@ -102,12 +102,57 @@ export interface BacktestReportResponse {
   equity_curve?: BacktestReportPoint[]
   kline?: KlineBar[]
   trades?: Trade[]
-  kline?: KlineBar[]
   symbol?: string
   interval?: string
   error?: StructuredBacktestError
   completed_at?: string | null
   disclaimer?: string
+  report_id?: string | null
+  report_status?: string | null
+}
+
+export interface BacktestAiChatMessage {
+  id: string
+  role: string
+  message: string
+  created_at?: string | null
+}
+
+export interface BacktestAiAlert {
+  id: string
+  level: string
+  title: string
+  message: string
+  status?: string
+}
+
+export interface BacktestAiReportPayload {
+  metrics?: BacktestSummary
+  equity_curve?: BacktestReportPoint[]
+  drawdown_series?: Array<{ timestamp: number; drawdown: number }>
+  monthly_returns?: Array<{ month: string; return: number }>
+  trade_details?: Trade[]
+  executive_summary?: string
+  metric_narrations?: Record<string, string>
+  anomalies?: Array<Record<string, unknown>>
+  parameter_sensitivity?: Array<Record<string, unknown>>
+  monte_carlo?: Record<string, unknown>
+  regime_analysis?: Array<Record<string, unknown>>
+  diagnosis_narration?: string
+  advisor_narration?: string
+}
+
+export interface BacktestAiReportResponse {
+  id: string
+  job_id: string
+  status: string
+  payload: BacktestAiReportPayload
+}
+
+export interface BacktestAiReportStatusResponse {
+  id: string
+  job_id: string
+  status: string
 }
 
 export interface BacktestHistoryItem {

@@ -93,6 +93,20 @@ describe('backtests api', () => {
     expect(requestMock).toHaveBeenCalledWith({ method: 'get', url: '/v1/backtest/job-id/report' })
   })
 
+  it('returns compatibility fields from legacy report bootstrap', async () => {
+    requestMock.mockResolvedValueOnce({
+      job_id: 'job-id',
+      status: 'completed',
+      report_id: 'report-1',
+      report_status: 'ready',
+    })
+
+    const data = await backtests.fetchBacktestReport('job-id')
+
+    expect(data.report_id).toBe('report-1')
+    expect(data.report_status).toBe('ready')
+  })
+
   it('fetches supported package whitelist', async () => {
     const data = await backtests.fetchSupportedPackages()
 

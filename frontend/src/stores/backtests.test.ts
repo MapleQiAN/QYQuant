@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { setActivePinia, createPinia } from 'pinia'
 import { useBacktestsStore } from './backtests'
 
-const { fetchLatestMock, fetchBacktestReportMock } = vi.hoisted(() => ({
+const { fetchLatestMock, fetchBacktestReportMock, fetchReportMock } = vi.hoisted(() => ({
   fetchLatestMock: vi.fn().mockResolvedValue({ summary: { totalReturn: 1 }, kline: [], trades: [] })
   ,
   fetchBacktestReportMock: vi.fn().mockResolvedValue({
@@ -10,8 +10,19 @@ const { fetchLatestMock, fetchBacktestReportMock } = vi.hoisted(() => ({
     status: 'completed',
     result_summary: { totalReturn: 12.5, maxDrawdown: -3.2, sharpeRatio: 1.8 },
     equity_curve: [{ timestamp: 1700000000000, equity: 100000 }],
-    trades: []
-  })
+    trades: [],
+    report_id: 'report-1',
+    report_status: 'ready'
+  }),
+  fetchReportMock: vi.fn().mockResolvedValue({
+    id: 'report-1',
+    job_id: 'job-1',
+    status: 'ready',
+    payload: {
+      metrics: { totalReturn: 12.5 },
+      executive_summary: 'summary',
+    },
+  }),
 }))
 
 vi.mock('../api/backtests', () => ({
@@ -19,11 +30,16 @@ vi.mock('../api/backtests', () => ({
   fetchBacktestReport: fetchBacktestReportMock
 }))
 
+vi.mock('../api/reports', () => ({
+  fetchReport: fetchReportMock,
+}))
+
 describe('backtests store', () => {
   beforeEach(() => {
     setActivePinia(createPinia())
     fetchLatestMock.mockClear()
     fetchBacktestReportMock.mockClear()
+    fetchReportMock.mockClear()
   })
 
   it('loads latest and clears error', async () => {
@@ -44,7 +60,10 @@ describe('backtests store', () => {
     await store.loadReport('job-1')
 
     expect(fetchBacktestReportMock).toHaveBeenCalledWith('job-1')
+    expect(fetchReportMock).toHaveBeenCalledWith('report-1')
     expect(store.reportError).toBeNull()
     expect(store.report?.job_id).toBe('job-1')
+    expect(store.legacyReport?.report_id).toBe('report-1')
+    expect(store.aiReport?.id).toBe('report-1')
   })
 })
