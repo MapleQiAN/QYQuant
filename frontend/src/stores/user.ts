@@ -30,6 +30,21 @@ const defaultUser: User = {
   updated_at: undefined,
 }
 
+function getErrorStatus(error: unknown): number | undefined {
+  if (typeof error !== 'object' || error === null) {
+    return undefined
+  }
+
+  const candidate = error as { status?: unknown; response?: { status?: unknown } }
+  if (typeof candidate.status === 'number') {
+    return candidate.status
+  }
+  if (typeof candidate.response?.status === 'number') {
+    return candidate.response.status
+  }
+  return undefined
+}
+
 export const useUserStore = defineStore('user', {
   state: () => ({
     profile: defaultUser,
@@ -118,9 +133,10 @@ export const useUserStore = defineStore('user', {
 
       try {
         await this.refreshProfile()
-      } catch {
-        // Token may be invalid/expired — clear it
-        window.localStorage.removeItem('qyquant-token')
+      } catch (error) {
+        if (getErrorStatus(error) === 401) {
+          window.localStorage.removeItem('qyquant-token')
+        }
         this.profileLoaded = true
       }
     },
