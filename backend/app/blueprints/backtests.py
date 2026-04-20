@@ -102,6 +102,7 @@ def _build_v1_job_params(payload):
         "strategy_params": parameters,
         "parameters": parameters,
         "enable_ai": payload.get("enable_ai", True),
+        "locale": payload.get("locale", "en"),
     }
 
 
@@ -185,6 +186,7 @@ def run():
             "strategy_params": strategy_params,
             "data_source": data_source,
             "enable_ai": payload.get("enableAi", payload.get("enable_ai", True)),
+            "locale": payload.get("locale", "en"),
         },
     )
     db.session.add(job_record)

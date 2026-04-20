@@ -271,10 +271,11 @@ def test_post_backtest_report_creates_regeneration_request(client, app, monkeypa
         db.session.commit()
         job_id = job.id
 
-    def _fake_delay(job_id, user_id, force=False):
+    def _fake_delay(job_id, user_id, force=False, locale="en"):
         queued["job_id"] = job_id
         queued["user_id"] = user_id
         queued["force"] = force
+        queued["locale"] = locale
 
     monkeypatch.setattr("app.tasks.report_generation.generate_backtest_report.delay", _fake_delay)
 
@@ -288,6 +289,7 @@ def test_post_backtest_report_creates_regeneration_request(client, app, monkeypa
         "job_id": job_id,
         "user_id": user_id,
         "force": True,
+        "locale": "en",
     }
 
 
@@ -461,8 +463,8 @@ def test_generate_report_uses_narrator_stub(app, monkeypatch, tmp_path):
     from app.utils.storage import build_backtest_storage_key, write_json
 
     monkeypatch.setenv("BACKTEST_STORAGE_DIR", tmp_path.as_posix())
-    monkeypatch.setattr("app.report_agent.narrator.generate_summary", lambda metrics, tier: f"{tier} summary")
-    monkeypatch.setattr("app.report_agent.narrator.annotate_metrics", lambda metrics: {"sharpeRatio": "stub metric"})
+    monkeypatch.setattr("app.report_agent.narrator.generate_summary", lambda metrics, tier, locale="en": f"{tier} summary")
+    monkeypatch.setattr("app.report_agent.narrator.annotate_metrics", lambda metrics, locale="en": {"sharpeRatio": "stub metric"})
 
     with app.app_context():
         user = User(phone="13800138908", nickname="NarratorOwner", plan_level="go")
@@ -501,7 +503,7 @@ def test_generate_report_uses_diagnostician_for_plus_tier(app, monkeypatch, tmp_
     from app.utils.storage import build_backtest_storage_key, write_json
 
     monkeypatch.setenv("BACKTEST_STORAGE_DIR", tmp_path.as_posix())
-    monkeypatch.setattr("app.report_agent.diagnostician.generate_diagnosis", lambda payload, tier: "diagnosis stub")
+    monkeypatch.setattr("app.report_agent.diagnostician.generate_diagnosis", lambda payload, tier, locale="en": "diagnosis stub")
 
     with app.app_context():
         user = User(phone="13800138909", nickname="DiagnosisOwner", plan_level="plus")
@@ -539,10 +541,10 @@ def test_generate_report_uses_advisor_and_creates_alerts_for_pro_tier(app, monke
     from app.utils.storage import build_backtest_storage_key, write_json
 
     monkeypatch.setenv("BACKTEST_STORAGE_DIR", tmp_path.as_posix())
-    monkeypatch.setattr("app.report_agent.advisor.generate_suggestions", lambda payload, tier: "advisor stub")
+    monkeypatch.setattr("app.report_agent.advisor.generate_suggestions", lambda payload, tier, locale="en": "advisor stub")
     monkeypatch.setattr(
         "app.report_agent.advisor.generate_alerts",
-        lambda payload, tier: [{"level": "warning", "title": "Drawdown cluster", "message": "Watch recent losses"}],
+        lambda payload, tier, locale="en": [{"level": "warning", "title": "Drawdown cluster", "message": "Watch recent losses"}],
     )
 
     with app.app_context():
@@ -605,7 +607,7 @@ def test_report_chat_persists_question_and_answer(client, app, monkeypatch):
         db.session.commit()
         report_id = report.id
 
-    monkeypatch.setattr("app.report_agent.chat_router.route_chat_question", lambda message, report: "answer stub")
+    monkeypatch.setattr("app.report_agent.chat_router.route_chat_question", lambda message, report, locale="en": "answer stub")
 
     response = client.post(
         f"/api/reports/{report_id}/chat",

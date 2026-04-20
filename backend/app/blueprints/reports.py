@@ -124,7 +124,8 @@ def create_or_regenerate_report(job_id):
         report.failure_reason = None
         db.session.commit()
 
-    generate_backtest_report.delay(job_id, user_id, force=True)
+    locale = (request.get_json(silent=True) or {}).get("locale", "en")
+    generate_backtest_report.delay(job_id, user_id, force=True, locale=locale)
     return ok(
         {
             "job_id": job_id,
@@ -190,7 +191,8 @@ def post_report_chat(report_id):
     db.session.add(user_message)
     db.session.flush()
 
-    answer = chat_router.route_chat_question(message, report)
+    locale = (request.get_json(silent=True) or {}).get("locale", "en")
+    answer = chat_router.route_chat_question(message, report, locale=locale)
     assistant_message = ReportChatMessage(
         report_id=report.id,
         user_id=None,

@@ -18,8 +18,8 @@ export function fetchReportStatus(reportId: string): Promise<BacktestAiReportSta
   return client.request({ method: 'get', url: `/reports/${reportId}/status` })
 }
 
-export function sendReportChatMessage(reportId: string, message: string): Promise<BacktestAiChatMessage> {
-  return client.request({ method: 'post', url: `/reports/${reportId}/chat`, data: { message } })
+export function sendReportChatMessage(reportId: string, message: string, locale = 'en'): Promise<BacktestAiChatMessage> {
+  return client.request({ method: 'post', url: `/reports/${reportId}/chat`, data: { message, locale } })
 }
 
 export function fetchReportChatHistory(reportId: string): Promise<BacktestAiChatHistoryResponse> {

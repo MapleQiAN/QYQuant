@@ -184,7 +184,7 @@ import { useUserStore } from '../stores'
 import { usePresetsStore } from '../stores/usePresetsStore'
 import type { StrategyParameterDefinition } from '../types/Strategy'
 
-const { t } = useI18n()
+const { t, locale } = useI18n()
 
 const route = useRoute()
 const router = useRouter()
@@ -340,6 +340,7 @@ async function handleSubmit() {
       data_source: effectiveDataSource.value,
       parameters: sanitizeParameters(definitions.value, parameterValues.value),
       enable_ai: enableAI.value,
+      locale: locale.value,
     })
 
     if (isGuidedMode) {

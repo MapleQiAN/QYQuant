@@ -6,7 +6,7 @@ from .quant_engine import build_report_payload
 from .tier_filter import normalize_report_plan_level
 
 
-def generate_report(backtest_job_id, user_id, force=False):
+def generate_report(backtest_job_id, user_id, force=False, locale="en"):
     job = db.session.get(BacktestJob, backtest_job_id)
     if job is None:
         raise ValueError(f"backtest job {backtest_job_id} not found")
@@ -49,16 +49,16 @@ def generate_report(backtest_job_id, user_id, force=False):
         report.monte_carlo = payload["monte_carlo"]
         report.regime_analysis = payload["regime_analysis"]
         report.metric_narrations = payload["metric_narrations"]
-        report.executive_summary = narrator.generate_summary(payload["metrics"], tier)
+        report.executive_summary = narrator.generate_summary(payload["metrics"], tier, locale=locale)
         if tier in {"go", "plus", "pro", "ultra"}:
-            report.metric_narrations = narrator.annotate_metrics(payload["metrics"])
+            report.metric_narrations = narrator.annotate_metrics(payload["metrics"], locale=locale)
         if tier in {"plus", "pro", "ultra"}:
-            report.diagnosis_narration = diagnostician.generate_diagnosis(payload, tier)
+            report.diagnosis_narration = diagnostician.generate_diagnosis(payload, tier, locale=locale)
         else:
             report.diagnosis_narration = None
         if tier in {"pro", "ultra"}:
-            report.advisor_narration = advisor.generate_suggestions(payload, tier)
-            alert_specs = advisor.generate_alerts(payload, tier)
+            report.advisor_narration = advisor.generate_suggestions(payload, tier, locale=locale)
+            alert_specs = advisor.generate_alerts(payload, tier, locale=locale)
             report.anomalies = alert_specs
             ReportAlert.query.filter_by(report_id=report.id).delete()
             for alert in alert_specs:

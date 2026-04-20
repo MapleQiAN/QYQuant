@@ -38,12 +38,12 @@ describe('reports api', () => {
   })
 
   it('sends ai report chat messages', async () => {
-    await reports.sendReportChatMessage('report-1', 'What is the main risk?')
+    await reports.sendReportChatMessage('report-1', 'What is the main risk?', 'zh')
 
     expect(requestMock).toHaveBeenCalledWith({
       method: 'post',
       url: '/reports/report-1/chat',
-      data: { message: 'What is the main risk?' },
+      data: { message: 'What is the main risk?', locale: 'zh' },
     })
   })
 

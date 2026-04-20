@@ -331,6 +331,7 @@ import { confirmDialog, toast } from '../lib/toast'
 import type { BacktestHistoryItem, SubmitBacktestPayload } from '../types/Backtest'
 import type { Strategy, StrategyParameter, StrategyRuntimeDescriptor } from '../types/Strategy'
 import { QCheckbox, QDatePicker, QSelect } from '../components/ui'
+import { i18n } from '../i18n'
 
 const strategies = ref<Strategy[]>([])
 const strategiesError = ref('')
@@ -739,6 +740,7 @@ async function handleRun() {
       data_source: effectiveDataSource.value,
       name: buildBacktestName(),
       enable_ai: enableAI.value,
+      locale: i18n.global.locale.value,
     }
 
     if (runtimeDescriptor.value) {
