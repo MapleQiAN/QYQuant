@@ -126,12 +126,10 @@
                     @update:model-value="onParamInput(param.key, $event)"
                   />
 
-                  <input
+                  <QCheckbox
                     v-else-if="param.type === 'boolean'"
-                    class="field-checkbox"
-                    type="checkbox"
-                    :checked="Boolean(paramValues[param.key])"
-                    @change="onBooleanParamInput(param.key, $event)"
+                    :model-value="Boolean(paramValues[param.key])"
+                    @update:model-value="onParamInput(param.key, $event)"
                   />
 
                   <input
@@ -160,10 +158,11 @@
           </div>
 
           <div class="actions">
-            <label v-if="quota && quota.plan_level && quota.plan_level !== 'free'" class="field field--checkbox">
-              <input type="checkbox" v-model="enableAI" />
-              <span>{{ $t('backtests.enableAI') }}</span>
-            </label>
+            <QCheckbox
+              v-if="quota && quota.plan_level && quota.plan_level !== 'free'"
+              v-model="enableAI"
+              :label="$t('backtests.enableAI')"
+            />
             <button
               v-if="!isQuotaExhausted"
               :class="['btn btn-run', { 'btn-run--active': runState.running }]"
@@ -331,7 +330,7 @@ import { fetchMyQuota, type UserQuotaResponse } from '../api/users'
 import { confirmDialog, toast } from '../lib/toast'
 import type { BacktestHistoryItem, SubmitBacktestPayload } from '../types/Backtest'
 import type { Strategy, StrategyParameter, StrategyRuntimeDescriptor } from '../types/Strategy'
-import { QDatePicker, QSelect } from '../components/ui'
+import { QCheckbox, QDatePicker, QSelect } from '../components/ui'
 
 const strategies = ref<Strategy[]>([])
 const strategiesError = ref('')
@@ -1228,12 +1227,6 @@ onMounted(() => {
   border-color: var(--color-border-strong);
 }
 
-.field-checkbox {
-  width: 18px;
-  height: 18px;
-  accent-color: var(--color-accent);
-}
-
 .field-help {
   color: var(--color-text-muted);
   font-size: var(--font-size-xs);
@@ -1324,6 +1317,9 @@ onMounted(() => {
 
 /* ── Run Button — Bauhaus accent (yellow) with 2px border ── */
 .actions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
   padding: var(--spacing-md) var(--spacing-lg) var(--spacing-lg);
 }
 

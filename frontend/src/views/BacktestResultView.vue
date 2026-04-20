@@ -39,7 +39,7 @@
         />
 
         <template v-else>
-          <div class="report-layout">
+          <div :class="['report-layout', { 'report-layout--chat-open': chatOpen && isReportChatEnabled }]">
             <div class="report-body">
               <MetricsPanel
                 :completed-at-label="completedAtLabel"
@@ -92,14 +92,17 @@
               <DisclaimerFooter />
             </div>
 
-            <ChatSidebar
-              v-if="aiReport?.id"
-              :enabled="isReportChatEnabled"
-              :report-id="aiReport.id"
-              :context-hint="contextHint"
-              @clear-context="clearAiContext"
-            />
           </div>
+
+          <ChatSidebar
+            v-if="aiReport?.id"
+            :enabled="isReportChatEnabled"
+            :open="chatOpen"
+            :report-id="aiReport.id"
+            :context-hint="contextHint"
+            @clear-context="clearAiContext"
+            @update:open="chatOpen = $event"
+          />
         </template>
       </template>
     </div>
@@ -148,6 +151,7 @@ const userStore = useUserStore()
 const jobId = String(route.params.jobId || '')
 const isGuidedMode = route.query.guided === 'true'
 const exportRoot = ref<HTMLElement | null>(null)
+const chatOpen = ref(false)
 
 const aiContext = reactive({
   activeSection: 'metrics' as 'metrics' | 'charts' | 'params',
@@ -1704,8 +1708,12 @@ onMounted(() => {
 
 .report-layout {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 340px;
+  grid-template-columns: 1fr;
   gap: 0;
+}
+
+.report-layout--chat-open {
+  margin-right: 380px;
 }
 
 .report-body {
@@ -1715,8 +1723,8 @@ onMounted(() => {
 }
 
 @media (max-width: 768px) {
-  .report-layout {
-    grid-template-columns: 1fr;
+  .report-layout--chat-open {
+    margin-right: 0;
   }
 }
 </style>
