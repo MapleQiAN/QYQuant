@@ -1710,6 +1710,7 @@ onMounted(() => {
   display: grid;
   grid-template-columns: 1fr;
   gap: 0;
+  transition: margin-right 0.5s cubic-bezier(0.32, 0.72, 0, 1);
 }
 
 .report-layout--chat-open {

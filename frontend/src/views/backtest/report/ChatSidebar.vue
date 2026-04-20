@@ -178,12 +178,15 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: var(--shadow-sm);
+  box-shadow:
+    0 2px 12px rgba(25, 118, 210, 0.10),
+    var(--shadow-sm);
   transition:
-    background 0.2s ease,
-    color 0.2s ease,
-    border-color 0.2s ease,
-    transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    background 0.3s ease,
+    color 0.3s ease,
+    border-color 0.3s ease,
+    box-shadow 0.35s ease,
+    transform 0.5s cubic-bezier(0.32, 0.72, 0, 1);
 }
 
 .chat-fab::before {
@@ -201,7 +204,8 @@ onUnmounted(() => {
   background: var(--color-primary);
   color: #fff;
   border-color: var(--color-primary);
-  transform: translateY(-50%) scale(1.08);
+  transform: translateY(-50%) scale(1.1);
+  box-shadow: 0 4px 20px rgba(25, 118, 210, 0.25);
 }
 
 .chat-fab:hover::before {
@@ -242,11 +246,8 @@ onUnmounted(() => {
   width: 380px;
   z-index: 200;
   transform: translateX(100%);
-  transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: transform 0.5s cubic-bezier(0.32, 0.72, 0, 1);
   pointer-events: none;
-  will-change: transform;
-  backface-visibility: hidden;
-  -webkit-backface-visibility: hidden;
 }
 
 .chat-sidebar--open {
@@ -260,7 +261,7 @@ onUnmounted(() => {
   flex-direction: column;
   background: var(--color-surface);
   border-left: 2px solid var(--color-border);
-  box-shadow: var(--shadow-lg);
+  box-shadow: -4px 0 32px rgba(0, 0, 0, 0.05);
   position: relative;
   overflow: hidden;
 }
@@ -271,6 +272,12 @@ onUnmounted(() => {
   flex-shrink: 0;
   background: linear-gradient(90deg, var(--color-primary), var(--color-accent), var(--color-primary));
   background-size: 200% 100%;
+  animation: accent-flow 6s ease infinite;
+}
+
+@keyframes accent-flow {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
 }
 
 /* ─── Header ─── */
@@ -395,6 +402,13 @@ onUnmounted(() => {
   max-width: 88%;
   padding: 10px 14px;
   border-radius: 12px;
+  position: relative;
+  animation: bubble-in 0.25s ease-out;
+}
+
+@keyframes bubble-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 .chat-bubble--user {
@@ -476,11 +490,12 @@ onUnmounted(() => {
   border: 2px solid var(--color-border);
   border-radius: 24px;
   background: var(--color-surface);
-  transition: border-color 0.15s ease;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
 .chat-input-wrap:focus-within {
   border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px var(--color-primary-bg);
 }
 
 .chat-input {
@@ -547,7 +562,7 @@ onUnmounted(() => {
   .chat-sidebar__inner {
     border-left: none;
     border-radius: 16px 16px 0 0;
-    box-shadow: var(--shadow-lg);
+    box-shadow: 0 -4px 32px rgba(0, 0, 0, 0.08);
   }
 
   .chat-fab {
