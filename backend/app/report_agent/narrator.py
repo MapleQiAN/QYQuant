@@ -1,3 +1,7 @@
+import json
+
+from .llm_client import call_llm
+
 CORE_KEYS = ("totalReturn", "maxDrawdown", "sharpeRatio", "winRate", "totalTrades")
 
 _LABELS = {
@@ -18,8 +22,7 @@ def _fmt(value):
         return str(value)
 
 
-def generate_summary(metrics, tier, locale="en"):
-    lang = "zh" if locale == "zh" else "en"
+def _template_summary(metrics, tier, lang):
     metrics = metrics or {}
     total_return = _fmt(metrics.get("totalReturn"))
     max_drawdown = _fmt(metrics.get("maxDrawdown"))
@@ -35,8 +38,30 @@ def generate_summary(metrics, tier, locale="en"):
     )
 
 
-def annotate_metrics(metrics, locale="en"):
+def generate_summary(metrics, tier, locale="en", user_id=None):
     lang = "zh" if locale == "zh" else "en"
+
+    if user_id is not None:
+        lang_name = "Chinese" if lang == "zh" else "English"
+        result = call_llm(
+            user_id,
+            "You are a quantitative trading analyst.",
+            (
+                f"Given these backtest metrics, write a concise executive summary (2-3 sentences).\n"
+                f"Tier: {tier}\n"
+                f"Language: {lang_name}\n"
+                f"Metrics:\n{json.dumps(metrics or {}, ensure_ascii=False, indent=2)}"
+            ),
+            temperature=0.3,
+            timeout=30,
+        )
+        if result is not None:
+            return result
+
+    return _template_summary(metrics, tier, lang)
+
+
+def _template_annotations(metrics, lang):
     metrics = metrics or {}
     narrations = {}
     for key in CORE_KEYS:
@@ -48,3 +73,31 @@ def annotate_metrics(metrics, locale="en"):
             else:
                 narrations[key] = f"{label} is {value} in this backtest."
     return narrations
+
+
+def annotate_metrics(metrics, locale="en", user_id=None):
+    lang = "zh" if locale == "zh" else "en"
+
+    if user_id is not None:
+        lang_name = "Chinese" if lang == "zh" else "English"
+        result = call_llm(
+            user_id,
+            "You are a quantitative trading analyst.",
+            (
+                f"For each metric, write a one-sentence insight about what this value means for strategy performance.\n"
+                f"Respond in JSON: {{\"metricKey\": \"insight sentence\"}}\n"
+                f"Language: {lang_name}\n"
+                f"Metrics:\n{json.dumps(metrics or {}, ensure_ascii=False, indent=2)}"
+            ),
+            temperature=0.3,
+            timeout=30,
+        )
+        if result is not None:
+            try:
+                parsed = json.loads(result)
+                if isinstance(parsed, dict) and parsed:
+                    return parsed
+            except json.JSONDecodeError:
+                pass
+
+    return _template_annotations(metrics, lang)

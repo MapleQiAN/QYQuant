@@ -192,7 +192,7 @@ def post_report_chat(report_id):
     db.session.flush()
 
     locale = (request.get_json(silent=True) or {}).get("locale", "en")
-    answer = chat_router.route_chat_question(message, report, locale=locale)
+    answer = chat_router.route_chat_question(message, report, locale=locale, user_id=user_id)
     assistant_message = ReportChatMessage(
         report_id=report.id,
         user_id=None,

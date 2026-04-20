@@ -49,16 +49,16 @@ def generate_report(backtest_job_id, user_id, force=False, locale="en"):
         report.monte_carlo = payload["monte_carlo"]
         report.regime_analysis = payload["regime_analysis"]
         report.metric_narrations = payload["metric_narrations"]
-        report.executive_summary = narrator.generate_summary(payload["metrics"], tier, locale=locale)
+        report.executive_summary = narrator.generate_summary(payload["metrics"], tier, locale=locale, user_id=user_id)
         if tier in {"go", "plus", "pro", "ultra"}:
-            report.metric_narrations = narrator.annotate_metrics(payload["metrics"], locale=locale)
+            report.metric_narrations = narrator.annotate_metrics(payload["metrics"], locale=locale, user_id=user_id)
         if tier in {"plus", "pro", "ultra"}:
-            report.diagnosis_narration = diagnostician.generate_diagnosis(payload, tier, locale=locale)
+            report.diagnosis_narration = diagnostician.generate_diagnosis(payload, tier, locale=locale, user_id=user_id)
         else:
             report.diagnosis_narration = None
         if tier in {"pro", "ultra"}:
-            report.advisor_narration = advisor.generate_suggestions(payload, tier, locale=locale)
-            alert_specs = advisor.generate_alerts(payload, tier, locale=locale)
+            report.advisor_narration = advisor.generate_suggestions(payload, tier, locale=locale, user_id=user_id)
+            alert_specs = advisor.generate_alerts(payload, tier, locale=locale, user_id=user_id)
             report.anomalies = alert_specs
             ReportAlert.query.filter_by(report_id=report.id).delete()
             for alert in alert_specs:
