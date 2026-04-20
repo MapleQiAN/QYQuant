@@ -78,6 +78,7 @@ def normalize_marketplace_trial_backtest_payload(
             or normalized_payload.get("dataSource")
             or normalized_payload.get("provider")
         ),
+        "locale": _normalize_string(normalized_payload.get("locale")) or "en",
     }
 
 

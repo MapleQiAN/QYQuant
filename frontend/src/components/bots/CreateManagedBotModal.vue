@@ -1,27 +1,29 @@
 <template>
   <div class="modal-overlay" @click.self="$emit('close')">
     <div class="modal-card">
-      <div class="header-row">
+      <div class="modal-header">
         <div>
+          <p class="modal-eyebrow">量化交易</p>
           <h2 class="modal-title">创建量化托管机器人</h2>
           <p class="modal-subtitle">选择你的策略、券商账户和托管金额，生成一个真实托管机器人。</p>
         </div>
-        <button class="ghost-button" type="button" @click="$emit('close')">关闭</button>
+        <button class="btn btn-ghost" type="button" @click="$emit('close')">关闭</button>
       </div>
 
       <div v-if="brokerOptions.length === 0" class="empty-state">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
         <p>暂无可用券商连接。请先在设置页绑定券商 API 账户。</p>
       </div>
 
       <template v-else>
         <div class="form-grid">
           <label class="field">
-            <span>机器人名称</span>
+            <span class="field__label">机器人名称</span>
             <input v-model="name" class="field-control" maxlength="64" placeholder="例如：沪深择时一号" type="text" />
           </label>
 
           <label class="field">
-            <span>策略</span>
+            <span class="field__label">策略</span>
             <QSelect
               v-model="strategyId"
               :options="strategyOptions"
@@ -31,7 +33,7 @@
           </label>
 
           <label class="field">
-            <span>券商账户</span>
+            <span class="field__label">券商账户</span>
             <QSelect
               v-model="integrationId"
               :options="brokerOptions"
@@ -41,7 +43,7 @@
           </label>
 
           <label class="field">
-            <span>托管金额</span>
+            <span class="field__label">托管金额</span>
             <input
               v-model.number="capital"
               class="field-control"
@@ -53,25 +55,25 @@
         </div>
 
         <div v-if="accountSummary" class="account-box">
-          <strong>账户概览</strong>
+          <div class="account-box__title">账户概览</div>
           <div class="account-grid">
             <div class="account-item">
-              <span>可用资金</span>
-              <strong>{{ formatMoney(accountSummary.available_cash ?? accountSummary.available ?? accountSummary.cash) }}</strong>
+              <span class="account-item__label">可用资金</span>
+              <strong class="account-item__value tnum">{{ formatMoney(accountSummary.available_cash ?? accountSummary.available ?? accountSummary.cash) }}</strong>
             </div>
             <div class="account-item">
-              <span>账户权益</span>
-              <strong>{{ formatMoney(accountSummary.equity) }}</strong>
+              <span class="account-item__label">账户权益</span>
+              <strong class="account-item__value tnum">{{ formatMoney(accountSummary.equity) }}</strong>
             </div>
           </div>
         </div>
 
         <p v-if="errorMessage" class="error-text">{{ errorMessage }}</p>
 
-        <div class="footer-row">
+        <div class="modal-footer">
           <button
             :disabled="isSubmitting || !strategyId || !integrationId || capital < 1000"
-            class="primary-button"
+            class="btn btn-accent"
             type="button"
             @click="submit"
           >
@@ -199,6 +201,7 @@ function formatMoney(value: unknown) {
 </script>
 
 <style scoped>
+/* ── Modal Overlay — Bauhaus ── */
 .modal-overlay {
   position: fixed;
   inset: 0;
@@ -206,118 +209,200 @@ function formatMoney(value: unknown) {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 16px;
-  background: rgba(15, 23, 42, 0.45);
+  padding: var(--spacing-md);
+  background: var(--color-overlay);
 }
 
 .modal-card {
   width: min(680px, 100%);
-  padding: 24px;
-  border-radius: 24px;
+  padding: var(--spacing-lg);
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-xl);
   background: var(--color-surface);
-  box-shadow: var(--shadow-lg);
+  box-shadow: var(--shadow-xl);
 }
 
-.header-row,
-.footer-row {
+/* ── Header ── */
+.modal-header {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 16px;
+  gap: var(--spacing-md);
+  margin-bottom: var(--spacing-lg);
+  padding-bottom: var(--spacing-md);
+  border-bottom: 1px solid var(--color-border-light);
+}
+
+.modal-eyebrow {
+  margin: 0 0 4px;
+  font-size: var(--font-size-xs);
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--color-accent);
 }
 
 .modal-title {
   margin: 0;
-  font-size: 24px;
+  font-size: var(--font-size-xxl);
+  font-weight: 800;
+  color: var(--color-text-primary);
+  letter-spacing: -0.02em;
 }
 
 .modal-subtitle {
-  margin: 8px 0 0;
+  margin: var(--spacing-xs) 0 0;
   color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
 }
 
+/* ── Form ── */
 .form-grid {
   display: grid;
-  gap: 16px;
-  margin: 24px 0 16px;
+  gap: var(--spacing-md);
+  margin-bottom: var(--spacing-lg);
 }
 
 .field {
   display: grid;
-  gap: 8px;
+  gap: var(--spacing-sm);
+}
+
+.field__label {
+  font-size: var(--font-size-xs);
+  font-weight: 700;
   color: var(--color-text-secondary);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
 }
 
 .field-control {
   min-height: 44px;
-  padding: 0 14px;
-  border: 1px solid rgba(148, 163, 184, 0.35);
-  border-radius: 12px;
-  background: #fff;
+  padding: 0 var(--spacing-md);
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-background);
+  color: var(--color-text-primary);
+  font-family: var(--font-family);
+  font-size: var(--font-size-md);
+  transition: border-color var(--transition-fast);
 }
 
-.account-box,
-.empty-state {
-  margin: 0 0 16px;
-  padding: 16px;
-  border-radius: 16px;
-  background: rgba(15, 23, 42, 0.04);
-  color: var(--color-text-secondary);
+.field-control:focus {
+  outline: none;
+  border-color: var(--color-primary);
+}
+
+.field-control::placeholder {
+  color: var(--color-text-muted);
+}
+
+/* ── Account Box ── */
+.account-box {
+  margin-bottom: var(--spacing-md);
+  padding: var(--spacing-md);
+  border-radius: var(--radius-md);
+  background: var(--color-background);
+  border: 1px solid var(--color-border-light);
+}
+
+.account-box__title {
+  font-size: var(--font-size-xs);
+  font-weight: 800;
+  color: var(--color-text-muted);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  margin-bottom: var(--spacing-sm);
 }
 
 .account-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px;
-  margin-top: 12px;
+  gap: var(--spacing-md);
 }
 
 .account-item {
   display: grid;
-  gap: 4px;
+  gap: 2px;
 }
 
-.primary-button,
-.ghost-button {
+.account-item__label {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+}
+
+.account-item__value {
+  font-size: var(--font-size-lg);
+  font-weight: 700;
+  color: var(--color-text-primary);
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── Empty State ── */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-xxl) var(--spacing-xl);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+  text-align: center;
+}
+
+/* ── Footer ── */
+.modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--spacing-sm);
+  padding-top: var(--spacing-md);
+  border-top: 1px solid var(--color-border-light);
+}
+
+.btn-accent {
   min-height: 44px;
-  padding: 0 18px;
-  border-radius: 999px;
-  cursor: pointer;
+  padding: 0 var(--spacing-lg);
 }
 
-.primary-button {
-  border: none;
-  background: #111827;
-  color: #fff;
-}
-
-.primary-button:disabled {
-  background: #9ca3af;
+.btn-accent:disabled {
+  opacity: 0.5;
   cursor: not-allowed;
 }
 
-.ghost-button {
-  border: 1px solid rgba(148, 163, 184, 0.35);
-  background: transparent;
-}
-
+/* ── Error ── */
 .error-text {
-  margin: 0 0 12px;
-  color: #b91c1c;
+  margin: 0 0 var(--spacing-md);
+  padding: var(--spacing-sm) var(--spacing-md);
+  border-radius: var(--radius-sm);
+  background: var(--color-danger-bg);
+  color: var(--color-danger);
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  border: 2px solid rgba(212, 57, 59, 0.25);
 }
 
+/* ── Responsive ── */
 @media (max-width: 768px) {
   .modal-card {
-    padding: 18px;
+    padding: var(--spacing-md);
   }
 
-  .header-row,
-  .footer-row {
+  .modal-header {
     flex-direction: column;
   }
 
   .account-grid {
     grid-template-columns: 1fr;
+  }
+
+  .modal-footer {
+    justify-content: stretch;
+  }
+
+  .modal-footer .btn {
+    flex: 1;
   }
 }
 </style>

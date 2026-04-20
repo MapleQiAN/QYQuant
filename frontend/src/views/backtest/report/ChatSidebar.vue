@@ -84,6 +84,7 @@
 
 <script setup lang="ts">
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { fetchReportChatHistory, sendReportChatMessage } from '../../../api/reports'
 import type { BacktestAiChatMessage } from '../../../types/Backtest'
 
@@ -99,6 +100,7 @@ const emit = defineEmits<{
   'update:open': [value: boolean]
 }>()
 
+const { locale } = useI18n()
 const draft = ref('')
 const loading = ref(false)
 const messages = ref<BacktestAiChatMessage[]>([])
@@ -142,7 +144,7 @@ async function sendMessage() {
       { id: `local-${Date.now()}`, role: 'user', message },
     ]
     scrollToBottom()
-    const answer = await sendReportChatMessage(props.reportId, message)
+    const answer = await sendReportChatMessage(props.reportId, message, locale.value)
     messages.value = [...messages.value, answer]
     scrollToBottom()
   } finally {
