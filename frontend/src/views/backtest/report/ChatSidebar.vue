@@ -52,7 +52,9 @@
             :class="['chat-bubble', `chat-bubble--${message.role}`]"
           >
             <span class="chat-bubble__sender">{{ message.role === 'user' ? 'You' : 'AI' }}</span>
-            <p class="chat-bubble__text">{{ message.message }}</p>
+            <p v-if="message.role === 'user'" class="chat-bubble__text">{{ message.message }}</p>
+            <!-- eslint-disable-next-line vue/no-v-html -->
+            <div v-else class="chat-bubble__text chat-bubble__markdown" v-html="renderMarkdown(message.message)" />
           </article>
 
           <div v-if="loading" class="chat-typing">
@@ -85,8 +87,20 @@
 <script setup lang="ts">
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { Marked } from 'marked'
+import DOMPurify from 'dompurify'
 import { fetchReportChatHistory, sendReportChatMessage } from '../../../api/reports'
 import type { BacktestAiChatMessage } from '../../../types/Backtest'
+
+const marked = new Marked({
+  breaks: true,
+  gfm: true,
+})
+
+function renderMarkdown(text: string): string {
+  const raw = marked.parse(text) as string
+  return DOMPurify.sanitize(raw)
+}
 
 const props = defineProps<{
   reportId: string
@@ -243,10 +257,10 @@ onUnmounted(() => {
 .chat-sidebar {
   position: fixed;
   right: 0;
-  top: 0;
+  top: var(--nav-height, 48px);
   bottom: 0;
   width: 380px;
-  z-index: 200;
+  z-index: 90;
   transform: translateX(100%);
   transition: transform 0.5s cubic-bezier(0.32, 0.72, 0, 1);
   pointer-events: none;
@@ -448,6 +462,92 @@ onUnmounted(() => {
   color: var(--color-text-primary);
 }
 
+/* Markdown content styles */
+.chat-bubble__markdown :deep(h1),
+.chat-bubble__markdown :deep(h2),
+.chat-bubble__markdown :deep(h3),
+.chat-bubble__markdown :deep(h4) {
+  margin: 8px 0 4px;
+  font-weight: 700;
+  line-height: 1.3;
+}
+
+.chat-bubble__markdown :deep(h1) { font-size: 15px; }
+.chat-bubble__markdown :deep(h2) { font-size: 14px; }
+.chat-bubble__markdown :deep(h3) { font-size: 13px; }
+
+.chat-bubble__markdown :deep(p) {
+  margin: 4px 0;
+}
+
+.chat-bubble__markdown :deep(ul),
+.chat-bubble__markdown :deep(ol) {
+  margin: 4px 0;
+  padding-left: 20px;
+}
+
+.chat-bubble__markdown :deep(li) {
+  margin: 2px 0;
+}
+
+.chat-bubble__markdown :deep(code) {
+  font-family: 'Menlo', 'Consolas', monospace;
+  font-size: 12px;
+  background: rgba(0, 0, 0, 0.06);
+  padding: 1px 4px;
+  border-radius: 3px;
+}
+
+.chat-bubble__markdown :deep(pre) {
+  margin: 8px 0;
+  padding: 8px 10px;
+  background: rgba(0, 0, 0, 0.06);
+  border-radius: 6px;
+  overflow-x: auto;
+}
+
+.chat-bubble__markdown :deep(pre code) {
+  background: none;
+  padding: 0;
+  font-size: 12px;
+}
+
+.chat-bubble__markdown :deep(blockquote) {
+  margin: 6px 0;
+  padding: 4px 10px;
+  border-left: 3px solid var(--color-primary);
+  color: var(--color-text-secondary);
+}
+
+.chat-bubble__markdown :deep(table) {
+  border-collapse: collapse;
+  margin: 6px 0;
+  font-size: 12px;
+  width: 100%;
+}
+
+.chat-bubble__markdown :deep(th),
+.chat-bubble__markdown :deep(td) {
+  border: 1px solid var(--color-border);
+  padding: 3px 6px;
+  text-align: left;
+}
+
+.chat-bubble__markdown :deep(th) {
+  background: var(--color-surface-elevated);
+  font-weight: 600;
+}
+
+.chat-bubble__markdown :deep(strong) {
+  font-weight: 700;
+}
+
+.chat-bubble__markdown :deep(hr) {
+  border: none;
+  border-top: 1px solid var(--color-border-light);
+  margin: 8px 0;
+}
+
 /* ─── Typing Indicator ─── */
 .chat-typing {
   display: flex;
@@ -552,6 +652,7 @@ onUnmounted(() => {
     border-left: none;
     top: auto;
     height: 55vh;
+    z-index: 90;
     border-top: 2px solid var(--color-border);
     border-radius: 16px 16px 0 0;
     transform: translateY(100%);
