@@ -376,11 +376,37 @@ function ProfileIcon() {
   background: rgba(255, 255, 255, 0.15);
 }
 
+/* Shared sub-item: bold border + hover shimmer */
+.sub-item {
+  position: relative;
+  overflow: hidden;
+}
+
+.sub-item::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 60%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.25), transparent);
+  transition: left 400ms ease;
+  pointer-events: none;
+}
+
+.sub-item:hover::after {
+  left: 120%;
+}
+
+.sub-item:hover .plan-badge {
+  filter: brightness(0.88);
+}
+
 /* Free — muted gray */
 .sub-item--free {
   background: var(--color-surface-hover);
   color: var(--color-text-muted);
-  border: 1px solid var(--color-border);
+  border: 2px solid var(--color-border);
 }
 .sub-item--free .plan-badge {
   background: rgba(0, 0, 0, 0.06);
@@ -394,7 +420,7 @@ function ProfileIcon() {
 .sub-item--go {
   background: #ecfdf5;
   color: #059669;
-  border: 1px solid #a7f3d0;
+  border: 2px solid #a7f3d0;
 }
 .sub-item--go .plan-badge {
   background: rgba(5, 150, 105, 0.1);
@@ -408,7 +434,7 @@ function ProfileIcon() {
 .sub-item--plus {
   background: var(--color-primary-bg);
   color: var(--color-primary);
-  border: 1px solid var(--color-primary-border);
+  border: 2px solid var(--color-primary-border);
 }
 .sub-item--plus .plan-badge {
   background: rgba(59, 130, 246, 0.12);
@@ -422,7 +448,7 @@ function ProfileIcon() {
 .sub-item--pro {
   background: linear-gradient(135deg, #f5f3ff, #ede9fe);
   color: #7c3aed;
-  border: 1px solid #c4b5fd;
+  border: 2px solid #c4b5fd;
   box-shadow: 0 0 8px rgba(124, 58, 237, 0.08);
 }
 .sub-item--pro .plan-badge {
@@ -439,7 +465,7 @@ function ProfileIcon() {
   background: linear-gradient(135deg, #fffbeb, #fef3c7, #fde68a);
   background-size: 200% 200%;
   color: #92400e;
-  border: 1px solid #d97706;
+  border: 2px solid #d97706;
   font-weight: 600;
   box-shadow: 0 0 12px rgba(245, 158, 11, 0.15);
   animation: shimmer 3s ease-in-out infinite;
@@ -449,6 +475,8 @@ function ProfileIcon() {
   font-weight: 800;
 }
 .sub-item--ultra:hover {
+  background: linear-gradient(135deg, #fde68a, #fbbf24, #f59e0b);
+  color: #78350f;
   box-shadow: 0 0 20px rgba(245, 158, 11, 0.25);
 }
 
