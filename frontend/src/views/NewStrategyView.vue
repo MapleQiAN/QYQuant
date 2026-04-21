@@ -14,7 +14,7 @@
       </div>
 
       <div class="path-grid">
-        <!-- Row 1: AI card — full width, horizontal layout -->
+        <!-- Row 1: AI card — full width -->
         <article class="card path-card path-card--ai" @click="openAiBuilder">
           <div class="path-card--ai__glow"></div>
           <div class="path-card--ai__content">
@@ -26,14 +26,26 @@
                 </span>
               </div>
               <h2>{{ $t('strategyNew.aiTitle') }}</h2>
-              <p>{{ $t('strategyNew.aiHint') }}</p>
+              <p class="path-card__description">{{ $t('strategyNew.aiDescription') }}</p>
+              <div class="ai-highlight-tags">
+                <span class="ai-tag">{{ $t('strategyNew.aiTagQyir') }}</span>
+                <span class="ai-tag">{{ $t('strategyNew.aiTagNonTuring') }}</span>
+                <span class="ai-tag">{{ $t('strategyNew.aiTagVerifiable') }}</span>
+                <span class="ai-tag">{{ $t('strategyNew.aiTagAuditable') }}</span>
+              </div>
             </div>
             <div class="path-card__body">
               <div class="path-checklist">
                 <span class="path-check">{{ $t('strategyNew.aiChecklist.one') }}</span>
                 <span class="path-check">{{ $t('strategyNew.aiChecklist.two') }}</span>
                 <span class="path-check">{{ $t('strategyNew.aiChecklist.three') }}</span>
+                <span class="path-check">{{ $t('strategyNew.aiChecklist.four') }}</span>
+                <span class="path-check">{{ $t('strategyNew.aiChecklist.five') }}</span>
               </div>
+              <RouterLink class="ai-learn-more" :to="{ name: 'ai-trust' }" @click.stop>
+                {{ $t('strategyNew.aiLearnMore') }}
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+              </RouterLink>
             </div>
           </div>
           <div class="path-card--ai__action">
@@ -697,45 +709,56 @@ const ArrowLeftIcon = () => h('svg', {
   overflow: hidden;
   display: flex;
   align-items: center;
-  gap: var(--spacing-xl);
-  padding: var(--spacing-lg) var(--spacing-xl);
+  gap: var(--spacing-xxl);
+  min-height: 250px;
+  padding: 34px 40px;
   cursor: pointer;
-  border-color: var(--color-primary);
-  background: linear-gradient(135deg, var(--color-surface) 0%, var(--color-primary-bg) 100%);
-  transition: border-color var(--transition-normal), box-shadow var(--transition-normal);
+  border: 2px solid var(--color-border-strong);
+  background:
+    linear-gradient(100deg, rgba(249, 168, 37, 0.20) 0%, rgba(249, 168, 37, 0.08) 32%, rgba(25, 118, 210, 0.10) 74%, rgba(25, 118, 210, 0.16) 100%),
+    linear-gradient(180deg, #ffffff 0%, #fbfaf5 100%);
+  box-shadow: 8px 8px 0 rgba(17, 17, 17, 0.10);
+  transition: transform var(--transition-normal), box-shadow var(--transition-normal), border-color var(--transition-normal);
 }
 
 .path-card--ai:hover {
-  border-color: var(--color-primary-light);
-  box-shadow: var(--shadow-lg);
+  transform: translate(-2px, -2px);
+  border-color: var(--color-accent);
+  box-shadow: 12px 12px 0 rgba(17, 17, 17, 0.14);
 }
 
 .path-card--ai__glow {
   position: absolute;
-  top: -60%;
-  right: -10%;
-  width: 300px;
-  height: 300px;
-  border-radius: 50%;
-  background: radial-gradient(circle, rgba(249, 168, 37, 0.10) 0%, transparent 70%);
+  top: 0;
+  right: 0;
+  width: 34%;
+  height: 100%;
+  border-radius: 0;
+  background:
+    linear-gradient(135deg, rgba(25, 118, 210, 0.18), rgba(249, 168, 37, 0.10)),
+    repeating-linear-gradient(135deg, rgba(17, 17, 17, 0.08) 0 1px, transparent 1px 14px);
+  clip-path: polygon(28% 0, 100% 0, 100% 100%, 0 100%);
   pointer-events: none;
 }
 
 .path-card--ai__content {
   display: flex;
   align-items: center;
-  gap: var(--spacing-xl);
+  gap: var(--spacing-xxl);
   flex: 1;
+  min-width: 0;
   position: relative;
   z-index: 1;
 }
 
 .path-card--ai__content .path-card__header {
   flex: 1;
+  min-width: 0;
 }
 
 .path-card--ai__content .path-card__body {
-  flex: 1;
+  flex: 0 1 430px;
+  min-width: 0;
 }
 
 .path-card--ai__badge-row {
@@ -745,7 +768,13 @@ const ArrowLeftIcon = () => h('svg', {
 }
 
 .path-card--ai__spark {
-  display: flex;
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border: 2px solid var(--color-border-strong);
+  border-radius: var(--radius-full);
+  background: var(--color-surface);
   color: var(--color-accent);
   animation: sparkle 3s ease-in-out infinite;
 }
@@ -754,17 +783,27 @@ const ArrowLeftIcon = () => h('svg', {
   position: relative;
   z-index: 1;
   flex-shrink: 0;
+  align-self: flex-end;
 }
 
 .path-card--ai .btn-primary {
-  background: #46A9A0;
+  min-height: 48px;
+  padding: 0 20px;
+  border-width: 2px;
+  border-radius: var(--radius-full);
+  background: var(--color-text-primary);
   border-color: #000000;
   color: #fff;
+  font-size: var(--font-size-lg);
+  font-weight: 800;
+  box-shadow: 4px 4px 0 rgba(249, 168, 37, 0.95);
 }
 
 .path-card--ai .btn-primary:hover {
-  background: #3b918a;
+  background: var(--color-accent);
   border-color: #000000;
+  color: var(--color-text-primary);
+  box-shadow: 5px 5px 0 rgba(17, 17, 17, 0.22);
 }
 
 @keyframes sparkle {
@@ -805,6 +844,42 @@ const ArrowLeftIcon = () => h('svg', {
   gap: var(--spacing-md);
 }
 
+.path-card--ai .path-card__header {
+  gap: 12px;
+}
+
+.path-card--ai .path-card__header h2 {
+  max-width: 420px;
+  font-family: var(--font-zh-display);
+  font-size: 38px;
+  line-height: 1.08;
+  font-weight: 900;
+  color: var(--color-text-primary);
+}
+
+.path-card--ai .path-card__body {
+  padding: 18px 20px;
+  border: 2px solid rgba(17, 17, 17, 0.16);
+  border-radius: var(--radius-md);
+  background: rgba(255, 255, 255, 0.72);
+  backdrop-filter: blur(10px);
+  box-shadow: var(--shadow-sm);
+}
+
+.path-card__description {
+  margin: 0;
+  font-size: var(--font-size-sm);
+  line-height: 1.6;
+  color: var(--color-text-secondary);
+}
+
+.path-card--ai .path-card__description {
+  max-width: 680px;
+  font-size: var(--font-size-lg);
+  line-height: 1.75;
+  color: #2f2f2f;
+}
+
 .path-badge {
   width: fit-content;
   padding: 6px 12px;
@@ -818,8 +893,9 @@ const ArrowLeftIcon = () => h('svg', {
 }
 
 .path-badge--accent {
-  background: var(--color-accent);
-  color: var(--color-text-primary);
+  border: 2px solid var(--color-border-strong);
+  background: var(--color-text-primary);
+  color: var(--color-accent);
 }
 
 .path-checklist,
@@ -838,6 +914,62 @@ const ArrowLeftIcon = () => h('svg', {
   content: '•';
   margin-right: 8px;
   color: var(--color-accent);
+}
+
+.path-card--ai .path-check {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  color: var(--color-text-primary);
+  line-height: 1.55;
+}
+
+.path-card--ai .path-check::before {
+  content: '✓';
+  display: grid;
+  place-items: center;
+  flex: 0 0 18px;
+  width: 18px;
+  height: 18px;
+  margin: 1px 0 0;
+  border-radius: var(--radius-full);
+  background: var(--color-accent);
+  color: var(--color-text-primary);
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.ai-highlight-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  max-width: 620px;
+}
+
+.ai-tag {
+  padding: 5px 10px;
+  border-radius: 999px;
+  font-size: var(--font-size-xs);
+  font-weight: 800;
+  border: 1px solid rgba(249, 168, 37, 0.45);
+  background: rgba(255, 250, 235, 0.88);
+  color: #8a5200;
+  letter-spacing: 0;
+}
+
+.ai-learn-more {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: var(--font-size-sm);
+  color: var(--color-primary-dark);
+  text-decoration: none;
+  font-weight: 800;
+  transition: opacity 0.2s;
+}
+
+.ai-learn-more:hover {
+  opacity: 0.8;
 }
 
 .import-visual {
@@ -1286,10 +1418,16 @@ const ArrowLeftIcon = () => h('svg', {
 
   .path-card--ai__content {
     flex-direction: column;
+    align-items: stretch;
+    gap: var(--spacing-md);
   }
 
   .path-card--ai__action {
     align-self: flex-start;
+  }
+
+  .path-card--ai .path-card__header h2 {
+    font-size: 30px;
   }
 
   .guide-grid,

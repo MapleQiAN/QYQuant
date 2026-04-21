@@ -17,6 +17,7 @@ import StrategyImportView from '../views/StrategyImportView.vue'
 import StrategyImportConfirmView from '../views/StrategyImportConfirmView.vue'
 import StrategyPreviewView from '../views/StrategyPreviewView.vue'
 import StrategyWritingGuideView from '../views/StrategyWritingGuideView.vue'
+import AiTrustView from '../views/AiTrustView.vue'
 import StrategyDetailView from '../views/StrategyDetailView.vue'
 import MarketplaceView from '../views/Marketplace.vue'
 import MarketplaceStrategyDetailView from '../views/MarketplaceStrategyDetailView.vue'
@@ -61,6 +62,7 @@ const router = createRouter({
     { path: '/strategies/import/confirm', name: 'strategy-import-confirm', component: StrategyImportConfirmView },
     { path: '/strategies/preview', name: 'strategy-preview', component: StrategyPreviewView },
     { path: '/strategies/guide', name: 'strategy-writing-guide', component: StrategyWritingGuideView },
+    { path: '/strategies/ai-trust', name: 'ai-trust', component: AiTrustView },
     { path: '/strategies/:strategyId/parameters', name: 'strategy-parameters', component: StrategyDetailView },
     { path: '/backtest/configure', name: 'backtest-configure', component: StrategyDetailView },
     { path: '/marketplace', name: 'marketplace', component: MarketplaceView },

@@ -191,7 +191,7 @@ describe('NewStrategyView', () => {
     expect(wrapper.get('[data-testid="strategy-guide-secondary"]').exists()).toBe(true)
   })
 
-  it('creates AI draft and routes to confirm import', async () => {
+  it('creates AI draft and routes to strategy preview', async () => {
     fetchIntegrationsMock.mockResolvedValue([
       {
         id: 'integration-ai-1',
@@ -241,7 +241,7 @@ describe('NewStrategyView', () => {
 
     expect(sessionStorage.getItem('strategy-import:draft-ai-1')).toContain('"draftImportId":"draft-ai-1"')
     expect(pushMock).toHaveBeenCalledWith({
-      name: 'strategy-import-confirm',
+      name: 'strategy-preview',
       query: { draftImportId: 'draft-ai-1', source: 'ai' },
     })
   })

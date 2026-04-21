@@ -3,26 +3,55 @@
     <div class="container">
       <div class="page-header fade-in">
         <div class="header-text">
-          <p class="eyebrow">策略管理</p>
+          <p class="eyebrow">
+            <svg class="eyebrow__icon" width="12" height="12" viewBox="0 0 24 24" fill="none"><path d="M12 2L14.09 8.26L20 9.27L15.55 13.97L16.91 20L12 16.9L7.09 20L8.45 13.97L4 9.27L9.91 8.26L12 2Z" fill="currentColor"/></svg>
+            策略管理
+          </p>
           <h1 class="page-title">{{ t('strategy.library.pageTitle') }}</h1>
           <p class="page-subtitle">{{ t('strategy.library.pageSubtitle') }}</p>
         </div>
         <div class="header-actions">
-          <RouterLink class="btn btn-secondary" to="/">
+          <RouterLink class="btn btn-ghost" to="/">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
             {{ t('strategy.library.backToDashboard') }}
           </RouterLink>
           <button
             class="btn btn-secondary"
             type="button"
-            data-test="open-create-strategy"
             @click="handleOpenCreateStrategy"
           >
             {{ t('strategy.library.createStrategy') }}
           </button>
-          <RouterLink class="btn btn-primary" to="/strategies/import">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-            {{ t('strategy.library.openImportWizard') }}
-          </RouterLink>
+          <button
+            class="btn btn-primary"
+            type="button"
+            data-test="open-ai-create"
+            @click="handleOpenAiCreate"
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M12 2L14.09 8.26L20 9.27L15.55 13.97L16.91 20L12 16.9L7.09 20L8.45 13.97L4 9.27L9.91 8.26L12 2Z" fill="currentColor"/></svg>
+            {{ t('strategy.library.aiCreateStrategy') }}
+          </button>
+        </div>
+      </div>
+
+      <!-- Search Bar -->
+      <div class="search-bar fade-in">
+        <div class="search-bar__inner">
+          <svg class="search-bar__icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input
+            v-model="searchQuery"
+            class="search-bar__input"
+            type="text"
+            :placeholder="t('strategy.library.searchPlaceholder')"
+          />
+          <button
+            v-if="searchQuery"
+            class="search-bar__clear"
+            type="button"
+            @click="searchQuery = ''"
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
         </div>
       </div>
 
@@ -116,9 +145,13 @@
           <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/><line x1="12" y1="11" x2="12" y2="17"/><line x1="9" y1="14" x2="15" y2="14"/></svg>
           {{ t('strategy.library.noStrategies') }}
         </div>
+        <div v-else-if="filteredItems.length === 0 && searchQuery" class="empty-state empty-state--dashed">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          {{ t('strategy.library.searchNoMatch', { query: searchQuery }) }}
+        </div>
         <div v-else class="strategy-list">
           <article
-            v-for="(strategy, index) in items"
+            v-for="(strategy, index) in filteredItems"
             :key="strategy.id"
             class="strategy-card"
             :style="{ animationDelay: `${index * 40}ms` }"
@@ -253,6 +286,7 @@ const publishSubmitting = ref(false)
 const publishSubmitted = ref(false)
 const publishError = ref('')
 const selectedStrategy = ref<Strategy | null>(null)
+const searchQuery = ref('')
 
 const totalPages = computed(() => Math.max(1, Math.ceil(total.value / perPage.value)))
 const isGuidedMode = computed(() => route.query.guided === 'true')
@@ -266,6 +300,25 @@ const paginationRange = computed(() => {
     range.push(i)
   }
   return range
+})
+
+const filteredItems = computed(() => {
+  const q = searchQuery.value.trim().toLowerCase()
+  if (!q) return items.value
+  return items.value.filter((s) => {
+    const name = (s.title || s.name || '').toLowerCase()
+    const category = (s.category || '').toLowerCase()
+    const source = (s.source || '').toLowerCase()
+    const desc = (s.description || '').toLowerCase()
+    const tags = (s.tags || []).join(' ').toLowerCase()
+    return (
+      name.includes(q) ||
+      category.includes(q) ||
+      source.includes(q) ||
+      desc.includes(q) ||
+      tags.includes(q)
+    )
+  })
 })
 
 onMounted(() => {
@@ -317,6 +370,10 @@ async function handleOpenImportWizard() {
 
 async function handleOpenCreateStrategy() {
   await router.push('/strategies/new')
+}
+
+async function handleOpenAiCreate() {
+  await router.push({ path: '/strategies/new', query: { mode: 'ai' } })
 }
 
 async function handleDelete(strategyId: string) {
@@ -455,12 +512,19 @@ function statusClass(status?: MarketplaceReviewStatus) {
 }
 
 .eyebrow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
   margin: 0 0 6px;
   font-size: var(--font-size-xs);
   font-weight: 700;
   letter-spacing: 0.12em;
   text-transform: uppercase;
   color: var(--color-accent);
+}
+
+.eyebrow__icon {
+  flex-shrink: 0;
 }
 
 .page-title {
@@ -482,6 +546,68 @@ function statusClass(status?: MarketplaceReviewStatus) {
   gap: var(--spacing-sm);
   align-items: center;
   flex-shrink: 0;
+}
+
+/* ── Search Bar ── */
+.search-bar {
+  margin-bottom: var(--spacing-lg);
+}
+
+.search-bar__inner {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  padding: 0 var(--spacing-md);
+  height: 40px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.search-bar__inner:focus-within {
+  border-color: var(--color-primary-border);
+  box-shadow: 0 0 0 3px var(--color-primary-bg);
+}
+
+.search-bar__icon {
+  flex-shrink: 0;
+  color: var(--color-text-muted);
+}
+
+.search-bar__input {
+  flex: 1;
+  border: none;
+  outline: none;
+  background: transparent;
+  color: var(--color-text-primary);
+  font-size: var(--font-size-sm);
+  font-family: inherit;
+  min-width: 0;
+}
+
+.search-bar__input::placeholder {
+  color: var(--color-text-muted);
+}
+
+.search-bar__clear {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-active);
+  color: var(--color-text-muted);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background 0.15s, color 0.15s;
+}
+
+.search-bar__clear:hover {
+  background: var(--color-surface-hover);
+  color: var(--color-text-primary);
 }
 
 /* ── Guided Section ── */
@@ -964,6 +1090,11 @@ function statusClass(status?: MarketplaceReviewStatus) {
   .header-actions {
     width: 100%;
     justify-content: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .search-bar__inner {
+    height: 38px;
   }
 
   .import-strip {
