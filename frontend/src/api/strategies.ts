@@ -539,6 +539,32 @@ export function generateUserFacing(payload: {
   })
 }
 
+export async function exportStrategy(payload: {
+  draftImportId: string
+  format: 'qys' | 'py'
+  metadata?: Record<string, unknown>
+  parameterDefinitions?: Array<Record<string, unknown>>
+}): Promise<Blob> {
+  const response = await fetch('/api/v1/strategy-ai/export', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(_authHeaders())
+    },
+    body: JSON.stringify(payload)
+  })
+  if (!response.ok) {
+    const errorBody = await response.text()
+    throw new Error(errorBody || 'Export failed')
+  }
+  return response.blob()
+}
+
+function _authHeaders(): Record<string, string> {
+  const token = localStorage.getItem('token')
+  return token ? { Authorization: `Bearer ${token}` } : {}
+}
+
 export function fetchRuntimeDescriptor(strategyId: string, version?: string): Promise<StrategyRuntimeDescriptor> {
   const params = version ? { version } : undefined
   return client.request({ method: 'get', url: `/strategies/${strategyId}/runtime`, params })

@@ -18,6 +18,8 @@ SUPPORTED_CATEGORY_VALUES = {
     "other",
 }
 
+SUPPORTED_RISK_LEVELS = {"low", "medium", "high"}
+
 
 class AIStrategyGenerationError(Exception):
     def __init__(self, code, message, status, details=None):
@@ -67,7 +69,7 @@ def generate_strategy_draft(*, user_id, integration_id, messages):
     draft, _source_file, analysis = analyze_strategy_import(upload, owner_id=user_id)
 
     merged_analysis = dict(analysis)
-    merged_analysis["metadataCandidates"] = {
+    metadata_candidates = {
         **dict(analysis.get("metadataCandidates") or {}),
         "name": normalized_strategy["name"],
         "description": normalized_strategy["description"],
@@ -76,6 +78,17 @@ def generate_strategy_draft(*, user_id, integration_id, messages):
         "tags": normalized_strategy["tags"],
         "version": normalized_strategy["version"],
     }
+    if normalized_strategy.get("timeframe"):
+        metadata_candidates["timeframe"] = normalized_strategy["timeframe"]
+    if normalized_strategy.get("riskLevel"):
+        metadata_candidates["riskLevel"] = normalized_strategy["riskLevel"]
+    if normalized_strategy.get("logicExplanation"):
+        metadata_candidates["logicExplanation"] = normalized_strategy["logicExplanation"]
+    if normalized_strategy.get("riskRules"):
+        metadata_candidates["riskRules"] = normalized_strategy["riskRules"]
+    if normalized_strategy.get("suitableMarket"):
+        metadata_candidates["suitableMarket"] = normalized_strategy["suitableMarket"]
+    merged_analysis["metadataCandidates"] = metadata_candidates
     merged_analysis["parameterCandidates"] = normalized_strategy["parameters"]
     draft.analysis_payload = merged_analysis
     db.session.commit()
@@ -212,6 +225,14 @@ def _normalize_strategy_payload(payload):
     if not isinstance(parameters, list):
         parameters = []
 
+    timeframe = str(payload.get("timeframe") or "").strip() or None
+    risk_level = str(payload.get("riskLevel") or "").strip().lower() or None
+    if risk_level and risk_level not in SUPPORTED_RISK_LEVELS:
+        risk_level = None
+    logic_explanation = str(payload.get("logicExplanation") or "").strip() or None
+    risk_rules = str(payload.get("riskRules") or "").strip() or None
+    suitable_market = str(payload.get("suitableMarket") or "").strip() or None
+
     return {
         "name": name,
         "description": description,
@@ -219,6 +240,11 @@ def _normalize_strategy_payload(payload):
         "symbol": symbol,
         "version": version,
         "tags": [str(tag).strip() for tag in tags if str(tag).strip()],
+        "timeframe": timeframe,
+        "riskLevel": risk_level,
+        "logicExplanation": logic_explanation,
+        "riskRules": risk_rules,
+        "suitableMarket": suitable_market,
         "parameters": [_normalize_parameter_definition(item) for item in parameters if isinstance(item, dict)],
         "code": code,
     }
@@ -275,16 +301,54 @@ def _strip_code_fence(code):
 
 def _system_prompt():
     return (
-        "You generate runnable QYQuant strategies. "
+        "You are a professional quantitative strategy architect for the QYQuant platform. "
+        "You generate runnable QYQuant strategies that are production-quality. "
         "Always follow QYSP event_v1 contract exactly. "
-        "Reply with strict JSON only, no markdown. "
-        "Schema: "
-        '{"reply":"assistant text for user","strategy":null|{"name":"...","description":"...","category":"trend-following|mean-reversion|momentum|multi-indicator|other","symbol":"...","version":"1.0.0","tags":["..."],"parameters":[{"key":"...","type":"integer|number|string|boolean|enum","default":1,"min":1,"max":100,"step":1,"description":"...","enum":["..."]}],"code":"python source"}} '
-        "If requirements still unclear, set strategy to null and ask one concise follow-up question in reply. "
-        "If strategy is present, code must define on_bar(ctx: StrategyContext, data: BarData) -> list[Order] or a Strategy class with on_bar method, and prefer function form. "
-        "Use ctx.buy()/ctx.sell(). Read parameters from ctx.parameters.get(). "
-        "Do not use input(), print(), external files, network, pandas, numpy, or unsupported dependencies. "
-        "Keep state on ctx via setattr/getattr if needed. "
+        "Reply with strict JSON only, no markdown outside the JSON.\n\n"
+        "Schema:\n"
+        '{"reply":"assistant text for user","strategy":null|{'
+        '"name":"strategy name",'
+        '"description":"detailed professional description",'
+        '"category":"trend-following|mean-reversion|momentum|multi-indicator|other",'
+        '"symbol":"BTCUSDT",'
+        '"timeframe":"1h",'
+        '"version":"1.0.0",'
+        '"tags":["..."],'
+        '"riskLevel":"low|medium|high",'
+        '"logicExplanation":"plain language explanation of strategy logic, written for beginners",'
+        '"riskRules":"plain language explanation of risk management rules",'
+        '"suitableMarket":"description of ideal market conditions",'
+        '"parameters":[{"key":"...","type":"integer|number|string|boolean|enum",'
+        '"default":1,"min":1,"max":100,"step":1,"description":"...",'
+        '"user_facing":{"label":"human-readable name","group":"parameter group name","hint":"explanation for beginners"},'
+        '"enum":["..."]}],'
+        '"code":"python source with section comments"'
+        '}}\n\n'
+        "If requirements still unclear, set strategy to null and ask one concise follow-up question in reply.\n\n"
+        "CODE REQUIREMENTS:\n"
+        "- Must define on_bar(ctx: StrategyContext, data: BarData) -> list[Order]. Prefer function form.\n"
+        "- Use ctx.buy()/ctx.sell(). Read ALL tunable parameters from ctx.parameters.get().\n"
+        "- NEVER hardcode tunable values. Every threshold, period, ratio must be a parameter.\n"
+        "- Structure code with clear section comments:\n"
+        "  # === Parameter Reading ===\n"
+        "  # === Signal Detection ===\n"
+        "  # === Risk Management (Stop Loss / Take Profit) ===\n"
+        "  # === Position Sizing ===\n"
+        "  # === Order Execution ===\n"
+        "- ALWAYS include stop-loss and take-profit logic. No strategy without risk management.\n"
+        "- Include position sizing based on total capital ratio.\n"
+        "- Track open positions using ctx state (setattr/getattr).\n"
+        "- Do not use input(), print(), external files, network, pandas, numpy, or unsupported dependencies.\n\n"
+        "PARAMETER REQUIREMENTS:\n"
+        "- Every parameter MUST have user_facing with label, group, and hint.\n"
+        "- Group parameters logically: 'Indicator', 'Risk Management', 'Position Sizing', 'Signal Filter'.\n"
+        "- hint should explain what the parameter does in beginner-friendly language.\n"
+        "- Include sensible defaults and reasonable min/max ranges.\n\n"
+        "STRATEGY REPORT REQUIREMENTS:\n"
+        "- logicExplanation: Explain in plain language what the strategy does. Use analogies if helpful.\n"
+        "- riskRules: Explain stop-loss, take-profit, position limits in plain language.\n"
+        "- suitableMarket: Describe ideal market conditions (e.g., trending up, ranging, high volatility).\n"
+        "- riskLevel: 'low' for tight stops + small positions, 'medium' for balanced, 'high' for aggressive.\n\n"
         "Reference constraints:\n"
         f"{_load_reference_material()}"
     )

@@ -1,12 +1,18 @@
+import io
+import json
 import os
+import shutil
+import uuid
+import zipfile
 from pathlib import Path
 
-from flask import request
+from flask import request, send_file
 from flask_jwt_extended import get_jwt_identity, jwt_required
 from flask_smorest import Blueprint
+from qysp.builder import build_package
 
 from ..extensions import db
-from ..models import BacktestJob, File, Strategy, StrategyVersion
+from ..models import BacktestJob, File, Strategy, StrategyImportDraft, StrategyVersion
 from ..schemas import StrategyParameterSchema, StrategySchema
 from ..services.strategy_import_analysis import (
     StrategyImportAnalysisError,
@@ -27,6 +33,8 @@ from ..services.user_facing_generator import generate_user_facing, UserFacingGen
 from ..services.strategy_import_confirm import (
     StrategyImportConfirmError,
     confirm_strategy_import,
+    _resolve_source_and_manifest,
+    _build_manifest,
 )
 from ..services.strategy_import import StrategyImportError, import_strategy_package
 from ..strategy_runtime import StrategyRuntimeError
@@ -234,7 +242,113 @@ def generate_ai_strategy_v1():
     return ok(result)
 
 
-@bp.post("/v1/strategy-ai/classify")
+@bp.post("/v1/strategy-ai/export")
+@jwt_required()
+def export_strategy():
+    payload = request.get_json() or {}
+    draft_import_id = payload.get("draftImportId")
+    if not draft_import_id:
+        return error_response("DRAFT_IMPORT_ID_REQUIRED", "Import draft id is required", 400)
+
+    export_format = str(payload.get("format") or "qys").strip().lower()
+    if export_format not in ("qys", "py"):
+        return error_response("INVALID_FORMAT", "Format must be 'qys' or 'py'", 400)
+
+    user_id = get_jwt_identity()
+    draft = db.session.get(StrategyImportDraft, draft_import_id)
+    if draft is None or draft.owner_id != user_id:
+        return error_response("DRAFT_NOT_FOUND", "Import draft not found", 404)
+
+    source_file = db.session.get(File, draft.source_file_id)
+    if source_file is None or not source_file.path:
+        return error_response("SOURCE_NOT_FOUND", "Source file not found", 404)
+
+    raw_payload = Path(source_file.path).read_bytes()
+
+    try:
+        source_text, base_manifest = _resolve_source_and_manifest(
+            raw_payload, draft.source_type, "src/strategy.py"
+        )
+    except StrategyImportConfirmError as exc:
+        return error_response(exc.code, exc.message, exc.status, details=exc.details)
+
+    metadata = payload.get("metadata") or {}
+    parameter_definitions = payload.get("parameterDefinitions") or []
+    entrypoint_candidates = draft.analysis_payload.get("entrypointCandidates") if isinstance(draft.analysis_payload, dict) else []
+    selected_callable = "on_bar"
+    selected_interface = "event_v1"
+    if entrypoint_candidates:
+        selected_callable = entrypoint_candidates[0].get("callable", "on_bar")
+        selected_interface = entrypoint_candidates[0].get("interface", "event_v1")
+
+    if export_format == "py":
+        buffer = io.BytesIO(source_text.encode("utf-8"))
+        filename = _slugify(metadata.get("name") or "strategy") + ".py"
+        return send_file(buffer, as_attachment=True, download_name=filename, mimetype="text/x-python")
+
+    manifest = _build_manifest(
+        base_manifest=base_manifest,
+        metadata=metadata,
+        parameter_definitions=parameter_definitions,
+        selected_callable=selected_callable,
+        selected_interface=selected_interface,
+    )
+
+    logic_explanation = (metadata.get("logicExplanation") or "")
+    risk_rules = (metadata.get("riskRules") or "")
+    suitable_market = (metadata.get("suitableMarket") or "")
+    risk_level = (metadata.get("riskLevel") or "")
+    readme_parts = [
+        f"# {manifest.get('name', 'Strategy')}",
+        "",
+        manifest.get("description", ""),
+        "",
+        "## Strategy Logic",
+        logic_explanation or "See code comments.",
+        "",
+        "## Risk Management",
+        risk_rules or "Stop-loss and take-profit included.",
+        "",
+        "## Suitable Market",
+        suitable_market or "General market conditions.",
+    ]
+    if risk_level:
+        readme_parts.extend(["", f"**Risk Level**: {risk_level}"])
+    readme_text = "\n".join(readme_parts)
+
+    temp_root = Path(os.getenv("STRATEGY_STORAGE_DIR", str(Path(__file__).resolve().parents[2] / "storage"))) / "_tmp" / f"export-{uuid.uuid4().hex}"
+    project_dir = temp_root / "project"
+    project_src_dir = project_dir / "src"
+    try:
+        project_src_dir.mkdir(parents=True, exist_ok=True)
+        (project_dir / "strategy.json").write_text(
+            json.dumps(manifest, indent=2, ensure_ascii=False) + "\n",
+            encoding="utf-8",
+        )
+        (project_src_dir / "strategy.py").write_text(source_text, encoding="utf-8")
+        (project_dir / "README.md").write_text(readme_text, encoding="utf-8")
+
+        built_path = temp_root / "built.qys"
+        build_package(project_dir, output=built_path)
+        package_bytes = built_path.read_bytes()
+
+        filename = _slugify(manifest.get("name", "strategy")) + ".qys"
+        return send_file(
+            io.BytesIO(package_bytes),
+            as_attachment=True,
+            download_name=filename,
+            mimetype="application/zip",
+        )
+    except Exception as exc:
+        return error_response("EXPORT_FAILED", str(exc), 500)
+    finally:
+        if temp_root.exists():
+            shutil.rmtree(temp_root, ignore_errors=True)
+
+
+def _slugify(name):
+    import re
+    return re.sub(r"[^a-z0-9]+", "-", str(name).lower()).strip("-") or "strategy"
 @jwt_required()
 def classify_strategy_intent():
     payload = request.get_json() or {}

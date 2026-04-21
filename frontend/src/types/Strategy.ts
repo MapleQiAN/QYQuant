@@ -105,6 +105,26 @@ export interface AiStrategyDraftResult {
   analysis: StrategyImportAnalysis | null
 }
 
+export interface AiStrategyMetadata {
+  name: string
+  description: string
+  category: string
+  symbol: string
+  timeframe?: string
+  riskLevel?: 'low' | 'medium' | 'high'
+  logicExplanation?: string
+  riskRules?: string
+  suitableMarket?: string
+  version?: string
+  tags?: string[]
+}
+
+export interface StrategyParameterUserFacing {
+  label: string
+  group: string
+  hint?: string
+}
+
 export type StrategyParameterValue = string | number | boolean | null
 export type StrategyParameterDefinitionType = 'int' | 'float' | 'string' | 'enum'
 
@@ -142,7 +162,7 @@ export interface StrategyParameter {
   step?: number
   enum?: Array<string | number | boolean>
   description?: string
-  user_facing?: Record<string, unknown>
+  user_facing?: StrategyParameterUserFacing | Record<string, unknown>
 }
 
 export interface StrategyRuntimeDescriptor {

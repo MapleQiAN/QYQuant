@@ -14,6 +14,29 @@
       </div>
 
       <div class="path-grid">
+        <article class="card path-card path-card--featured">
+          <div class="path-card__header">
+            <span class="path-badge path-badge--accent">{{ $t('strategyNew.aiBadge') }}</span>
+            <h2>{{ $t('strategyNew.aiTitle') }}</h2>
+            <p>{{ $t('strategyNew.aiHint') }}</p>
+          </div>
+          <div class="path-card__body">
+            <div class="path-checklist">
+              <span class="path-check">{{ $t('strategyNew.aiChecklist.one') }}</span>
+              <span class="path-check">{{ $t('strategyNew.aiChecklist.two') }}</span>
+              <span class="path-check">{{ $t('strategyNew.aiChecklist.three') }}</span>
+            </div>
+            <button
+              data-test="open-ai-builder"
+              class="btn btn-primary"
+              type="button"
+              @click="openAiBuilder"
+            >
+              {{ $t('strategyNew.aiAction') }}
+            </button>
+          </div>
+        </article>
+
         <article class="card path-card">
           <div class="path-card__header">
             <span class="path-badge">{{ $t('strategyNew.recommendedBadge') }}</span>
@@ -37,29 +60,6 @@
               {{ $t('strategyNew.templateAction') }}
             </button>
             <p v-if="templateState.error" class="form-message error">{{ templateState.error }}</p>
-          </div>
-        </article>
-
-        <article class="card path-card">
-          <div class="path-card__header">
-            <span class="path-badge">{{ $t('strategyNew.aiBadge') }}</span>
-            <h2>{{ $t('strategyNew.aiTitle') }}</h2>
-            <p>{{ $t('strategyNew.aiHint') }}</p>
-          </div>
-          <div class="path-card__body">
-            <div class="path-checklist">
-              <span class="path-check">{{ $t('strategyNew.aiChecklist.one') }}</span>
-              <span class="path-check">{{ $t('strategyNew.aiChecklist.two') }}</span>
-              <span class="path-check">{{ $t('strategyNew.aiChecklist.three') }}</span>
-            </div>
-            <button
-              data-test="open-ai-builder"
-              class="btn btn-primary"
-              type="button"
-              @click="openAiBuilder"
-            >
-              {{ $t('strategyNew.aiAction') }}
-            </button>
           </div>
         </article>
 
@@ -520,7 +520,7 @@ async function adoptAiDraft() {
   sessionStorage.setItem(`strategy-import:${aiLatestAnalysis.value.draftImportId}`, JSON.stringify(aiLatestAnalysis.value))
   aiModalOpen.value = false
   await router.push({
-    name: 'strategy-import-confirm',
+    name: 'strategy-preview',
     query: {
       draftImportId: aiLatestAnalysis.value.draftImportId,
       source: 'ai',
@@ -624,6 +624,16 @@ const ArrowLeftIcon = () => h('svg', {
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
+}
+
+.path-badge--accent {
+  background: var(--color-accent);
+  color: white;
+}
+
+.path-card--featured {
+  border: 1px solid rgba(64, 162, 255, 0.3);
+  box-shadow: 0 0 20px rgba(64, 162, 255, 0.08);
 }
 
 .path-checklist,
