@@ -7,6 +7,7 @@ import LoginView from './LoginView.vue'
 const {
   replaceMock,
   resolveMock,
+  routerCurrentRoute,
   routeQuery,
   refreshProfileMock,
   loginWithPasswordMock,
@@ -16,6 +17,7 @@ const {
 } = vi.hoisted(() => ({
   replaceMock: vi.fn(),
   resolveMock: vi.fn(),
+  routerCurrentRoute: { value: { name: 'dashboard' as string } },
   routeQuery: {} as Record<string, string>,
   refreshProfileMock: vi.fn(),
   loginWithPasswordMock: vi.fn(),
@@ -32,6 +34,7 @@ vi.mock('vue-router', () => ({
   useRouter: () => ({
     replace: replaceMock,
     resolve: resolveMock,
+    currentRoute: routerCurrentRoute,
   }),
   useRoute: () => ({
     query: routeQuery,
@@ -62,6 +65,7 @@ describe('LoginView', () => {
     replaceMock.mockReset()
     resolveMock.mockReset()
     resolveMock.mockReturnValue({ matched: [{ meta: {} }] })
+    routerCurrentRoute.value = { name: 'dashboard' }
     refreshProfileMock.mockReset()
     loginWithPasswordMock.mockReset()
     registerWithPasswordMock.mockReset()

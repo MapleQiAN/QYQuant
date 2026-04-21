@@ -37,6 +37,11 @@ onMounted(async () => {
     toast.success(t('auth.loginTab') === 'Login' ? 'Login successful' : '登录成功')
     await finalizeLogin(result.access_token)
     await router.replace('/')
+    setTimeout(() => {
+      if (router.currentRoute.value.name === 'oauth-callback' || window.location.pathname === '/auth/oauth/callback') {
+        window.location.href = '/'
+      }
+    }, 100)
   } catch (e: any) {
     error.value = e.message || 'OAuth login failed'
     loading.value = false

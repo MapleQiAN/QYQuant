@@ -95,6 +95,13 @@ async function finalizeLogin(accessToken: string) {
   userStore.profileLoaded = true
   userStore.profileLoading = false
   await router.replace(redirect)
+  setTimeout(() => {
+    const stillOnLoginRoute = router.currentRoute.value.name === 'login'
+    const stillOnLoginUrl = window.location.pathname === '/login'
+    if ((stillOnLoginRoute || stillOnLoginUrl) && !redirect.startsWith('/login')) {
+      window.location.href = redirect
+    }
+  }, 100)
   void userStore.refreshProfile().catch(() => {
     // Login already succeeded; route guards can retry profile loading after navigation.
   })
