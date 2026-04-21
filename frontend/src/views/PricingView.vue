@@ -1,19 +1,29 @@
 <template>
-  <section class="view pricing-view">
+  <section class="pricing-view">
     <div class="container pricing-page">
-      <header class="pricing-hero fade-in">
-        <h1 class="pricing-hero__title">{{ t('pages.pricingTitle') }}</h1>
-        <p class="pricing-hero__subtitle">{{ t('pages.pricingDescription') }}</p>
+      <!-- Bauhaus Header -->
+      <header class="page-header fade-in">
+        <div class="header-text">
+          <p class="eyebrow">{{ t('pages.pricingTitle') }}</p>
+          <h1 class="page-title">{{ t('pages.pricingTitle') }}</h1>
+          <p class="page-subtitle">{{ t('pages.pricingDescription') }}</p>
+        </div>
+        <div class="header-deco" aria-hidden="true">
+          <span class="deco-circle" />
+          <span class="deco-triangle" />
+        </div>
       </header>
 
-      <p v-if="loading" class="message">{{ t('pricing.loadingPlans') }}</p>
+      <!-- Loading / Error states -->
+      <p v-if="loading" class="message fade-in">{{ t('pricing.loadingPlans') }}</p>
       <template v-else>
-        <p v-if="!isLoggedIn" class="message login-hint">{{ t('pricing.loginHint') }}</p>
-        <p v-else-if="loadError" class="message error">{{ loadError }}</p>
+        <p v-if="!isLoggedIn" class="message login-hint fade-in">{{ t('pricing.loginHint') }}</p>
+        <p v-else-if="loadError" class="message error fade-in">{{ loadError }}</p>
       </template>
 
-      <div v-if="isLoggedIn && !loading && !loadError && quota" class="sub-overview">
-        <div class="sub-overview__plan">
+      <!-- Subscription Overview -->
+      <div v-if="isLoggedIn && !loading && !loadError && quota" class="sub-overview card fade-in-up">
+        <div class="sub-overview__left">
           <div class="sub-overview__badge" :class="'sub-overview__badge--' + currentPlanLevel">
             {{ getPlanName(currentPlanLevel) }}
           </div>
@@ -27,75 +37,75 @@
             </span>
           </div>
         </div>
-        <div class="sub-overview__usage">
-          <div class="sub-overview__usage-inner">
-            <div class="sub-overview__usage-title">{{ t('pricing.usageDetails.title') }}</div>
-            <div class="sub-overview__stats">
-              <div class="usage-stat">
-                <span class="usage-stat__label">{{ t('pricing.usageDetails.botRemaining') }}</span>
-                <strong class="usage-stat__value tnum" data-test="usage-bot-remaining">{{ remainingBotSlots }}</strong>
-                <span class="usage-stat__meta">{{ t('pricing.usageDetails.activeBotsMeta', { active: activeBotCount, total: currentBotLimit }) }}</span>
-              </div>
-              <div class="usage-stat">
-                <span class="usage-stat__label">{{ t('pricing.usageDetails.backtestRemaining') }}</span>
-                <strong class="usage-stat__value tnum" data-test="usage-backtest-remaining">{{ backtestRemainingLabel }}</strong>
-                <span class="usage-stat__meta">{{ t('pricing.usageDetails.backtestsUsedMeta', { used: quota.used_count, total: backtestTotalLabel }) }}</span>
-              </div>
-              <div class="usage-stat">
-                <span class="usage-stat__label">{{ t('pricing.usageDetails.planExpiry') }}</span>
-                <strong class="usage-stat__value" data-test="usage-plan-expiry">{{ currentPlanExpiryLabel }}</strong>
-                <span class="usage-stat__meta">{{ subscription?.payment_provider ? formatProvider(subscription.payment_provider) : currentPlanStatusLabel }}</span>
-              </div>
+        <div class="sub-overview__right">
+          <div class="sub-overview__usage-title">{{ t('pricing.usageDetails.title') }}</div>
+          <div class="sub-overview__stats">
+            <div class="usage-stat">
+              <span class="usage-stat__label">{{ t('pricing.usageDetails.botRemaining') }}</span>
+              <strong class="usage-stat__value tnum" data-test="usage-bot-remaining">{{ remainingBotSlots }}</strong>
+              <span class="usage-stat__meta">{{ t('pricing.usageDetails.activeBotsMeta', { active: activeBotCount, total: currentBotLimit }) }}</span>
             </div>
-            <div v-if="quota.plan_limit !== 'unlimited'" class="sub-overview__bar">
-              <div class="sub-overview__bar-fill" :style="{ width: usagePercentage + '%' }" />
+            <div class="usage-stat">
+              <span class="usage-stat__label">{{ t('pricing.usageDetails.backtestRemaining') }}</span>
+              <strong class="usage-stat__value tnum" data-test="usage-backtest-remaining">{{ backtestRemainingLabel }}</strong>
+              <span class="usage-stat__meta">{{ t('pricing.usageDetails.backtestsUsedMeta', { used: quota.used_count, total: backtestTotalLabel }) }}</span>
             </div>
+            <div class="usage-stat">
+              <span class="usage-stat__label">{{ t('pricing.usageDetails.planExpiry') }}</span>
+              <strong class="usage-stat__value" data-test="usage-plan-expiry">{{ currentPlanExpiryLabel }}</strong>
+              <span class="usage-stat__meta">{{ subscription?.payment_provider ? formatProvider(subscription.payment_provider) : currentPlanStatusLabel }}</span>
+            </div>
+          </div>
+          <div v-if="quota.plan_limit !== 'unlimited'" class="sub-overview__bar">
+            <div class="sub-overview__bar-fill" :style="{ width: usagePercentage + '%' }" />
           </div>
         </div>
       </div>
 
-      <!-- Plus recommendation (for Free/Go users) -->
-      <div v-if="isLoggedIn && !loading && !loadError && shouldRecommendPlus" class="plus-rec">
+      <!-- Plus Recommendation -->
+      <div v-if="isLoggedIn && !loading && !loadError && shouldRecommendPlus" class="plus-rec card card-hover fade-in">
         <div class="plus-rec__icon">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-            <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z" fill="url(#plus-star)"/>
-            <defs><linearGradient id="plus-star" x1="2" y1="2" x2="22" y2="22"><stop stop-color="#9585e6"/><stop offset="1" stop-color="#7c6dd8"/></linearGradient></defs>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+            <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z" fill="currentColor"/>
           </svg>
         </div>
         <div class="plus-rec__text">
           <h3 class="plus-rec__title">{{ t('pricing.plusRec.title') }}</h3>
           <p class="plus-rec__desc">{{ t('pricing.plusRec.description') }}</p>
         </div>
-        <button class="plus-rec__cta" type="button" @click="goToCheckout('plus')">
+        <button class="btn btn-accent" type="button" @click="goToCheckout('plus')">
           {{ t('pricing.upgradeTo', { name: plusPlanName }) }}
           <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M6 3l5 5-5 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
         </button>
       </div>
 
-      <div v-if="!loading && (isLoggedIn ? !loadError : true)" class="pricing-grid">
+      <!-- Pricing Grid -->
+      <div v-if="!loading && (isLoggedIn ? !loadError : true)" class="pricing-grid stagger-in">
         <article
           v-for="plan in plans"
           :key="plan.level"
-          class="pricing-card"
+          class="pricing-card card card-hover"
           :class="{
             'pricing-card--current': currentPlanLevel === plan.level,
             'pricing-card--lower-tier': isLoggedIn && isPlanTierLowerThanCurrent(plan.level) && currentPlanLevel !== plan.level,
             'pricing-card--featured': plan.featured && shouldShowFeatured,
             'pricing-card--ultra': plan.level === 'ultra',
-            'pricing-card--ultra-light': plan.level === 'ultra' && isLightTheme,
           }"
         >
+          <!-- Accent bar -->
+          <div class="pricing-card__accent" :class="'pricing-card__accent--' + plan.level" />
+
           <!-- Badge row -->
           <div class="pricing-card__badges">
             <span v-if="plan.level === 'ultra'" class="badge badge--ultra-vip">
-              <svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor"><path d="M8 1l2.2 4.5L15 6.3l-3.5 3.4.8 4.8L8 12.2 3.7 14.5l.8-4.8L1 6.3l4.8-.8L8 1z"/></svg>
+              <svg width="10" height="10" viewBox="0 0 16 16" fill="currentColor"><path d="M8 1l2.2 4.5L15 6.3l-3.5 3.4.8 4.8L8 12.2 3.7 14.5l.8-4.8L1 6.3l4.8-.8L8 1z"/></svg>
               VIP
             </span>
             <span v-if="plan.featured && shouldShowFeatured" class="badge badge--featured">{{ t('pricing.featured') }}</span>
             <span v-if="currentPlanLevel === plan.level" class="badge badge--current">{{ t('pricing.currentPlan') }}</span>
           </div>
 
-          <!-- Plan name & price -->
+          <!-- Plan header -->
           <div class="pricing-card__header">
             <p class="pricing-card__name">{{ plan.name }}</p>
             <div v-if="shouldShowPromo(plan)" class="pricing-card__promo-tag">{{ t('pricing.promoTag') }}</div>
@@ -120,8 +130,8 @@
           <div class="pricing-card__actions">
             <button
               v-if="plan.level !== 'free' && currentPlanLevel !== plan.level && !isPlanTierLowerThanCurrent(plan.level)"
-              class="btn btn-upgrade"
-              :class="{ 'btn-upgrade--featured': plan.featured && shouldShowFeatured }"
+              class="btn"
+              :class="plan.featured && shouldShowFeatured ? 'btn-accent' : 'btn-primary'"
               type="button"
               @click="goToCheckout(plan.level)"
             >
@@ -144,7 +154,7 @@
           <!-- Divider -->
           <div class="pricing-card__divider" />
 
-          <!-- Features list -->
+          <!-- Features -->
           <ul class="feature-list" role="list">
             <li
               v-for="feature in plan.features"
@@ -168,32 +178,37 @@
         </article>
       </div>
 
-      <!-- Bottom trust strip -->
-      <div class="pricing-trust">
+      <!-- Trust Strip -->
+      <div class="pricing-trust fade-in">
         <div class="pricing-trust__item">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
           </svg>
           <span>{{ t('pricing.trustSecure') }}</span>
         </div>
         <div class="pricing-trust__item">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
           </svg>
           <span>{{ t('pricing.trustEncrypted') }}</span>
         </div>
         <div class="pricing-trust__item">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/>
           </svg>
           <span>{{ t('pricing.trustFlexible') }}</span>
         </div>
       </div>
 
-      <!-- Order history -->
+      <!-- Order History -->
       <template v-if="isLoggedIn && !loading">
-        <div class="pricing-orders">
-          <h3 class="pricing-orders__title">{{ t('pricing.orderHistory.title') }}</h3>
+        <div class="pricing-orders card fade-in">
+          <div class="orders-header">
+            <div class="panel-card__icon">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+            </div>
+            <h3 class="orders-header__title">{{ t('pricing.orderHistory.title') }}</h3>
+          </div>
           <div v-if="orders.length > 0" class="orders-table-wrap">
             <table class="orders-table">
               <thead>
@@ -223,18 +238,18 @@
             </table>
             <div v-if="totalPages > 1" class="orders-pagination">
               <button
-                class="btn-page"
+                class="btn btn-ghost btn--sm"
                 :disabled="ordersCurrentPage <= 1"
                 type="button"
                 @click="loadOrders(ordersCurrentPage - 1)"
               >
                 {{ t('pricing.orderHistory.previousPage') }}
               </button>
-              <span class="orders-pagination__indicator">
+              <span class="orders-pagination__indicator tnum">
                 {{ t('pricing.orderHistory.pageIndicator', { current: ordersCurrentPage, total: totalPages }) }}
               </span>
               <button
-                class="btn-page"
+                class="btn btn-ghost btn--sm"
                 :disabled="ordersCurrentPage >= totalPages"
                 type="button"
                 @click="loadOrders(ordersCurrentPage + 1)"
@@ -451,6 +466,7 @@ onBeforeUnmount(() => {
 </script>
 
 <style scoped>
+/* ── View Root ── */
 .pricing-view {
   width: 100%;
 }
@@ -459,30 +475,87 @@ onBeforeUnmount(() => {
   padding-bottom: var(--spacing-xl);
 }
 
-/* Hero */
-.pricing-hero {
+/* ── Page Header — Bauhaus ── */
+.page-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
   margin-bottom: var(--spacing-xl);
-  text-align: center;
-  padding-top: var(--spacing-md);
+  position: relative;
+  padding-bottom: var(--spacing-lg);
 }
 
-.pricing-hero__title {
-  margin: 0 0 var(--spacing-sm);
-  color: var(--color-text-primary);
-  font-size: clamp(1.5rem, 3vw, 2rem);
+.page-header::after {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 80px;
+  height: 6px;
+  background: var(--color-accent);
+  border-radius: 3px;
+}
+
+.header-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.eyebrow {
+  margin: 0 0 6px;
+  font-size: var(--font-size-xs);
   font-weight: 700;
-  line-height: 1.2;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--color-accent);
 }
 
-.pricing-hero__subtitle {
-  margin: 0 auto;
+.page-title {
+  margin: 0;
+  font-size: var(--font-size-xxxl);
+  font-weight: 900;
+  color: var(--color-text-primary);
+  letter-spacing: -0.02em;
+}
+
+.page-subtitle {
+  margin: var(--spacing-xs) 0 0;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
   max-width: 480px;
-  color: var(--color-text-secondary);
-  font-size: var(--font-size-lg);
   line-height: 1.6;
 }
 
-/* ── Subscription overview (above grid) ── */
+/* Bauhaus decorative shapes */
+.header-deco {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+  flex-shrink: 0;
+}
+
+.deco-circle {
+  display: block;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  border: 2px solid var(--color-border);
+  background: var(--color-accent);
+  opacity: 0.15;
+}
+
+.deco-triangle {
+  display: block;
+  width: 0;
+  height: 0;
+  border-left: 18px solid transparent;
+  border-right: 18px solid transparent;
+  border-bottom: 30px solid var(--color-primary);
+  opacity: 0.2;
+}
+
+/* ── Subscription Overview ── */
 .sub-overview {
   display: grid;
   grid-template-columns: auto 1fr;
@@ -490,10 +563,12 @@ onBeforeUnmount(() => {
   align-items: center;
   padding: var(--spacing-lg) var(--spacing-xl);
   margin-bottom: var(--spacing-lg);
-  border-radius: var(--radius-lg);
-  background: var(--color-surface);
-  border: 1px solid var(--color-primary-border);
-  box-shadow: 0 0 0 1px var(--color-primary-border), var(--shadow-sm);
+}
+
+.sub-overview__left {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
 }
 
 .sub-overview__badge {
@@ -506,25 +581,34 @@ onBeforeUnmount(() => {
   letter-spacing: 0.02em;
 }
 
+.sub-overview__badge--free {
+  background: var(--color-surface-hover);
+  color: var(--color-text-secondary);
+  border: 2px solid var(--color-border);
+}
+
 .sub-overview__badge--go {
-  background: rgba(54, 214, 182, 0.12);
-  color: #36d6b6;
+  background: rgba(54, 214, 182, 0.10);
+  color: #1aab91;
+  border: 2px solid rgba(54, 214, 182, 0.25);
 }
 
 .sub-overview__badge--plus {
   background: var(--color-primary-bg);
   color: var(--color-primary);
+  border: 2px solid var(--color-primary-border);
 }
 
 .sub-overview__badge--pro {
-  background: rgba(240, 180, 41, 0.12);
-  color: #f0b429;
+  background: rgba(240, 180, 41, 0.10);
+  color: #c08e20;
+  border: 2px solid rgba(240, 180, 41, 0.25);
 }
 
 .sub-overview__badge--ultra {
-  background: linear-gradient(135deg, rgba(255, 215, 0, 0.15), rgba(218, 165, 32, 0.15));
-  color: #ffd700;
-  text-shadow: 0 0 20px rgba(255, 215, 0, 0.3);
+  background: linear-gradient(135deg, rgba(255, 215, 0, 0.12), rgba(218, 165, 32, 0.12));
+  color: #c9a000;
+  border: 2px solid rgba(255, 215, 0, 0.3);
 }
 
 .sub-overview__meta {
@@ -532,7 +616,6 @@ onBeforeUnmount(() => {
   flex-wrap: wrap;
   align-items: center;
   gap: var(--spacing-md);
-  margin-top: var(--spacing-xs);
 }
 
 .sub-overview__status {
@@ -549,7 +632,7 @@ onBeforeUnmount(() => {
   font-size: var(--font-size-xs);
 }
 
-.sub-overview__usage-inner {
+.sub-overview__right {
   display: flex;
   flex-direction: column;
   gap: var(--spacing-sm);
@@ -557,8 +640,10 @@ onBeforeUnmount(() => {
 
 .sub-overview__usage-title {
   color: var(--color-text-muted);
-  font-size: var(--font-size-sm);
-  font-weight: 500;
+  font-size: var(--font-size-xs);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
 }
 
 .sub-overview__stats {
@@ -573,15 +658,16 @@ onBeforeUnmount(() => {
   gap: 6px;
   min-width: 0;
   padding: 14px 16px;
-  border: 1px solid var(--color-border);
+  border: 2px solid var(--color-border);
   border-radius: var(--radius-md);
   background: var(--color-surface-elevated);
 }
 
 .usage-stat__label {
   color: var(--color-text-muted);
-  font-size: var(--font-size-xs);
-  letter-spacing: 0.04em;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
 }
 
@@ -590,6 +676,8 @@ onBeforeUnmount(() => {
   font-size: var(--font-size-xl);
   font-weight: 700;
   line-height: 1.2;
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
 }
 
 .usage-stat__meta {
@@ -600,33 +688,25 @@ onBeforeUnmount(() => {
 .sub-overview__bar {
   height: 6px;
   border-radius: var(--radius-full);
-  background: var(--color-border);
+  background: var(--color-surface-active);
   overflow: hidden;
+  border: 1px solid var(--color-border-light);
 }
 
 .sub-overview__bar-fill {
   height: 100%;
   border-radius: var(--radius-full);
-  background: linear-gradient(90deg, var(--color-primary), var(--color-primary-light));
+  background: linear-gradient(90deg, var(--color-primary), var(--color-accent));
   transition: width var(--transition-fast);
 }
 
-/* ── Plus recommendation banner ── */
+/* ── Plus Recommendation ── */
 .plus-rec {
   display: flex;
   align-items: center;
   gap: var(--spacing-lg);
   padding: var(--spacing-lg) var(--spacing-xl);
   margin-bottom: var(--spacing-lg);
-  border-radius: var(--radius-lg);
-  background: linear-gradient(135deg, rgba(124, 109, 216, 0.06), rgba(124, 109, 216, 0.12));
-  border: 1px solid var(--color-primary-border);
-  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
-}
-
-.plus-rec:hover {
-  border-color: var(--color-primary);
-  box-shadow: 0 0 0 1px var(--color-primary-border), 0 4px 16px -4px rgba(124, 109, 216, 0.2);
 }
 
 .plus-rec__icon {
@@ -638,6 +718,8 @@ onBeforeUnmount(() => {
   height: 44px;
   border-radius: var(--radius-md);
   background: var(--color-primary-bg);
+  color: var(--color-primary);
+  border: 2px solid var(--color-primary-border);
 }
 
 .plus-rec__text {
@@ -648,7 +730,7 @@ onBeforeUnmount(() => {
 .plus-rec__title {
   margin: 0 0 2px;
   font-size: var(--font-size-lg);
-  font-weight: 600;
+  font-weight: 700;
   color: var(--color-text-primary);
 }
 
@@ -659,29 +741,7 @@ onBeforeUnmount(() => {
   line-height: 1.5;
 }
 
-.plus-rec__cta {
-  flex-shrink: 0;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 10px 20px;
-  border-radius: var(--radius-full);
-  background: var(--color-primary);
-  border: none;
-  color: #fff;
-  font-size: var(--font-size-sm);
-  font-weight: 600;
-  cursor: pointer;
-  transition: opacity var(--transition-fast), transform var(--transition-fast);
-  white-space: nowrap;
-}
-
-.plus-rec__cta:hover {
-  opacity: 0.9;
-  transform: translateX(2px);
-}
-
-/* ── Grid ── */
+/* ── Pricing Grid ── */
 .pricing-grid {
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
@@ -689,47 +749,71 @@ onBeforeUnmount(() => {
   align-items: start;
 }
 
-/* ── Card base ── */
+/* ── Pricing Card — Bauhaus ── */
 .pricing-card {
   display: flex;
   flex-direction: column;
   gap: var(--spacing-md);
-  padding: var(--spacing-lg);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
-  background: var(--color-surface);
-  transition: transform var(--transition-fast), box-shadow var(--transition-fast), border-color var(--transition-fast);
+  padding: 0;
+  overflow: hidden;
   position: relative;
 }
 
-.pricing-card:hover:not(.pricing-card--lower-tier):not(.pricing-card--ultra) {
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-md);
+/* Top accent bar per plan */
+.pricing-card__accent {
+  height: 5px;
+  width: 100%;
+  flex-shrink: 0;
+}
+
+.pricing-card__accent--free {
+  background: var(--color-text-muted);
+}
+
+.pricing-card__accent--go {
+  background: #1aab91;
+}
+
+.pricing-card__accent--plus {
+  background: var(--color-primary);
+}
+
+.pricing-card__accent--pro {
+  background: var(--color-accent);
+}
+
+.pricing-card__accent--ultra {
+  background: linear-gradient(90deg, #ffd700, #daa520, #ffd700);
 }
 
 .pricing-card--current {
-  border-color: var(--color-primary-border);
-  box-shadow: 0 0 0 1px var(--color-primary-border);
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 2px var(--color-primary-border);
 }
 
 .pricing-card--lower-tier {
-  opacity: 0.45;
+  opacity: 0.4;
+}
+
+.pricing-card--lower-tier:hover {
+  transform: none;
+  box-shadow: var(--shadow-md);
 }
 
 .pricing-card--featured {
   border-color: var(--color-primary);
-  box-shadow: 0 0 0 1px rgba(124, 109, 216, 0.15), 0 8px 32px -8px rgba(124, 109, 216, 0.2);
-  transform: scale(1.03);
+  transform: scale(1.04);
+  z-index: 2;
+  box-shadow: var(--shadow-xl);
 }
 
 .pricing-card--featured:hover {
-  transform: scale(1.03) translateY(-2px);
-  box-shadow: 0 0 0 1px rgba(124, 109, 216, 0.25), 0 12px 40px -8px rgba(124, 109, 216, 0.25);
+  transform: scale(1.04) translateY(-2px);
 }
 
-/* ── Ultra card — luxurious gold gradient ── */
+/* Ultra card — Bauhaus gold */
 .pricing-card--ultra {
-  border: none;
+  border-color: #c9a000;
   background: linear-gradient(
     170deg,
     #2a2210 0%,
@@ -740,57 +824,26 @@ onBeforeUnmount(() => {
     #1e1a0c 100%
   );
   box-shadow:
-    0 0 60px -12px rgba(255, 215, 0, 0.2),
-    0 0 30px -6px rgba(218, 165, 32, 0.12),
-    inset 0 1px 0 rgba(255, 215, 0, 0.15);
-  overflow: hidden;
+    0 0 60px -12px rgba(255, 215, 0, 0.15),
+    0 0 0 1px rgba(255, 215, 0, 0.2);
 }
 
 .pricing-card--ultra::before {
   content: '';
   position: absolute;
   inset: 0;
-  border-radius: inherit;
-  padding: 2px;
-  background: linear-gradient(
-    135deg,
-    #ffd700 0%, #ffec80 12%, #daa520 25%,
-    #ffd700 37%, #ffec80 50%, #b8860b 62%,
-    #ffd700 75%, #daa520 87%, #ffec80 100%
-  );
-  background-size: 400% 400%;
-  animation: ultraGoldShimmer 5s ease-in-out infinite;
-  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-  -webkit-mask-composite: xor;
-  mask-composite: exclude;
-  pointer-events: none;
-  z-index: 1;
-}
-
-.pricing-card--ultra::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
   background:
-    radial-gradient(ellipse at 25% 15%, rgba(255, 236, 128, 0.1) 0%, transparent 50%),
-    radial-gradient(ellipse at 75% 85%, rgba(255, 215, 0, 0.06) 0%, transparent 50%);
+    radial-gradient(ellipse at 25% 15%, rgba(255, 236, 128, 0.08) 0%, transparent 50%),
+    radial-gradient(ellipse at 75% 85%, rgba(255, 215, 0, 0.05) 0%, transparent 50%);
   pointer-events: none;
   z-index: 1;
-}
-
-@keyframes ultraGoldShimmer {
-  0%, 100% { background-position: 0% 50%; }
-  50% { background-position: 100% 50%; }
 }
 
 .pricing-card--ultra .pricing-card__name {
   color: #ffd700;
-  letter-spacing: 0.1em;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
-  font-size: var(--font-size-lg);
-  text-shadow: 0 0 20px rgba(255, 215, 0, 0.3);
+  text-shadow: 0 0 20px rgba(255, 215, 0, 0.2);
 }
 
 .pricing-card--ultra .pricing-card__price,
@@ -807,20 +860,20 @@ onBeforeUnmount(() => {
 
 .pricing-card--ultra .pricing-card__quota {
   color: #f0c850;
-  text-shadow: 0 0 12px rgba(255, 215, 0, 0.2);
 }
 
 .pricing-card--ultra .pricing-card__capacity {
-  color: rgba(255, 240, 210, 0.7);
+  color: rgba(255, 240, 210, 0.6);
 }
 
 .pricing-card--ultra .pricing-card__description {
-  color: rgba(255, 235, 200, 0.65);
+  color: rgba(255, 235, 200, 0.55);
 }
 
 .pricing-card--ultra .pricing-card__divider {
-  background: linear-gradient(90deg, transparent, rgba(255, 215, 0, 0.35), rgba(255, 236, 128, 0.2), transparent);
+  background: linear-gradient(90deg, transparent, rgba(255, 215, 0, 0.3), transparent);
   height: 1px;
+  border: none;
 }
 
 .pricing-card--ultra .feature-icon--check {
@@ -828,60 +881,45 @@ onBeforeUnmount(() => {
 }
 
 .pricing-card--ultra .feature-text {
-  color: rgba(255, 240, 210, 0.8);
+  color: rgba(255, 240, 210, 0.75);
 }
 
 .pricing-card--ultra .feature-item--disabled .feature-text {
-  color: rgba(180, 160, 120, 0.35);
+  color: rgba(180, 160, 120, 0.3);
 }
 
 .pricing-card--ultra .feature-icon--cross {
-  color: rgba(180, 160, 120, 0.25);
+  color: rgba(180, 160, 120, 0.2);
 }
 
-.pricing-card--ultra .feature-item--disabled .feature-text {
-  color: rgba(255, 255, 255, 0.2);
+.pricing-card--ultra .btn-upgrade,
+.pricing-card--ultra .btn-accent {
+  background: linear-gradient(135deg, #ffd700 0%, #f0c850 50%, #daa520 100%);
+  border-color: transparent;
+  color: #1a1408;
+  font-weight: 700;
+  box-shadow: 0 2px 12px -2px rgba(255, 215, 0, 0.25);
 }
 
-.pricing-card--ultra .feature-icon--cross {
-  color: rgba(255, 255, 255, 0.15);
+.pricing-card--ultra .btn-accent:hover {
+  box-shadow: 0 4px 24px -4px rgba(255, 215, 0, 0.4);
+  opacity: 0.9;
 }
 
-:root[data-theme="light"] .pricing-card--ultra-light {
-  background: linear-gradient(
-    160deg,
-    #fffdf6 0%,
-    #fbf3d6 22%,
-    #f6e7b8 48%,
-    #efe1af 72%,
-    #fff7dc 100%
-  );
-  box-shadow:
-    0 16px 36px -22px rgba(176, 131, 24, 0.45),
-    0 0 0 1px rgba(218, 165, 32, 0.18),
-    inset 0 1px 0 rgba(255, 255, 255, 0.72);
+/* Inner content area */
+.pricing-card__badges,
+.pricing-card__header,
+.pricing-card__quota-stack,
+.pricing-card__description,
+.pricing-card__actions,
+.pricing-card__divider,
+.feature-list {
+  padding-left: var(--spacing-lg);
+  padding-right: var(--spacing-lg);
 }
 
-:root[data-theme="light"] .pricing-card--ultra-light .pricing-card__name {
-  color: #8a5c00;
-  text-shadow: none;
-}
-
-:root[data-theme="light"] .pricing-card--ultra-light .pricing-card__description {
-  color: rgba(79, 60, 18, 0.76);
-}
-
-:root[data-theme="light"] .pricing-card--ultra-light .feature-text {
-  color: rgba(79, 60, 18, 0.82);
-}
-
-:root[data-theme="light"] .pricing-card--ultra-light .feature-item--disabled .feature-text,
-:root[data-theme="light"] .pricing-card--ultra-light .feature-icon--cross {
-  color: rgba(125, 102, 43, 0.38);
-}
-
-/* ── Badges ── */
 .pricing-card__badges {
+  padding-top: var(--spacing-md);
   display: flex;
   gap: var(--spacing-xs);
   min-height: 22px;
@@ -889,6 +927,7 @@ onBeforeUnmount(() => {
   z-index: 2;
 }
 
+/* Badges */
 .badge {
   display: inline-flex;
   align-items: center;
@@ -896,29 +935,30 @@ onBeforeUnmount(() => {
   padding: 2px 10px;
   border-radius: var(--radius-full);
   font-size: var(--font-size-xs);
-  font-weight: 600;
+  font-weight: 700;
   line-height: 1.6;
 }
 
 .badge--featured {
   background: var(--color-primary);
   color: #fff;
+  border: 2px solid transparent;
 }
 
 .badge--current {
   background: var(--color-primary-bg);
   color: var(--color-primary);
+  border: 2px solid var(--color-primary-border);
 }
 
 .badge--ultra-vip {
-  background: linear-gradient(135deg, rgba(255, 215, 0, 0.25), rgba(240, 200, 80, 0.2));
+  background: linear-gradient(135deg, rgba(255, 215, 0, 0.2), rgba(240, 200, 80, 0.15));
   color: #ffd700;
-  border: 1px solid rgba(255, 215, 0, 0.4);
+  border: 1px solid rgba(255, 215, 0, 0.35);
   letter-spacing: 0.08em;
-  text-shadow: 0 0 10px rgba(255, 215, 0, 0.3);
 }
 
-/* ── Header ── */
+/* Header */
 .pricing-card__header {
   display: flex;
   flex-direction: column;
@@ -931,7 +971,8 @@ onBeforeUnmount(() => {
   margin: 0;
   color: var(--color-text-secondary);
   font-size: var(--font-size-sm);
-  font-weight: 600;
+  font-weight: 700;
+  letter-spacing: 0.02em;
 }
 
 .pricing-card__price-row {
@@ -943,16 +984,19 @@ onBeforeUnmount(() => {
 .pricing-card__currency {
   color: var(--color-text-primary);
   font-size: var(--font-size-lg);
-  font-weight: 600;
+  font-weight: 700;
   align-self: flex-start;
   margin-top: 5px;
+  font-family: var(--font-mono);
 }
 
 .pricing-card__price {
   color: var(--color-text-primary);
   font-size: 2rem;
-  font-weight: 700;
+  font-weight: 900;
   line-height: 1;
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
 }
 
 .pricing-card__unit {
@@ -965,10 +1009,10 @@ onBeforeUnmount(() => {
   display: inline-block;
   padding: 1px 8px;
   border-radius: var(--radius-full);
-  background: linear-gradient(135deg, #f06868, #e04848);
+  background: var(--color-danger);
   color: #fff;
-  font-size: 11px;
-  font-weight: 600;
+  font-size: 10px;
+  font-weight: 700;
   width: fit-content;
 }
 
@@ -977,7 +1021,8 @@ onBeforeUnmount(() => {
   font-size: var(--font-size-sm);
   text-decoration: line-through;
   margin-left: 6px;
-  opacity: 0.7;
+  opacity: 0.6;
+  font-family: var(--font-mono);
 }
 
 .pricing-card__quota-stack {
@@ -991,7 +1036,9 @@ onBeforeUnmount(() => {
 .pricing-card__quota {
   color: var(--color-primary);
   font-size: var(--font-size-sm);
-  font-weight: 600;
+  font-weight: 700;
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
 }
 
 .pricing-card__capacity {
@@ -1000,7 +1047,7 @@ onBeforeUnmount(() => {
   letter-spacing: 0.02em;
 }
 
-/* ── Description ── */
+/* Description */
 .pricing-card__description {
   margin: 0;
   color: var(--color-text-muted);
@@ -1011,60 +1058,12 @@ onBeforeUnmount(() => {
   z-index: 2;
 }
 
-/* ── CTA ── */
+/* CTA */
 .pricing-card__actions {
   display: flex;
   flex-direction: column;
   position: relative;
   z-index: 2;
-}
-
-.btn-upgrade {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 100%;
-  padding: 10px 14px;
-  border: 1px solid var(--color-border-strong);
-  border-radius: var(--radius-full);
-  background: transparent;
-  color: var(--color-text-primary);
-  font-size: var(--font-size-sm);
-  font-weight: 600;
-  cursor: pointer;
-  transition: background var(--transition-fast), border-color var(--transition-fast), transform var(--transition-fast);
-}
-
-.btn-upgrade:hover {
-  background: var(--color-surface-hover);
-  border-color: var(--color-border-hover);
-  transform: translateY(-1px);
-}
-
-.btn-upgrade--featured {
-  background: var(--color-primary);
-  border-color: var(--color-primary);
-  color: #fff;
-}
-
-.btn-upgrade--featured:hover {
-  opacity: 0.9;
-  background: var(--color-primary);
-  border-color: var(--color-primary);
-}
-
-.pricing-card--ultra .btn-upgrade {
-  background: linear-gradient(135deg, #ffd700 0%, #f0c850 50%, #daa520 100%);
-  border-color: transparent;
-  color: #1a1408;
-  font-weight: 700;
-  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.2);
-  box-shadow: 0 2px 12px -2px rgba(255, 215, 0, 0.3);
-}
-
-.pricing-card--ultra .btn-upgrade:hover {
-  box-shadow: 0 4px 24px -4px rgba(255, 215, 0, 0.5);
-  transform: translateY(-1px);
 }
 
 .btn-disabled {
@@ -1078,7 +1077,7 @@ onBeforeUnmount(() => {
   color: var(--color-text-muted);
   font-size: var(--font-size-sm);
   font-weight: 500;
-  border: 1px solid var(--color-border);
+  border: 2px solid var(--color-border);
   cursor: default;
 }
 
@@ -1088,19 +1087,19 @@ onBeforeUnmount(() => {
   background: var(--color-primary-bg);
 }
 
-/* ── Divider ── */
+/* Divider */
 .pricing-card__divider {
   height: 1px;
-  background: var(--color-border);
-  position: relative;
-  z-index: 2;
+  background: var(--color-border-light);
+  border: none;
+  margin: 0;
 }
 
-/* ── Features ── */
+/* Features */
 .feature-list {
   list-style: none;
   margin: 0;
-  padding: 0;
+  padding-bottom: var(--spacing-lg);
   display: flex;
   flex-direction: column;
   gap: 9px;
@@ -1137,47 +1136,63 @@ onBeforeUnmount(() => {
   color: var(--color-text-muted);
 }
 
-/* ── Trust strip ── */
+/* ── Trust Strip ── */
 .pricing-trust {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: var(--spacing-lg);
+  gap: var(--spacing-xl);
   margin-top: var(--spacing-xl);
-  padding: var(--spacing-md) 0;
-  border-top: 1px solid var(--color-border);
+  padding: var(--spacing-lg) 0;
+  border-top: 2px solid var(--color-border);
 }
 
 .pricing-trust__item {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   color: var(--color-text-muted);
   font-size: var(--font-size-xs);
-  font-weight: 500;
-}
-
-.pricing-trust__item svg {
-  color: var(--color-text-muted);
+  font-weight: 600;
 }
 
 /* ── Orders ── */
 .pricing-orders {
   margin-top: var(--spacing-xl);
+  padding: 0;
+  overflow: hidden;
 }
 
-.pricing-orders__title {
-  margin: 0 0 var(--spacing-md);
+.orders-header {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-md) var(--spacing-lg);
+  border-bottom: 1px solid var(--color-border-light);
+  background: var(--color-surface-elevated);
+}
+
+.panel-card__icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-sm);
+  background: var(--color-primary-bg);
+  color: var(--color-primary);
+  flex-shrink: 0;
+}
+
+.orders-header__title {
+  margin: 0;
+  font-size: var(--font-size-md);
+  font-weight: 700;
   color: var(--color-text-primary);
-  font-size: var(--font-size-base);
-  font-weight: 600;
 }
 
 .orders-table-wrap {
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
-  background: var(--color-surface);
-  overflow: hidden;
+  overflow-x: auto;
 }
 
 .orders-table {
@@ -1190,18 +1205,18 @@ onBeforeUnmount(() => {
   padding: var(--spacing-sm) var(--spacing-md);
   text-align: left;
   color: var(--color-text-muted);
-  font-weight: 500;
-  font-size: var(--font-size-xs);
+  font-weight: 700;
+  font-size: 10px;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
-  border-bottom: 1px solid var(--color-border);
+  letter-spacing: 0.08em;
+  border-bottom: 2px solid var(--color-border);
   background: var(--color-surface);
 }
 
 .orders-table td {
   padding: var(--spacing-sm) var(--spacing-md);
   color: var(--color-text-secondary);
-  border-bottom: 1px solid var(--color-border);
+  border-bottom: 1px solid var(--color-border-light);
 }
 
 .orders-table tbody tr:last-child td {
@@ -1213,22 +1228,26 @@ onBeforeUnmount(() => {
   padding: 2px 8px;
   border-radius: var(--radius-full);
   font-size: var(--font-size-xs);
-  font-weight: 600;
+  font-weight: 700;
+  border: 1px solid transparent;
 }
 
 .order-status--paid {
-  background: var(--color-primary-bg);
+  background: var(--color-success-bg);
   color: var(--color-success);
+  border-color: rgba(46, 125, 50, 0.2);
 }
 
 .order-status--pending {
-  background: var(--color-warning-bg, #fef3c7);
-  color: var(--color-warning, #d97706);
+  background: var(--color-warning-bg);
+  color: var(--color-warning);
+  border-color: rgba(230, 81, 0, 0.2);
 }
 
 .order-status--cancelled {
-  background: var(--color-danger-bg, #fef2f2);
+  background: var(--color-danger-bg);
   color: var(--color-danger);
+  border-color: rgba(212, 57, 59, 0.2);
 }
 
 /* Pagination */
@@ -1237,35 +1256,56 @@ onBeforeUnmount(() => {
   align-items: center;
   justify-content: center;
   gap: var(--spacing-md);
-  padding: var(--spacing-sm) var(--spacing-md);
-  border-top: 1px solid var(--color-border);
+  padding: var(--spacing-md) var(--spacing-lg);
+  border-top: 1px solid var(--color-border-light);
 }
 
 .orders-pagination__indicator {
   color: var(--color-text-muted);
   font-size: var(--font-size-sm);
+  font-family: var(--font-mono);
 }
 
-.btn-page {
+.btn--sm {
+  padding: 5px 12px;
+  font-size: var(--font-size-xs);
+}
+
+/* Ghost button */
+.btn-ghost {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
   padding: 6px 14px;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-full);
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-sm);
   background: transparent;
   color: var(--color-text-secondary);
-  font-size: var(--font-size-sm);
-  font-weight: 500;
+  font-size: var(--font-size-xs);
+  font-weight: 600;
   cursor: pointer;
-  transition: background var(--transition-fast), border-color var(--transition-fast);
+  transition: all 0.15s;
+  white-space: nowrap;
+  font-family: inherit;
 }
 
-.btn-page:hover:not(:disabled) {
+.btn-ghost:hover:not(:disabled) {
   background: var(--color-surface-hover);
-  border-color: var(--color-border-hover);
+  border-color: var(--color-border-strong);
+  color: var(--color-text-primary);
 }
 
-.btn-page:disabled {
-  opacity: 0.4;
-  cursor: default;
+.btn-ghost:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+/* Panel empty */
+.panel-empty {
+  padding: var(--spacing-xl) var(--spacing-lg);
+  text-align: center;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
 }
 
 /* ── Messages ── */
@@ -1290,14 +1330,16 @@ onBeforeUnmount(() => {
   .sub-overview { grid-template-columns: 1fr; }
   .sub-overview__stats { grid-template-columns: 1fr; }
   .plus-rec { flex-direction: column; text-align: center; }
-  .plus-rec__text { text-align: center; }
+  .header-deco { display: none; }
   .orders-table { font-size: 12px; }
   .orders-table th,
   .orders-table td { padding: var(--spacing-xs) var(--spacing-sm); }
 }
 
 @media (max-width: 560px) {
-  .pricing-hero { text-align: left; }
+  .page-header {
+    flex-direction: column;
+  }
   .pricing-grid { grid-template-columns: 1fr; }
   .pricing-trust { flex-direction: column; align-items: flex-start; }
   .pricing-card--featured { transform: none; }
