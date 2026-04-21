@@ -13,10 +13,24 @@ def is_chat_available(plan_level):
 
 def _template_response(message, report, lang):
     metrics = report.metrics or {}
-    total_return = metrics.get("totalReturn", "--")
-    max_drawdown = metrics.get("maxDrawdown", "--")
+    total_return = metrics.get("totalReturn")
+    max_drawdown = metrics.get("maxDrawdown")
+
+    if total_return is None and max_drawdown is None:
+        if lang == "zh":
+            return (
+                "报告指标尚未计算完成，暂时无法回答。"
+                "请确认回测任务已成功完成，或稍后重试。"
+            )
+        return (
+            "Report metrics are not yet available. "
+            "Please verify the backtest completed successfully or try again later."
+        )
+
+    total_return = total_return if total_return is not None else "--"
+    max_drawdown = max_drawdown if max_drawdown is not None else "--"
     summary = report.executive_summary or (
-        "尚未生成执行摘要。" if lang == "zh" else "No executive summary has been generated yet."
+        "回测已完成。" if lang == "zh" else "Backtest completed."
     )
     if lang == "zh":
         return (
