@@ -1,7 +1,7 @@
 <template>
   <div class="dashboard-view">
     <!-- Page Header -->
-    <div class="page-header">
+    <div class="page-header fade-in">
       <div class="header-text">
         <h1 class="page-title">{{ $t('dashboard.title', { name: user.name }) }}</h1>
         <p class="page-subtitle">{{ $t('dashboard.subtitle') }}</p>
@@ -23,8 +23,8 @@
     />
 
     <!-- KPI Row -->
-    <div class="kpi-row">
-      <div class="kpi-card">
+    <div class="kpi-row stagger-in">
+      <div class="kpi-card card-hover">
         <div class="kpi-label">{{ $t('dashboard.totalReturn') }}</div>
         <div class="kpi-value-row">
           <span class="kpi-value tnum" :class="kpiReturn >= 0 ? 'positive' : 'negative'">
@@ -37,16 +37,16 @@
         <div class="kpi-sub">{{ $t('dashboard.allStrategiesCombined') }}</div>
       </div>
 
-      <div class="kpi-card">
+      <div class="kpi-card card-hover">
         <div class="kpi-label">{{ $t('dashboard.activeBots') }}</div>
         <div class="kpi-value-row">
           <span class="kpi-value tnum">{{ activeBotCount }}</span>
-          <span v-if="activeBotCount > 0" class="kpi-dot active" />
+          <span v-if="activeBotCount > 0" class="kpi-dot active pulse-dot" />
         </div>
         <div class="kpi-sub">{{ $t('dashboard.runningInRealtime') }}</div>
       </div>
 
-      <div class="kpi-card">
+      <div class="kpi-card card-hover">
         <div class="kpi-label">{{ $t('dashboard.strategies') }}</div>
         <div class="kpi-value-row">
           <span class="kpi-value tnum">{{ strategyCount }}</span>
@@ -54,7 +54,7 @@
         <div class="kpi-sub">{{ $t('dashboard.inYourLibrary') }}</div>
       </div>
 
-      <div class="kpi-card">
+      <div class="kpi-card card-hover">
         <div class="kpi-label">{{ $t('dashboard.backtests') }}</div>
         <div class="kpi-value-row">
           <span class="kpi-value tnum">{{ backtestCount }}</span>
@@ -64,7 +64,7 @@
     </div>
 
     <!-- Main Grid -->
-    <div class="dashboard-grid">
+    <div class="dashboard-grid fade-in-up">
       <div class="grid-area-backtest">
         <BacktestCard
           :data="backtestsStore.latestReport"

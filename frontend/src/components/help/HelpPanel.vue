@@ -97,6 +97,7 @@ watch(() => props.open, (next) => {
   position: absolute;
   inset: 0;
   background: rgba(0, 0, 0, 0.3);
+  animation: modalOverlayIn 200ms ease both;
 }
 
 .help-panel {
@@ -111,6 +112,12 @@ watch(() => props.open, (next) => {
   display: flex;
   flex-direction: column;
   gap: 18px;
+  animation: slideInRight 250ms cubic-bezier(0.2, 0, 0, 1) both;
+}
+
+@keyframes slideInRight {
+  from { transform: translateX(100%); }
+  to   { transform: translateX(0); }
 }
 
 .help-header {

@@ -14,29 +14,42 @@
       </div>
 
       <div class="path-grid">
-        <article class="card path-card path-card--featured">
-          <div class="path-card__header">
-            <span class="path-badge path-badge--accent">{{ $t('strategyNew.aiBadge') }}</span>
-            <h2>{{ $t('strategyNew.aiTitle') }}</h2>
-            <p>{{ $t('strategyNew.aiHint') }}</p>
-          </div>
-          <div class="path-card__body">
-            <div class="path-checklist">
-              <span class="path-check">{{ $t('strategyNew.aiChecklist.one') }}</span>
-              <span class="path-check">{{ $t('strategyNew.aiChecklist.two') }}</span>
-              <span class="path-check">{{ $t('strategyNew.aiChecklist.three') }}</span>
+        <!-- Row 1: AI card — full width, horizontal layout -->
+        <article class="card path-card path-card--ai" @click="openAiBuilder">
+          <div class="path-card--ai__glow"></div>
+          <div class="path-card--ai__content">
+            <div class="path-card__header">
+              <div class="path-card--ai__badge-row">
+                <span class="path-badge path-badge--accent">{{ $t('strategyNew.aiBadge') }}</span>
+                <span class="path-card--ai__spark">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M12 2L14.09 8.26L20 9.27L15.55 13.97L16.91 20L12 16.9L7.09 20L8.45 13.97L4 9.27L9.91 8.26L12 2Z" fill="currentColor"/></svg>
+                </span>
+              </div>
+              <h2>{{ $t('strategyNew.aiTitle') }}</h2>
+              <p>{{ $t('strategyNew.aiHint') }}</p>
             </div>
+            <div class="path-card__body">
+              <div class="path-checklist">
+                <span class="path-check">{{ $t('strategyNew.aiChecklist.one') }}</span>
+                <span class="path-check">{{ $t('strategyNew.aiChecklist.two') }}</span>
+                <span class="path-check">{{ $t('strategyNew.aiChecklist.three') }}</span>
+              </div>
+            </div>
+          </div>
+          <div class="path-card--ai__action">
             <button
               data-test="open-ai-builder"
               class="btn btn-primary"
               type="button"
-              @click="openAiBuilder"
+              @click.stop="openAiBuilder"
             >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 2L14.09 8.26L20 9.27L15.55 13.97L16.91 20L12 16.9L7.09 20L8.45 13.97L4 9.27L9.91 8.26L12 2Z"/></svg>
               {{ $t('strategyNew.aiAction') }}
             </button>
           </div>
         </article>
 
+        <!-- Row 2: Template + Import — two columns -->
         <article class="card path-card">
           <div class="path-card__header">
             <span class="path-badge">{{ $t('strategyNew.recommendedBadge') }}</span>
@@ -242,13 +255,40 @@
                   </div>
                   <div class="summary-row">
                     <span class="summary-label">{{ $t('marketplace.category') }}</span>
-                    <span class="summary-value">{{ String(aiLatestMetadata.category || '-') }}</span>
+                    <span class="summary-value">{{ formatCategory(String(aiLatestMetadata.category || '-')) }}</span>
+                  </div>
+                  <div v-if="aiLatestMetadata.timeframe" class="summary-row">
+                    <span class="summary-label">{{ $t('strategyPreview.timeframe') }}</span>
+                    <span class="summary-value">{{ String(aiLatestMetadata.timeframe) }}</span>
+                  </div>
+                  <div v-if="aiLatestMetadata.riskLevel" class="summary-row">
+                    <span class="summary-label">{{ $t('strategyPreview.riskLevel') }}</span>
+                    <span class="summary-value" :class="`risk-badge risk-badge--${aiLatestMetadata.riskLevel}`">{{ riskLevelLabel(String(aiLatestMetadata.riskLevel)) }}</span>
                   </div>
                 </div>
 
-                <div v-if="aiLatestAnalysis.fileSummary" class="preview-file">
-                  <span class="preview-file__label">{{ $t('strategyNew.aiPreviewSource') }}</span>
-                  <code class="preview-file__name">{{ aiLatestAnalysis.fileSummary.filename }}</code>
+                <div v-if="aiLatestMetadata.logicExplanation" class="draft-section">
+                  <h4 class="draft-section__title">{{ $t('strategyPreview.logicTitle') }}</h4>
+                  <p class="draft-section__text">{{ String(aiLatestMetadata.logicExplanation) }}</p>
+                </div>
+
+                <div v-if="aiLatestMetadata.riskRules" class="draft-section">
+                  <h4 class="draft-section__title">{{ $t('strategyPreview.riskRulesTitle') }}</h4>
+                  <p class="draft-section__text">{{ String(aiLatestMetadata.riskRules) }}</p>
+                </div>
+
+                <div v-if="aiLatestMetadata.suitableMarket" class="draft-section">
+                  <h4 class="draft-section__title">{{ $t('strategyPreview.suitableMarket') }}</h4>
+                  <p class="draft-section__text">{{ String(aiLatestMetadata.suitableMarket) }}</p>
+                </div>
+
+                <div v-if="aiLatestAnalysis.parameterCandidates.length" class="draft-section">
+                  <h4 class="draft-section__title">{{ $t('strategyNew.aiParamsDetected') }}</h4>
+                  <div class="param-chips">
+                    <span v-for="param in aiLatestAnalysis.parameterCandidates" :key="param.key" class="param-chip">
+                      {{ param.user_facing && 'label' in param.user_facing ? param.user_facing.label : param.key }}: {{ param.default }}
+                    </span>
+                  </div>
                 </div>
 
                 <div class="validation-block">
@@ -273,20 +313,34 @@
                 </div>
                 <button
                   data-test="ai-adopt"
-                  class="btn btn-primary"
+                  class="btn btn-primary btn--full"
                   type="button"
                   :disabled="!aiCanAdopt"
                   @click="adoptAiDraft"
                 >
                   {{ $t('strategyNew.aiAdoptAction') }}
                 </button>
+
+                <div v-if="aiCanAdopt" class="quick-refine">
+                  <p class="quick-refine__label">{{ $t('strategyNew.aiQuickRefine') }}</p>
+                  <div class="quick-refine__chips">
+                    <button v-for="hint in quickRefineHints" :key="hint" class="chip-btn" type="button" @click="applyRefineHint(hint)">{{ hint }}</button>
+                  </div>
+                </div>
               </div>
             </section>
 
             <section class="card ai-chat">
               <div ref="aiChatMessages" class="ai-chat__messages">
-                <div v-if="aiMessages.length === 0" class="empty-panel">
-                  {{ $t('strategyNew.aiEmptyState') }}
+                <div v-if="aiMessages.length === 0" class="chat-empty">
+                  <p class="chat-empty__title">{{ $t('strategyNew.aiChatEmptyTitle') }}</p>
+                  <p class="chat-empty__subtitle">{{ $t('strategyNew.aiChatEmptySubtitle') }}</p>
+                  <div class="scenario-grid">
+                    <button v-for="scenario in scenarios" :key="scenario.key" class="scenario-card" type="button" @click="applyScenario(scenario)">
+                      <span class="scenario-card__icon">{{ scenario.icon }}</span>
+                      <span class="scenario-card__label">{{ $t(scenario.labelKey) }}</span>
+                    </button>
+                  </div>
                 </div>
                 <article
                   v-for="(message, index) in aiMessages"
@@ -295,7 +349,7 @@
                   :class="`chat-bubble--${message.role}`"
                 >
                   <p class="chat-bubble__role">{{ message.role === 'user' ? $t('strategyNew.aiUserRole') : $t('strategyNew.aiAssistantRole') }}</p>
-                  <p class="chat-bubble__content">{{ message.content }}</p>
+                  <div class="chat-bubble__content" v-html="renderChatContent(message.content)"></div>
                 </article>
                 <div v-if="aiSubmitting" class="chat-bubble chat-bubble--assistant chat-bubble--thinking">
                   <p class="chat-bubble__role">{{ $t('strategyNew.aiAssistantRole') }}</p>
@@ -314,14 +368,16 @@
                   data-test="ai-prompt"
                   class="field-input field-textarea"
                   :placeholder="$t('strategyNew.aiPromptPlaceholder')"
+                  @keydown.enter.ctrl="handleAiSend"
                 />
+                <span class="field-hint">{{ $t('strategyNew.aiSendShortcut') }}</span>
               </label>
               <div class="actions">
                 <button
                   data-test="ai-send"
                   class="btn btn-primary"
                   type="button"
-                  :disabled="aiSubmitting"
+                  :disabled="aiSubmitting || !aiPrompt.trim()"
                   @click="handleAiSend"
                 >
                   <span v-if="aiSubmitting" class="btn-spinner"></span>
@@ -528,6 +584,59 @@ async function adoptAiDraft() {
   })
 }
 
+const scenarios = [
+  { key: 'bullish', icon: '📈', labelKey: 'strategyNew.scenarioBullish', prompt: t('strategyNew.scenarioBullishPrompt') },
+  { key: 'bearish', icon: '📉', labelKey: 'strategyNew.scenarioBearish', prompt: t('strategyNew.scenarioBearishPrompt') },
+  { key: 'reversal', icon: '🔄', labelKey: 'strategyNew.scenarioReversal', prompt: t('strategyNew.scenarioReversalPrompt') },
+  { key: 'trend', icon: '🏄', labelKey: 'strategyNew.scenarioTrend', prompt: t('strategyNew.scenarioTrendPrompt') },
+  { key: 'learn', icon: '🎓', labelKey: 'strategyNew.scenarioLearn', prompt: t('strategyNew.scenarioLearnPrompt') },
+]
+
+const quickRefineHints = computed(() => [
+  t('strategyNew.refineAdjustStop'),
+  t('strategyNew.refineChangeSymbol'),
+  t('strategyNew.refineOptimize'),
+  t('strategyNew.refineAddFilter'),
+])
+
+function applyScenario(scenario: typeof scenarios[number]) {
+  aiPrompt.value = scenario.prompt
+}
+
+function applyRefineHint(hint: string) {
+  aiPrompt.value = hint
+}
+
+function formatCategory(cat: string): string {
+  const map: Record<string, string> = {
+    'trend-following': t('strategyPreview.catTrendFollowing'),
+    'mean-reversion': t('strategyPreview.catMeanReversion'),
+    momentum: t('strategyPreview.catMomentum'),
+    'multi-indicator': t('strategyPreview.catMultiIndicator'),
+    other: t('strategyPreview.catOther'),
+  }
+  return map[cat] || cat
+}
+
+function riskLevelLabel(level: string): string {
+  const map: Record<string, string> = {
+    low: t('strategyPreview.riskLow'),
+    medium: t('strategyPreview.riskMedium'),
+    high: t('strategyPreview.riskHigh'),
+  }
+  return map[level] || level
+}
+
+function renderChatContent(content: string): string {
+  return content
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/`([^`]+)`/g, '<code>$1</code>')
+    .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+    .replace(/\n/g, '<br>')
+}
+
 const ArrowLeftIcon = () => h('svg', {
   width: 16,
   height: 16,
@@ -577,8 +686,90 @@ const ArrowLeftIcon = () => h('svg', {
 
 .path-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: var(--spacing-lg);
+}
+
+/* AI card spans full row */
+.path-card--ai {
+  grid-column: 1 / -1;
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xl);
+  padding: var(--spacing-lg) var(--spacing-xl);
+  cursor: pointer;
+  border-color: var(--color-primary);
+  background: linear-gradient(135deg, var(--color-surface) 0%, var(--color-primary-bg) 100%);
+  transition: border-color var(--transition-normal), box-shadow var(--transition-normal);
+}
+
+.path-card--ai:hover {
+  border-color: var(--color-primary-light);
+  box-shadow: var(--shadow-lg);
+}
+
+.path-card--ai__glow {
+  position: absolute;
+  top: -60%;
+  right: -10%;
+  width: 300px;
+  height: 300px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(249, 168, 37, 0.10) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+.path-card--ai__content {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xl);
+  flex: 1;
+  position: relative;
+  z-index: 1;
+}
+
+.path-card--ai__content .path-card__header {
+  flex: 1;
+}
+
+.path-card--ai__content .path-card__body {
+  flex: 1;
+}
+
+.path-card--ai__badge-row {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+}
+
+.path-card--ai__spark {
+  display: flex;
+  color: var(--color-accent);
+  animation: sparkle 3s ease-in-out infinite;
+}
+
+.path-card--ai__action {
+  position: relative;
+  z-index: 1;
+  flex-shrink: 0;
+}
+
+.path-card--ai .btn-primary {
+  background: #46A9A0;
+  border-color: #000000;
+  color: #fff;
+}
+
+.path-card--ai .btn-primary:hover {
+  background: #3b918a;
+  border-color: #000000;
+}
+
+@keyframes sparkle {
+  0%, 100% { opacity: 1; transform: scale(1) rotate(0deg); }
+  50% { opacity: 0.7; transform: scale(1.15) rotate(15deg); }
 }
 
 .path-card {
@@ -618,8 +809,8 @@ const ArrowLeftIcon = () => h('svg', {
   width: fit-content;
   padding: 6px 12px;
   border-radius: 999px;
-  background: rgba(64, 162, 255, 0.12);
-  color: var(--color-accent);
+  background: rgba(25, 118, 210, 0.10);
+  color: var(--color-primary);
   font-size: var(--font-size-xs);
   font-weight: 700;
   letter-spacing: 0.08em;
@@ -628,12 +819,7 @@ const ArrowLeftIcon = () => h('svg', {
 
 .path-badge--accent {
   background: var(--color-accent);
-  color: white;
-}
-
-.path-card--featured {
-  border: 1px solid rgba(64, 162, 255, 0.3);
-  box-shadow: 0 0 20px rgba(64, 162, 255, 0.08);
+  color: var(--color-text-primary);
 }
 
 .path-checklist,
@@ -784,6 +970,7 @@ const ArrowLeftIcon = () => h('svg', {
   background: rgba(12, 18, 32, 0.55);
   backdrop-filter: blur(6px);
   z-index: 40;
+  animation: modalOverlayIn 200ms ease both;
 }
 
 .template-picker,
@@ -793,6 +980,7 @@ const ArrowLeftIcon = () => h('svg', {
   overflow: auto;
   padding: var(--spacing-lg);
   font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', 'Noto Sans SC', sans-serif;
+  animation: modalCardIn 300ms cubic-bezier(0.2, 0, 0, 1) both;
 }
 
 .template-picker__header {
@@ -1086,13 +1274,24 @@ const ArrowLeftIcon = () => h('svg', {
   color: #c87a00;
 }
 
-@media (max-width: 1100px) {
-  .path-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-}
-
 @media (max-width: 900px) {
+  .path-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .path-card--ai {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .path-card--ai__content {
+    flex-direction: column;
+  }
+
+  .path-card--ai__action {
+    align-self: flex-start;
+  }
+
   .guide-grid,
   .template-grid,
   .ai-builder__grid {
@@ -1100,16 +1299,200 @@ const ArrowLeftIcon = () => h('svg', {
   }
 }
 
+/* Chat empty state */
+.chat-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--spacing-md);
+  padding: var(--spacing-lg) 0;
+  text-align: center;
+}
+
+.chat-empty__title {
+  font-size: var(--font-size-lg);
+  font-weight: 600;
+  margin: 0;
+  color: var(--color-text-primary);
+}
+
+.chat-empty__subtitle {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+  margin: 0;
+}
+
+/* Scenario cards */
+.scenario-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-sm);
+  justify-content: center;
+}
+
+.scenario-card {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  padding: var(--spacing-xs) var(--spacing-md);
+  border-radius: 999px;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s, transform 0.15s;
+}
+
+.scenario-card:hover {
+  border-color: var(--color-accent);
+  background: rgba(64, 162, 255, 0.06);
+  transform: translateY(-1px);
+}
+
+.scenario-card__icon {
+  font-size: var(--font-size-md);
+  line-height: 1;
+}
+
+.scenario-card__label {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+}
+
+/* Draft section in sidepanel */
+.draft-section {
+  margin-top: var(--spacing-md);
+  padding-top: var(--spacing-sm);
+  border-top: 1px solid var(--color-border);
+}
+
+.draft-section__title {
+  margin: 0 0 var(--spacing-xs);
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-accent);
+}
+
+.draft-section__text {
+  margin: 0;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  line-height: 1.6;
+}
+
+/* Param chips */
+.param-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.param-chip {
+  padding: 2px 8px;
+  border-radius: var(--radius-md);
+  background: rgba(255, 255, 255, 0.05);
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+  font-family: var(--font-mono, 'SF Mono', 'Cascadia Code', Consolas, monospace);
+}
+
+/* Risk badge */
+.risk-badge {
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+}
+
+.risk-badge--low {
+  background: rgba(42, 157, 101, 0.15);
+  color: #2a9d65;
+}
+
+.risk-badge--medium {
+  background: rgba(200, 122, 0, 0.15);
+  color: #c87a00;
+}
+
+.risk-badge--high {
+  background: rgba(207, 78, 78, 0.15);
+  color: #cf4e4e;
+}
+
+/* Quick refine */
+.quick-refine {
+  margin-top: var(--spacing-md);
+  padding-top: var(--spacing-sm);
+  border-top: 1px solid var(--color-border);
+}
+
+.quick-refine__label {
+  margin: 0 0 var(--spacing-xs);
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+  font-weight: 600;
+}
+
+.quick-refine__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.chip-btn {
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--color-border);
+  background: transparent;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-xs);
+  cursor: pointer;
+  transition: border-color 0.2s, color 0.2s;
+}
+
+.chip-btn:hover {
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+}
+
+/* Full-width button */
+.btn--full {
+  width: 100%;
+  margin-top: var(--spacing-md);
+}
+
+/* Chat bubble code/strong */
+.chat-bubble__content :deep(code) {
+  padding: 1px 5px;
+  border-radius: var(--radius-sm);
+  background: rgba(255, 255, 255, 0.08);
+  font-family: var(--font-mono, 'SF Mono', 'Cascadia Code', Consolas, monospace);
+  font-size: 0.9em;
+}
+
+.chat-bubble__content :deep(strong) {
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
 @media (max-width: 720px) {
-  .path-grid,
   .page-header,
   .template-picker__header {
-    grid-template-columns: 1fr;
     flex-direction: column;
   }
 
   .chat-bubble {
     max-width: 100%;
+  }
+
+  .scenario-grid {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .scenario-card {
+    justify-content: center;
   }
 }
 </style>

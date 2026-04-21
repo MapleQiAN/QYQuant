@@ -1,7 +1,7 @@
 <template>
   <section class="marketplace-page">
     <div class="container">
-      <header class="page-header">
+      <header class="page-header fade-in">
         <div>
           <h1 class="page-title">{{ $t('marketplace.pageTitle') }}</h1>
           <p class="page-subtitle">{{ $t('marketplace.pageSubtitle') }}</p>

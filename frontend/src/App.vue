@@ -13,7 +13,11 @@
     <div class="app-main" :class="{ 'no-sidebar': hideChrome }">
       <TopNav v-if="!hideChrome" @toggle-sidebar="sidebarCollapsed = !sidebarCollapsed" />
       <main class="main-content">
-        <RouterView />
+        <RouterView v-slot="{ Component }">
+          <Transition name="page" mode="out-in">
+            <component :is="Component" />
+          </Transition>
+        </RouterView>
       </main>
       <footer v-if="!hideChrome" class="app-footer">
         <div class="footer-content">

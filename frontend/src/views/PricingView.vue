@@ -1,7 +1,7 @@
 <template>
   <section class="view pricing-view">
     <div class="container pricing-page">
-      <header class="pricing-hero">
+      <header class="pricing-hero fade-in">
         <h1 class="pricing-hero__title">{{ t('pages.pricingTitle') }}</h1>
         <p class="pricing-hero__subtitle">{{ t('pages.pricingDescription') }}</p>
       </header>

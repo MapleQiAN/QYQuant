@@ -2,7 +2,7 @@
   <section class="view">
     <div class="container">
       <!-- Page Header — Bauhaus -->
-      <div class="page-header">
+      <div class="page-header fade-in">
         <div class="header-text">
           <p class="eyebrow">量化交易</p>
           <h1 class="page-title">{{ $t('pages.botsTitle') }}</h1>

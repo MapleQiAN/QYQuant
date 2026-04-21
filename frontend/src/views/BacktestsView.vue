@@ -1,7 +1,7 @@
 <template>
   <section class="view">
     <div class="container">
-      <div class="page-header">
+      <div class="page-header fade-in">
         <div class="header-text">
           <p class="eyebrow">{{ $t('backtests.title') }}</p>
           <h1 class="view-title">{{ $t('backtests.runBacktest') }}</h1>

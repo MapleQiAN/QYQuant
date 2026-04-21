@@ -1,7 +1,7 @@
 <template>
   <section class="strategy-library">
     <div class="container">
-      <div class="page-header">
+      <div class="page-header fade-in">
         <div class="header-text">
           <p class="eyebrow">策略管理</p>
           <h1 class="page-title">{{ t('strategy.library.pageTitle') }}</h1>

@@ -615,6 +615,101 @@ a:hover {
   }
 }
 
+/* ── Entrance Animations ── */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0.4; }
+}
+
+@keyframes modalOverlayIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes modalCardIn {
+  from { opacity: 0; transform: scale(0.96) translateY(12px); }
+  to   { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+/* Page transition */
+.page-enter-active {
+  transition: opacity 200ms ease, transform 200ms ease;
+}
+.page-leave-active {
+  transition: opacity 150ms ease;
+}
+.page-enter-from {
+  opacity: 0;
+  transform: translateY(6px);
+}
+.page-leave-to {
+  opacity: 0;
+}
+
+/* Stagger entrance utility */
+.stagger-in > * {
+  animation: fadeIn 300ms var(--ease-out-expo) both;
+}
+.stagger-in > *:nth-child(1) { animation-delay: 0ms; }
+.stagger-in > *:nth-child(2) { animation-delay: 60ms; }
+.stagger-in > *:nth-child(3) { animation-delay: 120ms; }
+.stagger-in > *:nth-child(4) { animation-delay: 180ms; }
+.stagger-in > *:nth-child(5) { animation-delay: 240ms; }
+.stagger-in > *:nth-child(6) { animation-delay: 300ms; }
+
+/* Fade-in on mount */
+.fade-in {
+  animation: fadeIn 350ms var(--ease-out-expo) both;
+}
+
+/* Fade-in-up on mount */
+.fade-in-up {
+  animation: fadeInUp 400ms var(--ease-out-expo) both;
+}
+
+/* Active pulse dot */
+.pulse-dot {
+  animation: pulse 2s ease-in-out infinite;
+}
+
+/* Card hover lift — subtle */
+.card-hover {
+  transition: transform var(--transition-normal), box-shadow var(--transition-normal);
+}
+.card-hover:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-lg);
+}
+
+/* Skeleton pulse */
+@keyframes skeletonPulse {
+  0%, 100% { opacity: 0.4; }
+  50%      { opacity: 0.8; }
+}
+
+.skeleton-pulse {
+  animation: skeletonPulse 1.5s ease-in-out infinite;
+}
+
+/* ── Modal Animations ── */
+.modal-overlay {
+  animation: modalOverlayIn 200ms ease both;
+}
+
+.modal-card {
+  animation: modalCardIn 300ms cubic-bezier(0.2, 0, 0, 1) both;
+}
+
 /* Reduced Motion */
 @media (prefers-reduced-motion: reduce) {
   *,
