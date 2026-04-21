@@ -58,7 +58,7 @@ def test_create_payment_order_returns_pending_order_payload(client):
     assert response.status_code == 201
     data = response.json["data"]
     assert data["plan_level"] == "plus"
-    assert data["amount"] == 99
+    assert data["amount"] == 69
     assert data["provider"] == "wechat"
     assert data["order_id"]
     assert data["pay_url"].startswith("https://")

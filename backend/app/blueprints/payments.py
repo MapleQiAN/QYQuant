@@ -16,16 +16,16 @@ bp = Blueprint("payments", __name__, url_prefix="/api/v1/payments")
 
 PLAN_PRICES = {
     "free": 0,
-    "go": 49,
-    "plus": 199,
-    "pro": 499,
-    "ultra": 999,
+    "go": 39,
+    "plus": 129,
+    "pro": 299,
+    "ultra": 599,
 }
 PLAN_PROMO_PRICES = {
-    "go": 29,
-    "plus": 99,
-    "pro": 259,
-    "ultra": 599,
+    "go": 19,
+    "plus": 69,
+    "pro": 159,
+    "ultra": 399,
 }
 PAYABLE_PLAN_LEVELS = tuple(plan_level for plan_level in PLAN_PRICES if plan_level != "free")
 VALID_PROVIDERS = ("wechat", "alipay")

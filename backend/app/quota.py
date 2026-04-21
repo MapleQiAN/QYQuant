@@ -6,11 +6,11 @@ from .utils.time import now_utc
 
 
 PLAN_LIMITS = {
-    "free": 10,
+    "free": 30,
     "basic": 100,
-    "go": 50,
-    "plus": 200,
-    "pro": 500,
+    "go": 100,
+    "plus": 300,
+    "pro": 800,
     "ultra": math.inf,
 }
 
@@ -24,10 +24,10 @@ PLAN_LEVEL_ALIASES = {
 
 BOT_SLOT_LIMITS = {
     "free": 1,
-    "go": 1,
-    "plus": 2,
-    "pro": 3,
-    "ultra": 5,
+    "go": 2,
+    "plus": 3,
+    "pro": 5,
+    "ultra": 10,
 }
 
 
