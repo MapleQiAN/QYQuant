@@ -73,7 +73,7 @@
           <h3 class="plus-rec__title">{{ t('pricing.plusRec.title') }}</h3>
           <p class="plus-rec__desc">{{ t('pricing.plusRec.description') }}</p>
         </div>
-        <button class="btn btn-accent" type="button" @click="goToCheckout('plus')">
+        <button class="btn btn-primary" type="button" @click="goToCheckout('plus')">
           {{ t('pricing.upgradeTo', { name: plusPlanName }) }}
           <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M6 3l5 5-5 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
         </button>
@@ -700,14 +700,7 @@ onBeforeUnmount(() => {
   transition: width var(--transition-fast);
 }
 
-/* ── Plus Recommendation ── */
-.plus-rec {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-lg);
-  padding: var(--spacing-lg) var(--spacing-xl);
-  margin-bottom: var(--spacing-lg);
-}
+/* ── Plus Recommendation — always blue border ── */
 
 .plus-rec__icon {
   flex-shrink: 0;
@@ -741,12 +734,28 @@ onBeforeUnmount(() => {
   line-height: 1.5;
 }
 
+/* ── Plus Recommendation — always blue border ── */
+.plus-rec {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-lg);
+  padding: var(--spacing-lg) var(--spacing-xl);
+  margin-bottom: var(--spacing-lg);
+  border-color: var(--color-primary) !important;
+  box-shadow: 0 0 0 1px var(--color-primary-border);
+}
+
+.plus-rec:hover {
+  border-color: var(--color-primary) !important;
+  box-shadow: 0 0 0 1px var(--color-primary-border), var(--shadow-md);
+}
+
 /* ── Pricing Grid ── */
 .pricing-grid {
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: var(--spacing-md);
-  align-items: start;
+  align-items: stretch;
 }
 
 /* ── Pricing Card — Bauhaus ── */
@@ -811,21 +820,22 @@ onBeforeUnmount(() => {
   transform: scale(1.04) translateY(-2px);
 }
 
-/* Ultra card — Bauhaus gold */
+/* Ultra card — White Gold */
 .pricing-card--ultra {
   border-color: #c9a000;
   background: linear-gradient(
     170deg,
-    #2a2210 0%,
-    #3d3218 20%,
-    #4a3c1c 40%,
-    #3d3218 60%,
-    #2a2210 80%,
-    #1e1a0c 100%
+    #fffdf6 0%,
+    #fbf3d6 18%,
+    #f6e7b8 40%,
+    #efe1af 60%,
+    #fbf3d6 80%,
+    #fff7dc 100%
   );
   box-shadow:
-    0 0 60px -12px rgba(255, 215, 0, 0.15),
-    0 0 0 1px rgba(255, 215, 0, 0.2);
+    0 12px 36px -16px rgba(176, 131, 24, 0.35),
+    0 0 0 1px rgba(218, 165, 32, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.6);
 }
 
 .pricing-card--ultra::before {
@@ -833,22 +843,21 @@ onBeforeUnmount(() => {
   position: absolute;
   inset: 0;
   background:
-    radial-gradient(ellipse at 25% 15%, rgba(255, 236, 128, 0.08) 0%, transparent 50%),
-    radial-gradient(ellipse at 75% 85%, rgba(255, 215, 0, 0.05) 0%, transparent 50%);
+    radial-gradient(ellipse at 25% 15%, rgba(255, 236, 128, 0.15) 0%, transparent 50%),
+    radial-gradient(ellipse at 75% 85%, rgba(255, 215, 0, 0.08) 0%, transparent 50%);
   pointer-events: none;
   z-index: 1;
 }
 
 .pricing-card--ultra .pricing-card__name {
-  color: #ffd700;
+  color: #8a5c00;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  text-shadow: 0 0 20px rgba(255, 215, 0, 0.2);
 }
 
 .pricing-card--ultra .pricing-card__price,
 .pricing-card--ultra .pricing-card__currency {
-  background: linear-gradient(135deg, #ffd700 0%, #fff1a8 40%, #daa520 100%);
+  background: linear-gradient(135deg, #b8860b 0%, #daa520 40%, #8a5c00 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -859,50 +868,50 @@ onBeforeUnmount(() => {
 }
 
 .pricing-card--ultra .pricing-card__quota {
-  color: #f0c850;
+  color: #8a6d10;
 }
 
 .pricing-card--ultra .pricing-card__capacity {
-  color: rgba(255, 240, 210, 0.6);
+  color: rgba(120, 90, 20, 0.65);
 }
 
 .pricing-card--ultra .pricing-card__description {
-  color: rgba(255, 235, 200, 0.55);
+  color: rgba(100, 75, 15, 0.7);
 }
 
 .pricing-card--ultra .pricing-card__divider {
-  background: linear-gradient(90deg, transparent, rgba(255, 215, 0, 0.3), transparent);
+  background: linear-gradient(90deg, transparent, rgba(218, 165, 32, 0.35), transparent);
   height: 1px;
   border: none;
 }
 
 .pricing-card--ultra .feature-icon--check {
-  color: #f0c850;
+  color: #b8860b;
 }
 
 .pricing-card--ultra .feature-text {
-  color: rgba(255, 240, 210, 0.75);
+  color: rgba(80, 60, 10, 0.82);
 }
 
 .pricing-card--ultra .feature-item--disabled .feature-text {
-  color: rgba(180, 160, 120, 0.3);
+  color: rgba(125, 102, 43, 0.4);
 }
 
 .pricing-card--ultra .feature-icon--cross {
-  color: rgba(180, 160, 120, 0.2);
+  color: rgba(125, 102, 43, 0.25);
 }
 
 .pricing-card--ultra .btn-upgrade,
 .pricing-card--ultra .btn-accent {
   background: linear-gradient(135deg, #ffd700 0%, #f0c850 50%, #daa520 100%);
   border-color: transparent;
-  color: #1a1408;
+  color: #3d2e00;
   font-weight: 700;
-  box-shadow: 0 2px 12px -2px rgba(255, 215, 0, 0.25);
+  box-shadow: 0 2px 12px -2px rgba(218, 165, 32, 0.35);
 }
 
 .pricing-card--ultra .btn-accent:hover {
-  box-shadow: 0 4px 24px -4px rgba(255, 215, 0, 0.4);
+  box-shadow: 0 4px 24px -4px rgba(218, 165, 32, 0.5);
   opacity: 0.9;
 }
 
@@ -952,9 +961,9 @@ onBeforeUnmount(() => {
 }
 
 .badge--ultra-vip {
-  background: linear-gradient(135deg, rgba(255, 215, 0, 0.2), rgba(240, 200, 80, 0.15));
-  color: #ffd700;
-  border: 1px solid rgba(255, 215, 0, 0.35);
+  background: linear-gradient(135deg, rgba(218, 165, 32, 0.12), rgba(255, 215, 0, 0.10));
+  color: #8a5c00;
+  border: 2px solid rgba(218, 165, 32, 0.35);
   letter-spacing: 0.08em;
 }
 
@@ -1105,6 +1114,7 @@ onBeforeUnmount(() => {
   gap: 9px;
   position: relative;
   z-index: 2;
+  flex: 1;
 }
 
 .feature-item {
