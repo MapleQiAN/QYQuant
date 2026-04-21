@@ -673,6 +673,8 @@ const en = {
     lowLabel: 'Low',
     closeLabel: 'Close',
     volumeLabel: 'Volume',
+    changeLabel: 'Chg',
+    amplitudeLabel: 'Amp',
     tradePriceLabel: 'Price',
     tradeQuantityLabel: 'Quantity',
     tradePnlLabel: 'PnL',
