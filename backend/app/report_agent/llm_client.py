@@ -3,7 +3,7 @@ import logging
 import urllib.error
 import urllib.request
 
-from ..services.integrations import list_user_integrations
+from ..services.integrations import decrypt_secret_payload, list_user_integrations
 
 logger = logging.getLogger(__name__)
 
@@ -29,12 +29,12 @@ def call_llm(user_id, system_prompt, user_prompt, *, temperature=0.3, timeout=30
     base_url = config_public.get("base_url")
     model = config_public.get("model")
 
-    secret = {}
     try:
-        secret = integration._secret_payload or {}
+        secret_payload = decrypt_secret_payload(integration)
     except Exception:
-        pass
-    api_key = secret.get("api_key")
+        logger.debug("llm_client: failed decrypting secret for user %s", user_id)
+        return None
+    api_key = (secret_payload or {}).get("api_key")
 
     if not base_url or not api_key or not model:
         logger.debug("llm_client: incomplete config for user %s", user_id)

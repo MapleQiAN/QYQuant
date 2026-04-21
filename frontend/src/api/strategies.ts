@@ -412,6 +412,7 @@ export function generateAiStrategyDraft(payload: {
   return client.request({
     method: 'post',
     url: '/v1/strategy-ai/generate',
+    timeout: 60000,
     data: {
       integrationId: payload.integrationId,
       messages: payload.messages
@@ -440,6 +441,7 @@ export function classifyStrategyIntent(payload: {
   return client.request({
     method: 'post',
     url: '/v1/strategy-ai/classify',
+    timeout: 60000,
     data: payload
   })
 }
@@ -483,6 +485,7 @@ export function fetchStrategySummary(payload: {
   return client.request({
     method: 'post',
     url: '/v1/strategy-ai/summary',
+    timeout: 60000,
     data: payload
   })
 }
@@ -519,6 +522,7 @@ export function optimizeStrategy(
   return client.request({
     method: 'post',
     url: `/v1/strategies/${strategyId}/optimize`,
+    timeout: 60000,
     data: payload
   })
 }
@@ -530,6 +534,7 @@ export function generateUserFacing(payload: {
   return client.request({
     method: 'post',
     url: '/v1/strategy-ai/user-facing',
+    timeout: 60000,
     data: payload
   })
 }

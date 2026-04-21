@@ -19,7 +19,7 @@ export function fetchReportStatus(reportId: string): Promise<BacktestAiReportSta
 }
 
 export function sendReportChatMessage(reportId: string, message: string, locale = 'en'): Promise<BacktestAiChatMessage> {
-  return client.request({ method: 'post', url: `/reports/${reportId}/chat`, data: { message, locale } })
+  return client.request({ method: 'post', url: `/reports/${reportId}/chat`, data: { message, locale }, timeout: 60000 })
 }
 
 export function fetchReportChatHistory(reportId: string): Promise<BacktestAiChatHistoryResponse> {

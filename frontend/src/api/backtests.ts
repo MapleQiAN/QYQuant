@@ -32,7 +32,7 @@ export function fetchLatestCompletedReport(): Promise<LatestCompletedReportRespo
 }
 
 export function runBacktest(payload: RunBacktestPayload): Promise<RunBacktestResponse> {
-  return client.request({ method: 'post', url: '/backtests/run', data: payload })
+  return client.request({ method: 'post', url: '/backtests/run', data: payload, timeout: 60000 })
 }
 
 export function fetchBacktestJob(jobId: string): Promise<BacktestJobResponse> {
