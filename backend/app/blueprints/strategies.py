@@ -349,6 +349,9 @@ def export_strategy():
 def _slugify(name):
     import re
     return re.sub(r"[^a-z0-9]+", "-", str(name).lower()).strip("-") or "strategy"
+
+
+@bp.post("/v1/strategy-ai/classify")
 @jwt_required()
 def classify_strategy_intent():
     payload = request.get_json() or {}
