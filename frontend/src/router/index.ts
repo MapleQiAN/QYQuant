@@ -94,16 +94,7 @@ router.beforeEach(async (to) => {
   const userStore = useUserStore(pinia)
   const isPublic = publicRoutes.has(to.name as string)
 
-  // Load profile if token exists but profile not yet loaded.
-  if (userStore.token) {
-    if (!userStore.profileLoaded && !userStore.profileLoading) {
-      await userStore.loadProfile()
-    }
-
-    await waitForProfileToSettle(userStore)
-  }
-
-  // Redirect logged-in users away from auth pages.
+  // Redirect logged-in users away from auth pages without waiting on profile fetch.
   if (isPublic && userStore.token) {
     return { path: '/' }
   }
@@ -111,6 +102,19 @@ router.beforeEach(async (to) => {
   // Redirect unauthenticated users to login (except public pages).
   if (!isPublic && !userStore.token) {
     return { name: 'login', query: { redirect: to.fullPath } }
+  }
+
+  // Admin pages need a confirmed profile. Normal protected pages only need a token.
+  if (userStore.token && to.meta.requiresAdmin) {
+    if (!userStore.profileLoaded && !userStore.profileLoading) {
+      await userStore.loadProfile()
+    }
+
+    await waitForProfileToSettle(userStore)
+  }
+
+  if (userStore.token && !to.meta.requiresAdmin && !userStore.profileLoaded && !userStore.profileLoading) {
+    void userStore.loadProfile()
   }
 
   // Admin-only check.

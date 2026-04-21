@@ -236,6 +236,30 @@ describe('router', () => {
     expect(router.currentRoute.value.path).toBe('/admin')
   })
 
+  it('does not block non-admin protected routes while profile is already loading', async () => {
+    localStorage.setItem('qyquant-token', 'real-token')
+    useUserStore(pinia).$dispose()
+    const userStore = useUserStore(pinia)
+    userStore.profileLoading = true
+    userStore.profileLoaded = false
+
+    const navigation = router.push('/settings').then(() => 'navigated')
+    const result = await Promise.race([
+      navigation,
+      new Promise((resolve) => setTimeout(() => resolve('blocked'), 10)),
+    ])
+
+    if (result === 'blocked') {
+      userStore.profile.role = 'user'
+      userStore.profileLoaded = true
+      userStore.profileLoading = false
+      await navigation
+    }
+
+    expect(result).toBe('navigated')
+    expect(router.currentRoute.value.path).toBe('/settings')
+  })
+
   it('requires a real admin profile for admin routes', async () => {
     localStorage.setItem('qyquant-token', 'real-token')
     useUserStore(pinia).$dispose()

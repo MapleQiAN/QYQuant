@@ -80,12 +80,24 @@ function validate() {
 async function finalizeLogin(accessToken: string) {
   localStorage.setItem('qyquant-token', accessToken)
   const redirect = typeof route.query.redirect === 'string' ? route.query.redirect : '/'
-  try {
-    await userStore.refreshProfile()
-  } catch {
-    // Login already succeeded; route guards can retry profile loading after navigation.
+  const requiresProfileBeforeRedirect = router.resolve(redirect).matched.some((record) => record.meta.requiresAdmin)
+
+  if (requiresProfileBeforeRedirect) {
+    try {
+      await userStore.refreshProfile()
+    } catch {
+      // Keep the authenticated redirect path; the admin guard will handle authorization.
+    }
+    await router.replace(redirect)
+    return
   }
+
+  userStore.profileLoaded = true
+  userStore.profileLoading = false
   await router.replace(redirect)
+  void userStore.refreshProfile().catch(() => {
+    // Login already succeeded; route guards can retry profile loading after navigation.
+  })
 }
 
 async function startOAuth(provider: string) {

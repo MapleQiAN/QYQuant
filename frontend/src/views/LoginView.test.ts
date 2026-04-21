@@ -6,6 +6,7 @@ import LoginView from './LoginView.vue'
 
 const {
   replaceMock,
+  resolveMock,
   routeQuery,
   refreshProfileMock,
   loginWithPasswordMock,
@@ -14,6 +15,7 @@ const {
   toastSuccessMock,
 } = vi.hoisted(() => ({
   replaceMock: vi.fn(),
+  resolveMock: vi.fn(),
   routeQuery: {} as Record<string, string>,
   refreshProfileMock: vi.fn(),
   loginWithPasswordMock: vi.fn(),
@@ -29,6 +31,7 @@ vi.mock('vue-router', () => ({
   },
   useRouter: () => ({
     replace: replaceMock,
+    resolve: resolveMock,
   }),
   useRoute: () => ({
     query: routeQuery,
@@ -57,6 +60,8 @@ vi.mock('../lib/toast', () => ({
 describe('LoginView', () => {
   beforeEach(() => {
     replaceMock.mockReset()
+    resolveMock.mockReset()
+    resolveMock.mockReturnValue({ matched: [{ meta: {} }] })
     refreshProfileMock.mockReset()
     loginWithPasswordMock.mockReset()
     registerWithPasswordMock.mockReset()
@@ -175,6 +180,70 @@ describe('LoginView', () => {
     expect(localStorage.getItem('qyquant-token')).toBe('token-1')
     expect(refreshProfileMock).toHaveBeenCalled()
     expect(replaceMock).toHaveBeenCalledWith('/backtests')
+  })
+
+  it('redirects immediately after successful login before profile refresh settles', async () => {
+    let resolveProfile: (() => void) | undefined
+    loginWithPasswordMock.mockResolvedValueOnce({
+      access_token: 'token-1',
+      data: {
+        user_id: 'user-1',
+        email: 'pa***@example.com',
+        nickname: 'Alice',
+        plan_level: 'free',
+      },
+    })
+    refreshProfileMock.mockReturnValueOnce(new Promise<void>((resolve) => {
+      resolveProfile = resolve
+    }))
+    replaceMock.mockResolvedValueOnce(undefined)
+
+    const wrapper = mountView()
+
+    await wrapper.get('[data-test="email-input"]').setValue('alice@example.com')
+    await wrapper.get('[data-test="password-input"]').setValue('Secret123!')
+    await wrapper.get('[data-test="submit-auth"]').trigger('click')
+    await flushPromises()
+
+    expect(localStorage.getItem('qyquant-token')).toBe('token-1')
+    expect(replaceMock).toHaveBeenCalledWith('/')
+
+    resolveProfile?.()
+    await flushPromises()
+  })
+
+  it('waits for profile refresh before redirecting to admin pages', async () => {
+    let resolveProfile: (() => void) | undefined
+    routeQuery.redirect = '/admin'
+    resolveMock.mockReturnValue({ matched: [{ meta: { requiresAdmin: true } }] })
+    loginWithPasswordMock.mockResolvedValueOnce({
+      access_token: 'token-1',
+      data: {
+        user_id: 'user-1',
+        email: 'pa***@example.com',
+        nickname: 'Admin',
+        plan_level: 'pro',
+      },
+    })
+    refreshProfileMock.mockReturnValueOnce(new Promise<void>((resolve) => {
+      resolveProfile = resolve
+    }))
+    replaceMock.mockResolvedValueOnce(undefined)
+
+    const wrapper = mountView()
+
+    await wrapper.get('[data-test="email-input"]').setValue('admin@example.com')
+    await wrapper.get('[data-test="password-input"]').setValue('Secret123!')
+    await wrapper.get('[data-test="submit-auth"]').trigger('click')
+    await flushPromises()
+
+    expect(refreshProfileMock).toHaveBeenCalled()
+    expect(replaceMock).not.toHaveBeenCalled()
+
+    resolveProfile?.()
+    await flushPromises()
+
+    expect(replaceMock).toHaveBeenCalledWith('/admin')
   })
 
   it('submits email registration with nickname', async () => {

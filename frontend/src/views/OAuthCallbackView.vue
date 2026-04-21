@@ -16,7 +16,11 @@ const loading = ref(true)
 
 async function finalizeLogin(accessToken: string) {
   localStorage.setItem('qyquant-token', accessToken)
-  await userStore.refreshProfile()
+  userStore.profileLoaded = true
+  userStore.profileLoading = false
+  void userStore.refreshProfile().catch(() => {
+    // OAuth login already succeeded; keep navigation independent from profile refresh.
+  })
 }
 
 onMounted(async () => {
