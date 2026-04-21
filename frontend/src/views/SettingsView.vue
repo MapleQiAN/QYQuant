@@ -3,71 +3,70 @@
     <div class="container">
       <h1 class="view-title">{{ $t('settings.title') }}</h1>
 
-      <div class="card setting-card">
-        <div class="setting-header">
-          <div>
-            <h3>{{ $t('settings.language') }}</h3>
-            <p class="hint">{{ $t('settings.languageHint') }}</p>
+      <div class="settings-grid">
+        <div class="card setting-card preferences-card">
+          <div class="setting-row">
+            <div class="setting-label">
+              <h3>{{ $t('settings.language') }}</h3>
+              <p class="hint">{{ $t('settings.languageHint') }}</p>
+            </div>
+            <div class="toggle">
+              <button
+                class="toggle-btn"
+                :class="{ active: locale === 'zh' }"
+                data-locale="zh"
+                type="button"
+                @click="setLocale('zh')"
+              >
+                {{ $t('settings.zh') }}
+              </button>
+              <button
+                class="toggle-btn"
+                :class="{ active: locale === 'en' }"
+                data-locale="en"
+                type="button"
+                @click="setLocale('en')"
+              >
+                {{ $t('settings.en') }}
+              </button>
+            </div>
           </div>
-          <div class="toggle">
-            <button
-              class="toggle-btn"
-              :class="{ active: locale === 'zh' }"
-              data-locale="zh"
-              type="button"
-              @click="setLocale('zh')"
-            >
-              {{ $t('settings.zh') }}
-            </button>
-            <button
-              class="toggle-btn"
-              :class="{ active: locale === 'en' }"
-              data-locale="en"
-              type="button"
-              @click="setLocale('en')"
-            >
-              {{ $t('settings.en') }}
-            </button>
+          <div class="setting-divider" />
+          <div class="setting-row">
+            <div class="setting-label">
+              <h3>{{ $t('settings.marketStyle') }}</h3>
+              <p class="hint">{{ $t('settings.marketStyleHint') }}</p>
+            </div>
+            <div class="toggle">
+              <button
+                class="toggle-btn"
+                :class="{ active: marketStyle === 'cn' }"
+                data-market-style="cn"
+                type="button"
+                @click="setMarketStyle('cn')"
+              >
+                {{ $t('settings.marketStyleCn') }}
+              </button>
+              <button
+                class="toggle-btn"
+                :class="{ active: marketStyle === 'us' }"
+                data-market-style="us"
+                type="button"
+                @click="setMarketStyle('us')"
+              >
+                {{ $t('settings.marketStyleUs') }}
+              </button>
+            </div>
           </div>
         </div>
-      </div>
 
-      <div class="card setting-card">
-        <div class="setting-header">
-          <div>
-            <h3>{{ $t('settings.marketStyle') }}</h3>
-            <p class="hint">{{ $t('settings.marketStyleHint') }}</p>
+        <div class="card setting-card integrations-card">
+          <div class="setting-header integrations-header">
+            <div>
+              <h3>{{ $t('settings.dataSourceTitle') }}</h3>
+              <p class="hint">{{ $t('settings.dataSourceHint') }}</p>
+            </div>
           </div>
-          <div class="toggle">
-            <button
-              class="toggle-btn"
-              :class="{ active: marketStyle === 'cn' }"
-              data-market-style="cn"
-              type="button"
-              @click="setMarketStyle('cn')"
-            >
-              {{ $t('settings.marketStyleCn') }}
-            </button>
-            <button
-              class="toggle-btn"
-              :class="{ active: marketStyle === 'us' }"
-              data-market-style="us"
-              type="button"
-              @click="setMarketStyle('us')"
-            >
-              {{ $t('settings.marketStyleUs') }}
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <div class="card setting-card integrations-card">
-        <div class="setting-header integrations-header">
-          <div>
-            <h3>{{ $t('settings.dataSourceTitle') }}</h3>
-            <p class="hint">{{ $t('settings.dataSourceHint') }}</p>
-          </div>
-        </div>
         <form class="integration-form" data-action="connect-datasource" @submit.prevent="submitDsIntegration">
           <label class="field">
             <span>{{ $t('settings.providerLabel') }}</span>
@@ -139,6 +138,7 @@
             </ul>
           </article>
         </div>
+      </div>
       </div>
 
       <div class="card setting-card integrations-card">
@@ -488,12 +488,47 @@ onMounted(async () => {
   color: var(--color-text-primary);
 }
 
+.settings-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--spacing-md);
+  align-items: start;
+}
+
 .setting-card {
   padding: var(--spacing-lg);
 }
 
 .setting-card + .setting-card {
+  margin-top: 0;
+}
+
+.settings-grid + .card {
   margin-top: var(--spacing-md);
+}
+
+.preferences-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.setting-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-xl);
+  padding: var(--spacing-sm) 0;
+}
+
+.setting-label h3 {
+  margin: 0;
+}
+
+.setting-divider {
+  height: 1px;
+  background: var(--color-border-light);
+  margin: var(--spacing-xs) 0;
 }
 
 .setting-header {
@@ -504,7 +539,7 @@ onMounted(async () => {
 }
 
 .hint {
-  margin-top: var(--spacing-xs);
+  margin: var(--spacing-xs) 0 0;
   font-size: var(--font-size-sm);
   color: var(--color-text-muted);
 }
