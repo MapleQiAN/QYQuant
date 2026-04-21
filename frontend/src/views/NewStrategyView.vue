@@ -851,7 +851,7 @@ const ArrowLeftIcon = () => h('svg', {
 .path-card--ai .path-card__header h2 {
   max-width: 420px;
   font-family: var(--font-zh-display);
-  font-size: 38px;
+  font-size: clamp(30px, 3.2vw, 46px);
   line-height: 1.08;
   font-weight: 900;
   color: var(--color-text-primary);
@@ -1424,10 +1424,6 @@ const ArrowLeftIcon = () => h('svg', {
 
   .path-card--ai__action {
     align-self: flex-start;
-  }
-
-  .path-card--ai .path-card__header h2 {
-    font-size: 30px;
   }
 
   .guide-grid,
