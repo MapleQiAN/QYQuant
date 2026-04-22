@@ -1468,6 +1468,8 @@ const en = {
     toolbarSaveAs: 'Save as New',
     toolbarPublish: 'Publish',
     toolbarSaving: 'Saving...',
+    toolbarThemeLight: 'Light Theme',
+    toolbarThemeDark: 'Dark Theme',
     sidebarTitle: 'Strategy Metadata',
     sidebarName: 'Name',
     sidebarNamePlaceholder: 'Enter strategy name',

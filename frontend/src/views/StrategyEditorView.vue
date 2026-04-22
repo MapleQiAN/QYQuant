@@ -1,5 +1,5 @@
 <template>
-  <div class="editor-root">
+  <div class="editor-root" :class="{ 'editor-light': lightTheme }">
     <!-- Toolbar -->
     <header class="editor-toolbar">
       <div class="toolbar-left">
@@ -11,6 +11,12 @@
         <span class="toolbar-title">{{ isEditing ? t('strategyEditor.toolbarEditing') : t('strategyEditor.toolbarNewStrategy') }}</span>
       </div>
       <div class="toolbar-right">
+        <button class="toolbar-btn" type="button" @click="toggleTheme" :title="lightTheme ? t('strategyEditor.toolbarThemeDark') : t('strategyEditor.toolbarThemeLight')">
+          <!-- Sun icon -->
+          <svg v-if="lightTheme" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+          <!-- Moon icon -->
+          <svg v-else width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+        </button>
         <button
           class="btn btn-primary btn--compact"
           type="button"
@@ -87,6 +93,7 @@ const saving = ref(false)
 const dirty = ref(false)
 const lastSavedAt = ref<number | null>(null)
 const autoSaveSource = ref(false)
+const lightTheme = ref(false)
 let editor: any = null
 let monacoInstance: any = null
 let autoSaveTimer: ReturnType<typeof setTimeout> | null = null
@@ -105,6 +112,13 @@ const lineCount = ref(1)
 const syntaxOk = ref(true)
 
 const canSave = computed(() => form.name.trim() !== '' && form.symbol.trim() !== '')
+
+function toggleTheme() {
+  lightTheme.value = !lightTheme.value
+  if (monacoInstance) {
+    monacoInstance.editor.setTheme(lightTheme.value ? 'vs' : 'vs-dark')
+  }
+}
 
 const syntaxClass = computed(() => syntaxOk.value ? 'status-ok' : 'status-error')
 const syntaxLabel = computed(() => syntaxOk.value ? t('strategyEditor.statusBarSyntaxOk') : t('strategyEditor.statusBarSyntaxError'))
@@ -183,7 +197,7 @@ async function initEditor() {
   editor = monaco.editor.create(editorContainer.value, {
     value: initialCode,
     language: 'python',
-    theme: 'vs-dark',
+    theme: lightTheme.value ? 'vs' : 'vs-dark',
     minimap: { enabled: false },
     fontSize: 14,
     lineNumbers: 'on',
@@ -289,13 +303,21 @@ onBeforeRouteLeave((_to, _from, next) => {
 <style scoped>
 .editor-root {
   position: fixed;
-  inset: 0;
+  top: var(--nav-height, 48px);
+  left: var(--sidebar-width, 220px);
+  right: 0;
+  bottom: 0;
   display: flex;
   flex-direction: column;
   background: #1e1e1e;
   color: #d4d4d4;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  transition: left 250ms var(--ease-out-expo, cubic-bezier(0.16, 1, 0.3, 1));
   z-index: 100;
+}
+
+:global(.sidebar-collapsed) .editor-root {
+  left: var(--sidebar-collapsed-width, 60px);
 }
 
 /* Toolbar */
@@ -440,8 +462,74 @@ onBeforeRouteLeave((_to, _from, next) => {
 
 /* Responsive */
 @media (max-width: 768px) {
+  .editor-root {
+    left: 0;
+  }
+
   .editor-sidebar {
     display: none;
   }
+}
+
+/* Light Theme */
+.editor-light {
+  background: #f3f3f3;
+  color: #333;
+}
+
+.editor-light .editor-toolbar {
+  background: #f9f9f9;
+  border-bottom-color: #e0e0e0;
+}
+
+.editor-light .toolbar-btn {
+  color: #333;
+  border-color: #ccc;
+}
+
+.editor-light .toolbar-btn:hover {
+  background: #e8e8e8;
+}
+
+.editor-light .toolbar-divider {
+  background: #d0d0d0;
+}
+
+.editor-light .toolbar-title {
+  color: #333;
+}
+
+.editor-light .editor-sidebar {
+  background: #f9f9f9;
+  border-right-color: #e0e0e0;
+}
+
+.editor-light .sidebar-heading {
+  color: #666;
+}
+
+.editor-light .form-label {
+  color: #555;
+}
+
+.editor-light .form-input,
+.editor-light .form-textarea {
+  background: #fff;
+  border-color: #ccc;
+  color: #333;
+}
+
+.editor-light .form-input:focus,
+.editor-light .form-textarea:focus {
+  border-color: #007acc;
+}
+
+.editor-light .editor-statusbar {
+  background: #007acc;
+  color: #fff;
+}
+
+.editor-light .status-error {
+  color: #d32f2f;
 }
 </style>

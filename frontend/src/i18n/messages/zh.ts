@@ -1471,6 +1471,8 @@ const zh = {
     toolbarSaveAs: '另存为新策略',
     toolbarPublish: '发布',
     toolbarSaving: '保存中...',
+    toolbarThemeLight: '浅色主题',
+    toolbarThemeDark: '深色主题',
     sidebarTitle: '策略元信息',
     sidebarName: '名称',
     sidebarNamePlaceholder: '输入策略名称',
