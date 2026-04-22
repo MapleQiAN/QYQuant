@@ -16,6 +16,9 @@ import type {
   AiStrategyDraftResult,
   AiStrategyMessage,
   Strategy,
+  StrategyCodePayload,
+  StrategyCodeResult,
+  StrategyCodeUpdateResult,
   StrategyImportAnalysis,
   StrategyImportConfirmPayload,
   StrategyParameterDefinition,
@@ -611,6 +614,32 @@ export function deleteStrategyPreset(strategyId: string, presetId: string): Prom
   return client.request({
     method: 'delete',
     url: `/v1/strategies/${strategyId}/presets/${presetId}`
+  })
+}
+
+export function createStrategyWithCode(payload: StrategyCodePayload): Promise<Strategy> {
+  return client.request({
+    method: 'post',
+    url: '/v1/strategies/code',
+    data: payload
+  })
+}
+
+export function fetchStrategyCode(strategyId: string): Promise<StrategyCodeResult> {
+  return client.request({
+    method: 'get',
+    url: `/v1/strategies/${strategyId}/code`
+  })
+}
+
+export function updateStrategyCode(
+  strategyId: string,
+  payload: { code?: string; metadata?: { name?: string; description?: string; category?: string; tags?: string[] } }
+): Promise<StrategyCodeUpdateResult> {
+  return client.request({
+    method: 'put',
+    url: `/v1/strategies/${strategyId}/code`,
+    data: payload
   })
 }
 

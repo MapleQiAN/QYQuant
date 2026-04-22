@@ -198,6 +198,13 @@
               </div>
             </div>
             <div class="strategy-card__actions">
+              <RouterLink
+                v-if="!isRuntimeAsset(strategy)"
+                class="btn btn-secondary btn--sm"
+                :to="`/strategies/${strategy.id}/edit`"
+              >
+                {{ t('strategyEditor.libraryEdit') }}
+              </RouterLink>
               <button
                 class="btn btn-secondary btn--sm"
                 type="button"

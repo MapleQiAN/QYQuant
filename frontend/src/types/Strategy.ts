@@ -285,3 +285,31 @@ export interface MarketplaceFilters {
   annualReturnGte: number | null
   maxDrawdownLte: number | null
 }
+
+export interface StrategyEditorDraft {
+  code: string
+  name: string
+  symbol: string
+  description?: string
+  category?: string
+  tags?: string[]
+}
+
+export interface StrategyCodePayload {
+  code: string
+  name: string
+  symbol: string
+  description?: string
+  category?: string
+  tags?: string[]
+}
+
+export interface StrategyCodeResult {
+  code: string
+  filename: string
+}
+
+export interface StrategyCodeUpdateResult {
+  id: string
+  updatedAt: number
+}

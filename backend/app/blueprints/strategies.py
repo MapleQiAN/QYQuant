@@ -476,6 +476,110 @@ def generate_user_facing_endpoint():
     return ok({"parameters": result})
 
 
+@bp.post("/v1/strategies/code")
+@jwt_required()
+def create_strategy_with_code():
+    user_id = get_jwt_identity()
+    payload = request.get_json() or {}
+    code = (payload.get("code") or "").strip()
+    name = (payload.get("name") or "").strip()
+    symbol = (payload.get("symbol") or "").strip()
+    if not code:
+        return error_response("CODE_REQUIRED", "Strategy code is required", 400)
+    if not name:
+        return error_response("NAME_REQUIRED", "Strategy name is required", 400)
+    if not symbol:
+        return error_response("SYMBOL_REQUIRED", "Symbol is required", 400)
+
+    tags = payload.get("tags", [])
+    if not isinstance(tags, list):
+        tags = []
+
+    storage_root = Path(os.getenv("STRATEGY_STORAGE_DIR") or Path(__file__).resolve().parents[2] / "storage")
+    storage_key = f"editor/{user_id}/{uuid.uuid4().hex}"
+    code_path = storage_root / storage_key / "strategy.py"
+    code_path.parent.mkdir(parents=True, exist_ok=True)
+    code_path.write_text(code, encoding="utf-8")
+
+    strategy = Strategy(
+        name=name,
+        symbol=symbol,
+        status="draft",
+        source="editor",
+        owner_id=user_id,
+        storage_key=storage_key,
+        description=payload.get("description"),
+        category=payload.get("category"),
+        tags=tags,
+        returns=0,
+        win_rate=0,
+        max_drawdown=0,
+        last_update=now_ms(),
+        trades=0,
+    )
+    db.session.add(strategy)
+    db.session.commit()
+    return ok(StrategySchema().dump(strategy))
+
+
+@bp.get("/v1/strategies/<strategy_id>/code")
+@jwt_required()
+def get_strategy_code(strategy_id):
+    user_id = get_jwt_identity()
+    strategy = _get_accessible_strategy(strategy_id, user_id)
+    if strategy is None:
+        return error_response("STRATEGY_NOT_FOUND", "Strategy not found", 404)
+
+    if not strategy.storage_key:
+        return error_response("CODE_NOT_AVAILABLE", "No source code available for this strategy", 404)
+
+    storage_root = Path(os.getenv("STRATEGY_STORAGE_DIR") or Path(__file__).resolve().parents[2] / "storage")
+    code_path = storage_root / strategy.storage_key / "strategy.py"
+    if not code_path.exists():
+        return error_response("CODE_NOT_AVAILABLE", "Source file not found", 404)
+
+    code = code_path.read_text(encoding="utf-8")
+    return ok({"code": code, "filename": "strategy.py"})
+
+
+@bp.put("/v1/strategies/<strategy_id>/code")
+@jwt_required()
+def update_strategy_code(strategy_id):
+    user_id = get_jwt_identity()
+    strategy = _get_accessible_strategy(strategy_id, user_id)
+    if strategy is None:
+        return error_response("STRATEGY_NOT_FOUND", "Strategy not found", 404)
+
+    payload = request.get_json() or {}
+    code = payload.get("code")
+    if code is not None:
+        if not strategy.storage_key:
+            storage_root = Path(os.getenv("STRATEGY_STORAGE_DIR") or Path(__file__).resolve().parents[2] / "storage")
+            storage_key = f"editor/{user_id}/{uuid.uuid4().hex}"
+            strategy.storage_key = storage_key
+            code_path = storage_root / storage_key / "strategy.py"
+            code_path.parent.mkdir(parents=True, exist_ok=True)
+        else:
+            storage_root = Path(os.getenv("STRATEGY_STORAGE_DIR") or Path(__file__).resolve().parents[2] / "storage")
+            code_path = storage_root / strategy.storage_key / "strategy.py"
+        code_path.write_text(code, encoding="utf-8")
+
+    metadata = payload.get("metadata")
+    if metadata and isinstance(metadata, dict):
+        if "name" in metadata:
+            strategy.name = metadata["name"]
+        if "description" in metadata:
+            strategy.description = metadata["description"]
+        if "category" in metadata:
+            strategy.category = metadata["category"]
+        if "tags" in metadata:
+            strategy.tags = metadata["tags"]
+
+    strategy.last_update = now_ms()
+    db.session.commit()
+    return ok({"id": strategy.id, "updatedAt": strategy.last_update})
+
+
 @bp.delete("/v1/strategies/<strategy_id>")
 @jwt_required()
 def delete_strategy(strategy_id):
