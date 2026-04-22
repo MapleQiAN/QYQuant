@@ -118,7 +118,7 @@
         </article>
 
         <!-- Row 3: Editor card — full width -->
-        <article class="card path-card path-card--editor" @click="openEditor">
+        <article class="card path-card path-card--editor">
           <div class="path-card--editor__content">
             <div class="path-card__header">
               <div class="path-card--ai__badge-row">
@@ -133,7 +133,7 @@
                 <span class="path-check">{{ $t('strategyEditor.newStrategyEditorCheck2') }}</span>
                 <span class="path-check">{{ $t('strategyEditor.newStrategyEditorCheck3') }}</span>
               </div>
-              <button class="btn btn-primary path-card--editor__action" type="button" @click.stop="openEditor">
+              <button class="btn btn-primary path-card--editor__action" type="button" @click="openEditor">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
                 {{ $t('strategyEditor.newStrategyEditorAction') }}
               </button>
@@ -839,18 +839,17 @@ const ArrowLeftIcon = () => h('svg', {
   50% { opacity: 0.7; transform: scale(1.15) rotate(15deg); }
 }
 
-/* Editor card — full width, dark theme */
+/* Editor card — full width, system theme */
 .path-card--editor {
   grid-column: 1 / -1;
-  background: #07111b;
-  border-color: rgba(249, 168, 37, 0.2);
-  cursor: pointer;
+  background: var(--color-surface);
+  border-color: var(--color-border-light);
   transition: border-color 0.2s, box-shadow 0.2s;
 }
 
 .path-card--editor:hover {
-  border-color: rgba(249, 168, 37, 0.45);
-  box-shadow: 0 0 30px rgba(249, 168, 37, 0.06);
+  border-color: var(--color-primary-border);
+  box-shadow: var(--shadow-md);
 }
 
 .path-card--editor__content {
@@ -865,11 +864,11 @@ const ArrowLeftIcon = () => h('svg', {
 }
 
 .path-card--editor .path-card__header h2 {
-  color: #e2e8f0;
+  color: var(--color-text-primary);
 }
 
 .path-card--editor .path-card__description {
-  color: #94a3b8;
+  color: var(--color-text-secondary);
 }
 
 .path-card--editor .path-card__body {
@@ -880,23 +879,23 @@ const ArrowLeftIcon = () => h('svg', {
 }
 
 .path-card--editor .path-check {
-  color: #94a3b8;
+  color: var(--color-text-secondary);
 }
 
 .path-card--editor__action {
   flex-shrink: 0;
-  background: #f9a825 !important;
-  border-color: #000 !important;
-  color: #07111b !important;
-  font-weight: 800 !important;
-  border-radius: var(--radius-full) !important;
-  box-shadow: 3px 3px 0 rgba(0, 0, 0, 0.3);
+  background: var(--color-accent);
+  border-color: var(--color-border);
+  color: var(--color-text-primary);
+  font-weight: var(--font-weight-bold);
+  border-radius: var(--radius-full);
+  box-shadow: 3px 3px 0 rgba(0, 0, 0, 0.15);
   transition: transform 0.15s, box-shadow 0.15s;
 }
 
 .path-card--editor__action:hover {
   transform: translate(-1px, -1px);
-  box-shadow: 4px 4px 0 rgba(0, 0, 0, 0.4);
+  box-shadow: 4px 4px 0 rgba(0, 0, 0, 0.2);
 }
 
 .path-card {
