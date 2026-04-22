@@ -80,12 +80,20 @@ describe('NewStrategyView', () => {
                   aiBadge: 'AI',
                   aiTitle: 'Create with AI',
                   aiHint: 'Use AI',
+                  aiDescription: 'Create a verifiable strategy draft with AI.',
+                  aiTagQyir: 'QYIR',
+                  aiTagNonTuring: 'Non-Turing',
+                  aiTagVerifiable: 'Verifiable',
+                  aiTagAuditable: 'Auditable',
                   aiAction: 'Start AI draft',
                   aiChecklist: {
                     one: 'one',
                     two: 'two',
                     three: 'three',
+                    four: 'four',
+                    five: 'five',
                   },
+                  aiLearnMore: 'Learn more',
                   aiModalTitle: 'AI Strategy Builder',
                   aiModalHint: 'Hint',
                   aiLoading: 'Loading AI connections...',
@@ -140,6 +148,15 @@ describe('NewStrategyView', () => {
                     blank: { name: 'Blank', description: 'Blank desc' },
                   },
                 },
+                strategyEditor: {
+                  messagesNewStrategyTitle: 'Manual',
+                  newStrategyEditorTitle: 'Code editor',
+                  newStrategyEditorDescription: 'Write code directly.',
+                  newStrategyEditorCheck1: 'one',
+                  newStrategyEditorCheck2: 'two',
+                  newStrategyEditorCheck3: 'three',
+                  newStrategyEditorAction: 'Open editor',
+                },
               },
             },
           }),
@@ -187,84 +204,18 @@ describe('NewStrategyView', () => {
     expect(wrapper.text()).toContain('def on_bar(ctx, data):')
     expect(wrapper.text()).toContain('ctx: strategy context')
     expect(wrapper.text()).toContain('Missing on_bar')
-    expect(wrapper.get('[data-testid="strategy-guide-primary"]').exists()).toBe(true)
-    expect(wrapper.get('[data-testid="strategy-guide-secondary"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="strategy-guide-primary"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="strategy-guide-secondary"]').exists()).toBe(true)
   })
 
-  it('creates AI draft and routes to strategy preview', async () => {
-    fetchIntegrationsMock.mockResolvedValue([
-      {
-        id: 'integration-ai-1',
-        providerKey: 'openai_compatible',
-        displayName: 'Strategy AI',
-        status: 'active',
-        configPublic: {},
-        lastValidatedAt: null,
-        lastSuccessAt: null,
-        lastFailureAt: null,
-        lastErrorMessage: null,
-        createdAt: null,
-        updatedAt: null,
-      },
-    ])
-    generateAiStrategyDraftMock.mockResolvedValue({
-      reply: 'Draft ready.',
-      analysis: {
-        draftImportId: 'draft-ai-1',
-        sourceType: 'python_file',
-        entrypointCandidates: [{ path: 'ai-draft.py', callable: 'on_bar', interface: 'event_v1', confidence: 0.8 }],
-        parameterCandidates: [],
-        warnings: [],
-        errors: [],
-        metadataCandidates: {
-          name: 'AI Draft',
-          symbol: 'BTCUSDT',
-          category: 'momentum',
-        },
-      },
-    })
-
+  it('routes the AI creation entry to AI Strategy Lab', async () => {
     const wrapper = mountView()
     await wrapper.get('[data-test="open-ai-builder"]').trigger('click')
-    await flushPromises()
-
-    await wrapper.get('[data-test="ai-prompt"]').setValue('Build a BTC trend strategy')
-    await wrapper.get('[data-test="ai-send"]').trigger('click')
-    await flushPromises()
-
-    expect(generateAiStrategyDraftMock).toHaveBeenCalledWith({
-      integrationId: 'integration-ai-1',
-      messages: [{ role: 'user', content: 'Build a BTC trend strategy' }],
-    })
-
-    await wrapper.get('[data-test="ai-adopt"]').trigger('click')
-
-    expect(sessionStorage.getItem('strategy-import:draft-ai-1')).toContain('"draftImportId":"draft-ai-1"')
-    expect(pushMock).toHaveBeenCalledWith({
-      name: 'strategy-preview',
-      query: { draftImportId: 'draft-ai-1', source: 'ai' },
-    })
-  })
-
-  it('redirects to settings when no AI integration is configured', async () => {
-    fetchIntegrationsMock.mockResolvedValue([])
-
-    const wrapper = mountView()
-    await wrapper.get('[data-test="open-ai-builder"]').trigger('click')
-    await flushPromises()
-
-    expect(wrapper.text()).toContain('Configure your AI connection in Settings before using AI generation.')
-    expect(wrapper.find('[data-test="ai-connect-integration"]').exists()).toBe(false)
-
-    await wrapper.get('[data-test="ai-open-settings"]').trigger('click')
 
     expect(pushMock).toHaveBeenCalledWith({
-      path: '/settings',
-      query: {
-        provider: 'openai_compatible',
-        redirect: '/strategies/new',
-      },
+      name: 'ai-strategy-lab',
     })
-    expect(createIntegrationMock).not.toHaveBeenCalled()
+    expect(fetchIntegrationsMock).not.toHaveBeenCalled()
+    expect(generateAiStrategyDraftMock).not.toHaveBeenCalled()
   })
 })

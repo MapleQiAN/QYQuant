@@ -235,246 +235,27 @@
         </div>
       </div>
 
-      <div v-if="aiModalOpen" class="overlay-backdrop" @click.self="aiModalOpen = false">
-        <div class="card ai-builder">
-          <div class="template-picker__header">
-            <div>
-              <p class="guide-eyebrow">{{ $t('strategyNew.aiTitle') }}</p>
-              <h2>{{ $t('strategyNew.aiModalTitle') }}</h2>
-              <p class="page-subtitle">{{ $t('strategyNew.aiModalHint') }}</p>
-            </div>
-            <button class="btn btn-secondary" type="button" @click="aiModalOpen = false">
-              {{ $t('common.close') }}
-            </button>
-          </div>
-
-          <div v-if="aiLoadingIntegrations" class="empty-panel">
-            {{ $t('strategyNew.aiLoading') }}
-          </div>
-
-          <div v-else class="ai-builder__grid">
-            <section class="ai-sidepanel">
-              <div class="card ai-panel">
-                <h3>{{ $t('strategyNew.aiConnectionTitle') }}</h3>
-
-                <template v-if="aiIntegrations.length > 0">
-                  <label class="field">
-                    <span class="field-label">{{ $t('strategyNew.aiIntegrationLabel') }}</span>
-                    <QSelect v-model="selectedAiIntegrationId" :options="aiIntegrationOptions" data-test="ai-integration-select" />
-                  </label>
-                  <p class="field-hint">{{ $t('strategyNew.aiReuseHint') }}</p>
-                </template>
-
-                <template v-else>
-                  <p class="field-hint">{{ $t('strategyNew.aiSetupHint') }}</p>
-                  <button
-                    data-test="ai-open-settings"
-                    class="btn btn-primary"
-                    type="button"
-                    @click="openAiSettings"
-                  >
-                    {{ $t('strategyNew.aiOpenSettingsAction') }}
-                  </button>
-                </template>
-              </div>
-
-              <div v-if="aiLatestAnalysis" class="card ai-panel">
-                <h3>{{ $t('strategyNew.aiDraftTitle') }}</h3>
-                <div class="summary-rows">
-                  <div class="summary-row">
-                    <span class="summary-label">{{ $t('strategyNew.nameLabel') }}</span>
-                    <span class="summary-value">{{ String(aiLatestMetadata.name || '-') }}</span>
-                  </div>
-                  <div class="summary-row">
-                    <span class="summary-label">{{ $t('strategyNew.symbolLabel') }}</span>
-                    <span class="summary-value">{{ String(aiLatestMetadata.symbol || '-') }}</span>
-                  </div>
-                  <div class="summary-row">
-                    <span class="summary-label">{{ $t('marketplace.category') }}</span>
-                    <span class="summary-value">{{ formatCategory(String(aiLatestMetadata.category || '-')) }}</span>
-                  </div>
-                  <div v-if="aiLatestMetadata.timeframe" class="summary-row">
-                    <span class="summary-label">{{ $t('strategyPreview.timeframe') }}</span>
-                    <span class="summary-value">{{ String(aiLatestMetadata.timeframe) }}</span>
-                  </div>
-                  <div v-if="aiLatestMetadata.riskLevel" class="summary-row">
-                    <span class="summary-label">{{ $t('strategyPreview.riskLevel') }}</span>
-                    <span class="summary-value" :class="`risk-badge risk-badge--${aiLatestMetadata.riskLevel}`">{{ riskLevelLabel(String(aiLatestMetadata.riskLevel)) }}</span>
-                  </div>
-                </div>
-
-                <div v-if="aiLatestMetadata.logicExplanation" class="draft-section">
-                  <h4 class="draft-section__title">{{ $t('strategyPreview.logicTitle') }}</h4>
-                  <p class="draft-section__text">{{ String(aiLatestMetadata.logicExplanation) }}</p>
-                </div>
-
-                <div v-if="aiLatestMetadata.riskRules" class="draft-section">
-                  <h4 class="draft-section__title">{{ $t('strategyPreview.riskRulesTitle') }}</h4>
-                  <p class="draft-section__text">{{ String(aiLatestMetadata.riskRules) }}</p>
-                </div>
-
-                <div v-if="aiLatestMetadata.suitableMarket" class="draft-section">
-                  <h4 class="draft-section__title">{{ $t('strategyPreview.suitableMarket') }}</h4>
-                  <p class="draft-section__text">{{ String(aiLatestMetadata.suitableMarket) }}</p>
-                </div>
-
-                <div v-if="aiLatestAnalysis.parameterCandidates.length" class="draft-section">
-                  <h4 class="draft-section__title">{{ $t('strategyNew.aiParamsDetected') }}</h4>
-                  <div class="param-chips">
-                    <span v-for="param in aiLatestAnalysis.parameterCandidates" :key="param.key" class="param-chip">
-                      {{ param.user_facing && 'label' in param.user_facing ? param.user_facing.label : param.key }}: {{ param.default }}
-                    </span>
-                  </div>
-                </div>
-
-                <div class="validation-block">
-                  <h4 class="validation-title">{{ $t('strategyNew.aiValidationTitle') }}</h4>
-                  <div class="validation-list">
-                    <div class="validation-item">
-                      <span>{{ $t('strategy.import.validationEntrypoint') }}</span>
-                      <strong :class="validationClass(aiLatestAnalysis.entrypointCandidates.length > 0)">{{ validationLabel(aiLatestAnalysis.entrypointCandidates.length > 0) }}</strong>
-                    </div>
-                    <div v-if="aiLatestAnalysis.parameterCandidates.length" class="validation-item">
-                      <span>{{ $t('strategyNew.aiParamsDetected') }}</span>
-                      <strong class="validation-state validation-state--pass">{{ aiLatestAnalysis.parameterCandidates.length }}</strong>
-                    </div>
-                  </div>
-                </div>
-
-                <div v-if="aiLatestAnalysis.warnings.length" class="summary-alert summary-alert--warning">
-                  {{ aiLatestAnalysis.warnings.join(', ') }}
-                </div>
-                <div v-if="aiLatestAnalysis.errors.length" class="summary-alert summary-alert--error">
-                  {{ aiLatestAnalysis.errors.join(', ') }}
-                </div>
-                <button
-                  data-test="ai-adopt"
-                  class="btn btn-primary btn--full"
-                  type="button"
-                  :disabled="!aiCanAdopt"
-                  @click="adoptAiDraft"
-                >
-                  {{ $t('strategyNew.aiAdoptAction') }}
-                </button>
-
-                <div v-if="aiCanAdopt" class="quick-refine">
-                  <p class="quick-refine__label">{{ $t('strategyNew.aiQuickRefine') }}</p>
-                  <div class="quick-refine__chips">
-                    <button v-for="hint in quickRefineHints" :key="hint" class="chip-btn" type="button" @click="applyRefineHint(hint)">{{ hint }}</button>
-                  </div>
-                </div>
-              </div>
-            </section>
-
-            <section class="card ai-chat">
-              <div ref="aiChatMessages" class="ai-chat__messages">
-                <div v-if="aiMessages.length === 0" class="chat-empty">
-                  <p class="chat-empty__title">{{ $t('strategyNew.aiChatEmptyTitle') }}</p>
-                  <p class="chat-empty__subtitle">{{ $t('strategyNew.aiChatEmptySubtitle') }}</p>
-                  <div class="scenario-grid">
-                    <button v-for="scenario in scenarios" :key="scenario.key" class="scenario-card" type="button" @click="applyScenario(scenario)">
-                      <span class="scenario-card__icon">{{ scenario.icon }}</span>
-                      <span class="scenario-card__label">{{ $t(scenario.labelKey) }}</span>
-                    </button>
-                  </div>
-                </div>
-                <article
-                  v-for="(message, index) in aiMessages"
-                  :key="`${message.role}-${index}`"
-                  class="chat-bubble"
-                  :class="`chat-bubble--${message.role}`"
-                >
-                  <p class="chat-bubble__role">{{ message.role === 'user' ? $t('strategyNew.aiUserRole') : $t('strategyNew.aiAssistantRole') }}</p>
-                  <div class="chat-bubble__content" v-html="renderChatContent(message.content)"></div>
-                </article>
-                <div v-if="aiSubmitting" class="chat-bubble chat-bubble--assistant chat-bubble--thinking">
-                  <p class="chat-bubble__role">{{ $t('strategyNew.aiAssistantRole') }}</p>
-                  <div class="thinking-dots">
-                    <span class="thinking-dot"></span>
-                    <span class="thinking-dot"></span>
-                    <span class="thinking-dot"></span>
-                  </div>
-                </div>
-              </div>
-
-              <label class="field ai-chat__composer">
-                <span class="field-label">{{ $t('strategyNew.aiPromptLabel') }}</span>
-                <textarea
-                  v-model="aiPrompt"
-                  data-test="ai-prompt"
-                  class="field-input field-textarea"
-                  :placeholder="$t('strategyNew.aiPromptPlaceholder')"
-                  @keydown.enter.ctrl="handleAiSend"
-                />
-                <span class="field-hint">{{ $t('strategyNew.aiSendShortcut') }}</span>
-              </label>
-              <div class="actions">
-                <button
-                  data-test="ai-send"
-                  class="btn btn-primary"
-                  type="button"
-                  :disabled="aiSubmitting || !aiPrompt.trim()"
-                  @click="handleAiSend"
-                >
-                  <span v-if="aiSubmitting" class="btn-spinner"></span>
-                  {{ aiSubmitting ? $t('strategyNew.aiSending') : $t('strategyNew.aiSendAction') }}
-                </button>
-              </div>
-              <p v-if="aiError" class="form-message error">{{ aiError }}</p>
-            </section>
-          </div>
-        </div>
-      </div>
     </div>
   </section>
 </template>
 
 <script setup lang="ts">
-import { computed, h, nextTick, ref } from 'vue'
+import { computed, h, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { RouterLink, useRouter } from 'vue-router'
-import { fetchIntegrations, type UserIntegration } from '../api/integrations'
-import { analyzeStrategyImport, generateAiStrategyDraft } from '../api/strategies'
+import { analyzeStrategyImport } from '../api/strategies'
 import { strategyTemplates, type StrategyTemplateDefinition } from '../lib/strategyTemplates'
-import type { AiStrategyMessage, StrategyImportAnalysis } from '../types/Strategy'
-import { QSelect } from '../components/ui'
 
 const { t } = useI18n()
 const router = useRouter()
 
 const templates = strategyTemplates
 const templatePickerOpen = ref(false)
-const aiModalOpen = ref(false)
 const isGuideOpen = ref(false)
 const templateState = ref({
   loading: false,
   error: '',
 })
-
-const aiLoadingIntegrations = ref(false)
-const aiIntegrations = ref<UserIntegration[]>([])
-const selectedAiIntegrationId = ref('')
-const aiMessages = ref<AiStrategyMessage[]>([])
-const aiPrompt = ref('')
-const aiSubmitting = ref(false)
-const aiError = ref('')
-const aiLatestAnalysis = ref<StrategyImportAnalysis | null>(null)
-const aiChatMessages = ref<HTMLElement | null>(null)
-
-function scrollToBottom() {
-  nextTick(() => {
-    const el = aiChatMessages.value
-    if (el) el.scrollTop = el.scrollHeight
-  })
-}
-
-function validationLabel(value: boolean) {
-  return value ? 'Passed' : 'Needs review'
-}
-
-function validationClass(value: boolean) {
-  return value ? 'validation-state validation-state--pass' : 'validation-state validation-state--warn'
-}
 
 const minimalGuideCode = computed(() => `from qysp import Order
 
@@ -483,24 +264,6 @@ def on_bar(ctx, data):
     if data.close > data.open:
         return [Order(symbol=data.symbol, side="buy", volume=1)]
     return []`)
-
-const aiLatestMetadata = computed<Record<string, unknown>>(
-  () => (aiLatestAnalysis.value?.metadataCandidates || {}) as Record<string, unknown>
-)
-
-const aiCanAdopt = computed(() => {
-  const analysis = aiLatestAnalysis.value
-  return Boolean(
-    analysis &&
-      analysis.entrypointCandidates.length > 0 &&
-      analysis.errors.length === 0 &&
-      analysis.draftImportId
-  )
-})
-
-const aiIntegrationOptions = computed(() =>
-  aiIntegrations.value.map((i) => ({ label: i.displayName, value: i.id }))
-)
 
 async function handleTemplateSelect(template: StrategyTemplateDefinition) {
   templateState.value = {
@@ -541,140 +304,12 @@ async function handleTemplateSelect(template: StrategyTemplateDefinition) {
   }
 }
 
-async function openAiBuilder() {
-  aiModalOpen.value = true
-  aiError.value = ''
-  await loadAiIntegrations()
+function openAiBuilder() {
+  router.push({ name: 'ai-strategy-lab' })
 }
 
 function openEditor() {
   router.push({ name: 'strategy-editor' })
-}
-
-async function loadAiIntegrations() {
-  aiLoadingIntegrations.value = true
-  try {
-    const integrations = await fetchIntegrations()
-    aiIntegrations.value = integrations.filter((item) => item.providerKey === 'openai_compatible')
-    if (!selectedAiIntegrationId.value && aiIntegrations.value.length > 0) {
-      selectedAiIntegrationId.value = aiIntegrations.value[0].id
-    }
-  } catch (error: any) {
-    aiError.value = error?.message || t('strategyNew.aiError')
-  } finally {
-    aiLoadingIntegrations.value = false
-  }
-}
-
-function openAiSettings() {
-  router.push({
-    path: '/settings',
-    query: {
-      provider: 'openai_compatible',
-      redirect: '/strategies/new',
-    },
-  })
-}
-
-async function handleAiSend() {
-  if (!selectedAiIntegrationId.value) {
-    aiError.value = t('strategyNew.aiSelectIntegration')
-    return
-  }
-  if (!aiPrompt.value.trim()) {
-    return
-  }
-
-  aiSubmitting.value = true
-  aiError.value = ''
-  const pendingMessages: AiStrategyMessage[] = [...aiMessages.value, { role: 'user', content: aiPrompt.value.trim() }]
-  aiMessages.value = pendingMessages
-  const currentPrompt = aiPrompt.value
-  aiPrompt.value = ''
-  scrollToBottom()
-
-  try {
-    const result = await generateAiStrategyDraft({
-      integrationId: selectedAiIntegrationId.value,
-      messages: pendingMessages,
-    })
-    aiMessages.value = [...pendingMessages, { role: 'assistant', content: result.reply }]
-    aiLatestAnalysis.value = result.analysis
-    scrollToBottom()
-  } catch (error: any) {
-    aiPrompt.value = currentPrompt
-    aiError.value = error?.message || t('strategyNew.aiError')
-  } finally {
-    aiSubmitting.value = false
-  }
-}
-
-async function adoptAiDraft() {
-  if (!aiLatestAnalysis.value?.draftImportId) {
-    return
-  }
-  sessionStorage.setItem(`strategy-import:${aiLatestAnalysis.value.draftImportId}`, JSON.stringify(aiLatestAnalysis.value))
-  aiModalOpen.value = false
-  await router.push({
-    name: 'strategy-preview',
-    query: {
-      draftImportId: aiLatestAnalysis.value.draftImportId,
-      source: 'ai',
-    },
-  })
-}
-
-const scenarios = [
-  { key: 'bullish', icon: '📈', labelKey: 'strategyNew.scenarioBullish', prompt: t('strategyNew.scenarioBullishPrompt') },
-  { key: 'bearish', icon: '📉', labelKey: 'strategyNew.scenarioBearish', prompt: t('strategyNew.scenarioBearishPrompt') },
-  { key: 'reversal', icon: '🔄', labelKey: 'strategyNew.scenarioReversal', prompt: t('strategyNew.scenarioReversalPrompt') },
-  { key: 'trend', icon: '🏄', labelKey: 'strategyNew.scenarioTrend', prompt: t('strategyNew.scenarioTrendPrompt') },
-  { key: 'learn', icon: '🎓', labelKey: 'strategyNew.scenarioLearn', prompt: t('strategyNew.scenarioLearnPrompt') },
-]
-
-const quickRefineHints = computed(() => [
-  t('strategyNew.refineAdjustStop'),
-  t('strategyNew.refineChangeSymbol'),
-  t('strategyNew.refineOptimize'),
-  t('strategyNew.refineAddFilter'),
-])
-
-function applyScenario(scenario: typeof scenarios[number]) {
-  aiPrompt.value = scenario.prompt
-}
-
-function applyRefineHint(hint: string) {
-  aiPrompt.value = hint
-}
-
-function formatCategory(cat: string): string {
-  const map: Record<string, string> = {
-    'trend-following': t('strategyPreview.catTrendFollowing'),
-    'mean-reversion': t('strategyPreview.catMeanReversion'),
-    momentum: t('strategyPreview.catMomentum'),
-    'multi-indicator': t('strategyPreview.catMultiIndicator'),
-    other: t('strategyPreview.catOther'),
-  }
-  return map[cat] || cat
-}
-
-function riskLevelLabel(level: string): string {
-  const map: Record<string, string> = {
-    low: t('strategyPreview.riskLow'),
-    medium: t('strategyPreview.riskMedium'),
-    high: t('strategyPreview.riskHigh'),
-  }
-  return map[level] || level
-}
-
-function renderChatContent(content: string): string {
-  return content
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/`([^`]+)`/g, '<code>$1</code>')
-    .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
-    .replace(/\n/g, '<br>')
 }
 
 const ArrowLeftIcon = () => h('svg', {
