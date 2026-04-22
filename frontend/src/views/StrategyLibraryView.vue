@@ -11,17 +11,6 @@
           <p class="page-subtitle">{{ t('strategy.library.pageSubtitle') }}</p>
         </div>
         <div class="header-actions">
-          <RouterLink class="btn btn-ghost" to="/">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
-            {{ t('strategy.library.backToDashboard') }}
-          </RouterLink>
-          <button
-            class="btn btn-secondary"
-            type="button"
-            @click="handleOpenCreateStrategy"
-          >
-            {{ t('strategy.library.createStrategy') }}
-          </button>
           <button
             class="btn btn-primary"
             type="button"
@@ -29,28 +18,7 @@
             @click="handleOpenAiCreate"
           >
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M12 2L14.09 8.26L20 9.27L15.55 13.97L16.91 20L12 16.9L7.09 20L8.45 13.97L4 9.27L9.91 8.26L12 2Z" fill="currentColor"/></svg>
-            {{ t('strategy.library.aiCreateStrategy') }}
-          </button>
-        </div>
-      </div>
-
-      <!-- Search Bar -->
-      <div class="search-bar fade-in">
-        <div class="search-bar__inner">
-          <svg class="search-bar__icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-          <input
-            v-model="searchQuery"
-            class="search-bar__input"
-            type="text"
-            :placeholder="t('strategy.library.searchPlaceholder')"
-          />
-          <button
-            v-if="searchQuery"
-            class="search-bar__clear"
-            type="button"
-            @click="searchQuery = ''"
-          >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            {{ t('strategy.library.createStrategy') }}
           </button>
         </div>
       </div>
@@ -101,28 +69,6 @@
         </div>
       </section>
 
-      <!-- Import Strip -->
-      <div class="import-strip">
-        <div class="import-strip__info">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-          <span class="import-strip__text">{{ t('strategy.library.importStrategyDesc') }}</span>
-          <div class="import-strip__formats">
-            <span class="format-chip">.py</span>
-            <span class="format-chip">.zip</span>
-            <span class="format-chip format-chip--accent">.qys</span>
-          </div>
-        </div>
-        <button
-          class="btn btn-primary btn--compact"
-          type="button"
-          data-test="open-import-wizard"
-          @click="handleOpenImportWizard"
-        >
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-          {{ t('strategy.library.openImportWizard') }}
-        </button>
-      </div>
-
       <!-- Library Section -->
       <div class="card library-card">
         <div class="library-card__header">
@@ -132,8 +78,24 @@
             </div>
             <h2 class="section-title">{{ t('strategy.library.myStrategies') }}</h2>
             <span class="count-badge">{{ total }}</span>
+            <div class="search-bar__inner">
+              <svg class="search-bar__icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+              <input
+                v-model="searchQuery"
+                class="search-bar__input"
+                type="text"
+                :placeholder="t('strategy.library.searchPlaceholder')"
+              />
+              <button
+                v-if="searchQuery"
+                class="search-bar__clear"
+                type="button"
+                @click="searchQuery = ''"
+              >
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+              </button>
+            </div>
           </div>
-          <p class="section-subtitle">{{ t('strategy.library.itemCount', { count: total, plural: total !== 1 ? 's' : '' }) }}</p>
         </div>
 
         <div v-if="loading" class="empty-state">
@@ -371,14 +333,6 @@ async function loadGuidedStrategies() {
   }
 }
 
-async function handleOpenImportWizard() {
-  await router.push('/strategies/import')
-}
-
-async function handleOpenCreateStrategy() {
-  await router.push('/strategies/new')
-}
-
 async function handleOpenAiCreate() {
   await router.push({ path: '/strategies/new', query: { mode: 'ai' } })
 }
@@ -556,19 +510,17 @@ function statusClass(status?: MarketplaceReviewStatus) {
 }
 
 /* ── Search Bar ── */
-.search-bar {
-  margin-bottom: var(--spacing-lg);
-}
-
 .search-bar__inner {
   display: flex;
   align-items: center;
   gap: var(--spacing-sm);
-  padding: 0 var(--spacing-md);
-  height: 40px;
+  padding: 0 var(--spacing-sm);
+  height: 30px;
+  margin-left: auto;
+  width: 220px;
   background: var(--color-surface);
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-md);
   transition: border-color 0.2s, box-shadow 0.2s;
 }
 
@@ -657,24 +609,7 @@ function statusClass(status?: MarketplaceReviewStatus) {
   flex-shrink: 0;
 }
 
-/* ── Import Strip ── */
-.import-strip {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--spacing-md);
-  padding: var(--spacing-md) var(--spacing-lg);
-  margin-bottom: var(--spacing-lg);
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
-  transition: border-color 0.2s;
-}
-
-.import-strip:hover {
-  border-color: var(--color-primary-border);
-}
-
+/* ── Runtime Asset ── */
 .runtime-asset {
   margin-top: var(--spacing-sm);
 }
@@ -695,53 +630,6 @@ function statusClass(status?: MarketplaceReviewStatus) {
   color: var(--color-text-secondary);
   font-size: var(--font-size-xs);
   line-height: 1.5;
-}
-
-.import-strip__info {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-md);
-  flex: 1;
-  min-width: 0;
-  color: var(--color-text-muted);
-}
-
-.import-strip__text {
-  font-size: var(--font-size-sm);
-  color: var(--color-text-secondary);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.import-strip__formats {
-  display: flex;
-  gap: 4px;
-  flex-shrink: 0;
-}
-
-.format-chip {
-  padding: 2px 7px;
-  border-radius: var(--radius-sm);
-  background: var(--color-surface-elevated);
-  border: 1px solid var(--color-border);
-  color: var(--color-text-muted);
-  font-size: 10px;
-  font-family: var(--font-mono);
-  font-weight: 700;
-  letter-spacing: 0.02em;
-}
-
-.format-chip--accent {
-  border-color: var(--color-primary-border);
-  color: var(--color-accent);
-  background: var(--color-primary-bg);
-}
-
-.btn--compact {
-  padding: 7px 16px;
-  font-size: var(--font-size-xs);
-  flex-shrink: 0;
 }
 
 /* ── Library Card ── */
@@ -1098,19 +986,6 @@ function statusClass(status?: MarketplaceReviewStatus) {
     width: 100%;
     justify-content: flex-start;
     flex-wrap: wrap;
-  }
-
-  .search-bar__inner {
-    height: 38px;
-  }
-
-  .import-strip {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .import-strip__formats {
-    display: none;
   }
 
   .strategy-card {
