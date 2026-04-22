@@ -2,6 +2,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { flushPromises, mount } from '@vue/test-utils'
 import { createI18n } from 'vue-i18n'
+import en from '../i18n/messages/en'
 import AiStrategyLabView from './AiStrategyLabView.vue'
 
 const {
@@ -46,7 +47,7 @@ describe('AiStrategyLabView', () => {
           createI18n({
             legacy: false,
             locale: 'en',
-            messages: { en: {} },
+            messages: { en },
           }),
         ],
       },

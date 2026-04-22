@@ -1,34 +1,52 @@
 <template>
   <section class="ai-lab-view">
+    <!-- Ambient background -->
+    <div class="ai-lab-ambient" aria-hidden="true">
+      <div class="ai-lab-ambient__grid"></div>
+      <div class="ai-lab-ambient__glow ai-lab-ambient__glow--left"></div>
+      <div class="ai-lab-ambient__glow ai-lab-ambient__glow--right"></div>
+    </div>
+
     <div class="ai-lab-shell">
       <header class="ai-lab-header">
         <div class="ai-lab-header__copy">
-          <p class="ai-lab-eyebrow">{{ copy.eyebrow }}</p>
+          <div class="ai-lab-eyebrow-row">
+            <span class="ai-lab-eyebrow">{{ copy.eyebrow }}</span>
+            <span class="ai-lab-header__divider"></span>
+            <span class="connection-pill" :class="connectionClass">
+              <span class="status-dot"></span>
+              {{ connectionLabel }}
+            </span>
+          </div>
           <h1>{{ copy.title }}</h1>
           <p>{{ copy.subtitle }}</p>
         </div>
 
         <div class="ai-lab-header__actions">
-          <span class="connection-pill" :class="connectionClass">
-            <span class="status-dot"></span>
-            {{ connectionLabel }}
-          </span>
-          <RouterLink class="btn btn-secondary" :to="{ name: 'strategy-new' }">
+          <RouterLink class="btn btn-ghost" :to="{ name: 'strategy-new' }">
             {{ copy.back }}
           </RouterLink>
         </div>
       </header>
 
       <nav class="stage-rail" aria-label="AI strategy generation stage">
-        <span
-          v-for="stage in stages"
-          :key="stage.key"
-          class="stage-rail__item"
-          :class="{ 'stage-rail__item--active': stage.key === currentStage }"
-        >
-          <span class="stage-rail__index">{{ stage.index }}</span>
-          <span>{{ stage.label }}</span>
-        </span>
+        <div class="stage-rail__track">
+          <span
+            v-for="(stage, idx) in stages"
+            :key="stage.key"
+            class="stage-rail__item"
+            :class="{
+              'stage-rail__item--active': stage.key === currentStage,
+              'stage-rail__item--done': stageDone(idx)
+            }"
+          >
+            <span class="stage-rail__dot">
+              <span class="stage-rail__dot-inner"></span>
+            </span>
+            <span class="stage-rail__label">{{ stage.label }}</span>
+            <span v-if="idx < stages.length - 1" class="stage-rail__line"></span>
+          </span>
+        </div>
       </nav>
 
       <div class="mobile-tabs" role="tablist" aria-label="AI Lab panels">
@@ -82,10 +100,10 @@
           <label class="field">
             <span>{{ copy.market }}</span>
             <select v-model="brief.market" class="field-control">
-              <option value="crypto">Crypto</option>
-              <option value="gold">Gold</option>
-              <option value="stock">Stock</option>
-              <option value="futures">Futures</option>
+              <option value="crypto">{{ t('aiLab.marketCrypto') }}</option>
+              <option value="gold">{{ t('aiLab.marketGold') }}</option>
+              <option value="stock">{{ t('aiLab.marketStock') }}</option>
+              <option value="futures">{{ t('aiLab.marketFutures') }}</option>
             </select>
           </label>
 
@@ -107,11 +125,11 @@
           <label class="field">
             <span>{{ copy.strategyStyle }}</span>
             <select v-model="brief.strategyStyle" class="field-control">
-              <option value="trend-following">Trend following</option>
-              <option value="mean-reversion">Mean reversion</option>
-              <option value="momentum">Momentum</option>
-              <option value="breakout">Breakout</option>
-              <option value="multi-factor">Multi-factor</option>
+              <option value="trend-following">{{ t('aiLab.styleTrendFollowing') }}</option>
+              <option value="mean-reversion">{{ t('aiLab.styleMeanReversion') }}</option>
+              <option value="momentum">{{ t('aiLab.styleMomentum') }}</option>
+              <option value="breakout">{{ t('aiLab.styleBreakout') }}</option>
+              <option value="multi-factor">{{ t('aiLab.styleMultiFactor') }}</option>
             </select>
           </label>
 
@@ -145,14 +163,14 @@
             <span>{{ copy.constraints }}</span>
             <div class="constraint-list">
               <button
-                v-for="constraint in constraints"
-                :key="constraint"
+                v-for="item in constraintList"
+                :key="item.key"
                 class="constraint-chip"
-                :class="{ 'constraint-chip--active': brief.constraints.includes(constraint) }"
+                :class="{ 'constraint-chip--active': brief.constraints.includes(item.key) }"
                 type="button"
-                @click="toggleConstraint(constraint)"
+                @click="toggleConstraint(item.key)"
               >
-                {{ constraint }}
+                {{ item.label }}
               </button>
             </div>
           </div>
@@ -232,12 +250,12 @@
             <div class="quick-refine">
               <button
                 v-for="hint in quickRefineHints"
-                :key="hint"
+                :key="hint.key"
                 class="quick-refine__chip"
                 type="button"
-                @click="applyRefineHint(hint)"
+                @click="applyRefineHint(hint.label)"
               >
-                {{ hint }}
+                {{ hint.label }}
               </button>
             </div>
 
@@ -409,158 +427,99 @@ interface StrategyBriefState {
   notes: string
 }
 
-const { locale } = useI18n()
+const { t } = useI18n()
 const router = useRouter()
 
-const copy = computed(() => {
-  const zh = String(locale.value || '').startsWith('zh')
-  return zh
-    ? {
-        eyebrow: 'AI 策略引擎',
-        title: 'AI Strategy Lab',
-        subtitle: '把交易想法拆成可验证的策略草案，再进入预览、导入和回测。',
-        back: '返回新建策略',
-        briefKicker: 'Strategy Brief',
-        briefTitle: '策略意图',
-        briefQuality: '简报质量',
-        market: '市场',
-        symbol: '标的',
-        timeframe: '周期',
-        strategyStyle: '策略风格',
-        direction: '方向',
-        maxDrawdown: '最大回撤 %',
-        positionRatio: '仓位比例 %',
-        constraints: '约束',
-        notes: '补充说明',
-        notesPlaceholder: '例如：只做多，避免高频，突破后等待确认，不使用未来数据。',
-        consoleKicker: 'AI Research Console',
-        consoleTitle: '研究控制台',
-        settings: 'AI 设置',
-        loadingConnection: '正在加载 AI 连接...',
-        noConnectionTitle: '需要先配置 AI 连接',
-        noConnectionBody: '在设置页保存 OpenAI Compatible 连接后，即可生成策略草案。',
-        connectAction: '去设置',
-        aiConnection: 'AI 连接',
-        logEmptyTitle: '从策略意图开始',
-        logEmptyBody: '左侧结构化简报会和你的补充描述一起发送给 AI。',
-        userRole: '你',
-        aiRole: 'AI',
-        generating: '生成中',
-        generatingBody: '正在生成策略逻辑、参数和验证信息。',
-        promptLabel: '补充描述',
-        promptPlaceholder: '描述你的市场假设、信号、过滤器或想优化的风险点。Ctrl+Enter 生成。',
-        generateAction: '生成可验证草案',
-        draftKicker: 'Verified Draft',
-        draftTitle: '可验证草案',
-        noDraftTitle: '暂无草案',
-        noDraftBody: '生成后会在这里展示摘要、参数、验证状态和风险警告。',
-        name: '名称',
-        riskLevel: '风险等级',
-        logic: '策略逻辑',
-        riskRules: '风控规则',
-        parameters: '参数',
-        paramName: '参数',
-        paramDefault: '默认值',
-        noParams: '未识别到参数。',
-        validation: '验证',
-        entrypoint: '入口函数',
-        errors: '错误',
-        pass: '通过',
-        warn: '待复核',
-        adopt: '采用草案',
-        adoptWithWarning: '带警告采用',
-        blocked: '修复阻塞项',
-        refineAction: '继续优化',
-        refineMore: '继续优化这份草案，优先降低回撤并解释修改原因。',
-      }
-    : {
-        eyebrow: 'AI Strategy Engine',
-        title: 'AI Strategy Lab',
-        subtitle: 'Turn a market thesis into a verifiable draft before preview, import, and backtest.',
-        back: 'Back to creation',
-        briefKicker: 'Strategy Brief',
-        briefTitle: 'Strategy intent',
-        briefQuality: 'Brief quality',
-        market: 'Market',
-        symbol: 'Symbol',
-        timeframe: 'Timeframe',
-        strategyStyle: 'Strategy style',
-        direction: 'Direction',
-        maxDrawdown: 'Max drawdown %',
-        positionRatio: 'Position ratio %',
-        constraints: 'Constraints',
-        notes: 'Notes',
-        notesPlaceholder: 'Example: long only, avoid high frequency, confirm breakouts, no look-ahead data.',
-        consoleKicker: 'AI Research Console',
-        consoleTitle: 'Research console',
-        settings: 'AI settings',
-        loadingConnection: 'Loading AI connections...',
-        noConnectionTitle: 'AI connection required',
-        noConnectionBody: 'Save an OpenAI Compatible connection in Settings before generating a strategy draft.',
-        connectAction: 'Open settings',
-        aiConnection: 'AI connection',
-        logEmptyTitle: 'Start from the strategy brief',
-        logEmptyBody: 'The structured brief and your extra notes will be sent to AI together.',
-        userRole: 'You',
-        aiRole: 'AI',
-        generating: 'Generating',
-        generatingBody: 'Generating strategy logic, parameters, and validation details.',
-        promptLabel: 'Additional prompt',
-        promptPlaceholder: 'Describe market thesis, signals, filters, or risk changes. Ctrl+Enter to generate.',
-        generateAction: 'Generate verified draft',
-        draftKicker: 'Verified Draft',
-        draftTitle: 'Verifiable draft',
-        noDraftTitle: 'No draft yet',
-        noDraftBody: 'After generation, summary, parameters, validation, and risk warnings appear here.',
-        name: 'Name',
-        riskLevel: 'Risk level',
-        logic: 'Strategy logic',
-        riskRules: 'Risk rules',
-        parameters: 'Parameters',
-        paramName: 'Parameter',
-        paramDefault: 'Default',
-        noParams: 'No parameters detected.',
-        validation: 'Validation',
-        entrypoint: 'Entrypoint',
-        errors: 'Errors',
-        pass: 'Pass',
-        warn: 'Review',
-        adopt: 'Adopt draft',
-        adoptWithWarning: 'Adopt with warnings',
-        blocked: 'Fix blockers',
-        refineAction: 'Refine',
-        refineMore: 'Refine this draft with lower drawdown first, and explain what changed.',
-      }
-})
+const copy = computed(() => ({
+  eyebrow: t('aiLab.eyebrow'),
+  title: t('aiLab.title'),
+  subtitle: t('aiLab.subtitle'),
+  back: t('aiLab.back'),
+  briefKicker: t('aiLab.briefKicker'),
+  briefTitle: t('aiLab.briefTitle'),
+  briefQuality: t('aiLab.briefQuality'),
+  market: t('aiLab.market'),
+  symbol: t('aiLab.symbol'),
+  timeframe: t('aiLab.timeframe'),
+  strategyStyle: t('aiLab.strategyStyle'),
+  direction: t('aiLab.direction'),
+  maxDrawdown: t('aiLab.maxDrawdown'),
+  positionRatio: t('aiLab.positionRatio'),
+  constraints: t('aiLab.constraints'),
+  notes: t('aiLab.notes'),
+  notesPlaceholder: t('aiLab.notesPlaceholder'),
+  consoleKicker: t('aiLab.consoleKicker'),
+  consoleTitle: t('aiLab.consoleTitle'),
+  settings: t('aiLab.settings'),
+  loadingConnection: t('aiLab.loadingConnection'),
+  noConnectionTitle: t('aiLab.noConnectionTitle'),
+  noConnectionBody: t('aiLab.noConnectionBody'),
+  connectAction: t('aiLab.connectAction'),
+  aiConnection: t('aiLab.aiConnection'),
+  logEmptyTitle: t('aiLab.logEmptyTitle'),
+  logEmptyBody: t('aiLab.logEmptyBody'),
+  userRole: t('aiLab.userRole'),
+  aiRole: t('aiLab.aiRole'),
+  generating: t('aiLab.generating'),
+  generatingBody: t('aiLab.generatingBody'),
+  promptLabel: t('aiLab.promptLabel'),
+  promptPlaceholder: t('aiLab.promptPlaceholder'),
+  generateAction: t('aiLab.generateAction'),
+  draftKicker: t('aiLab.draftKicker'),
+  draftTitle: t('aiLab.draftTitle'),
+  noDraftTitle: t('aiLab.noDraftTitle'),
+  noDraftBody: t('aiLab.noDraftBody'),
+  name: t('aiLab.name'),
+  riskLevel: t('aiLab.riskLevel'),
+  logic: t('aiLab.logic'),
+  riskRules: t('aiLab.riskRules'),
+  parameters: t('aiLab.parameters'),
+  paramName: t('aiLab.paramName'),
+  paramDefault: t('aiLab.paramDefault'),
+  noParams: t('aiLab.noParams'),
+  validation: t('aiLab.validation'),
+  entrypoint: t('aiLab.entrypoint'),
+  errors: t('aiLab.errors'),
+  pass: t('aiLab.pass'),
+  warn: t('aiLab.warn'),
+  adopt: t('aiLab.adopt'),
+  adoptWithWarning: t('aiLab.adoptWithWarning'),
+  blocked: t('aiLab.blocked'),
+  refineAction: t('aiLab.refineAction'),
+  refineMore: t('aiLab.refineMore'),
+}))
 
-const modes = [
-  { value: 'guided' as const, label: 'Guided', description: 'AI asks for missing inputs' },
-  { value: 'mixed' as const, label: 'Mixed', description: 'AI plus manual constraints' },
-  { value: 'expert' as const, label: 'Expert', description: 'Direct control of assumptions' },
-]
+const modes = computed(() => [
+  { value: 'guided' as const, label: t('aiLab.modeGuided'), description: t('aiLab.modeGuidedDesc') },
+  { value: 'mixed' as const, label: t('aiLab.modeMixed'), description: t('aiLab.modeMixedDesc') },
+  { value: 'expert' as const, label: t('aiLab.modeExpert'), description: t('aiLab.modeExpertDesc') },
+])
 
-const directions = [
-  { value: 'long-only', label: 'Long' },
-  { value: 'short-only', label: 'Short' },
-  { value: 'long-short', label: 'L/S' },
-]
+const directions = computed(() => [
+  { value: 'long-only', label: t('aiLab.directionLong') },
+  { value: 'short-only', label: t('aiLab.directionShort') },
+  { value: 'long-short', label: t('aiLab.directionLongShort') },
+])
 
-const stages = [
-  { key: 'brief' as const, index: '01', label: 'Brief' },
-  { key: 'clarify' as const, index: '02', label: 'Clarify' },
-  { key: 'design' as const, index: '03', label: 'Design' },
-  { key: 'validate' as const, index: '04', label: 'Validate' },
-  { key: 'package' as const, index: '05', label: 'Package' },
-]
+const stages = computed(() => [
+  { key: 'brief' as const, index: '01', label: t('aiLab.stageBrief') },
+  { key: 'clarify' as const, index: '02', label: t('aiLab.stageClarify') },
+  { key: 'design' as const, index: '03', label: t('aiLab.stageDesign') },
+  { key: 'validate' as const, index: '04', label: t('aiLab.stageValidate') },
+  { key: 'package' as const, index: '05', label: t('aiLab.stagePackage') },
+])
 
-const mobileTabs = [
-  { key: 'brief' as const, label: 'Brief' },
-  { key: 'console' as const, label: 'Console' },
-  { key: 'draft' as const, label: 'Draft' },
-]
+const mobileTabs = computed(() => [
+  { key: 'brief' as const, label: t('aiLab.mobileTabBrief') },
+  { key: 'console' as const, label: t('aiLab.mobileTabConsole') },
+  { key: 'draft' as const, label: t('aiLab.mobileTabDraft') },
+])
 
-const constraints = ['No leverage', 'Long only', 'No high frequency', 'Stop loss required', 'Explainable rules', 'Low turnover']
-const quickRefineHints = ['Lower drawdown', 'Add stop loss', 'Reduce trade frequency', 'Use daily timeframe', 'Tighten parameter bounds']
+const constraintKeys = ['constraintNoLeverage', 'constraintLongOnly', 'constraintNoHighFreq', 'constraintStopLoss', 'constraintExplainable', 'constraintLowTurnover'] as const
+const constraintList = computed(() => constraintKeys.map((key) => ({ key, label: t(`aiLab.${key}`) })))
+
+const quickRefineHintKeys = ['refineLowerDrawdown', 'refineAddStopLoss', 'refineReduceFreq', 'refineDailyTf', 'refineTightenBounds'] as const
+const quickRefineHints = computed(() => quickRefineHintKeys.map((key) => ({ key, label: t(`aiLab.${key}`) })))
 
 const brief = reactive<StrategyBriefState>({
   mode: 'guided',
@@ -573,7 +532,7 @@ const brief = reactive<StrategyBriefState>({
     maxDrawdownPct: 15,
     positionRatio: 30,
   },
-  constraints: ['No leverage', 'Stop loss required', 'Explainable rules'],
+  constraints: ['constraintNoLeverage', 'constraintStopLoss', 'constraintExplainable'],
   notes: '',
 })
 
@@ -593,7 +552,7 @@ const briefQuality = computed(() => {
   if (brief.symbol && brief.market && brief.timeframe) score += 1
   if (brief.strategyStyle && brief.direction && brief.constraints.length >= 2) score += 1
   if (brief.notes || brief.riskLimits.maxDrawdownPct || brief.riskLimits.positionRatio) score += 1
-  const labels = ['Incomplete', 'Enough for draft', 'Strong brief']
+  const labels = [t('aiLab.briefQualityIncomplete'), t('aiLab.briefQualityEnough'), t('aiLab.briefQualityStrong')]
   return { score, label: labels[Math.max(0, score - 1)] ?? labels[0] }
 })
 
@@ -605,7 +564,7 @@ const currentStage = computed<GenerationStage>(() => {
   return 'package'
 })
 
-const currentStageLabel = computed(() => stages.find((stage) => stage.key === currentStage.value)?.label ?? 'AI')
+const currentStageLabel = computed(() => stages.value.find((stage) => stage.key === currentStage.value)?.label ?? 'AI')
 
 const hasEntrypoint = computed(() => (aiLatestAnalysis.value?.entrypointCandidates.length ?? 0) > 0)
 
@@ -647,6 +606,13 @@ const connectionClass = computed(() => ({
   'connection-pill--ready': !aiLoadingIntegrations.value && aiIntegrations.value.length > 0,
 }))
 
+const stageOrder: GenerationStage[] = ['brief', 'clarify', 'design', 'validate', 'package']
+
+function stageDone(idx: number): boolean {
+  const currentIdx = stageOrder.indexOf(currentStage.value)
+  return idx < currentIdx
+}
+
 function mobilePanelClass(tab: MobileTab) {
   return { 'lab-panel--mobile-hidden': activeMobileTab.value !== tab }
 }
@@ -660,7 +626,17 @@ function toggleConstraint(constraint: string) {
   }
 }
 
+const enConstraintLabels: Record<string, string> = {
+  constraintNoLeverage: 'No leverage',
+  constraintLongOnly: 'Long only',
+  constraintNoHighFreq: 'No high frequency',
+  constraintStopLoss: 'Stop loss required',
+  constraintExplainable: 'Explainable rules',
+  constraintLowTurnover: 'Low turnover',
+}
+
 function compileBriefMessage(): string {
+  const constraintText = brief.constraints.map((key) => enConstraintLabels[key] || key).join(', ') || 'none'
   const lines = [
     'Create a QYQuant executable strategy draft from this structured brief.',
     `Mode: ${brief.mode}`,
@@ -670,7 +646,7 @@ function compileBriefMessage(): string {
     `Style: ${brief.strategyStyle}`,
     `Direction: ${brief.direction}`,
     `Risk: max drawdown ${brief.riskLimits.maxDrawdownPct}%, position ratio ${brief.riskLimits.positionRatio}%`,
-    `Constraints: ${brief.constraints.join(', ') || 'none'}`,
+    `Constraints: ${constraintText}`,
   ]
   if (brief.notes) lines.push(`User notes: ${brief.notes}`)
   if (aiPrompt.value) lines.push(`Additional request: ${aiPrompt.value}`)
@@ -772,9 +748,9 @@ function metadataText(key: string): string {
 
 function riskLevelLabel(level: string): string {
   const map: Record<string, string> = {
-    low: 'Low',
-    medium: 'Medium',
-    high: 'High',
+    low: t('aiLab.riskLevelLow'),
+    medium: t('aiLab.riskLevelMedium'),
+    high: t('aiLab.riskLevelHigh'),
   }
   return map[level] || level
 }
@@ -797,31 +773,78 @@ onMounted(() => {
 </script>
 
 <style scoped>
+/* ═══════════════════════════════════════════════════════
+   AI Strategy Lab — Premium Quant Terminal
+   ═══════════════════════════════════════════════════════ */
+
 .ai-lab-view {
   width: 100%;
+  position: relative;
+  animation: labFadeIn 600ms var(--ease-out-expo) both;
+}
+
+@keyframes labFadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+/* ── Ambient Background ── */
+.ai-lab-ambient {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  overflow: hidden;
+}
+
+.ai-lab-ambient__grid {
+  position: absolute;
+  inset: 0;
+  background-image:
+    radial-gradient(circle, rgba(25, 118, 210, 0.06) 1px, transparent 1px);
+  background-size: 32px 32px;
+}
+
+.ai-lab-ambient__glow {
+  position: absolute;
+  width: 600px;
+  height: 600px;
+  border-radius: 50%;
+  filter: blur(120px);
+  opacity: 0.12;
+}
+
+.ai-lab-ambient__glow--left {
+  top: 10%;
+  left: -10%;
+  background: var(--color-accent);
+}
+
+.ai-lab-ambient__glow--right {
+  bottom: 5%;
+  right: -8%;
+  background: var(--color-primary);
 }
 
 .ai-lab-shell {
+  position: relative;
+  z-index: 1;
   max-width: 1760px;
   margin: 0 auto;
   padding: 0 var(--spacing-lg) var(--spacing-xl);
 }
 
+/* ── Layout Primitives ── */
 .ai-lab-header,
 .panel-heading--row,
 .ai-lab-header__actions,
-.stage-rail,
+.ai-lab-eyebrow-row,
+.stage-rail__track,
 .mobile-tabs,
 .console-actions,
 .draft-actions {
   display: flex;
   align-items: center;
-}
-
-.ai-lab-header {
-  justify-content: space-between;
-  gap: var(--spacing-lg);
-  margin-bottom: var(--spacing-md);
 }
 
 .ai-lab-header__copy,
@@ -831,13 +854,6 @@ onMounted(() => {
 .empty-state {
   display: grid;
   gap: var(--spacing-xs);
-}
-
-.ai-lab-header h1 {
-  margin: 0;
-  font-size: clamp(28px, 4vw, 48px);
-  line-height: 1;
-  letter-spacing: 0;
 }
 
 .ai-lab-header p,
@@ -854,137 +870,334 @@ onMounted(() => {
   margin: 0;
 }
 
-.ai-lab-eyebrow,
-.panel-kicker {
+/* ── Header ── */
+.ai-lab-header {
+  justify-content: space-between;
+  gap: var(--spacing-lg);
+  padding: var(--spacing-xl) 0 var(--spacing-lg);
+}
+
+.ai-lab-eyebrow-row {
+  gap: var(--spacing-sm);
+  margin-bottom: var(--spacing-xs);
+}
+
+.ai-lab-header__divider {
+  width: 1px;
+  height: 16px;
+  background: var(--color-border-light);
+}
+
+.ai-lab-header h1 {
+  margin: 0;
+  font-size: clamp(24px, 3.2vw, 38px);
+  line-height: 1.05;
+  letter-spacing: -0.04em;
+  font-weight: 900;
+  color: var(--color-text-primary);
+}
+
+.ai-lab-header p {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-md);
+  line-height: 1.6;
+  max-width: 520px;
+}
+
+.ai-lab-eyebrow {
   color: var(--color-accent);
   font-size: var(--font-size-xs);
   font-weight: 800;
-  letter-spacing: 0;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
 }
 
 .ai-lab-header__actions {
   justify-content: flex-end;
-  gap: var(--spacing-sm);
   flex-wrap: wrap;
 }
 
+/* ── Connection Pill ── */
 .connection-pill {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  min-height: 34px;
-  padding: 6px 12px;
-  border: 2px solid var(--color-border);
-  border-radius: var(--radius-sm);
+  gap: 6px;
+  min-height: 28px;
+  padding: 4px 12px;
+  border: 1.5px solid var(--color-border-light);
+  border-radius: var(--radius-full);
   background: var(--color-surface);
   color: var(--color-text-secondary);
-  font-size: var(--font-size-sm);
+  font-size: 11px;
   font-weight: 700;
+  font-family: var(--font-mono);
+  transition: all var(--transition-normal);
+}
+
+.connection-pill--ready {
+  border-color: rgba(46, 125, 50, 0.3);
 }
 
 .status-dot {
-  width: 8px;
-  height: 8px;
+  width: 6px;
+  height: 6px;
   border-radius: var(--radius-full);
-  background: var(--color-warning);
+  background: var(--color-text-muted);
+  transition: background var(--transition-normal);
 }
 
-.connection-pill--ready .status-dot,
-.draft-status--pass .status-dot {
+.connection-pill--ready .status-dot {
   background: var(--color-success);
+  box-shadow: 0 0 8px rgba(46, 125, 50, 0.5);
+}
+
+.connection-pill--loading .status-dot {
+  animation: statusPulse 1.5s ease-in-out infinite;
 }
 
 .connection-pill--blocked .status-dot,
 .draft-status--block .status-dot {
   background: var(--color-danger);
+  animation: statusPulse 2s ease-in-out infinite;
 }
 
+@keyframes statusPulse {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0.3; }
+}
+
+/* ── Stage Rail ── */
 .stage-rail {
-  gap: var(--spacing-xs);
-  margin-bottom: var(--spacing-md);
-  padding: var(--spacing-xs);
-  border: 2px solid var(--color-border);
-  border-radius: var(--radius-sm);
-  background: var(--color-surface);
+  margin-bottom: var(--spacing-lg);
+  padding: var(--spacing-sm) 0;
   overflow-x: auto;
+}
+
+.stage-rail__track {
+  gap: 0;
+  width: 100%;
+  min-width: max-content;
 }
 
 .stage-rail__item {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  min-width: max-content;
-  padding: 8px 12px;
-  border-radius: var(--radius-xs);
   color: var(--color-text-muted);
-  font-size: var(--font-size-sm);
+  font-size: var(--font-size-xs);
   font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  transition: color var(--transition-normal);
+}
+
+.stage-rail__dot {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 2px solid var(--color-border-light);
+  background: var(--color-surface);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: all var(--transition-normal);
+}
+
+.stage-rail__dot-inner {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--color-border-light);
+  transition: all var(--transition-normal);
+}
+
+.stage-rail__line {
+  flex: 1;
+  min-width: 24px;
+  height: 2px;
+  background: var(--color-border-light);
+  margin: 0 var(--spacing-xs);
+  transition: background var(--transition-normal);
+}
+
+.stage-rail__item--done .stage-rail__dot {
+  border-color: var(--color-primary);
+  background: var(--color-primary);
+}
+
+.stage-rail__item--done .stage-rail__dot-inner {
+  background: #fff;
+}
+
+.stage-rail__item--done .stage-rail__line {
+  background: var(--color-primary);
+}
+
+.stage-rail__item--done {
+  color: var(--color-primary);
+}
+
+.stage-rail__item--active .stage-rail__dot {
+  border-color: var(--color-primary);
+  background: var(--color-surface);
+  box-shadow: 0 0 0 4px rgba(25, 118, 210, 0.12), 0 0 16px rgba(25, 118, 210, 0.15);
+}
+
+.stage-rail__item--active .stage-rail__dot-inner {
+  background: var(--color-primary);
+  box-shadow: 0 0 6px rgba(25, 118, 210, 0.5);
 }
 
 .stage-rail__item--active {
-  background: var(--color-primary-bg);
-  color: var(--color-text-primary);
+  color: var(--color-primary);
 }
 
-.stage-rail__index {
-  font-family: var(--font-mono);
-  color: var(--color-accent);
+.stage-rail__item--active .stage-rail__label {
+  font-weight: 800;
 }
 
+/* ── Three-Panel Grid ── */
 .ai-lab-grid {
   display: grid;
-  grid-template-columns: minmax(280px, 330px) minmax(460px, 1fr) minmax(340px, 410px);
+  grid-template-columns: 1fr 1.6fr 1fr;
   gap: var(--spacing-md);
-  align-items: start;
+  align-items: stretch;
 }
 
+.ai-lab-grid > .brief-panel  { animation: panelReveal 500ms var(--ease-out-expo) 80ms both; }
+.ai-lab-grid > .console-panel { animation: panelReveal 500ms var(--ease-out-expo) 160ms both; }
+.ai-lab-grid > .draft-panel  { animation: panelReveal 500ms var(--ease-out-expo) 240ms both; }
+
+@keyframes panelReveal {
+  from { opacity: 0; transform: translateY(20px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Panel Base ── */
 .lab-panel {
   min-width: 0;
-  min-height: 680px;
   padding: var(--spacing-lg);
-  border: 2px solid var(--color-border);
-  border-radius: var(--radius-sm);
-  background: var(--color-surface);
-  box-shadow: var(--shadow-md);
-}
-
-.brief-panel,
-.draft-panel {
+  border: 1.5px solid var(--color-border-light);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  box-shadow:
+    0 1px 3px rgba(0, 0, 0, 0.04),
+    0 4px 16px rgba(0, 0, 0, 0.03);
   display: grid;
   gap: var(--spacing-md);
+  align-content: start;
+  transition: box-shadow var(--transition-slow), border-color var(--transition-slow);
 }
 
+.lab-panel:hover {
+  box-shadow:
+    0 1px 3px rgba(0, 0, 0, 0.04),
+    0 8px 24px rgba(0, 0, 0, 0.06);
+}
+
+/* ── Brief Panel (left) ── */
+.brief-panel {
+  position: relative;
+  overflow: hidden;
+}
+
+.brief-panel::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, var(--color-accent), #fdd835);
+}
+
+/* ── Console Panel (center) ── */
 .console-panel {
-  display: grid;
-  gap: var(--spacing-md);
+  position: relative;
+  overflow: hidden;
 }
 
+.console-panel::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, var(--color-primary), #42a5f5);
+}
+
+/* ── Draft Panel (right) ── */
+.draft-panel {
+  position: relative;
+  overflow: hidden;
+}
+
+.draft-panel::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, #43a047, #66bb6a);
+}
+
+/* ── Panel Headings ── */
 .panel-heading {
   padding-bottom: var(--spacing-sm);
-  border-bottom: 2px solid var(--color-border-light);
+  border-bottom: 1.5px solid var(--color-border-light);
 }
+
+.panel-heading h2 {
+  font-weight: 700;
+  font-size: var(--font-size-lg);
+  letter-spacing: -0.01em;
+}
+
+.panel-kicker {
+  color: var(--color-primary);
+  font-size: var(--font-size-xs);
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  opacity: 0.7;
+}
+
+.brief-panel .panel-kicker { color: var(--color-accent); }
+.draft-panel .panel-kicker { color: #43a047; }
 
 .panel-heading--row {
   justify-content: space-between;
   gap: var(--spacing-md);
 }
 
+/* ── Mode Switch ── */
 .mode-switch {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: var(--spacing-xs);
+  gap: 6px;
 }
 
 .mode-option {
   min-width: 0;
-  padding: var(--spacing-sm);
-  border: 2px solid var(--color-border-light);
-  border-radius: var(--radius-xs);
-  background: var(--color-surface-elevated);
+  padding: 10px 8px;
+  border: 1.5px solid var(--color-border-light);
+  border-radius: 8px;
+  background: var(--color-surface);
   color: var(--color-text-secondary);
-  text-align: left;
+  text-align: center;
   cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.mode-option:hover {
+  border-color: var(--color-border);
+  background: var(--color-surface-hover);
 }
 
 .mode-option strong,
@@ -994,27 +1207,31 @@ onMounted(() => {
 
 .mode-option strong {
   color: var(--color-text-primary);
-  font-size: var(--font-size-sm);
+  font-size: var(--font-size-xs);
+  font-weight: 700;
 }
 
 .mode-option span {
-  margin-top: 3px;
-  font-size: var(--font-size-xs);
-  line-height: 1.35;
+  margin-top: 2px;
+  font-size: 10px;
+  line-height: 1.3;
+  color: var(--color-text-muted);
 }
 
 .mode-option--active {
-  border-color: var(--color-border);
+  border-color: var(--color-accent);
   background: var(--color-accent-bg);
+  box-shadow: 0 0 0 3px rgba(249, 168, 37, 0.08);
 }
 
+/* ── Brief Quality ── */
 .brief-quality {
   display: grid;
-  gap: var(--spacing-xs);
-  padding: var(--spacing-sm);
-  border: 2px solid var(--color-border-light);
-  border-radius: var(--radius-xs);
-  background: var(--color-surface-elevated);
+  gap: 6px;
+  padding: 10px 12px;
+  border: 1.5px solid var(--color-border-light);
+  border-radius: 8px;
+  background: var(--color-surface);
 }
 
 .brief-quality > div:first-child,
@@ -1037,123 +1254,151 @@ onMounted(() => {
 .brief-quality__meter {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 4px;
+  gap: 3px;
 }
 
 .brief-quality__meter span {
-  height: 6px;
-  border-radius: var(--radius-full);
+  height: 4px;
+  border-radius: 2px;
   background: var(--color-border-light);
+  transition: all var(--transition-normal);
 }
 
 .brief-quality__meter .brief-quality__bar--active {
-  background: var(--color-accent);
+  background: linear-gradient(90deg, var(--color-accent), #fdd835);
+  box-shadow: 0 0 6px rgba(249, 168, 37, 0.25);
 }
 
+/* ── Fields ── */
 .field,
 .prompt-box {
   display: grid;
-  gap: 6px;
+  gap: 4px;
 }
 
 .field > span,
 .prompt-box > span {
-  color: var(--color-text-secondary);
-  font-size: var(--font-size-xs);
-  font-weight: 800;
-  letter-spacing: 0;
+  color: var(--color-text-muted);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
 }
 
 .field-control,
 .prompt-box textarea {
   width: 100%;
-  border: 2px solid var(--color-border-light);
-  border-radius: var(--radius-xs);
+  border: 1.5px solid var(--color-border-light);
+  border-radius: 8px;
   background: var(--color-surface);
   color: var(--color-text-primary);
   font: inherit;
+  font-size: var(--font-size-md);
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
 }
 
 .field-control {
-  min-height: 38px;
-  padding: 8px 10px;
+  min-height: 36px;
+  padding: 7px 10px;
 }
 
 .field-control:focus,
 .prompt-box textarea:focus {
-  border-color: var(--color-border);
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgba(25, 118, 210, 0.08);
   outline: none;
 }
 
 .field-control--textarea,
 .prompt-box textarea {
-  min-height: 110px;
-  padding: 10px 12px;
+  min-height: 100px;
+  padding: 10px;
   resize: vertical;
 }
 
 .risk-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: var(--spacing-sm);
+  gap: var(--spacing-xs);
 }
 
+/* ── Chips & Controls ── */
 .segmented-control,
 .constraint-list,
 .quick-refine {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--spacing-xs);
+  gap: 6px;
 }
 
 .segmented-control button,
 .constraint-chip,
 .quick-refine__chip,
 .mobile-tab {
-  border: 2px solid var(--color-border-light);
+  border: 1.5px solid var(--color-border-light);
   border-radius: var(--radius-full);
   background: var(--color-surface);
   color: var(--color-text-secondary);
   cursor: pointer;
   font: inherit;
   font-size: var(--font-size-xs);
-  font-weight: 800;
+  font-weight: 700;
+  transition: all var(--transition-fast);
 }
 
 .segmented-control button {
   flex: 1;
-  min-height: 34px;
+  min-height: 32px;
 }
 
 .constraint-chip,
 .quick-refine__chip {
-  padding: 6px 10px;
+  padding: 5px 10px;
+}
+
+.constraint-chip:hover,
+.quick-refine__chip:hover {
+  border-color: var(--color-border);
+  transform: translateY(-1px);
 }
 
 .segmented-control button.active,
 .constraint-chip--active,
-.quick-refine__chip:hover,
 .mobile-tab--active {
-  border-color: var(--color-border);
-  background: var(--color-accent);
-  color: var(--color-text-primary);
+  border-color: var(--color-primary);
+  background: var(--color-primary);
+  color: #fff;
+  box-shadow: 0 2px 8px rgba(25, 118, 210, 0.2);
 }
 
+.constraint-chip--active {
+  border-color: var(--color-accent);
+  background: var(--color-accent);
+  color: var(--color-text-primary);
+  box-shadow: 0 2px 8px rgba(249, 168, 37, 0.15);
+}
+
+.quick-refine__chip:hover {
+  border-color: var(--color-primary);
+  background: var(--color-primary-bg);
+  color: var(--color-primary);
+}
+
+/* ── Empty States ── */
 .empty-state {
-  min-height: 460px;
+  min-height: 380px;
   place-items: center;
   text-align: center;
   border: 2px dashed var(--color-border-light);
-  border-radius: var(--radius-sm);
-  background: var(--color-surface-elevated);
+  border-radius: 12px;
+  background: var(--color-surface);
 }
 
 .empty-state p,
 .draft-placeholder p,
 .research-log__empty p {
   color: var(--color-text-primary);
-  font-weight: 800;
+  font-weight: 700;
 }
 
 .empty-state--blocked {
@@ -1164,42 +1409,65 @@ onMounted(() => {
   max-width: 360px;
 }
 
+/* ── Research Log ── */
 .research-log {
-  min-height: 360px;
-  max-height: 520px;
+  min-height: 300px;
+  max-height: 460px;
   overflow: auto;
   display: grid;
   align-content: start;
   gap: var(--spacing-sm);
-  padding: var(--spacing-sm);
-  border: 2px solid var(--color-border-light);
-  border-radius: var(--radius-sm);
+  padding: var(--spacing-md);
+  border: 1.5px solid var(--color-border-light);
+  border-radius: 10px;
   background:
-    linear-gradient(180deg, rgba(25, 118, 210, 0.04), transparent 28%),
-    var(--color-surface-elevated);
+    linear-gradient(180deg, rgba(25, 118, 210, 0.02), transparent 40%),
+    var(--color-surface);
+  position: relative;
+}
+
+.research-log::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 32px;
+  background: linear-gradient(transparent, var(--color-surface));
+  pointer-events: none;
+  border-radius: 0 0 10px 10px;
 }
 
 .research-log__empty {
-  min-height: 320px;
+  min-height: 260px;
   place-items: center;
   text-align: center;
 }
 
 .research-entry {
   display: grid;
-  gap: var(--spacing-xs);
-  padding: var(--spacing-sm) var(--spacing-md);
-  border: 2px solid var(--color-border-light);
-  border-radius: var(--radius-xs);
+  gap: 6px;
+  padding: 10px 14px;
+  border: 1.5px solid var(--color-border-light);
+  border-radius: 8px;
   background: var(--color-surface);
+  transition: all var(--transition-fast);
+}
+
+.research-entry:hover {
+  border-color: var(--color-border);
 }
 
 .research-entry--assistant {
-  border-color: var(--color-primary-border);
+  border-left: 3px solid var(--color-primary);
+  background:
+    linear-gradient(90deg, rgba(25, 118, 210, 0.03), var(--color-surface) 50%);
 }
 
 .research-entry--user {
-  border-color: rgba(249, 168, 37, 0.45);
+  border-left: 3px solid var(--color-accent);
+  background:
+    linear-gradient(90deg, rgba(249, 168, 37, 0.03), var(--color-surface) 50%);
 }
 
 .research-entry__meta {
@@ -1209,20 +1477,23 @@ onMounted(() => {
   gap: var(--spacing-sm);
   color: var(--color-text-muted);
   font-family: var(--font-mono);
-  font-size: var(--font-size-xs);
+  font-size: 10px;
   text-transform: uppercase;
+  letter-spacing: 0.06em;
 }
 
 .research-entry p {
   white-space: pre-wrap;
   word-break: break-word;
   line-height: 1.65;
+  font-size: var(--font-size-md);
 }
 
 .prompt-box textarea {
-  min-height: 116px;
+  min-height: 100px;
 }
 
+/* ── Actions ── */
 .console-actions,
 .draft-actions {
   justify-content: flex-end;
@@ -1233,9 +1504,9 @@ onMounted(() => {
   width: 14px;
   height: 14px;
   border-radius: var(--radius-full);
-  border: 2px solid rgba(17, 17, 17, 0.25);
-  border-top-color: var(--color-text-primary);
-  animation: spin 0.8s linear infinite;
+  border: 2px solid rgba(0, 0, 0, 0.15);
+  border-top-color: var(--color-primary);
+  animation: spin 0.7s linear infinite;
 }
 
 .form-message {
@@ -1247,85 +1518,112 @@ onMounted(() => {
   color: var(--color-danger);
 }
 
+/* ── Draft Panel Content ── */
 .draft-placeholder {
-  min-height: 520px;
+  min-height: 400px;
   place-items: center;
   text-align: center;
   border: 2px dashed var(--color-border-light);
-  border-radius: var(--radius-sm);
-  background: var(--color-surface-elevated);
+  border-radius: 12px;
+  background: var(--color-surface);
 }
 
 .draft-status {
-  padding: var(--spacing-sm);
-  border: 2px solid var(--color-border-light);
-  border-radius: var(--radius-xs);
-  background: var(--color-surface-elevated);
+  padding: 10px 14px;
+  border: 1.5px solid var(--color-border-light);
+  border-radius: 8px;
+  background: var(--color-surface);
+  transition: all var(--transition-normal);
 }
 
 .draft-status--pass {
-  border-color: rgba(46, 125, 50, 0.35);
+  border-color: rgba(46, 125, 50, 0.3);
+  background: var(--color-success-bg);
+}
+
+.draft-status--pass .status-dot {
+  background: var(--color-success);
+  box-shadow: 0 0 8px rgba(46, 125, 50, 0.4);
 }
 
 .draft-status--warn {
-  border-color: rgba(230, 81, 0, 0.35);
+  border-color: rgba(230, 81, 0, 0.3);
+  background: var(--color-warning-bg);
 }
 
 .draft-status--block {
-  border-color: rgba(212, 57, 59, 0.35);
+  border-color: rgba(212, 57, 59, 0.3);
+  background: var(--color-danger-bg);
 }
 
 .summary-card,
 .draft-section {
   display: grid;
-  gap: var(--spacing-sm);
-  padding: var(--spacing-sm);
-  border: 2px solid var(--color-border-light);
-  border-radius: var(--radius-xs);
-  background: var(--color-surface-elevated);
+  gap: 8px;
+  padding: 12px;
+  border: 1.5px solid var(--color-border-light);
+  border-radius: 8px;
+  background: var(--color-surface);
+  transition: border-color var(--transition-fast);
+}
+
+.summary-card:hover,
+.draft-section:hover {
+  border-color: var(--color-border);
 }
 
 .summary-card strong,
 .parameter-table strong,
 .validation-item strong {
   font-family: var(--font-mono);
+  font-size: var(--font-size-sm);
 }
 
 .draft-section h3 {
   color: var(--color-text-primary);
-  font-size: var(--font-size-sm);
+  font-size: var(--font-size-xs);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
 }
 
 .draft-section p,
 .muted-copy {
   color: var(--color-text-secondary);
   line-height: 1.6;
+  font-size: var(--font-size-md);
 }
 
 .parameter-table {
   display: grid;
-  gap: 4px;
+  gap: 2px;
 }
 
 .parameter-table__row {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   gap: var(--spacing-sm);
-  padding: 7px 0;
+  padding: 8px 0;
   border-top: 1px solid var(--color-border-light);
+  transition: background var(--transition-fast);
+}
+
+.parameter-table__row:hover {
+  background: rgba(25, 118, 210, 0.02);
 }
 
 .parameter-table__row--head {
   border-top: none;
   color: var(--color-text-muted);
-  font-size: var(--font-size-xs);
-  font-weight: 800;
+  font-size: 10px;
+  font-weight: 700;
   text-transform: uppercase;
+  letter-spacing: 0.06em;
 }
 
 .validation-list {
   display: grid;
-  gap: var(--spacing-xs);
+  gap: 6px;
 }
 
 .validation-state--pass {
@@ -1337,24 +1635,27 @@ onMounted(() => {
 }
 
 .summary-alert {
-  padding: var(--spacing-sm);
-  border-radius: var(--radius-xs);
+  padding: 10px 14px;
+  border-radius: 8px;
   font-size: var(--font-size-sm);
   line-height: 1.5;
+  border-width: 1.5px;
+  border-style: solid;
 }
 
 .summary-alert--warning {
-  border: 2px solid rgba(230, 81, 0, 0.25);
+  border-color: rgba(230, 81, 0, 0.25);
   background: var(--color-warning-bg);
   color: var(--color-warning);
 }
 
 .summary-alert--error {
-  border: 2px solid rgba(212, 57, 59, 0.25);
+  border-color: rgba(212, 57, 59, 0.25);
   background: var(--color-danger-bg);
   color: var(--color-danger);
 }
 
+/* ── Mobile Tabs ── */
 .mobile-tabs {
   display: none;
   gap: var(--spacing-xs);
@@ -1366,12 +1667,12 @@ onMounted(() => {
   min-height: 36px;
 }
 
+/* ── Keyframes ── */
 @keyframes spin {
-  to {
-    transform: rotate(360deg);
-  }
+  to { transform: rotate(360deg); }
 }
 
+/* ── Responsive ── */
 @media (max-width: 1180px) {
   .ai-lab-grid {
     grid-template-columns: 1fr;
@@ -1395,11 +1696,20 @@ onMounted(() => {
     padding: 0 var(--spacing-md) var(--spacing-lg);
   }
 
-  .ai-lab-header,
+  .ai-lab-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--spacing-md);
+  }
+
   .ai-lab-header__actions,
   .panel-heading--row {
     align-items: stretch;
     flex-direction: column;
+  }
+
+  .ai-lab-header h1 {
+    font-size: clamp(22px, 6vw, 30px);
   }
 
   .mode-switch,
@@ -1407,8 +1717,8 @@ onMounted(() => {
     grid-template-columns: 1fr;
   }
 
-  .stage-rail__item {
-    padding: 7px 10px;
+  .ai-lab-ambient__grid {
+    background-size: 24px 24px;
   }
 }
 </style>
