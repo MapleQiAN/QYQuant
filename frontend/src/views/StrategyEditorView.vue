@@ -316,10 +316,6 @@ onBeforeRouteLeave((_to, _from, next) => {
   z-index: 100;
 }
 
-:global(.sidebar-collapsed) .editor-root {
-  left: var(--sidebar-collapsed-width, 60px);
-}
-
 /* Toolbar */
 .editor-toolbar {
   display: flex;
@@ -532,4 +528,18 @@ onBeforeRouteLeave((_to, _from, next) => {
 .editor-light .status-error {
   color: #d32f2f;
 }
+</style>
+
+<style>
+/* Non-scoped: sidebar collapse must reach ancestor .app class */
+.sidebar-collapsed .editor-root {
+  left: var(--sidebar-collapsed-width, 60px);
+}
+
+@media (max-width: 768px) {
+  .sidebar-collapsed .editor-root {
+    left: 0;
+  }
+}
+</style>
 </style>
