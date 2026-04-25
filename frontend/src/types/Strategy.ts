@@ -93,6 +93,7 @@ export interface StrategyImportConfirmPayload {
     version?: string
   }
   parameterDefinitions?: StrategyParameter[]
+  codeOverride?: string
 }
 
 export interface AiStrategyMessage {

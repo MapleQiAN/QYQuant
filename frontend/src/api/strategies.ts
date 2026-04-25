@@ -408,6 +408,13 @@ export function confirmStrategyImport(payload: StrategyImportConfirmPayload): Pr
   })
 }
 
+export function fetchDraftCode(draftImportId: string): Promise<{ code: string; filename: string }> {
+  return client.request({
+    method: 'get',
+    url: `/v1/strategy-imports/${draftImportId}/code`,
+  })
+}
+
 export function generateAiStrategyDraft(payload: {
   integrationId: string
   messages: AiStrategyMessage[]
