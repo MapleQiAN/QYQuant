@@ -411,6 +411,7 @@ export function confirmStrategyImport(payload: StrategyImportConfirmPayload): Pr
 export function generateAiStrategyDraft(payload: {
   integrationId: string
   messages: AiStrategyMessage[]
+  locale?: string
 }): Promise<AiStrategyDraftResult> {
   return client.request({
     method: 'post',
@@ -418,7 +419,8 @@ export function generateAiStrategyDraft(payload: {
     timeout: 60000,
     data: {
       integrationId: payload.integrationId,
-      messages: payload.messages
+      messages: payload.messages,
+      locale: payload.locale,
     }
   })
 }

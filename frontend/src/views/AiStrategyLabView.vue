@@ -405,6 +405,7 @@ import { useI18n } from 'vue-i18n'
 import { RouterLink, useRouter } from 'vue-router'
 import { fetchIntegrations, type UserIntegration } from '../api/integrations'
 import { generateAiStrategyDraft } from '../api/strategies'
+import { useUserStore } from '../stores/user'
 import type { AiStrategyMessage, StrategyImportAnalysis, StrategyParameter } from '../types/Strategy'
 
 type StrategyMode = 'guided' | 'mixed' | 'expert'
@@ -427,8 +428,10 @@ interface StrategyBriefState {
   notes: string
 }
 
-const { t } = useI18n()
+const { t, locale } = useI18n()
 const router = useRouter()
+const userStore = useUserStore()
+const isZh = computed(() => (userStore.locale || locale.value) === 'zh')
 
 const copy = computed(() => ({
   eyebrow: t('aiLab.eyebrow'),
@@ -626,17 +629,48 @@ function toggleConstraint(constraint: string) {
   }
 }
 
-const enConstraintLabels: Record<string, string> = {
-  constraintNoLeverage: 'No leverage',
-  constraintLongOnly: 'Long only',
-  constraintNoHighFreq: 'No high frequency',
-  constraintStopLoss: 'Stop loss required',
-  constraintExplainable: 'Explainable rules',
-  constraintLowTurnover: 'Low turnover',
+const constraintLabelMap: Record<string, Record<string, string>> = {
+  en: {
+    constraintNoLeverage: 'No leverage',
+    constraintLongOnly: 'Long only',
+    constraintNoHighFreq: 'No high frequency',
+    constraintStopLoss: 'Stop loss required',
+    constraintExplainable: 'Explainable rules',
+    constraintLowTurnover: 'Low turnover',
+  },
+  zh: {
+    constraintNoLeverage: '禁止杠杆',
+    constraintLongOnly: '仅做多',
+    constraintNoHighFreq: '禁止高频',
+    constraintStopLoss: '必须止损',
+    constraintExplainable: '规则可解释',
+    constraintLowTurnover: '低换手率',
+  },
 }
 
 function compileBriefMessage(): string {
-  const constraintText = brief.constraints.map((key) => enConstraintLabels[key] || key).join(', ') || 'none'
+  const lang = isZh.value ? 'zh' : 'en'
+  const labels = constraintLabelMap[lang]
+  const constraintText = brief.constraints.map((key) => labels[key] || key).join(', ') || (lang === 'zh' ? '无' : 'none')
+
+  if (lang === 'zh') {
+    const lines = [
+      '请根据以下结构化需求，生成一份可在 QYQuant 平台运行的策略草案。',
+      `模式: ${brief.mode}`,
+      `市场: ${brief.market}`,
+      `标的: ${brief.symbol}`,
+      `周期: ${brief.timeframe}`,
+      `风格: ${brief.strategyStyle}`,
+      `方向: ${brief.direction}`,
+      `风险: 最大回撤 ${brief.riskLimits.maxDrawdownPct}%，仓位比例 ${brief.riskLimits.positionRatio}%`,
+      `约束: ${constraintText}`,
+    ]
+    if (brief.notes) lines.push(`用户备注: ${brief.notes}`)
+    if (aiPrompt.value) lines.push(`补充要求: ${aiPrompt.value}`)
+    lines.push('请返回策略代码、元数据、参数定义、假设说明以及验证警告（如有）。')
+    return lines.join('\n')
+  }
+
   const lines = [
     'Create a QYQuant executable strategy draft from this structured brief.',
     `Mode: ${brief.mode}`,
@@ -696,6 +730,7 @@ async function handleGenerate() {
     const result = await generateAiStrategyDraft({
       integrationId: selectedAiIntegrationId.value,
       messages: pendingMessages,
+      locale: isZh.value ? 'zh' : 'en',
     })
     aiMessages.value = [...pendingMessages, { role: 'assistant', content: result.reply }]
     aiLatestAnalysis.value = result.analysis
@@ -829,7 +864,6 @@ onMounted(() => {
 .ai-lab-shell {
   position: relative;
   z-index: 1;
-  max-width: 1760px;
   margin: 0 auto;
   padding: 0 var(--spacing-lg) var(--spacing-xl);
 }

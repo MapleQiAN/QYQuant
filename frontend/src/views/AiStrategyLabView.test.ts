@@ -32,6 +32,12 @@ vi.mock('../api/strategies', () => ({
   generateAiStrategyDraft: generateAiStrategyDraftMock,
 }))
 
+vi.mock('../stores/user', () => ({
+  useUserStore: () => ({
+    locale: 'en',
+  }),
+}))
+
 describe('AiStrategyLabView', () => {
   beforeEach(() => {
     pushMock.mockReset()
@@ -128,6 +134,7 @@ describe('AiStrategyLabView', () => {
 
     expect(generateAiStrategyDraftMock).toHaveBeenCalledTimes(1)
     expect(generateAiStrategyDraftMock.mock.calls[0][0].integrationId).toBe('integration-ai-1')
+    expect(generateAiStrategyDraftMock.mock.calls[0][0].locale).toBe('en')
     expect(generateAiStrategyDraftMock.mock.calls[0][0].messages[0].content).toContain('Symbol: BTCUSDT')
     expect(generateAiStrategyDraftMock.mock.calls[0][0].messages[0].content).toContain('Additional request: Build a BTC trend strategy')
     expect(wrapper.text()).toContain('AI Draft')

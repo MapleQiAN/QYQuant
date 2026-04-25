@@ -30,7 +30,7 @@ class AIStrategyGenerationError(Exception):
         self.details = details
 
 
-def generate_strategy_draft(*, user_id, integration_id, messages):
+def generate_strategy_draft(*, user_id, integration_id, messages, locale="en"):
     integration = get_user_integration(integration_id, user_id)
     if integration is None:
         raise AIStrategyGenerationError("INTEGRATION_NOT_FOUND", "Integration not found", 404)
@@ -52,6 +52,7 @@ def generate_strategy_draft(*, user_id, integration_id, messages):
         model=str(config_public.get("model") or "").strip(),
         api_key=str(secret_payload.get("api_key") or "").strip(),
         messages=normalized_messages,
+        locale=locale,
     )
     parsed = _parse_model_response(completion)
     reply = str(parsed.get("reply") or "").strip() or "Strategy draft updated."
@@ -117,7 +118,7 @@ def _normalize_messages(messages):
     return normalized
 
 
-def _request_chat_completion(*, base_url, model, api_key, messages):
+def _request_chat_completion(*, base_url, model, api_key, messages, locale="en"):
     if not base_url:
         raise AIStrategyGenerationError("AI_BASE_URL_REQUIRED", "AI integration base_url is required", 422)
     if not model:
@@ -128,7 +129,7 @@ def _request_chat_completion(*, base_url, model, api_key, messages):
     payload = {
         "model": model,
         "temperature": 0.2,
-        "messages": [{"role": "system", "content": _system_prompt()}, *messages],
+        "messages": [{"role": "system", "content": _system_prompt(locale)}, *messages],
     }
     request = urllib.request.Request(
         url=f"{base_url.rstrip('/')}/chat/completions",
@@ -299,7 +300,61 @@ def _strip_code_fence(code):
     return match.group(1).strip() if match else code
 
 
-def _system_prompt():
+def _system_prompt(locale="en"):
+    reference = _load_reference_material()
+    if locale == "zh":
+        return (
+            "你是一位专业的量化策略架构师，服务于 QYQuant 平台。"
+            "你负责生成可在 QYQuant 平台直接运行的生产级策略。"
+            "始终严格遵循 QYSP event_v1 合约。"
+            "仅返回严格的 JSON 格式，不要在 JSON 外包含任何 markdown 内容。\n\n"
+            "Schema:\n"
+            '{"reply":"给用户的回复文本（使用中文）","strategy":null|{'
+            '"name":"策略名称",'
+            '"description":"详细的专业描述（使用中文）",'
+            '"category":"trend-following|mean-reversion|momentum|multi-indicator|other",'
+            '"symbol":"BTCUSDT",'
+            '"timeframe":"1h",'
+            '"version":"1.0.0",'
+            '"tags":["..."],'
+            '"riskLevel":"low|medium|high",'
+            '"logicExplanation":"用通俗易懂的语言解释策略逻辑，面向初学者（使用中文）",'
+            '"riskRules":"用通俗易懂的语言解释风控规则（使用中文）",'
+            '"suitableMarket":"描述适合的市场条件（使用中文）",'
+            '"parameters":[{"key":"...","type":"integer|number|string|boolean|enum",'
+            '"default":1,"min":1,"max":100,"step":1,"description":"...",'
+            '"user_facing":{"label":"参数中文名称","group":"参数组名称（中文）","hint":"面向初学者的解释（中文）"},'
+            '"enum":["..."]}],'
+            '"code":"python 源码，带中文段注释"'
+            '}}\n\n'
+            "如果需求仍不清晰，将 strategy 设为 null，并在 reply 中提出一个简洁的追问。\n\n"
+            "代码要求:\n"
+            "- 必须定义 on_bar(ctx: StrategyContext, data: BarData) -> list[Order]，优先使用函数形式。\n"
+            "- 使用 ctx.buy()/ctx.sell()，所有可调参数通过 ctx.parameters.get() 读取。\n"
+            "- 禁止硬编码可调参数。每个阈值、周期、比例都必须是参数。\n"
+            "- 代码结构需包含清晰的段注释：\n"
+            "  # === 参数读取 ===\n"
+            "  # === 信号检测 ===\n"
+            "  # === 风险管理（止损/止盈） ===\n"
+            "  # === 仓位管理 ===\n"
+            "  # === 下单执行 ===\n"
+            "- 必须包含止损和止盈逻辑，不允许无风控的策略。\n"
+            "- 基于总资金比例进行仓位管理。\n"
+            "- 使用 ctx state（setattr/getattr）跟踪持仓。\n"
+            "- 禁止使用 input()、print()、外部文件、网络、pandas、numpy 或不支持的依赖。\n\n"
+            "参数要求:\n"
+            "- 每个参数必须有 user_facing，包含 label、group 和 hint。\n"
+            "- 按逻辑分组：「指标参数」「风控参数」「仓位参数」「信号过滤」。\n"
+            "- hint 应以初学者能理解的语言解释参数作用。\n"
+            "- 提供合理的默认值和 min/max 范围。\n\n"
+            "策略报告要求:\n"
+            "- logicExplanation: 用通俗语言解释策略逻辑，可使用类比。\n"
+            "- riskRules: 用通俗语言解释止损、止盈、仓位限制。\n"
+            "- suitableMarket: 描述理想的市场条件（如上升趋势、震荡、高波动）。\n"
+            "- riskLevel: 'low' 为严格止损+小仓位，'medium' 为均衡，'high' 为激进。\n\n"
+            "参考约束:\n"
+            f"{reference}"
+        )
     return (
         "You are a professional quantitative strategy architect for the QYQuant platform. "
         "You generate runnable QYQuant strategies that are production-quality. "
@@ -350,7 +405,7 @@ def _system_prompt():
         "- suitableMarket: Describe ideal market conditions (e.g., trending up, ranging, high volatility).\n"
         "- riskLevel: 'low' for tight stops + small positions, 'medium' for balanced, 'high' for aggressive.\n\n"
         "Reference constraints:\n"
-        f"{_load_reference_material()}"
+        f"{reference}"
     )
 
 

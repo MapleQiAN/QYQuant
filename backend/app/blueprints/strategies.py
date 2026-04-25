@@ -235,6 +235,7 @@ def generate_ai_strategy_v1():
             user_id=get_jwt_identity(),
             integration_id=integration_id,
             messages=payload.get("messages"),
+            locale=str(payload.get("locale") or "en").strip(),
         )
     except AIStrategyGenerationError as exc:
         return error_response(exc.code, exc.message, exc.status, details=exc.details)
