@@ -1,0 +1,83 @@
+<h2>第一阶段 MVP · 功能边界</h2>
+<p class="subtitle">目标：只做“免费分享策略”的最小闭环，先跑通发现、验证、导入、传播</p>
+
+<div class="split" style="align-items:stretch;">
+  <div class="mockup">
+    <div class="mockup-header">本期必须做</div>
+    <div class="mockup-body" style="display:grid;gap:12px;">
+      <div style="padding:14px;border:2px solid #111;border-radius:14px;background:#ffd84d;">
+        <strong>策略广场列表与详情</strong>
+        <p style="margin:8px 0 0;">免费策略可被浏览、筛选、搜索、打开详情页。</p>
+      </div>
+      <div style="padding:14px;border:2px solid #111;border-radius:14px;background:#c6f36a;">
+        <strong>社区帖子挂载策略卡片</strong>
+        <p style="margin:8px 0 0;">帖子可以引用一个策略分享资产，为策略带来讨论和传播。</p>
+      </div>
+      <div style="padding:14px;border:2px solid #111;border-radius:14px;background:#fff8dc;">
+        <strong>试用回测</strong>
+        <p style="margin:8px 0 0;">用户可以在受限参数范围内验证效果，不暴露源码。</p>
+      </div>
+      <div style="padding:14px;border:2px solid #111;border-radius:14px;background:#fff;">
+        <strong>一键导入 sealed 副本</strong>
+        <p style="margin:8px 0 0;">导入到个人策略库后，可继续回测、托管、运行。</p>
+      </div>
+      <div style="padding:14px;border:2px dashed #111;border-radius:14px;background:#f8f6f1;">
+        <strong>基础社区互动</strong>
+        <p style="margin:8px 0 0;">帖子点赞、评论、收藏、作者页跳转。</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="mockup">
+    <div class="mockup-header">本期明确不做</div>
+    <div class="mockup-body" style="display:grid;gap:12px;">
+      <div style="padding:14px;border:2px solid #111;border-radius:14px;background:#f8f6f1;">
+        <strong>付费模式</strong>
+        <p style="margin:8px 0 0;">买断、订阅、收益分成、保证金、平台抽佣，全部留到下一阶段。</p>
+      </div>
+      <div style="padding:14px;border:2px solid #111;border-radius:14px;background:#f8f6f1;">
+        <strong>私聊 / 关注 / 粉丝系统</strong>
+        <p style="margin:8px 0 0;">先不引入完整社交关系链，避免把社区做得太重。</p>
+      </div>
+      <div style="padding:14px;border:2px solid #111;border-radius:14px;background:#f8f6f1;">
+        <strong>外部社交平台转发</strong>
+        <p style="margin:8px 0 0;">Instagram、Telegram、QQ、微信分享，后续再接。</p>
+      </div>
+      <div style="padding:14px;border:2px solid #111;border-radius:14px;background:#f8f6f1;">
+        <strong>复杂勋章体系</strong>
+        <p style="margin:8px 0 0;">收益率勋章、交易额勋章先不进入 MVP，可先只保留“作者认证”类轻标识。</p>
+      </div>
+      <div style="padding:14px;border:2px solid #111;border-radius:14px;background:#f8f6f1;">
+        <strong>可编辑复制</strong>
+        <p style="margin:8px 0 0;">不允许把分享策略复制成可看源码、可改逻辑的副本。</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="mockup" style="margin-top:20px;">
+  <div class="mockup-header">一句话定义这个 MVP</div>
+  <div class="mockup-body">
+    <div style="padding:18px;border:2px solid #111;border-radius:16px;background:#fff8dc;font-size:18px;line-height:1.7;">
+      用户可以在 <strong>策略广场</strong> 发现免费策略，先通过 <strong>试用回测</strong> 验证，再 <strong>一键导入 sealed 副本</strong> 到自己的策略库；
+      同时，作者可以通过 <strong>社区帖子 + 挂载策略卡片</strong> 来做传播、复盘和讨论。
+    </div>
+  </div>
+</div>
+
+<div class="options" style="margin-top:22px;">
+  <div class="option" data-choice="mvp-ok" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>MVP 边界对</h3>
+      <p>可以进入写规格文档了。</p>
+    </div>
+  </div>
+  <div class="option" data-choice="mvp-adjust" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>MVP 边界要调</h3>
+      <p>某项功能应该前置，或某项功能应该延后。</p>
+    </div>
+  </div>
+</div>

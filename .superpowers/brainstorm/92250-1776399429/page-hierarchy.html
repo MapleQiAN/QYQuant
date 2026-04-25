@@ -1,0 +1,104 @@
+<h2>双轨混合型 · 页面层级与关键入口</h2>
+<p class="subtitle">目标：让“发现策略”和“围绕策略交流”互相导流，但不把信息搅在一起</p>
+
+<div class="split" style="align-items:stretch;">
+  <div class="mockup">
+    <div class="mockup-header">策略广场主链路</div>
+    <div class="mockup-body" style="display:grid;gap:12px;">
+      <div style="padding:14px;border:2px solid #111;border-radius:14px;background:#ffd84d;">
+        <strong>1. 策略广场列表</strong>
+        <p style="margin:8px 0 0;">核心模块：分类筛选、收益/回撤排序、精选位、搜索、作者信息、免费标签</p>
+      </div>
+      <div style="text-align:center;font-size:24px;">↓</div>
+      <div style="padding:14px;border:2px solid #111;border-radius:14px;background:#fff;">
+        <strong>2. 策略详情页</strong>
+        <p style="margin:8px 0 0;">核心模块：策略简介、收益指标、风险说明、作者资料、关联帖子、试用回测按钮、导入按钮</p>
+      </div>
+      <div class="pros-cons">
+        <div class="pros">
+          <h4>用户在这页做决定</h4>
+          <ul>
+            <li>先试用回测</li>
+            <li>直接导入 sealed 副本</li>
+            <li>去看作者的社区复盘</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="mockup">
+    <div class="mockup-header">交流社区主链路</div>
+    <div class="mockup-body" style="display:grid;gap:12px;">
+      <div style="padding:14px;border:2px solid #111;border-radius:14px;background:#c6f36a;">
+        <strong>1. 社区信息流</strong>
+        <p style="margin:8px 0 0;">核心模块：帖子流、作者、话题标签、热度、挂载策略卡片、转发/评论入口</p>
+      </div>
+      <div style="text-align:center;font-size:24px;">↓</div>
+      <div style="padding:14px;border:2px solid #111;border-radius:14px;background:#fff;">
+        <strong>2. 帖子详情页</strong>
+        <p style="margin:8px 0 0;">核心模块：正文、评论区、点赞收藏、挂载策略卡、作者页入口</p>
+      </div>
+      <div class="pros-cons">
+        <div class="pros">
+          <h4>用户在这页被导流</h4>
+          <ul>
+            <li>点策略卡进入策略详情</li>
+            <li>点作者进入作者主页</li>
+            <li>在评论区形成讨论</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="mockup" style="margin-top:20px;">
+  <div class="mockup-header">支撑页面</div>
+  <div class="mockup-body" style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px;">
+    <div style="padding:14px;border:2px solid #111;border-radius:14px;background:#fff8dc;">
+      <strong>作者主页</strong>
+      <p style="margin:8px 0 0;">展示作者简介、已分享策略、已发布帖子、可信徽章</p>
+    </div>
+    <div style="padding:14px;border:2px solid #111;border-radius:14px;background:#fff8dc;">
+      <strong>试用回测页</strong>
+      <p style="margin:8px 0 0;">限定参数调节与区间回测，不暴露源码或核心逻辑</p>
+    </div>
+    <div style="padding:14px;border:2px solid #111;border-radius:14px;background:#fff8dc;">
+      <strong>我的策略库</strong>
+      <p style="margin:8px 0 0;">导入后的 sealed 副本在这里使用，可回测、可托管、不可看源码</p>
+    </div>
+  </div>
+</div>
+
+<div class="mockup" style="margin-top:20px;">
+  <div class="mockup-header">三个最重要按钮应该放哪</div>
+  <div class="mockup-body" style="display:grid;gap:10px;">
+    <div style="padding:12px 14px;border:2px dashed #111;border-radius:12px;background:#f8f6f1;">
+      <strong>试用回测</strong>：放在 <strong>策略详情页主操作区</strong>，优先级高于“去社区讨论”
+    </div>
+    <div style="padding:12px 14px;border:2px dashed #111;border-radius:12px;background:#f8f6f1;">
+      <strong>一键导入策略库</strong>：放在 <strong>策略详情页主操作区</strong>，和试用回测并列
+    </div>
+    <div style="padding:12px 14px;border:2px dashed #111;border-radius:12px;background:#f8f6f1;">
+      <strong>查看关联讨论</strong>：放在 <strong>策略详情页次级区</strong>，以及帖子里的策略卡片上
+    </div>
+  </div>
+</div>
+
+<div class="options" style="margin-top:22px;">
+  <div class="option" data-choice="pages-ok" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>页面层级对</h3>
+      <p>继续讲交互规则、信息展示和权限/IP 保护。</p>
+    </div>
+  </div>
+  <div class="option" data-choice="pages-adjust" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>页面层级要调</h3>
+      <p>某个页面职责太重，或某个入口应该前置/后置。</p>
+    </div>
+  </div>
+</div>

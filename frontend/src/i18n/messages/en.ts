@@ -393,6 +393,7 @@ const en = {
     noEntrypoint: 'No strategy entrypoint detected',
     copy: 'Copy',
     copied: 'Copied',
+    loadingCode: 'Loading strategy code...',
     aiSuggestions: 'AI Optimization Suggestions',
     suggestTightenStop: 'Tighten stop-loss',
     suggestRelaxStop: 'Relax stop-loss',

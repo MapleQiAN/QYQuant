@@ -113,7 +113,9 @@
               </div>
 
               <div v-if="activeTab === 'code'" class="tab-content">
-                <StrategyCodePreview :code="strategyCode" filename="strategy.py" />
+                <div v-if="codeLoading" class="code-loading">{{ $t('strategyPreview.loadingCode') }}</div>
+                <div v-else-if="codeError" class="code-error">{{ codeError }}</div>
+                <div v-else ref="editorContainer" class="code-editor"></div>
               </div>
 
               <div v-if="activeTab === 'params'" class="tab-content">
@@ -154,14 +156,13 @@
 </template>
 
 <script setup lang="ts">
-import { computed, h, ref } from 'vue'
+import { computed, h, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
-import { confirmStrategyImport, exportStrategy } from '../api/strategies'
+import { confirmStrategyImport, exportStrategy, fetchDraftCode } from '../api/strategies'
 import { toast } from '../lib/toast'
-import type { AiStrategyMetadata, StrategyImportAnalysis, StrategyParameter } from '../types/Strategy'
+import type { AiStrategyMetadata, StrategyImportAnalysis, StrategyImportConfirmPayload, StrategyParameter } from '../types/Strategy'
 import StrategyReportCard from '../components/strategy/StrategyReportCard.vue'
-import StrategyCodePreview from '../components/strategy/StrategyCodePreview.vue'
 import StrategyExportPanel from '../components/strategy/StrategyExportPanel.vue'
 import AiSuggestionBar from '../components/strategy/AiSuggestionBar.vue'
 
@@ -206,14 +207,55 @@ const editedParams = ref<Record<string, unknown>>({})
 const strategyName = computed(() => metadata.value.name || t('strategyPreview.untitled'))
 const strategyDescription = computed(() => metadata.value.description || '')
 
-const strategyCode = computed(() => {
-  const fileSummary = analysis.value?.fileSummary
-  if (!fileSummary) return ''
-  return ''
+const rawCode = ref('')
+const codeLoading = ref(false)
+const codeError = ref('')
+const editedCode = ref('')
+const codeDirty = ref(false)
+const editorContainer = ref<HTMLElement | null>(null)
+let editor: any = null
+
+async function initEditor() {
+  if (!editorContainer.value || !rawCode.value) return
+  const monaco = await import('monaco-editor')
+  editor = monaco.editor.create(editorContainer.value, {
+    value: editedCode.value,
+    language: 'python',
+    theme: 'vs-dark',
+    minimap: { enabled: false },
+    fontSize: 13,
+    lineNumbers: 'on',
+    scrollBeyondLastLine: false,
+    automaticLayout: true,
+    padding: { top: 12 },
+  })
+  editor.onDidChangeModelContent(() => {
+    editedCode.value = editor.getValue()
+    codeDirty.value = editedCode.value !== rawCode.value
+  })
+}
+
+onMounted(async () => {
+  if (!draftImportId) return
+  codeLoading.value = true
+  try {
+    const result = await fetchDraftCode(draftImportId)
+    rawCode.value = result.code
+    editedCode.value = result.code
+  } catch (err: any) {
+    codeError.value = err?.message || 'Failed to load strategy code'
+  } finally {
+    codeLoading.value = false
+    await initEditor()
+  }
+})
+
+onBeforeUnmount(() => {
+  editor?.dispose()
 })
 
 const backRoute = computed(() => {
-  if (source === 'ai') return '/strategies/new'
+  if (source === 'ai') return '/strategies/ai-lab'
   if (source === 'template') return '/strategies/new'
   return '/strategies/import'
 })
@@ -309,7 +351,7 @@ async function handleSave() {
     }
     sessionStorage.setItem(`strategy-import:${analysis.value.draftImportId}`, JSON.stringify(mergedAnalysis))
 
-    const result = await confirmStrategyImport({
+    const confirmPayload: StrategyImportConfirmPayload = {
       draftImportId: analysis.value.draftImportId,
       selectedEntrypoint: {
         path: entrypoint.path,
@@ -324,8 +366,12 @@ async function handleSave() {
         tags: metadata.value.tags || [],
         version: metadata.value.version,
       },
-      parameterDefinitions: mergedAnalysis.parameterCandidates as any[],
-    })
+      parameterDefinitions: mergedAnalysis.parameterCandidates as StrategyParameter[],
+    }
+    if (codeDirty.value) {
+      confirmPayload.codeOverride = editedCode.value
+    }
+    const result = await confirmStrategyImport(confirmPayload)
     sessionStorage.removeItem(`strategy-import:${analysis.value.draftImportId}`)
     toast.success(t('strategyPreview.saveSuccess', { name: result.strategy.name }))
     if (result.next) {
@@ -338,8 +384,14 @@ async function handleSave() {
   }
 }
 
-function handleApplySuggestion(suggestion: string) {
-  toast.info(t('strategyPreview.suggestionApplied', { suggestion }))
+async function handleApplySuggestion(suggestion: string) {
+  if (suggestion === t('strategyPreview.suggestTightenStop') || suggestion === t('strategyPreview.suggestRelaxStop')) {
+    await router.push({ path: '/strategies/ai-lab', query: { refine: suggestion } })
+  } else if (suggestion === t('strategyPreview.suggestOptimize') || suggestion === t('strategyPreview.suggestBacktest')) {
+    await handleSave()
+  } else {
+    toast.info(t('strategyPreview.suggestionApplied', { suggestion }))
+  }
 }
 
 const ArrowLeftIcon = () => h('svg', {
@@ -544,6 +596,25 @@ const ArrowLeftIcon = () => h('svg', {
 
 .error {
   color: var(--color-danger);
+}
+
+.code-loading {
+  padding: var(--spacing-xl);
+  text-align: center;
+  color: var(--color-text-muted);
+}
+
+.code-error {
+  padding: var(--spacing-lg);
+  text-align: center;
+  color: var(--color-danger);
+}
+
+.code-editor {
+  min-height: 400px;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  border: 1px solid var(--color-border);
 }
 
 @media (max-width: 900px) {

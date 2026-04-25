@@ -316,5 +316,15 @@ describe('strategies api', () => {
       }
     })
   })
+
+  it('calls fetchDraftCode endpoint', async () => {
+    requestMock.mockResolvedValueOnce({ code: 'def on_bar(): pass', filename: 'strategy.py' })
+    const result = await strategies.fetchDraftCode('draft-123')
+    expect(result).toEqual({ code: 'def on_bar(): pass', filename: 'strategy.py' })
+    expect(requestMock).toHaveBeenCalledWith({
+      method: 'get',
+      url: '/v1/strategy-imports/draft-123/code',
+    })
+  })
 })
 

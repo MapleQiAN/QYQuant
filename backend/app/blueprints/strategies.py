@@ -183,6 +183,39 @@ def list_strategies():
         }
     )
 
+@bp.get("/v1/strategy-imports/<draft_import_id>/code")
+@jwt_required()
+def fetch_draft_code_v1(draft_import_id):
+    user_id = get_jwt_identity()
+    draft = db.session.get(StrategyImportDraft, draft_import_id)
+    if draft is None or draft.owner_id != user_id:
+        return error_response("DRAFT_NOT_FOUND", "Import draft not found", 404)
+
+    source_file = db.session.get(File, draft.source_file_id)
+    if source_file is None or not source_file.path:
+        return error_response("SOURCE_NOT_FOUND", "Source file not found", 404)
+
+    raw_payload = Path(source_file.path).read_bytes()
+
+    # For python_file drafts, selected_path is ignored by _resolve_source_and_manifest.
+    # For archive drafts, use the first entrypoint candidate path if available.
+    selected_path = "src/strategy.py"
+    entrypoint_candidates = []
+    if isinstance(draft.analysis_payload, dict):
+        entrypoint_candidates = draft.analysis_payload.get("entrypointCandidates") or []
+    if entrypoint_candidates:
+        selected_path = entrypoint_candidates[0].get("path", selected_path)
+
+    try:
+        source_text, _ = _resolve_source_and_manifest(
+            raw_payload, draft.source_type, selected_path,
+        )
+    except StrategyImportConfirmError:
+        return error_response("SOURCE_READ_ERROR", "Could not read strategy source", 422)
+
+    return ok({"code": source_text, "filename": source_file.filename})
+
+
 @bp.post("/v1/strategy-imports/analyze")
 @jwt_required()
 def analyze_strategy_import_v1():

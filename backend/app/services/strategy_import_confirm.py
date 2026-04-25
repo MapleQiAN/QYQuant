@@ -65,6 +65,24 @@ def confirm_strategy_import(draft_import_id, *, owner_id, payload):
             selected_path,
         )
 
+        # Apply code override if provided
+        code_override = payload.get("codeOverride")
+        if code_override is not None:
+            if not isinstance(code_override, str) or not code_override.strip():
+                raise StrategyImportConfirmError(
+                    "INVALID_CODE_OVERRIDE", "Code override must be non-empty string", 400
+                )
+            try:
+                compile(code_override, "<code-override>", "exec")
+            except SyntaxError as exc:
+                raise StrategyImportConfirmError(
+                    "CODE_OVERRIDE_SYNTAX_ERROR",
+                    f"Code override has syntax error: {exc.msg}",
+                    422,
+                    details={"line": exc.lineno, "msg": exc.msg},
+                ) from exc
+            source_text = code_override
+
         manifest = _build_manifest(
             base_manifest=base_manifest,
             metadata=metadata,

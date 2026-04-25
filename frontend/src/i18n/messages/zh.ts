@@ -393,6 +393,7 @@ const zh = {
     noEntrypoint: '未检测到策略入口函数',
     copy: '复制',
     copied: '已复制',
+    loadingCode: '正在加载策略代码...',
     aiSuggestions: 'AI 优化建议',
     suggestTightenStop: '收紧止损',
     suggestRelaxStop: '放宽止损',
