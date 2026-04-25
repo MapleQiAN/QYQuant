@@ -1204,6 +1204,74 @@ def test_import_strategy_returns_422_when_integrity_check_fails(client, tmp_path
     assert response.json["error"]["code"] == "INTEGRITY_CHECK_FAILED"
 
 
+def test_confirm_strategy_import_with_code_override(client, app):
+    token, user_id = _login_user(client, phone="13800138045", nickname="CodeOverrideUser")
+    source = "def on_bar(ctx, bar):\n    return []\n"
+
+    analyze_response = client.post(
+        "/api/v1/strategy-imports/analyze",
+        headers=_auth_headers(token),
+        data={"file": (io.BytesIO(source.encode("utf-8")), "override.py")},
+        content_type="multipart/form-data",
+    )
+    draft_id = analyze_response.json["data"]["draftImportId"]
+
+    override_code = "def on_bar(ctx, bar):\n    # modified\n    return []\n"
+    response = client.post(
+        "/api/v1/strategy-imports/confirm",
+        headers=_auth_headers(token),
+        json={
+            "draftImportId": draft_id,
+            "selectedEntrypoint": {
+                "path": "override.py",
+                "callable": "on_bar",
+                "interface": "event_v1",
+            },
+            "metadata": {"name": "Override Test", "symbol": "BTCUSDT"},
+            "codeOverride": override_code,
+        },
+    )
+    assert response.status_code == 200
+    strategy_id = response.json["data"]["strategy"]["id"]
+
+    with app.app_context():
+        strategy = db.session.get(Strategy, strategy_id)
+        built_file = db.session.get(File, strategy.built_package_file_id)
+        # .qys files are zip archives — read src/strategy.py from the archive
+        with zipfile.ZipFile(built_file.path, "r") as archive:
+            saved_code = archive.read("src/strategy.py").decode("utf-8")
+        assert override_code in saved_code
+
+
+def test_confirm_strategy_import_rejects_invalid_syntax_override(client, app):
+    token, _ = _login_user(client, phone="13800138046", nickname="BadSyntaxUser")
+    source = "def on_bar(ctx, bar):\n    return []\n"
+
+    analyze_response = client.post(
+        "/api/v1/strategy-imports/analyze",
+        headers=_auth_headers(token),
+        data={"file": (io.BytesIO(source.encode("utf-8")), "badsyntax.py")},
+        content_type="multipart/form-data",
+    )
+    draft_id = analyze_response.json["data"]["draftImportId"]
+
+    response = client.post(
+        "/api/v1/strategy-imports/confirm",
+        headers=_auth_headers(token),
+        json={
+            "draftImportId": draft_id,
+            "selectedEntrypoint": {
+                "path": "badsyntax.py",
+                "callable": "on_bar",
+                "interface": "event_v1",
+            },
+            "metadata": {"name": "Bad Syntax", "symbol": "BTCUSDT"},
+            "codeOverride": "def on_bar(ctx, bar):\n this is not valid python {{{",
+        },
+    )
+    assert response.status_code == 422
+
+
 def test_import_strategy_returns_503_when_encryption_key_missing(client, monkeypatch, tmp_path):
     token, _ = _login_user(client, phone="13800138028", nickname="MissingKeyUser")
     package_path, _, _ = _build_qys_package(tmp_path)
