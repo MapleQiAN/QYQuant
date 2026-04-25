@@ -1,0 +1,104 @@
+<h2>双轨混合型 · 交互规则与 IP 保护</h2>
+<p class="subtitle">目标：让用户“先相信、再试用、后导入”，同时保护作者的源码和核心逻辑</p>
+
+<div class="split" style="align-items:stretch;">
+  <div class="mockup">
+    <div class="mockup-header">用户能看到什么</div>
+    <div class="mockup-body" style="display:grid;gap:12px;">
+      <div style="padding:14px;border:2px solid #111;border-radius:14px;background:#fff8dc;">
+        <strong>公开展示</strong>
+        <ul style="margin:8px 0 0;">
+          <li>策略名称、作者、分类、标签</li>
+          <li>区间收益率、最大回撤、胜率、手续费等摘要指标</li>
+          <li>策略简介、适用市场、风险提示</li>
+          <li>作者帖子/复盘内容</li>
+        </ul>
+      </div>
+      <div style="padding:14px;border:2px solid #111;border-radius:14px;background:#f8f6f1;">
+        <strong>默认不公开</strong>
+        <ul style="margin:8px 0 0;">
+          <li>源码全文</li>
+          <li>触发条件细节</li>
+          <li>完整参数逻辑推导</li>
+          <li>可导出的原始策略文件</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="mockup">
+    <div class="mockup-header">用户能做什么</div>
+    <div class="mockup-body" style="display:grid;gap:12px;">
+      <div style="padding:14px;border:2px solid #111;border-radius:14px;background:#c6f36a;">
+        <strong>试用回测</strong>
+        <p style="margin:8px 0 0;">可以改公开参数、选时间区间、查看结果，但看不到源码与私密逻辑。</p>
+      </div>
+      <div style="padding:14px;border:2px solid #111;border-radius:14px;background:#ffd84d;">
+        <strong>一键导入</strong>
+        <p style="margin:8px 0 0;">导入后进入个人策略库，生成 sealed 副本，可继续回测和托管。</p>
+      </div>
+      <div style="padding:14px;border:2px dashed #111;border-radius:14px;background:#fff;">
+        <strong>社区互动</strong>
+        <p style="margin:8px 0 0;">点赞、评论、收藏、转发帖子，但不会获得策略源码所有权。</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="mockup" style="margin-top:20px;">
+  <div class="mockup-header">策略详情页主操作区建议</div>
+  <div class="mockup-body" style="display:grid;grid-template-columns:1.2fr 1fr;gap:16px;align-items:start;">
+    <div style="padding:16px;border:2px solid #111;border-radius:16px;background:#fff;">
+      <h3 style="margin-top:0;">主按钮顺序</h3>
+      <div style="display:grid;gap:10px;">
+        <button class="mock-button" style="background:#111;color:#fff;">试用回测</button>
+        <button class="mock-button" style="background:#ffd84d;color:#111;">一键导入策略库</button>
+        <button class="mock-button">查看作者复盘 / 社区讨论</button>
+      </div>
+      <p style="margin:12px 0 0;">顺序表达的是：先验证效果，再决定导入，社区讨论作为辅助决策信息。</p>
+    </div>
+    <div style="padding:16px;border:2px solid #111;border-radius:16px;background:#fff8dc;">
+      <h3 style="margin-top:0;">导入后状态</h3>
+      <ul style="margin:8px 0 0;">
+        <li>已导入：按钮变为“已在策略库中”</li>
+        <li>仍可继续试用回测</li>
+        <li>点击进入我的策略库副本详情</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<div class="mockup" style="margin-top:20px;">
+  <div class="mockup-header">知识产权保护规则</div>
+  <div class="mockup-body" style="display:grid;gap:12px;">
+    <div style="padding:14px;border-left:8px solid #111;border-radius:12px;background:#f8f6f1;">
+      <strong>规则 1：帖子只挂卡片，不承载完整策略资产</strong>
+      <p style="margin:8px 0 0;">帖子是传播内容，不应该变成绕过保护机制的“源码展示页”。</p>
+    </div>
+    <div style="padding:14px;border-left:8px solid #111;border-radius:12px;background:#f8f6f1;">
+      <strong>规则 2：试用回测只开放白名单参数</strong>
+      <p style="margin:8px 0 0;">用户可以体验，不代表能无限拆解策略。</p>
+    </div>
+    <div style="padding:14px;border-left:8px solid #111;border-radius:12px;background:#f8f6f1;">
+      <strong>规则 3：导入得到的是运行权，不是文件所有权</strong>
+      <p style="margin:8px 0 0;">UI 和文案都应明确“已解锁使用权”，避免用户误以为自己拿到了源码。</p>
+    </div>
+  </div>
+</div>
+
+<div class="options" style="margin-top:22px;">
+  <div class="option" data-choice="rules-ok" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>规则对</h3>
+      <p>继续讲 MVP 功能边界，避免第一版做得过重。</p>
+    </div>
+  </div>
+  <div class="option" data-choice="rules-adjust" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>规则要调</h3>
+      <p>某些可见信息、可调参数或导入后的权限还需要改。</p>
+    </div>
+  </div>
+</div>

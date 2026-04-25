@@ -1,0 +1,101 @@
+<h2>双轨混合型 · 页面结构关系</h2>
+<p class="subtitle">第一阶段 MVP：免费分享策略 + 帖子挂载策略卡片 + 一键导入 sealed 副本 + 试用回测</p>
+
+<div class="mockup" style="margin-bottom:20px;">
+  <div class="mockup-header">核心定义</div>
+  <div class="mockup-body" style="display:grid;gap:12px;">
+    <div style="padding:14px 16px;border:2px solid #d7d2c8;border-radius:14px;background:#fffaf0;">
+      <strong>策略分享资产</strong>
+      <p style="margin:8px 0 0;">真正被导入、试用、回测和后续商业化的对象。帖子只是引用它，不复制它。</p>
+    </div>
+    <div style="padding:14px 16px;border:2px solid #d7d2c8;border-radius:14px;background:#f8f6f1;">
+      <strong>社区帖子</strong>
+      <p style="margin:8px 0 0;">负责传播、复盘、讨论、作者表达，可以挂 1 个策略卡片。</p>
+    </div>
+  </div>
+</div>
+
+<div class="split" style="align-items:stretch;">
+  <div class="mockup">
+    <div class="mockup-header">轨道 A：策略广场</div>
+    <div class="mockup-body" style="display:grid;gap:12px;">
+      <div style="padding:12px 14px;border:2px solid #111;border-radius:12px;background:#ffd84d;">
+        <strong>策略广场列表</strong>
+        <p style="margin:6px 0 0;">筛选、排序、收益指标、作者、分类标签</p>
+      </div>
+      <div style="text-align:center;font-size:26px;">↓</div>
+      <div style="padding:12px 14px;border:2px solid #111;border-radius:12px;background:#fff;">
+        <strong>策略详情页</strong>
+        <p style="margin:6px 0 0;">表现指标、作者说明、试用回测、导入按钮、关联讨论</p>
+      </div>
+      <div style="text-align:center;font-size:26px;">↓</div>
+      <div style="padding:12px 14px;border:2px solid #111;border-radius:12px;background:#fff;">
+        <strong>试用回测</strong>
+        <p style="margin:6px 0 0;">不暴露源码，只允许调参数并查看效果</p>
+      </div>
+      <div style="text-align:center;font-size:26px;">↓</div>
+      <div style="padding:12px 14px;border:2px solid #111;border-radius:12px;background:#fff8dc;">
+        <strong>一键导入我的策略库</strong>
+        <p style="margin:6px 0 0;">生成 sealed runtime copy</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="mockup">
+    <div class="mockup-header">轨道 B：交流社区</div>
+    <div class="mockup-body" style="display:grid;gap:12px;">
+      <div style="padding:12px 14px;border:2px solid #111;border-radius:12px;background:#c6f36a;">
+        <strong>社区信息流</strong>
+        <p style="margin:6px 0 0;">帖子、复盘、观点、作者动态</p>
+      </div>
+      <div style="text-align:center;font-size:26px;">↓</div>
+      <div style="padding:12px 14px;border:2px solid #111;border-radius:12px;background:#fff;">
+        <strong>帖子详情页</strong>
+        <p style="margin:6px 0 0;">正文、评论、点赞收藏、转发、挂载策略卡片</p>
+      </div>
+      <div style="text-align:center;font-size:26px;">↓</div>
+      <div style="padding:12px 14px;border:2px dashed #111;border-radius:12px;background:#f8f6f1;">
+        <strong>策略卡片引用</strong>
+        <p style="margin:6px 0 0;">点击后跳到策略详情页，而不是在帖子里直接承载全部资产信息</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="mockup" style="margin-top:20px;">
+  <div class="mockup-header">共享层：同一个策略资产，被两个入口消费</div>
+  <div class="mockup-body" style="display:grid;gap:14px;">
+    <div style="display:grid;grid-template-columns:1fr auto 1fr;gap:12px;align-items:center;">
+      <div style="padding:12px 14px;border:2px solid #111;border-radius:12px;background:#fff;">策略广场 / 策略详情</div>
+      <div style="font-size:26px;">→</div>
+      <div style="padding:12px 14px;border:2px solid #111;border-radius:12px;background:#fff8dc;"><strong>策略分享资产</strong></div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr auto 1fr;gap:12px;align-items:center;">
+      <div style="padding:12px 14px;border:2px solid #111;border-radius:12px;background:#fff;">社区帖子 / 挂载策略卡片</div>
+      <div style="font-size:26px;">→</div>
+      <div style="padding:12px 14px;border:2px solid #111;border-radius:12px;background:#fff8dc;"><strong>同一份策略分享资产</strong></div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr auto 1fr;gap:12px;align-items:center;">
+      <div style="padding:12px 14px;border:2px solid #111;border-radius:12px;background:#fff8dc;"><strong>策略分享资产</strong></div>
+      <div style="font-size:26px;">→</div>
+      <div style="padding:12px 14px;border:2px solid #111;border-radius:12px;background:#fff;"><strong>用户策略库 sealed 副本</strong><p style="margin:6px 0 0;">可运行、可调参数、不可看源码</p></div>
+    </div>
+  </div>
+</div>
+
+<div class="options" style="margin-top:22px;">
+  <div class="option" data-choice="structure-ok" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>结构正确</h3>
+      <p>继续展开页面层级、入口按钮和关键模块。</p>
+    </div>
+  </div>
+  <div class="option" data-choice="structure-adjust" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>需要调整</h3>
+      <p>某些页面归属、入口顺序或“帖子/策略”的主次还不对。</p>
+    </div>
+  </div>
+</div>
