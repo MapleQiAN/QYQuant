@@ -1012,6 +1012,58 @@ def test_delete_strategy_requires_owner_and_cleans_relations(client, app, tmp_pa
     assert not package_path.exists()
 
 
+def test_fetch_draft_code_returns_source_for_python_file(client, app):
+    token, user_id = _login_user(client, phone="13800138041", nickname="CodeFetchUser")
+    source = "class Strategy:\n    def on_bar(self, ctx, bar):\n        return []\n"
+
+    analyze_response = client.post(
+        "/api/v1/strategy-imports/analyze",
+        headers=_auth_headers(token),
+        data={"file": (io.BytesIO(source.encode("utf-8")), "my_strategy.py")},
+        content_type="multipart/form-data",
+    )
+    assert analyze_response.status_code == 200
+    draft_id = analyze_response.json["data"]["draftImportId"]
+
+    response = client.get(
+        f"/api/v1/strategy-imports/{draft_id}/code",
+        headers=_auth_headers(token),
+    )
+    assert response.status_code == 200
+    data = response.json["data"]
+    assert data["code"] == source
+    assert data["filename"] == "my_strategy.py"
+
+
+def test_fetch_draft_code_returns_404_for_missing_draft(client):
+    token, _ = _login_user(client, phone="13800138042", nickname="CodeFetchMissing")
+    response = client.get(
+        "/api/v1/strategy-imports/nonexistent-draft-id/code",
+        headers=_auth_headers(token),
+    )
+    assert response.status_code == 404
+
+
+def test_fetch_draft_code_rejects_other_users_draft(client, app):
+    token_a, _ = _login_user(client, phone="13800138043", nickname="CodeOwnerA")
+    source = "def on_bar(ctx, bar): return []"
+
+    analyze_response = client.post(
+        "/api/v1/strategy-imports/analyze",
+        headers=_auth_headers(token_a),
+        data={"file": (io.BytesIO(source.encode("utf-8")), "test.py")},
+        content_type="multipart/form-data",
+    )
+    draft_id = analyze_response.json["data"]["draftImportId"]
+
+    token_b, _ = _login_user(client, phone="13800138044", nickname="CodeOwnerB")
+    response = client.get(
+        f"/api/v1/strategy-imports/{draft_id}/code",
+        headers=_auth_headers(token_b),
+    )
+    assert response.status_code == 404
+
+
 def test_import_strategy_requires_auth(client, tmp_path):
     package_path, _, _ = _build_qys_package(tmp_path)
     with package_path.open("rb") as handle:
