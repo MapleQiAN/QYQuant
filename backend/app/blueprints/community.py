@@ -6,6 +6,7 @@ from ..extensions import db
 from ..models import Post, PostComment, PostInteraction, Strategy, User
 from ..utils.response import error_response, ok
 from ..utils.time import format_beijing_iso, now_ms, now_utc
+from ..tasks.moderation_tasks import moderate_content
 
 bp = Blueprint("community", __name__, url_prefix="/api/v1")
 
@@ -146,6 +147,13 @@ def create_post():
     db.session.add(post)
     db.session.commit()
 
+    moderate_content.delay(
+        user_id=user.id,
+        target_type="post",
+        target_id=post.id,
+        content=content,
+    )
+
     return ok(_serialize_post(post, author=user, strategy=strategy, liked=False, collected=False))
 
 
@@ -156,7 +164,7 @@ def get_posts():
     page = _int_arg("page", default=1, minimum=1)
     per_page = _int_arg("per_page", default=20, minimum=1, maximum=50)
 
-    base_query = Post.query.filter(Post.content.isnot(None))
+    base_query = Post.query.filter(Post.content.isnot(None), Post.is_hidden.is_(False))
     total = base_query.count()
     posts = (
         base_query
@@ -290,6 +298,7 @@ def get_my_collections():
             PostInteraction.user_id == user_id,
             PostInteraction.type == "collect",
             Post.content.isnot(None),
+            Post.is_hidden.is_(False),
         )
     )
     total = base_query.count()
@@ -328,7 +337,7 @@ def get_comments(post_id):
 
     page = _int_arg("page", default=1, minimum=1)
     per_page = _int_arg("per_page", default=20, minimum=1, maximum=50)
-    query = PostComment.query.filter_by(post_id=post.id)
+    query = PostComment.query.filter_by(post_id=post.id, is_hidden=False)
     total = query.count()
     comments = (
         query
@@ -370,6 +379,13 @@ def create_comment(post_id):
     db.session.add(comment)
     Post.query.filter_by(id=post.id).update({Post.comments_count: Post.comments_count + 1})
     db.session.commit()
+
+    moderate_content.delay(
+        user_id=user_id,
+        target_type="comment",
+        target_id=comment.id,
+        content=content,
+    )
 
     author = db.session.get(User, user_id)
     return ok(_serialize_comment(comment, author=author))

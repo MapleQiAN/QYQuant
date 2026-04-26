@@ -9,8 +9,9 @@ from sqlalchemy.orm import aliased
 
 from ..celery_app import celery_app
 from ..extensions import db
-from ..models import AuditLog, BacktestJob, BacktestJobStatus, File, Report, Strategy, StrategyVersion, User
+from ..models import AuditLog, BacktestJob, BacktestJobStatus, File, Post, PostComment, Report, SensitiveWord, Strategy, StrategyVersion, User, UserModerationRecord
 from ..services.data_source_health import DataSourceHealthService
+from ..services.moderation import reload_automaton
 from ..services.notifications import create_notification
 from ..tasks.notification_tasks import send_email_notification
 from ..utils.auth import blacklist_refresh_tokens, revoke_all_user_tokens
@@ -467,6 +468,218 @@ def terminate_backtest_job(job_id):
     )
     db.session.commit()
     return ok({"job_id": job.id, "status": "terminated"})
+
+
+# ─── Sensitive Words Management ──────────────────────────────────────
+
+
+@bp.get("/sensitive-words")
+@require_admin
+def list_sensitive_words():
+    page = _int_arg("page", default=1, minimum=1)
+    per_page = _int_arg("per_page", default=50, minimum=1, maximum=200)
+    category = (request.args.get("category") or "").strip()
+
+    query = SensitiveWord.query
+    if category:
+        query = query.filter(SensitiveWord.category == category)
+
+    total = query.count()
+    items = (
+        query.order_by(SensitiveWord.created_at.desc(), SensitiveWord.id.desc())
+        .offset((page - 1) * per_page)
+        .limit(per_page)
+        .all()
+    )
+    return ok(
+        [_serialize_sensitive_word(w) for w in items],
+        meta={"total": total, "page": page, "per_page": per_page},
+    )
+
+
+@bp.post("/sensitive-words")
+@require_admin
+def create_sensitive_words():
+    payload = request.get_json() or {}
+    words_data = payload.get("words")
+
+    if isinstance(words_data, list):
+        items = words_data
+    else:
+        items = [payload]
+
+    admin_id = _current_admin_id()
+    created = []
+    errors = []
+
+    for item in items:
+        word = str(item.get("word") or "").strip()
+        category = str(item.get("category") or "other").strip()
+        level = str(item.get("level") or "medium").strip()
+
+        if not word:
+            errors.append({"word": "", "error": "word is required"})
+            continue
+
+        existing = SensitiveWord.query.filter_by(word=word).first()
+        if existing:
+            if not existing.is_active:
+                existing.is_active = True
+                existing.category = category
+                existing.level = level
+                created.append(_serialize_sensitive_word(existing))
+            else:
+                errors.append({"word": word, "error": "already exists"})
+            continue
+
+        sw = SensitiveWord(word=word, category=category, level=level)
+        db.session.add(sw)
+        created.append(_serialize_sensitive_word(sw))
+
+    db.session.commit()
+
+    if created:
+        reload_automaton()
+        log_audit(
+            operator_id=admin_id,
+            action="sensitive_words_add",
+            target_type="sensitive_word",
+            target_id="batch",
+            details={"count": len(created)},
+        )
+
+    return ok({"created": created, "errors": errors})
+
+
+@bp.delete("/sensitive-words/<word_id>")
+@require_admin
+def delete_sensitive_word(word_id):
+    word = db.session.get(SensitiveWord, word_id)
+    if word is None:
+        return error_response("WORD_NOT_FOUND", "Sensitive word not found", 404)
+
+    admin_id = _current_admin_id()
+    db.session.delete(word)
+    log_audit(
+        operator_id=admin_id,
+        action="sensitive_word_delete",
+        target_type="sensitive_word",
+        target_id=word.id,
+        details={"word": word.word, "category": word.category},
+    )
+    db.session.commit()
+    reload_automaton()
+    return ok({"id": word_id, "deleted": True})
+
+
+# ─── Moderation Records ──────────────────────────────────────────────
+
+
+MAX_WARNINGS = 3
+
+
+@bp.get("/moderation-records")
+@require_admin
+def list_moderation_records():
+    page = _int_arg("page", default=1, minimum=1)
+    per_page = _int_arg("per_page", default=20, minimum=1, maximum=100)
+    user_id = (request.args.get("user_id") or "").strip()
+
+    query = db.session.query(UserModerationRecord, User).outerjoin(
+        User, UserModerationRecord.user_id == User.id
+    )
+    if user_id:
+        query = query.filter(UserModerationRecord.user_id == user_id)
+
+    total = query.count()
+    items = (
+        query.order_by(
+            UserModerationRecord.created_at.desc(), UserModerationRecord.id.desc()
+        )
+        .offset((page - 1) * per_page)
+        .limit(per_page)
+        .all()
+    )
+    return ok(
+        [_serialize_moderation_record(r, u) for r, u in items],
+        meta={"total": total, "page": page, "per_page": per_page},
+    )
+
+
+@bp.patch("/moderation-records/<record_id>/appeal")
+@require_admin
+def appeal_moderation_record(record_id):
+    record = db.session.get(UserModerationRecord, record_id)
+    if record is None:
+        return error_response("RECORD_NOT_FOUND", "Moderation record not found", 404)
+
+    payload = request.get_json() or {}
+    action = str(payload.get("action") or "").strip().lower()
+    if action not in ("restore", "uphold"):
+        return error_response("INVALID_ACTION", "Action must be 'restore' or 'uphold'", 422)
+
+    admin_id = _current_admin_id()
+
+    if action == "restore":
+        if record.target_type == "post":
+            db.session.query(Post).filter_by(id=record.target_id).update(
+                {Post.is_hidden: False}
+            )
+        elif record.target_type == "comment":
+            db.session.query(PostComment).filter_by(id=record.target_id).update(
+                {PostComment.is_hidden: False}
+            )
+
+        user = db.session.get(User, record.user_id)
+        if user and user.warning_count > 0:
+            user.warning_count -= 1
+            if user.warning_count < MAX_WARNINGS and user.is_banned:
+                user.is_banned = False
+
+        record.action_taken = "appealed_restored"
+        create_notification(
+            user_id=record.user_id,
+            type="moderation_appeal",
+            title="内容申诉通过",
+            content="您的内容经人工审核后已恢复。",
+        )
+
+    else:
+        record.action_taken = "appealed_upheld"
+
+    log_audit(
+        operator_id=admin_id,
+        action=f"moderation_{action}",
+        target_type="moderation_record",
+        target_id=record.id,
+        details={"appeal_action": action},
+    )
+    db.session.commit()
+    return ok({"record_id": record.id, "action": action})
+
+
+def _serialize_sensitive_word(word):
+    return {
+        "id": word.id,
+        "word": word.word,
+        "category": word.category,
+        "level": word.level,
+        "is_active": word.is_active,
+        "created_at": format_beijing_iso(word.created_at),
+    }
+
+
+def _serialize_moderation_record(record, user):
+    return {
+        "id": record.id,
+        "user_id": record.user_id,
+        "user_nickname": getattr(user, "nickname", None),
+        "target_type": record.target_type,
+        "target_id": record.target_id,
+        "matched_words": record.matched_words,
+        "action_taken": record.action_taken,
+        "created_at": format_beijing_iso(record.created_at),
+    }
 
 
 def _serialize_admin_strategy(strategy, author):
