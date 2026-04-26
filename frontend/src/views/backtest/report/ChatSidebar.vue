@@ -325,7 +325,7 @@ onUnmounted(() => {
 
 .chat-sidebar__eyebrow {
   display: block;
-  font-size: 10px;
+  font-size: var(--font-size-xs);
   font-weight: 800;
   letter-spacing: 0.1em;
   text-transform: uppercase;
@@ -348,7 +348,7 @@ onUnmounted(() => {
   border-radius: 6px;
   background: var(--color-surface-elevated);
   border: 1px dashed var(--color-border-light);
-  font-size: 11px;
+  font-size: var(--font-size-xs);
   color: var(--color-text-secondary);
 }
 
@@ -443,7 +443,7 @@ onUnmounted(() => {
 
 .chat-bubble__sender {
   display: block;
-  font-size: 10px;
+  font-size: var(--font-size-xs);
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.06em;

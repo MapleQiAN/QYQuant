@@ -224,7 +224,7 @@ watch(
 }
 
 .slider-bound {
-  font-size: 10px;
+  font-size: var(--font-size-xs);
   font-family: var(--font-mono);
   color: var(--color-text-muted);
 }

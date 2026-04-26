@@ -137,7 +137,7 @@ function formatMetric(value: string | number | boolean | null | undefined, perce
 
 .card-category {
   margin-top: var(--spacing-sm);
-  font-size: 11px;
+  font-size: var(--font-size-xs);
   color: var(--color-text-muted);
   font-weight: 800;
   letter-spacing: 0.08em;
@@ -185,7 +185,7 @@ function formatMetric(value: string | number | boolean | null | undefined, perce
 }
 
 .metric-cell dt {
-  font-size: 10px;
+  font-size: var(--font-size-xs);
   color: var(--color-text-muted);
   font-weight: 800;
   letter-spacing: 0.06em;

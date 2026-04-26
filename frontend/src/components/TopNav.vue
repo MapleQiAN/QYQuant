@@ -333,7 +333,7 @@ const HelpIcon = () => h('svg', { width: 16, height: 16, viewBox: '0 0 24 24', f
   position: absolute;
   right: 10px;
   padding: 2px 6px;
-  font-size: 10px;
+  font-size: var(--font-size-xs);
   font-family: var(--font-mono);
   font-weight: 600;
   color: var(--color-text-muted);

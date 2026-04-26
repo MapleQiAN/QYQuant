@@ -161,7 +161,7 @@ function toneFromValue(value: string): string {
 }
 
 .risk-tile__disclaimer {
-  font-size: 11px;
+  font-size: var(--font-size-xs);
   color: var(--color-warning);
   line-height: 1.4;
 }

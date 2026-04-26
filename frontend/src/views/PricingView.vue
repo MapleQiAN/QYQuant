@@ -665,7 +665,7 @@ onBeforeUnmount(() => {
 
 .usage-stat__label {
   color: var(--color-text-muted);
-  font-size: 10px;
+  font-size: var(--font-size-xs);
   font-weight: 800;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -1020,7 +1020,7 @@ onBeforeUnmount(() => {
   border-radius: var(--radius-full);
   background: var(--color-danger);
   color: #fff;
-  font-size: 10px;
+  font-size: var(--font-size-xs);
   font-weight: 700;
   width: fit-content;
 }
@@ -1216,7 +1216,7 @@ onBeforeUnmount(() => {
   text-align: left;
   color: var(--color-text-muted);
   font-weight: 700;
-  font-size: 10px;
+  font-size: var(--font-size-xs);
   text-transform: uppercase;
   letter-spacing: 0.08em;
   border-bottom: 2px solid var(--color-border);

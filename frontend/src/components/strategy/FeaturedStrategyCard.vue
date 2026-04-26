@@ -125,7 +125,7 @@ function formatMetric(value: string | number | boolean | null | undefined, perce
 
 .card-kicker {
   margin: 0;
-  font-size: 11px;
+  font-size: var(--font-size-xs);
   color: var(--color-text-muted);
   text-transform: uppercase;
   font-weight: 800;
@@ -165,7 +165,7 @@ function formatMetric(value: string | number | boolean | null | undefined, perce
 
 .metric-label {
   display: block;
-  font-size: 10px;
+  font-size: var(--font-size-xs);
   color: var(--color-text-muted);
   font-weight: 800;
   letter-spacing: 0.06em;

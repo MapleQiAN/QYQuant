@@ -641,16 +641,6 @@ onMounted(async () => {
   color: var(--color-text-inverse);
 }
 
-.toggle-btn.active:hover {
-  background: color-mix(in srgb, var(--color-primary) 82%, #000);
-  color: var(--color-text-inverse);
-}
-
-.toggle-btn::selection {
-  background: transparent;
-  color: inherit;
-}
-
 /* Buttons */
 .primary-btn {
   border: none;

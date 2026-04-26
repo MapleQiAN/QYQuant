@@ -302,7 +302,7 @@ watch(isOpen, (val) => {
 .q-select--sm .q-select__trigger {
   height: 30px;
   padding: 0 10px;
-  font-size: 11px;
+  font-size: var(--font-size-xs);
   gap: 4px;
 }
 
@@ -312,7 +312,7 @@ watch(isOpen, (val) => {
 
 .q-select--sm .q-select__option {
   padding: 4px 8px;
-  font-size: 11px;
+  font-size: var(--font-size-xs);
 }
 .q-select--md .q-select__trigger { height: 38px; }
 .q-select--lg .q-select__trigger { height: 44px; }

@@ -339,7 +339,7 @@ async function toggleCollect() {
   background: var(--color-surface);
   border: 2px solid var(--color-border);
   color: var(--color-text-secondary);
-  font-size: 11px;
+  font-size: var(--font-size-xs);
   font-weight: 700;
 }
 
@@ -347,7 +347,7 @@ async function toggleCollect() {
   display: inline-flex;
   padding: 3px 10px;
   border-radius: 999px;
-  font-size: 11px;
+  font-size: var(--font-size-xs);
   font-weight: 700;
   border: 2px solid transparent;
   font-family: var(--font-mono);

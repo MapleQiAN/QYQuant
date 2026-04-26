@@ -190,7 +190,7 @@ onMounted(() => {
 }
 
 .char-counter span {
-  font-size: 11px;
+  font-size: var(--font-size-xs);
   font-weight: 700;
   font-family: var(--font-mono);
   font-variant-numeric: tabular-nums;
@@ -293,7 +293,7 @@ onMounted(() => {
   align-items: center;
   gap: 6px;
   color: var(--color-text-muted);
-  font-size: 11px;
+  font-size: var(--font-size-xs);
   font-weight: 800;
   letter-spacing: 0.06em;
   text-transform: uppercase;

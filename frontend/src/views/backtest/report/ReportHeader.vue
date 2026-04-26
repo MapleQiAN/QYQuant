@@ -81,7 +81,7 @@ defineEmits<{
   border: 2px solid var(--color-border);
   border-radius: 999px;
   background: var(--color-surface);
-  font-size: 11px;
+  font-size: var(--font-size-xs);
   font-weight: 800;
   color: var(--color-text-muted);
 }

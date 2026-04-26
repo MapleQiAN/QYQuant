@@ -1026,7 +1026,7 @@ onMounted(() => {
 .history-item__status {
   padding: 3px 10px;
   border-radius: var(--radius-full);
-  font-size: 11px;
+  font-size: var(--font-size-xs);
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.06em;
@@ -1202,7 +1202,7 @@ onMounted(() => {
 
 .field-label--mono {
   font-family: var(--font-mono);
-  font-size: 11px;
+  font-size: var(--font-size-xs);
   color: var(--color-primary);
 }
 
@@ -1277,7 +1277,7 @@ onMounted(() => {
   border-radius: var(--radius-full);
   background: var(--color-accent-bg);
   color: var(--color-primary);
-  font-size: 11px;
+  font-size: var(--font-size-xs);
   font-family: var(--font-mono);
   font-weight: 700;
   border: 2px solid var(--color-primary-border);
@@ -1460,7 +1460,7 @@ onMounted(() => {
 
 .terminal__path {
   margin-left: 8px;
-  font-size: 11px;
+  font-size: var(--font-size-xs);
   color: var(--color-text-muted);
   letter-spacing: 0.05em;
 }
@@ -1496,7 +1496,7 @@ onMounted(() => {
 }
 
 .terminal__key {
-  font-size: 11px;
+  font-size: var(--font-size-xs);
   color: var(--color-text-muted);
   letter-spacing: 0.05em;
   text-transform: uppercase;

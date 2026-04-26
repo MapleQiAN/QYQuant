@@ -146,7 +146,7 @@ function formatMoney(value: number) {
   border-radius: var(--radius-full);
   background: var(--color-primary-bg);
   color: var(--color-primary);
-  font-size: 11px;
+  font-size: var(--font-size-xs);
   font-weight: 600;
 }
 
@@ -165,7 +165,7 @@ function formatMoney(value: number) {
   gap: 5px;
   padding: 3px 10px;
   border-radius: var(--radius-full);
-  font-size: 11px;
+  font-size: var(--font-size-xs);
   font-weight: 700;
   white-space: nowrap;
   border: 2px solid transparent;
@@ -218,7 +218,7 @@ function formatMoney(value: number) {
 }
 
 .metric__label {
-  font-size: 11px;
+  font-size: var(--font-size-xs);
   font-weight: 800;
   color: var(--color-text-muted);
   letter-spacing: 0.04em;
