@@ -58,6 +58,41 @@
             </div>
           </dl>
 
+          <div class="review-card__evidence">
+            <button
+              class="review-card__button review-card__button--secondary"
+              type="button"
+              :data-test="`review-evidence-${item.id}`"
+              :disabled="isEvidenceLoading(item.id)"
+              @click="loadEvidence(item.id)"
+            >
+              {{ isEvidenceLoading(item.id) ? '加载中' : '查看证据' }}
+            </button>
+
+            <div v-if="reviewPacket(item.id)" class="review-evidence">
+              <div>
+                <span>策略包</span>
+                <strong>{{ reviewPacket(item.id)?.version?.filename || '-' }}</strong>
+              </div>
+              <div>
+                <span>版本</span>
+                <strong>{{ reviewPacket(item.id)?.version?.version || '-' }}</strong>
+              </div>
+              <div>
+                <span>校验</span>
+                <strong>{{ evidenceCheckLabel(item.id) }}</strong>
+              </div>
+              <div>
+                <span>回测</span>
+                <strong>{{ reviewPacket(item.id)?.latestBacktest?.id || '-' }}</strong>
+              </div>
+              <div>
+                <span>回测结果</span>
+                <strong>{{ backtestSummary(item.id) }}</strong>
+              </div>
+            </div>
+          </div>
+
           <textarea
             :data-test="`reject-reason-${item.id}`"
             v-model="rejectReasons[item.id]"
@@ -153,6 +188,36 @@ function metricValue(metrics: Record<string, unknown>, key: string): string {
 
 function isSubmitting(strategyId: string): boolean {
   return Boolean(adminStore.reviewSubmitting?.[strategyId])
+}
+
+function isEvidenceLoading(strategyId: string): boolean {
+  return Boolean(adminStore.reviewPacketLoading?.[strategyId])
+}
+
+function reviewPacket(strategyId: string) {
+  return adminStore.reviewPackets?.[strategyId] ?? null
+}
+
+async function loadEvidence(strategyId: string) {
+  try {
+    await adminStore.loadReviewPacket(strategyId)
+  } catch (error) {
+    toast.error(getErrorMessage(error))
+  }
+}
+
+function evidenceCheckLabel(strategyId: string): string {
+  const checks = reviewPacket(strategyId)?.checks
+  if (!checks) return '-'
+  return Object.values(checks).every(Boolean) ? '校验通过' : '证据不完整'
+}
+
+function backtestSummary(strategyId: string): string {
+  const summary = reviewPacket(strategyId)?.latestBacktest?.resultSummary
+  if (!summary) return '-'
+  const totalReturn = summary.total_return ?? summary.totalReturn
+  const maxDrawdown = summary.max_drawdown ?? summary.maxDrawdown
+  return `收益 ${totalReturn ?? '-'} / 回撤 ${maxDrawdown ?? '-'}`
 }
 
 async function approve(strategyId: string) {
@@ -363,6 +428,45 @@ function getErrorMessage(error: unknown): string {
   color: var(--color-danger);
 }
 
+.review-card__button--secondary {
+  min-width: 96px;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-text);
+}
+
+.review-card__evidence {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+}
+
+.review-evidence {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: var(--spacing-sm);
+  padding: var(--spacing-sm);
+  border: 1px solid var(--color-border-light);
+  border-radius: 18px;
+  background: var(--color-surface-hover);
+}
+
+.review-evidence div {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.review-evidence span {
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
+}
+
+.review-evidence strong {
+  overflow-wrap: anywhere;
+}
+
 .strategy-review__pagination {
   display: flex;
   align-items: center;
@@ -401,10 +505,15 @@ function getErrorMessage(error: unknown): string {
   .review-card__grid {
     grid-template-columns: 1fr 1fr;
   }
+
+  .review-evidence {
+    grid-template-columns: 1fr 1fr;
+  }
 }
 
 @media (max-width: 640px) {
-  .review-card__grid {
+  .review-card__grid,
+  .review-evidence {
     grid-template-columns: 1fr;
   }
 }

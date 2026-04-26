@@ -78,6 +78,30 @@ export interface AdminReviewMutationResult {
   reviewStatus: 'pending' | 'approved' | 'rejected'
 }
 
+export interface AdminReviewPacket {
+  strategy: AdminReviewStrategy
+  version: {
+    version: string
+    fileId: string
+    filename: string | null
+    checksum: string | null
+    checksumValid: boolean
+  } | null
+  latestBacktest: {
+    id: string
+    status: string
+    params: Record<string, unknown>
+    resultSummary: Record<string, unknown>
+    resultStorageKey: string | null
+  } | null
+  checks: {
+    hasVersion: boolean
+    hasPackageFile: boolean
+    checksumValid: boolean
+    hasCompletedBacktest: boolean
+  }
+}
+
 export interface AdminReport {
   id: string
   reporterId: string
@@ -231,6 +255,30 @@ interface AdminReviewMutationDto {
   review_status?: string | null
 }
 
+interface AdminReviewPacketDto {
+  strategy?: AdminReviewStrategyDto
+  version?: {
+    version?: string | null
+    file_id?: string | null
+    filename?: string | null
+    checksum?: string | null
+    checksum_valid?: boolean | null
+  } | null
+  latest_backtest?: {
+    id?: string | null
+    status?: string | null
+    params?: Record<string, unknown> | null
+    result_summary?: Record<string, unknown> | null
+    result_storage_key?: string | null
+  } | null
+  checks?: {
+    has_version?: boolean | null
+    has_package_file?: boolean | null
+    checksum_valid?: boolean | null
+    has_completed_backtest?: boolean | null
+  } | null
+}
+
 interface AdminReportDto {
   id: string
   reporter_id?: string | null
@@ -360,23 +408,46 @@ export async function fetchPendingStrategyReviews(params?: {
   })
 
   return {
-    data: (response.data ?? []).map((item) => ({
-      id: item.id,
-      title: item.title || item.name,
-      name: item.name,
-      description: item.description ?? '',
-      category: item.category ?? '',
-      tags: Array.isArray(item.tags) ? item.tags : [],
-      displayMetrics: item.display_metrics ?? {},
-      ownerId: item.owner_id ?? '',
-      authorNickname: item.author_nickname ?? '',
-      createdAt: item.created_at ?? null,
-      reviewStatus: normalizeReviewStatus(item.review_status)
-    })),
+    data: (response.data ?? []).map(mapReviewStrategy),
     meta: {
       total: toNumber(response.meta?.total, 0),
       page: toNumber(response.meta?.page, page),
       perPage: toNumber(response.meta?.per_page, perPage)
+    }
+  }
+}
+
+export async function fetchStrategyReviewPacket(strategyId: string): Promise<AdminReviewPacket> {
+  const response = await client.request<AdminReviewPacketDto>({
+    method: 'get',
+    url: `/v1/admin/strategies/${strategyId}/review-packet`
+  })
+
+  return {
+    strategy: mapReviewStrategy(response.strategy ?? { id: strategyId, name: '' }),
+    version: response.version
+      ? {
+          version: response.version.version ?? '',
+          fileId: response.version.file_id ?? '',
+          filename: response.version.filename ?? null,
+          checksum: response.version.checksum ?? null,
+          checksumValid: Boolean(response.version.checksum_valid)
+        }
+      : null,
+    latestBacktest: response.latest_backtest
+      ? {
+          id: response.latest_backtest.id ?? '',
+          status: response.latest_backtest.status ?? '',
+          params: response.latest_backtest.params ?? {},
+          resultSummary: response.latest_backtest.result_summary ?? {},
+          resultStorageKey: response.latest_backtest.result_storage_key ?? null
+        }
+      : null,
+    checks: {
+      hasVersion: Boolean(response.checks?.has_version),
+      hasPackageFile: Boolean(response.checks?.has_package_file),
+      checksumValid: Boolean(response.checks?.checksum_valid),
+      hasCompletedBacktest: Boolean(response.checks?.has_completed_backtest)
     }
   }
 }
@@ -556,6 +627,22 @@ function toNumber(value: unknown, fallback: number): number {
   }
 
   return fallback
+}
+
+function mapReviewStrategy(item: AdminReviewStrategyDto): AdminReviewStrategy {
+  return {
+    id: item.id,
+    title: item.title || item.name,
+    name: item.name,
+    description: item.description ?? '',
+    category: item.category ?? '',
+    tags: Array.isArray(item.tags) ? item.tags : [],
+    displayMetrics: item.display_metrics ?? {},
+    ownerId: item.owner_id ?? '',
+    authorNickname: item.author_nickname ?? '',
+    createdAt: item.created_at ?? null,
+    reviewStatus: normalizeReviewStatus(item.review_status)
+  }
 }
 
 function normalizeReviewStatus(value: unknown): AdminReviewMutationResult['reviewStatus'] {

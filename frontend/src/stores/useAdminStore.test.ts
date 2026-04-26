@@ -8,6 +8,7 @@ const {
   fetchQueueStatsMock,
   fetchUsersMock,
   fetchPendingStrategyReviewsMock,
+  fetchStrategyReviewPacketMock,
   submitStrategyReviewMock,
   fetchPendingReportsMock,
   resolveReportMock,
@@ -20,6 +21,7 @@ const {
   fetchQueueStatsMock: vi.fn(),
   fetchUsersMock: vi.fn(),
   fetchPendingStrategyReviewsMock: vi.fn(),
+  fetchStrategyReviewPacketMock: vi.fn(),
   submitStrategyReviewMock: vi.fn(),
   fetchPendingReportsMock: vi.fn(),
   resolveReportMock: vi.fn(),
@@ -34,6 +36,7 @@ vi.mock('../api/admin', () => ({
   fetchQueueStats: fetchQueueStatsMock,
   fetchUsers: fetchUsersMock,
   fetchPendingStrategyReviews: fetchPendingStrategyReviewsMock,
+  fetchStrategyReviewPacket: fetchStrategyReviewPacketMock,
   submitStrategyReview: submitStrategyReviewMock,
   fetchPendingReports: fetchPendingReportsMock,
   resolveReport: resolveReportMock,
@@ -52,6 +55,7 @@ describe('admin store', () => {
     fetchQueueStatsMock.mockReset()
     fetchUsersMock.mockReset()
     fetchPendingStrategyReviewsMock.mockReset()
+    fetchStrategyReviewPacketMock.mockReset()
     submitStrategyReviewMock.mockReset()
     fetchPendingReportsMock.mockReset()
     resolveReportMock.mockReset()
@@ -335,6 +339,52 @@ describe('admin store', () => {
     expect(store.reviewQueue).toEqual([])
     expect(store.reviewQueueMeta.total).toBe(0)
     expect(store.reviewSubmitting['strategy-1']).toBe(false)
+  })
+
+  it('loads a strategy review packet into state', async () => {
+    fetchStrategyReviewPacketMock.mockResolvedValueOnce({
+      strategy: {
+        id: 'strategy-1',
+        title: '均线增强版',
+        name: 'ma-pro',
+        description: 'desc',
+        category: 'trend-following',
+        tags: ['均线'],
+        displayMetrics: { sharpe_ratio: 1.2 },
+        ownerId: 'user-1',
+        authorNickname: 'Alice',
+        createdAt: '2026-03-23T12:00:00+08:00',
+        reviewStatus: 'pending'
+      },
+      version: {
+        version: '1.0.0',
+        fileId: 'file-1',
+        filename: 'ma-pro.qys',
+        checksum: 'abc123',
+        checksumValid: true
+      },
+      latestBacktest: {
+        id: 'job-1',
+        status: 'completed',
+        params: { symbol: 'BTCUSDT' },
+        resultSummary: { total_return: 24.6 },
+        resultStorageKey: 'backtests/job-1'
+      },
+      checks: {
+        hasVersion: true,
+        hasPackageFile: true,
+        checksumValid: true,
+        hasCompletedBacktest: true
+      }
+    })
+
+    const store = useAdminStore()
+    const packet = await store.loadReviewPacket('strategy-1')
+
+    expect(fetchStrategyReviewPacketMock).toHaveBeenCalledWith('strategy-1')
+    expect(packet.version?.filename).toBe('ma-pro.qys')
+    expect(store.reviewPackets['strategy-1']).toEqual(packet)
+    expect(store.reviewPacketLoading['strategy-1']).toBe(false)
   })
 
   it('loads pending reports queue into state', async () => {
