@@ -665,7 +665,7 @@ onBeforeUnmount(() => {
 
 .usage-stat__label {
   color: var(--color-text-muted);
-  font-size: 10px;
+  font-size: var(--font-size-xs);
   font-weight: 800;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -1010,9 +1010,7 @@ onBeforeUnmount(() => {
 
 .pricing-card__unit {
   color: var(--color-text-muted);
-  font-size: var(--font-size-md);
-  font-weight: 500;
-  font-family: var(--font-zh-body);
+  font-size: var(--font-size-sm);
   margin-left: 3px;
 }
 
@@ -1022,7 +1020,7 @@ onBeforeUnmount(() => {
   border-radius: var(--radius-full);
   background: var(--color-danger);
   color: #fff;
-  font-size: 10px;
+  font-size: var(--font-size-xs);
   font-weight: 700;
   width: fit-content;
 }
@@ -1046,16 +1044,15 @@ onBeforeUnmount(() => {
 
 .pricing-card__quota {
   color: var(--color-primary);
-  font-size: var(--font-size-md);
-  font-weight: 600;
-  font-family: var(--font-zh-body);
+  font-size: var(--font-size-sm);
+  font-weight: 700;
+  font-family: 'KaiTi', '楷体', 'STKaiti', serif;
+  font-variant-numeric: tabular-nums;
 }
 
 .pricing-card__capacity {
   color: var(--color-text-secondary);
-  font-size: var(--font-size-sm);
-  font-weight: 500;
-  font-family: var(--font-zh-body);
+  font-size: var(--font-size-xs);
   letter-spacing: 0.02em;
 }
 
@@ -1219,7 +1216,7 @@ onBeforeUnmount(() => {
   text-align: left;
   color: var(--color-text-muted);
   font-weight: 700;
-  font-size: 10px;
+  font-size: var(--font-size-xs);
   text-transform: uppercase;
   letter-spacing: 0.08em;
   border-bottom: 2px solid var(--color-border);

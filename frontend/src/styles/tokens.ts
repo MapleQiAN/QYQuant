@@ -82,10 +82,8 @@ export const designTokens = {
   },
 
   typography: {
-    fontFamily: "'DM Sans', 'KaiTi', 'STKaiti', 'Noto Sans SC', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+    fontFamily: "'DM Sans', 'Noto Sans SC', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
     fontMono: "'DM Mono', 'JetBrains Mono', 'Courier New', monospace",
-    fontZhDisplay: "'KaiTi', 'STKaiti', 'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei', sans-serif",
-    fontZhBody: "'KaiTi', 'STKaiti', 'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei', sans-serif",
     fontSizes: {
       xs: '11px',
       sm: '12px',

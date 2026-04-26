@@ -145,10 +145,10 @@
   --radius-full: 9999px;
 
   /* Typography */
-  --font-family: 'DM Sans', 'KaiTi', 'STKaiti', 'Noto Sans SC', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-family: 'DM Sans', 'Noto Sans SC', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   --font-mono: 'DM Mono', 'JetBrains Mono', 'Courier New', monospace;
-  --font-zh-display: 'KaiTi', 'STKaiti', 'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei', sans-serif;
-  --font-zh-body: 'KaiTi', 'STKaiti', 'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  --font-zh-display: 'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  --font-zh-body: 'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei', sans-serif;
 
   --font-size-xs: 11px;
   --font-size-sm: 12px;
