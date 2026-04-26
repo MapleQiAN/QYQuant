@@ -721,6 +721,27 @@ class OAuthIdentity(db.Model):
     updated_at = db.Column(db.DateTime(timezone=True), nullable=False, default=now_utc, onupdate=now_utc)
 
 
+class StrategyReview(db.Model):
+    __tablename__ = 'strategy_reviews'
+    __table_args__ = (
+        db.Index('ix_strategy_reviews_strategy_id', 'strategy_id'),
+        db.Index('ix_strategy_reviews_status', 'status'),
+    )
+
+    id = db.Column(db.String, primary_key=True, default=gen_id)
+    strategy_id = db.Column(db.String, db.ForeignKey('strategies.id'), nullable=False)
+    status = db.Column(db.String(20), nullable=False, default='pending')
+    code_safety = db.Column(job_json_type, nullable=True)
+    metrics_check = db.Column(job_json_type, nullable=True)
+    metadata_check = db.Column(job_json_type, nullable=True)
+    ai_analysis = db.Column(job_json_type, nullable=True)
+    ai_enabled = db.Column(db.Boolean, nullable=False, default=False)
+    verdict = db.Column(db.String(20), nullable=True)
+    review_notes = db.Column(db.Text, nullable=True)
+    reviewed_at = db.Column(db.DateTime(timezone=True), nullable=True)
+    created_at = db.Column(db.DateTime(timezone=True), nullable=False, default=now_utc)
+
+
 class AiGenerationSession(db.Model):
     __tablename__ = 'ai_generation_sessions'
     __table_args__ = (

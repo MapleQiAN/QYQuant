@@ -234,7 +234,14 @@ def publish_marketplace_strategy():
         },
     )
     db.session.commit()
-    return ok({"strategy_id": strategy.id, "review_status": strategy.review_status})
+
+    response_data = {"strategy_id": strategy.id, "review_status": strategy.review_status}
+
+    # Dispatch auto-review task (runs async in production, sync in eager/test mode)
+    from ..tasks.review_tasks import review_strategy
+    review_strategy.delay(strategy.id)
+
+    return ok(response_data)
 
 
 @bp.post("/strategies/<strategy_id>/import")

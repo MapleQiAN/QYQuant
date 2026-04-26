@@ -64,6 +64,17 @@ class BaseConfig:
         self.OAUTH_GOOGLE_CLIENT_SECRET = os.getenv('OAUTH_GOOGLE_CLIENT_SECRET', '')
         self.FRONTEND_BASE_URL = os.getenv('FRONTEND_BASE_URL', 'http://localhost:5173')
 
+        # Strategy auto-review
+        self.REVIEW_MIN_WIN_RATE = float(os.getenv('REVIEW_MIN_WIN_RATE', '0.4'))
+        self.REVIEW_MIN_RETURNS = float(os.getenv('REVIEW_MIN_RETURNS', '-0.5'))
+        self.REVIEW_MAX_DRAWDOWN = float(os.getenv('REVIEW_MAX_DRAWDOWN', '0.8'))
+        self.REVIEW_AI_PROVIDER = os.getenv('REVIEW_AI_PROVIDER', '')
+        self.REVIEW_AI_MODEL = os.getenv('REVIEW_AI_MODEL', 'gpt-4o-mini')
+        self.REVIEW_AI_API_KEY = os.getenv('REVIEW_AI_API_KEY', '')
+        self.REVIEW_AI_BASE_URL = os.getenv('REVIEW_AI_BASE_URL', '')
+        self.REVIEW_TASK_SOFT_TIME_LIMIT = int(os.getenv('REVIEW_TASK_SOFT_TIME_LIMIT', '120'))
+        self.REVIEW_TASK_TIME_LIMIT = int(os.getenv('REVIEW_TASK_TIME_LIMIT', '180'))
+
 
 class DevConfig(BaseConfig):
     def __init__(self):
