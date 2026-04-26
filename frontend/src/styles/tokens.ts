@@ -82,13 +82,13 @@ export const designTokens = {
   },
 
   typography: {
-    fontFamily: "'DM Sans', 'KaiTi', 'STKaiti', 'Noto Sans SC', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+    fontFamily: "'DM Sans', 'Noto Sans SC', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
     fontMono: "'DM Mono', 'JetBrains Mono', 'Courier New', monospace",
     fontSizes: {
-      xs: '12px',
-      sm: '13px',
-      md: '14px',
-      lg: '15px',
+      xs: '11px',
+      sm: '12px',
+      md: '13px',
+      lg: '14px',
       xl: '16px',
       xxl: '20px',
       xxxl: '26px',
