@@ -23,6 +23,9 @@
         </div>
 
         <div class="ai-lab-header__actions">
+          <button v-if="!historyOpen" class="btn btn-ghost" type="button" @click="historyOpen = true">
+            {{ copy.historyTitle }}
+          </button>
           <RouterLink class="btn btn-ghost" :to="{ name: 'strategy-new' }">
             {{ copy.back }}
           </RouterLink>
@@ -62,7 +65,44 @@
         </button>
       </div>
 
-      <div class="ai-lab-grid">
+      <div class="ai-lab-grid" :class="{ 'ai-lab-grid--history-open': historyOpen }">
+        <aside v-if="historyOpen" class="lab-panel history-panel">
+          <div class="panel-heading">
+            <div class="panel-heading--row">
+              <div>
+                <p class="panel-kicker">{{ copy.historyTitle }}</p>
+                <h2>{{ copy.historyTitle }}</h2>
+              </div>
+              <button class="btn btn-ghost btn-sm" type="button" @click="historyOpen = false" aria-label="Close history">&times;</button>
+            </div>
+          </div>
+
+          <button class="history-new-btn" type="button" @click="startNewSession">
+            {{ copy.newSession }}
+          </button>
+
+          <div v-if="!historyLoaded" class="history-loading">{{ copy.generating }}</div>
+
+          <div v-else-if="sessions.length === 0" class="history-empty">
+            <span>{{ copy.logEmptyBody }}</span>
+          </div>
+
+          <ul v-else class="history-list">
+            <li
+              v-for="session in sessions"
+              :key="session.id"
+              class="history-item"
+              :class="{ 'history-item--active': session.id === activeSessionId }"
+            >
+              <button class="history-item__body" type="button" @click="loadSession(session.id)">
+                <strong class="history-item__title">{{ session.title || copy.newSession }}</strong>
+                <span class="history-item__meta">{{ copy.messageCount.replace('{n}', String(session.messageCount)) }}</span>
+              </button>
+              <button class="history-item__delete" type="button" @click.stop="handleDeleteSession(session.id)" aria-label="Delete">&times;</button>
+            </li>
+          </ul>
+        </aside>
+
         <aside class="lab-panel brief-panel" :class="mobilePanelClass('brief')">
           <div class="panel-heading">
             <p class="panel-kicker">{{ copy.briefKicker }}</p>
@@ -404,9 +444,9 @@ import { computed, nextTick, onMounted, reactive, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { RouterLink, useRouter } from 'vue-router'
 import { fetchIntegrations, type UserIntegration } from '../api/integrations'
-import { generateAiStrategyDraft } from '../api/strategies'
+import { deleteAiSession, generateAiStrategyDraft, getAiSession, listAiSessions } from '../api/strategies'
 import { useUserStore } from '../stores/user'
-import type { AiStrategyMessage, StrategyImportAnalysis, StrategyParameter } from '../types/Strategy'
+import type { AiSessionSummary, AiStrategyMessage, StrategyImportAnalysis, StrategyParameter } from '../types/Strategy'
 
 type StrategyMode = 'guided' | 'mixed' | 'expert'
 type GenerationStage = 'brief' | 'clarify' | 'design' | 'validate' | 'package'
@@ -490,6 +530,12 @@ const copy = computed(() => ({
   blocked: t('aiLab.blocked'),
   refineAction: t('aiLab.refineAction'),
   refineMore: t('aiLab.refineMore'),
+  historyTitle: t('aiLab.historyTitle'),
+  newSession: t('aiLab.newSession'),
+  messageCount: t('aiLab.messageCount'),
+  deleteConfirm: t('aiLab.deleteConfirm'),
+  loadError: t('aiLab.loadError'),
+  deleteError: t('aiLab.deleteError'),
 }))
 
 const modes = computed(() => [
@@ -549,6 +595,11 @@ const aiSubmitting = ref(false)
 const aiError = ref('')
 const aiLatestAnalysis = ref<StrategyImportAnalysis | null>(null)
 const consoleLog = ref<HTMLElement | null>(null)
+
+const sessions = ref<AiSessionSummary[]>([])
+const activeSessionId = ref<string | null>(null)
+const historyLoaded = ref(false)
+const historyOpen = ref(true)
 
 const briefQuality = computed(() => {
   let score = 0
@@ -731,10 +782,13 @@ async function handleGenerate() {
       integrationId: selectedAiIntegrationId.value,
       messages: pendingMessages,
       locale: isZh.value ? 'zh' : 'en',
+      sessionId: activeSessionId.value || undefined,
     })
     aiMessages.value = [...pendingMessages, { role: 'assistant', content: result.reply }]
     aiLatestAnalysis.value = result.analysis
+    activeSessionId.value = result.sessionId
     activeMobileTab.value = result.analysis ? 'draft' : 'console'
+    void loadSessionList()
     await scrollToBottom()
   } catch (error: any) {
     aiPrompt.value = previousPrompt
@@ -802,8 +856,52 @@ function validationClass(value: boolean) {
   return value ? 'validation-state validation-state--pass' : 'validation-state validation-state--warn'
 }
 
+async function loadSessionList() {
+  try {
+    const response = await listAiSessions({ perPage: 50 })
+    sessions.value = response.data ?? []
+    historyLoaded.value = true
+  } catch {
+    // silent — history is supplementary
+  }
+}
+
+async function loadSession(sessionId: string) {
+  try {
+    const detail = await getAiSession(sessionId)
+    activeSessionId.value = detail.id
+    aiMessages.value = detail.messages || []
+    aiLatestAnalysis.value = detail.analysis
+    activeMobileTab.value = detail.analysis ? 'draft' : 'console'
+  } catch {
+    aiError.value = t('aiLab.loadError')
+  }
+}
+
+function startNewSession() {
+  activeSessionId.value = null
+  aiMessages.value = []
+  aiLatestAnalysis.value = null
+  aiError.value = ''
+  activeMobileTab.value = 'console'
+}
+
+async function handleDeleteSession(sessionId: string) {
+  if (!confirm(t('aiLab.deleteConfirm'))) return
+  try {
+    await deleteAiSession(sessionId)
+    sessions.value = sessions.value.filter((s) => s.id !== sessionId)
+    if (activeSessionId.value === sessionId) {
+      startNewSession()
+    }
+  } catch {
+    aiError.value = t('aiLab.deleteError')
+  }
+}
+
 onMounted(() => {
   void loadAiIntegrations()
+  void loadSessionList()
 })
 </script>
 
@@ -1098,6 +1196,10 @@ onMounted(() => {
   grid-template-columns: 1fr 1.6fr 1fr;
   gap: var(--spacing-md);
   align-items: stretch;
+}
+
+.ai-lab-grid--history-open {
+  grid-template-columns: 220px 1fr 1.6fr 1fr;
 }
 
 .ai-lab-grid > .brief-panel  { animation: panelReveal 500ms var(--ease-out-expo) 80ms both; }
@@ -1689,6 +1791,123 @@ onMounted(() => {
   color: var(--color-danger);
 }
 
+/* ── History Panel ── */
+.history-panel {
+  overflow: hidden;
+}
+
+.history-panel::before {
+  background: linear-gradient(90deg, #7e57c2, #9575cd) !important;
+}
+
+.history-new-btn {
+  width: 100%;
+  padding: 8px;
+  border: 1.5px dashed var(--color-primary);
+  border-radius: 8px;
+  background: var(--color-primary-bg);
+  color: var(--color-primary);
+  font: inherit;
+  font-size: var(--font-size-xs);
+  font-weight: 700;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.history-new-btn:hover {
+  background: var(--color-primary);
+  color: #fff;
+}
+
+.history-loading,
+.history-empty {
+  text-align: center;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+  padding: var(--spacing-lg) 0;
+}
+
+.history-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 4px;
+  overflow-y: auto;
+  max-height: 500px;
+}
+
+.history-item {
+  display: flex;
+  align-items: center;
+  border: 1.5px solid transparent;
+  border-radius: 8px;
+  transition: all var(--transition-fast);
+}
+
+.history-item:hover {
+  background: var(--color-surface-hover);
+  border-color: var(--color-border-light);
+}
+
+.history-item--active {
+  border-color: var(--color-primary);
+  background: var(--color-primary-bg);
+}
+
+.history-item__body {
+  flex: 1;
+  min-width: 0;
+  padding: 8px 10px;
+  border: none;
+  background: none;
+  text-align: left;
+  cursor: pointer;
+  font: inherit;
+  display: grid;
+  gap: 2px;
+}
+
+.history-item__title {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-primary);
+}
+
+.history-item__meta {
+  font-size: 10px;
+  color: var(--color-text-muted);
+}
+
+.history-item__delete {
+  padding: 4px 8px;
+  border: none;
+  background: none;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  font-size: var(--font-size-lg);
+  line-height: 1;
+  opacity: 0;
+  transition: opacity var(--transition-fast);
+}
+
+.history-item:hover .history-item__delete {
+  opacity: 1;
+}
+
+.history-item__delete:hover {
+  color: var(--color-danger);
+}
+
+.btn-sm {
+  padding: 2px 8px;
+  font-size: var(--font-size-lg);
+  line-height: 1;
+}
+
 /* ── Mobile Tabs ── */
 .mobile-tabs {
   display: none;
@@ -1708,8 +1927,13 @@ onMounted(() => {
 
 /* ── Responsive ── */
 @media (max-width: 1180px) {
-  .ai-lab-grid {
+  .ai-lab-grid,
+  .ai-lab-grid--history-open {
     grid-template-columns: 1fr;
+  }
+
+  .history-panel {
+    display: none;
   }
 
   .mobile-tabs {

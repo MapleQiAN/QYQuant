@@ -20,6 +20,7 @@ import {
   fetchUsers,
   fetchPendingReports,
   fetchPendingStrategyReviews,
+  fetchStrategyReviewPacket,
   resolveReport,
   terminateJob,
   submitStrategyReview,
@@ -111,6 +112,59 @@ describe('admin api', () => {
       method: 'patch',
       url: '/v1/admin/strategies/strategy-1/review',
       data: { status: 'approved' }
+    })
+  })
+
+  it('calls strategy review packet endpoint', async () => {
+    requestMock.mockResolvedValueOnce({
+      strategy: {
+        id: 'strategy-1',
+        title: '均线增强版',
+        name: 'ma-pro',
+        description: 'desc',
+        category: 'trend-following',
+        tags: ['均线'],
+        display_metrics: { sharpe_ratio: 1.2 },
+        owner_id: 'user-1',
+        author_nickname: 'Alice',
+        created_at: '2026-03-23T12:00:00+08:00',
+        review_status: 'pending'
+      },
+      version: {
+        version: '1.0.0',
+        file_id: 'file-1',
+        filename: 'ma-pro.qys',
+        checksum: 'abc123',
+        checksum_valid: true
+      },
+      latest_backtest: {
+        id: 'job-1',
+        status: 'completed',
+        params: { symbol: 'BTCUSDT' },
+        result_summary: { total_return: 24.6 },
+        result_storage_key: 'backtests/job-1'
+      },
+      checks: {
+        has_version: true,
+        has_package_file: true,
+        checksum_valid: true,
+        has_completed_backtest: true
+      }
+    })
+
+    const data = await fetchStrategyReviewPacket('strategy-1')
+
+    expect(data.version?.filename).toBe('ma-pro.qys')
+    expect(data.latestBacktest?.resultSummary).toEqual({ total_return: 24.6 })
+    expect(data.checks).toEqual({
+      hasVersion: true,
+      hasPackageFile: true,
+      checksumValid: true,
+      hasCompletedBacktest: true
+    })
+    expect(requestMock).toHaveBeenCalledWith({
+      method: 'get',
+      url: '/v1/admin/strategies/strategy-1/review-packet'
     })
   })
 

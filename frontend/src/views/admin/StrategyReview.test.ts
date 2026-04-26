@@ -4,12 +4,14 @@ import { flushPromises, mount } from '@vue/test-utils'
 
 const {
   loadPendingReviewsMock,
+  loadReviewPacketMock,
   reviewStrategyMock,
   storeState,
   toastSuccessMock,
   toastErrorMock
 } = vi.hoisted(() => ({
   loadPendingReviewsMock: vi.fn(),
+  loadReviewPacketMock: vi.fn(),
   reviewStrategyMock: vi.fn(),
   toastSuccessMock: vi.fn(),
   toastErrorMock: vi.fn(),
@@ -35,7 +37,9 @@ const {
     ] as any[],
     reviewQueueLoading: false,
     reviewQueueMeta: { total: 1, page: 1, perPage: 20 },
-    reviewSubmitting: {} as Record<string, boolean>
+    reviewSubmitting: {} as Record<string, boolean>,
+    reviewPackets: {} as Record<string, any>,
+    reviewPacketLoading: {} as Record<string, boolean>
   }
 }))
 
@@ -43,6 +47,7 @@ vi.mock('../../stores/useAdminStore', () => ({
   useAdminStore: () => ({
     ...storeState,
     loadPendingReviews: loadPendingReviewsMock,
+    loadReviewPacket: loadReviewPacketMock,
     reviewStrategy: reviewStrategyMock
   })
 }))
@@ -71,6 +76,7 @@ function mountStrategyReview() {
 describe('StrategyReview', () => {
   beforeEach(() => {
     loadPendingReviewsMock.mockReset()
+    loadReviewPacketMock.mockReset()
     reviewStrategyMock.mockReset()
     toastSuccessMock.mockReset()
     toastErrorMock.mockReset()
@@ -96,6 +102,8 @@ describe('StrategyReview', () => {
     storeState.reviewQueueLoading = false
     storeState.reviewQueueMeta = { total: 1, page: 1, perPage: 20 }
     storeState.reviewSubmitting = {}
+    storeState.reviewPackets = {}
+    storeState.reviewPacketLoading = {}
   })
 
   it('loads and renders the pending review queue', () => {
@@ -116,6 +124,46 @@ describe('StrategyReview', () => {
 
     expect(reviewStrategyMock).toHaveBeenCalledWith('strategy-1', { status: 'approved' })
     expect(toastSuccessMock).toHaveBeenCalledWith('审核已通过')
+  })
+
+  it('loads and renders review evidence for a strategy', async () => {
+    const packet = {
+      version: {
+        version: '1.0.0',
+        fileId: 'file-1',
+        filename: 'ma-pro.qys',
+        checksum: 'abc123',
+        checksumValid: true
+      },
+      latestBacktest: {
+        id: 'job-1',
+        status: 'completed',
+        params: { symbol: 'BTCUSDT' },
+        resultSummary: { total_return: 24.6, max_drawdown: -8.2 },
+        resultStorageKey: 'backtests/job-1'
+      },
+      checks: {
+        hasVersion: true,
+        hasPackageFile: true,
+        checksumValid: true,
+        hasCompletedBacktest: true
+      }
+    }
+    loadReviewPacketMock.mockImplementationOnce(async (strategyId: string) => {
+      storeState.reviewPackets[strategyId] = packet
+      return packet
+    })
+    const wrapper = mountStrategyReview()
+
+    await wrapper.get('[data-test="review-evidence-strategy-1"]').trigger('click')
+    await flushPromises()
+    wrapper.vm.$forceUpdate()
+    await wrapper.vm.$nextTick()
+
+    expect(loadReviewPacketMock).toHaveBeenCalledWith('strategy-1')
+    expect(wrapper.text()).toContain('ma-pro.qys')
+    expect(wrapper.text()).toContain('job-1')
+    expect(wrapper.text()).toContain('校验通过')
   })
 
   it('rejects a strategy with a reason and shows success toast', async () => {

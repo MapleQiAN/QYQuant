@@ -6,6 +6,7 @@ import {
   fetchPendingReports,
   fetchPendingStrategyReviews,
   fetchQueueStats,
+  fetchStrategyReviewPacket,
   fetchUsers,
   resolveReport,
   submitStrategyReview,
@@ -21,6 +22,7 @@ import {
   type AdminResolveReportResult,
   type AdminReviewMutationPayload,
   type AdminReviewMutationResult,
+  type AdminReviewPacket,
   type AdminReviewStrategy,
   type AdminStuckJob,
   type AdminTerminateJobResult,
@@ -80,6 +82,8 @@ export const useAdminStore = defineStore('admin', {
       perPage: 20
     },
     reviewSubmitting: {} as Record<string, boolean>,
+    reviewPackets: {} as Record<string, AdminReviewPacket>,
+    reviewPacketLoading: {} as Record<string, boolean>,
     reportQueue: [] as AdminReport[],
     reportQueueLoading: false,
     reportQueueMeta: {
@@ -220,6 +224,16 @@ export const useAdminStore = defineStore('admin', {
         return result
       } finally {
         this.reviewSubmitting[strategyId] = false
+      }
+    },
+    async loadReviewPacket(strategyId: string): Promise<AdminReviewPacket> {
+      this.reviewPacketLoading[strategyId] = true
+      try {
+        const packet = await fetchStrategyReviewPacket(strategyId)
+        this.reviewPackets[strategyId] = packet
+        return packet
+      } finally {
+        this.reviewPacketLoading[strategyId] = false
       }
     },
     async loadPendingReports(page?: number) {

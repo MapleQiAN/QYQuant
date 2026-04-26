@@ -15,6 +15,8 @@ import type {
   MarketplaceTrialBacktestResult,
   AiStrategyDraftResult,
   AiStrategyMessage,
+  AiSessionDetail,
+  AiSessionSummary,
   Strategy,
   StrategyCodePayload,
   StrategyCodeResult,
@@ -419,6 +421,7 @@ export function generateAiStrategyDraft(payload: {
   integrationId: string
   messages: AiStrategyMessage[]
   locale?: string
+  sessionId?: string
 }): Promise<AiStrategyDraftResult> {
   return client.request({
     method: 'post',
@@ -428,7 +431,33 @@ export function generateAiStrategyDraft(payload: {
       integrationId: payload.integrationId,
       messages: payload.messages,
       locale: payload.locale,
+      sessionId: payload.sessionId,
     }
+  })
+}
+
+export function listAiSessions(params?: {
+  page?: number
+  perPage?: number
+}): Promise<{ data: AiSessionSummary[]; meta?: Record<string, unknown> }> {
+  return client.requestWithMeta({
+    method: 'get',
+    url: '/v1/ai-sessions',
+    params,
+  })
+}
+
+export function getAiSession(sessionId: string): Promise<AiSessionDetail> {
+  return client.request({
+    method: 'get',
+    url: `/v1/ai-sessions/${sessionId}`,
+  })
+}
+
+export function deleteAiSession(sessionId: string): Promise<{ deletedId: string }> {
+  return client.request({
+    method: 'delete',
+    url: `/v1/ai-sessions/${sessionId}`,
   })
 }
 

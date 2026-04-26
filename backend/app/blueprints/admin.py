@@ -1,4 +1,6 @@
+import hashlib
 from datetime import datetime, timedelta
+from pathlib import Path
 
 from flask import request
 from flask_smorest import Blueprint
@@ -7,7 +9,7 @@ from sqlalchemy.orm import aliased
 
 from ..celery_app import celery_app
 from ..extensions import db
-from ..models import AuditLog, BacktestJob, BacktestJobStatus, Report, Strategy, User
+from ..models import AuditLog, BacktestJob, BacktestJobStatus, File, Report, Strategy, StrategyVersion, User
 from ..services.data_source_health import DataSourceHealthService
 from ..services.notifications import create_notification
 from ..tasks.notification_tasks import send_email_notification
@@ -56,6 +58,16 @@ def list_admin_strategies():
     )
 
 
+@bp.get("/strategies/<strategy_id>/review-packet")
+@require_admin
+def get_strategy_review_packet(strategy_id):
+    strategy = db.session.get(Strategy, strategy_id)
+    if strategy is None:
+        return error_response("STRATEGY_NOT_FOUND", "Strategy not found", 404)
+
+    return ok(_build_strategy_review_packet(strategy))
+
+
 @bp.patch("/strategies/<strategy_id>/review")
 @require_admin
 def review_strategy(strategy_id):
@@ -76,6 +88,14 @@ def review_strategy(strategy_id):
         return error_response("STRATEGY_NOT_FOUND", "Strategy not found", 404)
     if strategy.review_status != "pending":
         return error_response("STRATEGY_REVIEW_CONFLICT", "Strategy review has already been processed", 409)
+    if status == "approved":
+        packet = _build_strategy_review_packet(strategy)
+        if not all(packet["checks"].values()):
+            return error_response(
+                "STRATEGY_REVIEW_EVIDENCE_INCOMPLETE",
+                "Strategy review evidence is incomplete",
+                422,
+            )
 
     admin_id = _current_admin_id()
     reviewed_at = now_ms()
@@ -462,6 +482,81 @@ def _serialize_admin_strategy(strategy, author):
         "author_nickname": getattr(author, "nickname", None),
         "created_at": format_beijing_iso_ms(strategy.created_at),
         "review_status": strategy.review_status,
+    }
+
+
+def _build_strategy_review_packet(strategy):
+    version, file_record = _latest_strategy_version_with_file(strategy.id)
+    latest_backtest = _latest_completed_backtest(strategy.id)
+    checksum_valid = _strategy_package_checksum_valid(version, file_record)
+
+    return {
+        "strategy": _serialize_admin_strategy(strategy, None),
+        "version": _serialize_review_version(version, file_record, checksum_valid),
+        "latest_backtest": _serialize_review_backtest(latest_backtest),
+        "checks": {
+            "has_version": version is not None,
+            "has_package_file": file_record is not None and bool(file_record.path) and Path(file_record.path).exists(),
+            "checksum_valid": checksum_valid,
+            "has_completed_backtest": latest_backtest is not None,
+        },
+    }
+
+
+def _latest_strategy_version_with_file(strategy_id):
+    version = (
+        StrategyVersion.query
+        .filter(StrategyVersion.strategy_id == strategy_id)
+        .order_by(StrategyVersion.created_at.desc(), StrategyVersion.id.desc())
+        .first()
+    )
+    file_record = db.session.get(File, version.file_id) if version and version.file_id else None
+    return version, file_record
+
+
+def _latest_completed_backtest(strategy_id):
+    return (
+        BacktestJob.query
+        .filter(
+            BacktestJob.strategy_id == strategy_id,
+            BacktestJob.status == BacktestJobStatus.COMPLETED.value,
+            BacktestJob.result_storage_key.isnot(None),
+        )
+        .order_by(BacktestJob.completed_at.desc(), BacktestJob.created_at.desc(), BacktestJob.id.desc())
+        .first()
+    )
+
+
+def _strategy_package_checksum_valid(version, file_record):
+    if version is None or file_record is None or not version.checksum or not file_record.path:
+        return False
+    path = Path(file_record.path)
+    if not path.exists() or not path.is_file():
+        return False
+    return hashlib.sha256(path.read_bytes()).hexdigest() == version.checksum
+
+
+def _serialize_review_version(version, file_record, checksum_valid):
+    if version is None:
+        return None
+    return {
+        "version": version.version,
+        "file_id": version.file_id,
+        "filename": file_record.filename if file_record else None,
+        "checksum": version.checksum,
+        "checksum_valid": checksum_valid,
+    }
+
+
+def _serialize_review_backtest(job):
+    if job is None:
+        return None
+    return {
+        "id": job.id,
+        "status": job.status,
+        "params": dict(job.params or {}),
+        "result_summary": dict(job.result_summary or {}),
+        "result_storage_key": job.result_storage_key,
     }
 
 

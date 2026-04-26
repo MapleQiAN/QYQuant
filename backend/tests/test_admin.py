@@ -1,3 +1,4 @@
+import hashlib
 from datetime import datetime, timedelta, timezone
 
 from app.extensions import db
@@ -6,10 +7,12 @@ from app.models import (
     BacktestJob,
     BacktestJobStatus,
     DataSourceHealthStatus,
+    File,
     Notification,
     RefreshToken,
     Report,
     Strategy,
+    StrategyVersion,
     User,
 )
 from app.utils.time import now_utc
@@ -79,6 +82,44 @@ def _seed_strategy_for_review(
         db.session.add(strategy)
         db.session.commit()
     return strategy_id
+
+
+def _seed_review_artifacts(app, *, strategy_id, owner_id, tmp_path, checksum="review-checksum"):
+    package_path = tmp_path / f"{strategy_id}.qys"
+    package_bytes = b"review-package"
+    package_path.write_bytes(package_bytes)
+    expected_checksum = checksum if checksum is not None else hashlib.sha256(package_bytes).hexdigest()
+
+    with app.app_context():
+        file_record = File(
+            owner_id=owner_id,
+            filename=f"{strategy_id}-1.0.0.qys",
+            content_type="application/zip",
+            size=len(package_bytes),
+            path=package_path.as_posix(),
+        )
+        db.session.add(file_record)
+        db.session.flush()
+        db.session.add(
+            StrategyVersion(
+                strategy_id=strategy_id,
+                version="1.0.0",
+                file_id=file_record.id,
+                checksum=expected_checksum,
+            )
+        )
+        db.session.add(
+            BacktestJob(
+                id=f"{strategy_id}-backtest",
+                user_id=owner_id,
+                strategy_id=strategy_id,
+                status=BacktestJobStatus.COMPLETED.value,
+                params={"symbol": "BTCUSDT", "timeframe": "1d"},
+                result_summary={"sharpe_ratio": 1.32, "max_drawdown": -12.4, "total_return": 31.8},
+                result_storage_key=f"backtests/{strategy_id}",
+            )
+        )
+        db.session.commit()
 
 
 def _seed_public_strategy_for_reports(
@@ -384,7 +425,67 @@ def test_admin_strategy_review_queue_rejects_non_admin_users(client, app):
     }
 
 
-def test_admin_strategy_review_approve_updates_state_and_writes_side_effects(client, app, monkeypatch):
+def test_admin_strategy_review_packet_returns_evidence_for_admin(client, app, tmp_path):
+    admin_token, admin_id = _login_user(client, phone="13800138230", nickname="ReviewPacketAdmin")
+    _, owner_id = _login_user(client, phone="13800138231", nickname="ReviewPacketAuthor")
+
+    with app.app_context():
+        admin = db.session.get(User, admin_id)
+        admin.role = "admin"
+        db.session.commit()
+
+    _seed_strategy_for_review(app, strategy_id="pending-packet", owner_id=owner_id)
+    _seed_review_artifacts(app, strategy_id="pending-packet", owner_id=owner_id, tmp_path=tmp_path)
+
+    response = client.get(
+        "/api/v1/admin/strategies/pending-packet/review-packet",
+        headers=_auth_headers(admin_token),
+    )
+
+    assert response.status_code == 200
+    data = response.json["data"]
+    assert data["strategy"]["id"] == "pending-packet"
+    assert data["version"]["version"] == "1.0.0"
+    assert data["version"]["filename"] == "pending-packet-1.0.0.qys"
+    assert data["version"]["checksum"] == "review-checksum"
+    assert data["version"]["checksum_valid"] is False
+    assert data["latest_backtest"] == {
+        "id": "pending-packet-backtest",
+        "status": "completed",
+        "params": {"symbol": "BTCUSDT", "timeframe": "1d"},
+        "result_summary": {"sharpe_ratio": 1.32, "max_drawdown": -12.4, "total_return": 31.8},
+        "result_storage_key": "backtests/pending-packet",
+    }
+    assert data["checks"] == {
+        "has_version": True,
+        "has_package_file": True,
+        "checksum_valid": False,
+        "has_completed_backtest": True,
+    }
+
+
+def test_admin_strategy_review_approve_requires_review_artifacts(client, app):
+    admin_token, admin_id = _login_user(client, phone="13800138232", nickname="ReviewGuardAdmin")
+    _, owner_id = _login_user(client, phone="13800138233", nickname="ReviewGuardAuthor")
+
+    with app.app_context():
+        admin = db.session.get(User, admin_id)
+        admin.role = "admin"
+        db.session.commit()
+
+    _seed_strategy_for_review(app, strategy_id="pending-without-artifacts", owner_id=owner_id)
+
+    response = client.patch(
+        "/api/v1/admin/strategies/pending-without-artifacts/review",
+        json={"status": "approved"},
+        headers=_auth_headers(admin_token),
+    )
+
+    assert response.status_code == 422
+    assert response.json["error"]["code"] == "STRATEGY_REVIEW_EVIDENCE_INCOMPLETE"
+
+
+def test_admin_strategy_review_approve_updates_state_and_writes_side_effects(client, app, monkeypatch, tmp_path):
     admin_token, admin_id = _login_user(client, phone="13800138214", nickname="ApproveAdmin")
     _, owner_id = _login_user(client, phone="13800138215", nickname="ApproveAuthor")
 
@@ -402,6 +503,13 @@ def test_admin_strategy_review_approve_updates_state_and_writes_side_effects(cli
         title="Approve Me",
         updated_at=1700000000000,
         last_update=1700000000000,
+    )
+    _seed_review_artifacts(
+        app,
+        strategy_id="pending-approve",
+        owner_id=owner_id,
+        tmp_path=tmp_path,
+        checksum=None,
     )
 
     delay_calls = []
