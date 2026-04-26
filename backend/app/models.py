@@ -36,6 +36,7 @@ class User(db.Model):
     role = db.Column(db.String(32), nullable=False, default='user')
     plan_level = db.Column(db.String(32), nullable=False, default='free')
     is_banned = db.Column(db.Boolean, nullable=False, default=False)
+    warning_count = db.Column(db.Integer, nullable=False, default=0)
     onboarding_completed = db.Column(db.Boolean, nullable=False, default=False)
     sim_disclaimer_accepted = db.Column(db.Boolean, nullable=False, default=False)
     location = db.Column(db.String(100), nullable=True)
@@ -93,6 +94,37 @@ class Notification(db.Model):
     title = db.Column(db.String(200), nullable=False)
     content = db.Column(db.Text, nullable=True)
     is_read = db.Column(db.Boolean, nullable=False, default=False)
+    created_at = db.Column(db.DateTime(timezone=True), nullable=False, default=now_utc)
+
+
+class SensitiveWord(db.Model):
+    __tablename__ = 'sensitive_words'
+    __table_args__ = (
+        db.Index('ix_sensitive_words_category', 'category'),
+        db.Index('ix_sensitive_words_is_active', 'is_active'),
+    )
+
+    id = db.Column(db.String, primary_key=True, default=gen_id)
+    word = db.Column(db.String, nullable=False, unique=True)
+    category = db.Column(db.String(32), nullable=False)
+    level = db.Column(db.String(16), nullable=False, default='medium')
+    is_active = db.Column(db.Boolean, nullable=False, default=True)
+    created_at = db.Column(db.DateTime(timezone=True), nullable=False, default=now_utc)
+
+
+class UserModerationRecord(db.Model):
+    __tablename__ = 'user_moderation_records'
+    __table_args__ = (
+        db.Index('ix_user_moderation_records_user_id', 'user_id'),
+        db.Index('ix_user_moderation_records_created_at', 'created_at'),
+    )
+
+    id = db.Column(db.String, primary_key=True, default=gen_id)
+    user_id = db.Column(db.String, db.ForeignKey('users.id'), nullable=False)
+    target_type = db.Column(db.String(32), nullable=False)
+    target_id = db.Column(db.String, nullable=False)
+    matched_words = db.Column(db.JSON, nullable=False, default=list)
+    action_taken = db.Column(db.String(32), nullable=False)
     created_at = db.Column(db.DateTime(timezone=True), nullable=False, default=now_utc)
 
 
@@ -466,6 +498,10 @@ class BotInstance(db.Model):
     tags = db.Column(db.JSON, default=list)
     paper = db.Column(db.Boolean, default=True)
     last_error_message = db.Column(db.Text, nullable=True)
+    last_run_at = db.Column(db.BigInteger, nullable=True)
+    last_reconciled_at = db.Column(db.BigInteger, nullable=True)
+    last_signal_at = db.Column(db.BigInteger, nullable=True)
+    failure_count = db.Column(db.Integer, nullable=False, default=0)
     user_id = db.Column(db.String, db.ForeignKey('users.id'))
     created_at = db.Column(db.BigInteger, default=now_ms)
     updated_at = db.Column(db.BigInteger, default=now_ms)
@@ -599,6 +635,7 @@ class Post(db.Model):
     likes_count = db.Column(db.Integer, nullable=False, default=0)
     comments_count = db.Column(db.Integer, nullable=False, default=0)
     created_at = db.Column(db.DateTime(timezone=True), nullable=True, default=now_utc)
+    is_hidden = db.Column(db.Boolean, nullable=False, default=False)
 
 
 class PostInteraction(db.Model):
@@ -628,6 +665,7 @@ class PostComment(db.Model):
     user_id = db.Column(db.String, db.ForeignKey('users.id'), nullable=False)
     content = db.Column(db.Text, nullable=False)
     created_at = db.Column(db.DateTime(timezone=True), nullable=False, default=now_utc)
+    is_hidden = db.Column(db.Boolean, nullable=False, default=False)
 
 
 class Comment(db.Model):
