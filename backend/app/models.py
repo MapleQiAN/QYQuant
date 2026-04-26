@@ -554,8 +554,15 @@ class SimulationTrade(db.Model):
 
 class Order(db.Model):
     __tablename__ = 'orders'
+    __table_args__ = (
+        db.Index('ix_orders_integration_id', 'integration_id'),
+        db.Index('ix_orders_strategy_id', 'strategy_id'),
+        db.Index('ix_orders_broker_order_id', 'broker_order_id'),
+    )
     id = db.Column(db.String, primary_key=True, default=gen_id)
     bot_id = db.Column(db.String, db.ForeignKey('bot_instances.id'))
+    integration_id = db.Column(db.String, db.ForeignKey('user_integrations.id'), nullable=True)
+    strategy_id = db.Column(db.String, db.ForeignKey('strategies.id'), nullable=True)
     symbol = db.Column(db.String, nullable=False)
     side = db.Column(db.String, nullable=False)
     price = db.Column(db.Float, nullable=False)
@@ -564,6 +571,15 @@ class Order(db.Model):
     pnl = db.Column(db.Float, nullable=True)
     timestamp = db.Column(db.BigInteger, nullable=False)
     client_order_id = db.Column(db.String, unique=True, nullable=True)
+    broker_order_id = db.Column(db.String, nullable=True)
+    order_type = db.Column(db.String(16), nullable=True)
+    limit_price = db.Column(db.Float, nullable=True)
+    filled_quantity = db.Column(db.Float, nullable=True)
+    filled_avg_price = db.Column(db.Float, nullable=True)
+    submitted_at = db.Column(db.BigInteger, nullable=True)
+    filled_at = db.Column(db.BigInteger, nullable=True)
+    rejected_reason = db.Column(db.Text, nullable=True)
+    raw_broker_payload = db.Column(db.JSON, nullable=True)
     created_at = db.Column(db.BigInteger, default=now_ms)
 
 

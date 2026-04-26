@@ -154,3 +154,72 @@ def test_xtquant_broker_adapter_supports_local_connector_contract():
     context = SimpleNamespace(_secret_payload={}, config_public=config["config_public"])
     assert adapter.get_account_summary(context)["equity"] == "500000.00"
     assert adapter.get_positions(context)[0]["symbol"] == "510300.SH"
+
+
+def test_broker_order_contract_payloads_are_stable():
+    from app.integrations.brokers import BrokerFill, BrokerOrderRequest, BrokerOrderResponse, BrokerOrderStatus
+
+    request = BrokerOrderRequest(
+        client_order_id="bot-1-20260426-1",
+        symbol="00700.HK",
+        side="buy",
+        quantity="100",
+        limit_price="320.50",
+        metadata={"bot_id": "bot-1", "strategy_id": "strategy-1"},
+    )
+    response = BrokerOrderResponse(
+        client_order_id=request.client_order_id,
+        broker_order_id="broker-1",
+        status="submitted",
+        raw_payload={"id": "broker-1"},
+    )
+    status = BrokerOrderStatus(
+        client_order_id=request.client_order_id,
+        broker_order_id="broker-1",
+        status="filled",
+        filled_quantity="100",
+        filled_avg_price="320.45",
+    )
+    fill = BrokerFill(
+        broker_order_id="broker-1",
+        symbol="00700.HK",
+        side="buy",
+        price="320.45",
+        quantity="100",
+        filled_at=1777132800000,
+    )
+
+    assert request.to_payload() == {
+        "client_order_id": "bot-1-20260426-1",
+        "symbol": "00700.HK",
+        "side": "buy",
+        "quantity": "100",
+        "order_type": "market",
+        "limit_price": "320.50",
+        "time_in_force": "day",
+        "metadata": {"bot_id": "bot-1", "strategy_id": "strategy-1"},
+    }
+    assert response.to_payload()["broker_order_id"] == "broker-1"
+    assert status.to_payload()["filled_avg_price"] == "320.45"
+    assert fill.to_payload()["filled_at"] == 1777132800000
+
+
+def test_read_only_broker_adapters_reject_live_orders():
+    import pytest
+
+    from app.integrations.brokers import BrokerOrderNotSupported, BrokerOrderRequest
+    from app.integrations.brokers.longport import LongPortBrokerAdapter
+
+    adapter = LongPortBrokerAdapter(client_factory=lambda _config: object())
+    request = BrokerOrderRequest(
+        client_order_id="bot-1-20260426-1",
+        symbol="00700.HK",
+        side="buy",
+        quantity="100",
+    )
+
+    with pytest.raises(BrokerOrderNotSupported):
+        adapter.place_order(SimpleNamespace(), request)
+
+    with pytest.raises(BrokerOrderNotSupported):
+        adapter.cancel_order(SimpleNamespace(), "broker-1")

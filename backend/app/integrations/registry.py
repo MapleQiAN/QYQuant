@@ -50,7 +50,7 @@ _PROVIDERS = {
         name="LongPort",
         type="broker_account",
         mode="hosted",
-        capabilities={"account_summary": True, "positions": True},
+        capabilities={"account_summary": True, "positions": True, "orders": False},
         config_schema={
             "public_fields": ["region"],
             "secret_fields": ["app_key", "app_secret", "access_token"],
@@ -62,7 +62,7 @@ _PROVIDERS = {
         name="GMTrade",
         type="broker_account",
         mode="hosted",
-        capabilities={"account_summary": True, "positions": True},
+        capabilities={"account_summary": True, "positions": True, "orders": False},
         config_schema={
             "public_fields": ["account_id", "endpoint"],
             "secret_fields": ["token"],
@@ -74,7 +74,7 @@ _PROVIDERS = {
         name="XtQuant",
         type="broker_account",
         mode="local_connector",
-        capabilities={"account_summary": True, "positions": True},
+        capabilities={"account_summary": True, "positions": True, "orders": False},
         config_schema={
             "public_fields": ["account_id", "endpoint", "client_path"],
             "secret_fields": [],

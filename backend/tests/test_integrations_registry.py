@@ -20,6 +20,7 @@ def test_registry_resolves_provider_metadata_by_key():
     assert provider.type == "broker_account"
     assert provider.mode in {"hosted", "local_connector"}
     assert provider.capabilities["positions"] is True
+    assert provider.capabilities["orders"] is False
 
 
 def test_registry_rejects_unknown_provider():

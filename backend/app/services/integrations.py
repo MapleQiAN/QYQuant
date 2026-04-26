@@ -1,7 +1,12 @@
 import json
 
 from ..extensions import db
-from ..integrations.brokers import GMTradeBrokerAdapter, LongPortBrokerAdapter, XtQuantBrokerAdapter
+from ..integrations.brokers import (
+    BrokerOrderNotSupported,
+    GMTradeBrokerAdapter,
+    LongPortBrokerAdapter,
+    XtQuantBrokerAdapter,
+)
 from ..integrations.llm import OpenAICompatibleLLMAdapter
 from ..integrations.registry import get_provider, list_providers
 from ..models import IntegrationProvider, UserIntegration, UserIntegrationSecret
@@ -18,6 +23,21 @@ class BrokerAdapterNotImplemented:
 
     def get_positions(self, _integration):
         return []
+
+    def place_order(self, _integration, _order_request):
+        raise BrokerOrderNotSupported("Broker adapter is not implemented yet")
+
+    def cancel_order(self, _integration, _broker_order_id):
+        raise BrokerOrderNotSupported("Broker adapter is not implemented yet")
+
+    def get_order(self, _integration, _broker_order_id):
+        raise BrokerOrderNotSupported("Broker adapter is not implemented yet")
+
+    def list_orders(self, _integration, since=None):
+        raise BrokerOrderNotSupported("Broker adapter is not implemented yet")
+
+    def get_fills(self, _integration, since=None):
+        raise BrokerOrderNotSupported("Broker adapter is not implemented yet")
 
 
 def sync_provider_catalog(session=None):
@@ -243,3 +263,18 @@ class _UnsupportedAdapter:
 
     def get_positions(self, _integration):
         return []
+
+    def place_order(self, _integration, _order_request):
+        raise BrokerOrderNotSupported("Validation not implemented for this provider type")
+
+    def cancel_order(self, _integration, _broker_order_id):
+        raise BrokerOrderNotSupported("Validation not implemented for this provider type")
+
+    def get_order(self, _integration, _broker_order_id):
+        raise BrokerOrderNotSupported("Validation not implemented for this provider type")
+
+    def list_orders(self, _integration, since=None):
+        raise BrokerOrderNotSupported("Validation not implemented for this provider type")
+
+    def get_fills(self, _integration, since=None):
+        raise BrokerOrderNotSupported("Validation not implemented for this provider type")
