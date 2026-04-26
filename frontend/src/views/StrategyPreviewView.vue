@@ -156,7 +156,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, h, onBeforeUnmount, onMounted, ref } from 'vue'
+import { computed, h, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
 import { confirmStrategyImport, exportStrategy, fetchDraftCode } from '../api/strategies'
@@ -246,6 +246,13 @@ onMounted(async () => {
     codeError.value = err?.message || 'Failed to load strategy code'
   } finally {
     codeLoading.value = false
+    await initEditor()
+  }
+})
+
+watch(activeTab, async (tab) => {
+  if (tab === 'code' && rawCode.value && !editor) {
+    await nextTick()
     await initEditor()
   }
 })

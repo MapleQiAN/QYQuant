@@ -573,7 +573,7 @@ export async function exportStrategy(payload: {
 }
 
 function _authHeaders(): Record<string, string> {
-  const token = localStorage.getItem('token')
+  const token = localStorage.getItem('qyquant-token')
   return token ? { Authorization: `Bearer ${token}` } : {}
 }
 
