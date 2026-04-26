@@ -1058,7 +1058,7 @@ const en = {
     unlimited: 'Unlimited',
     timesPerMonth: 'times / month',
     upgradeTo: 'Upgrade to {name}',
-    alreadyOwned: 'Already owned'
+    alreadyOwned: 'Already owned higher plan'
   },
   help: {
     title: 'Help Center',

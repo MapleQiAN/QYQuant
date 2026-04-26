@@ -1061,7 +1061,7 @@ const zh = {
     unlimited: '无限回测',
     timesPerMonth: '次 / 月',
     upgradeTo: '升级到 {name}',
-    alreadyOwned: '已拥有'
+    alreadyOwned: '已拥有更高级别订阅'
   },
   help: {
     title: '帮助中心',
