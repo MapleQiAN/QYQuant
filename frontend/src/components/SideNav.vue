@@ -411,7 +411,17 @@ function ProfileIcon() {
 .sub-item--free .plan-badge {
   background: rgba(0, 0, 0, 0.06);
 }
-.sub-item--free:hover {
+/* Override nav-item.active blue for subscription item */
+.sub-item.active {
+  background: unset;
+  color: unset;
+  border-color: unset;
+  transform: unset;
+  font-weight: 600;
+}
+
+.sub-item--free:hover,
+.sub-item--free.active {
   background: var(--color-sidebar-hover);
   color: var(--color-text-secondary);
 }
@@ -425,7 +435,8 @@ function ProfileIcon() {
 .sub-item--go .plan-badge {
   background: rgba(5, 150, 105, 0.1);
 }
-.sub-item--go:hover {
+.sub-item--go:hover,
+.sub-item--go.active {
   background: #d1fae5;
   color: #047857;
 }
@@ -439,7 +450,8 @@ function ProfileIcon() {
 .sub-item--plus .plan-badge {
   background: rgba(59, 130, 246, 0.12);
 }
-.sub-item--plus:hover {
+.sub-item--plus:hover,
+.sub-item--plus.active {
   background: color-mix(in srgb, var(--color-primary-bg) 85%, var(--color-primary));
   color: var(--color-primary);
 }
@@ -455,7 +467,8 @@ function ProfileIcon() {
   background: rgba(124, 58, 237, 0.12);
   text-shadow: 0 0 4px rgba(168, 85, 247, 0.2);
 }
-.sub-item--pro:hover {
+.sub-item--pro:hover,
+.sub-item--pro.active {
   background: linear-gradient(135deg, #ede9fe, #ddd6fe);
   box-shadow: 0 0 14px rgba(124, 58, 237, 0.15);
 }
@@ -474,7 +487,8 @@ function ProfileIcon() {
   background: rgba(217, 119, 6, 0.15);
   font-weight: 800;
 }
-.sub-item--ultra:hover {
+.sub-item--ultra:hover,
+.sub-item--ultra.active {
   background: linear-gradient(135deg, #fde68a, #fbbf24, #f59e0b);
   color: #78350f;
   box-shadow: 0 0 20px rgba(245, 158, 11, 0.25);
