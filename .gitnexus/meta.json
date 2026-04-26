@@ -1,13 +1,13 @@
 {
   "repoPath": "E:\\QYQuant",
-  "lastCommit": "10d604fd7e341c30763a10855d1f8b84fdb5a475",
-  "indexedAt": "2026-04-26T04:53:12.368Z",
+  "lastCommit": "a8cd86ec458491d9bc5d133b3e1c9f65012d713f",
+  "indexedAt": "2026-04-26T15:38:38.473Z",
   "remoteUrl": "https://github.com/MapleQiAN/QYQuant",
   "stats": {
-    "files": 894,
-    "nodes": 9935,
-    "edges": 18312,
-    "communities": 416,
+    "files": 905,
+    "nodes": 10291,
+    "edges": 17762,
+    "communities": 412,
     "processes": 300,
     "embeddings": 0
   }
