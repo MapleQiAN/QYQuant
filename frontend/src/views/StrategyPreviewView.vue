@@ -1,16 +1,25 @@
 <template>
   <section class="strategy-preview-view">
     <div class="container">
+      <!-- Header -->
       <div class="page-header">
-        <div class="header-text">
+        <RouterLink class="btn btn-ghost btn--back" :to="backRoute">
+          <ArrowLeftIcon />
+          {{ $t('strategyPreview.back') }}
+        </RouterLink>
+        <div class="header-info">
           <p class="eyebrow">{{ $t('strategyPreview.eyebrow') }}</p>
           <h1 class="page-title">{{ strategyName }}</h1>
           <p v-if="strategyDescription" class="page-subtitle">{{ strategyDescription }}</p>
         </div>
-        <RouterLink class="btn btn-secondary" :to="backRoute">
-          <ArrowLeftIcon />
-          {{ $t('strategyPreview.back') }}
-        </RouterLink>
+        <StrategyExportPanel
+          v-if="analysis"
+          :exporting="exporting"
+          :active-format="activeExportFormat"
+          :saving="saving"
+          @export="handleExport"
+          @save="handleSave"
+        />
       </div>
 
       <div v-if="!analysis" class="card panel">
@@ -18,132 +27,125 @@
       </div>
 
       <template v-else>
-        <div class="actions-bar">
-          <StrategyExportPanel
-            :exporting="exporting"
-            :active-format="activeExportFormat"
-            :saving="saving"
-            @export="handleExport"
-            @save="handleSave"
-          />
+        <!-- Sticky toolbar with tabs + meta badges -->
+        <div class="toolbar card">
+          <div class="toolbar__left">
+            <button
+              class="tab-btn"
+              :class="{ 'tab-btn--active': activeTab === 'report' }"
+              type="button"
+              @click="activeTab = 'report'"
+            >
+              {{ $t('strategyPreview.tabReport') }}
+            </button>
+            <button
+              class="tab-btn"
+              :class="{ 'tab-btn--active': activeTab === 'params' }"
+              type="button"
+              @click="activeTab = 'params'"
+            >
+              {{ $t('strategyPreview.tabParams') }}
+            </button>
+            <button
+              class="tab-btn"
+              :class="{ 'tab-btn--active': activeTab === 'code' }"
+              type="button"
+              @click="activeTab = 'code'"
+            >
+              {{ $t('strategyPreview.tabCode') }}
+            </button>
+          </div>
+          <div class="toolbar__right">
+            <span v-if="metadata.riskLevel" class="toolbar__badge" :class="`risk-tag risk-tag--${metadata.riskLevel}`">
+              {{ riskLevelLabel(metadata.riskLevel) }}
+            </span>
+            <span v-if="metadata.timeframe" class="toolbar__badge">{{ metadata.timeframe }}</span>
+            <span v-if="metadata.category" class="toolbar__badge">{{ categoryLabel(metadata.category) }}</span>
+          </div>
         </div>
 
-        <div class="main-grid">
-          <aside class="sidebar">
-            <div class="card panel">
-              <StrategyReportCard :metadata="metadata" />
-            </div>
+        <!-- Tab content -->
+        <div class="tab-body card">
+          <!-- Report tab -->
+          <div v-if="activeTab === 'report'" class="tab-content fade-in">
+            <StrategyReportCard :metadata="metadata" />
+          </div>
 
-            <div class="card panel">
-              <h3 class="panel-title">{{ $t('strategyPreview.parametersTitle') }}</h3>
-              <div class="param-groups">
-                <div v-for="group in parameterGroups" :key="group.name" class="param-group">
-                  <h4 class="param-group__name">{{ group.name }}</h4>
-                  <div class="param-group__items">
-                    <div v-for="param in group.params" :key="param.key" class="param-field">
-                      <label class="param-field__label">
-                        <span class="param-field__name">{{ getUserFacingLabel(param) }}</span>
-                        <span v-if="param.user_facing?.hint" class="param-field__hint">{{ param.user_facing.hint }}</span>
-                      </label>
-                      <div class="param-field__input-row">
-                        <input
-                          v-if="param.type === 'integer' || param.type === 'number'"
-                          type="number"
-                          class="field-input"
-                          :value="editedParams[param.key] ?? param.default"
-                          :min="param.min"
-                          :max="param.max"
-                          :step="param.step || (param.type === 'integer' ? 1 : 0.1)"
-                          @input="updateParam(param.key, $event)"
-                        />
-                        <select
-                          v-else-if="param.type === 'enum' && param.enum"
-                          class="field-input"
-                          :value="editedParams[param.key] ?? param.default"
-                          @change="updateParam(param.key, $event)"
-                        >
-                          <option v-for="opt in param.enum" :key="String(opt)" :value="opt">{{ opt }}</option>
-                        </select>
-                        <input
-                          v-else
-                          type="text"
-                          class="field-input"
-                          :value="editedParams[param.key] ?? param.default"
-                          @input="updateParam(param.key, $event)"
-                        />
+          <!-- Params tab: editable editor + detail table side by side -->
+          <div v-if="activeTab === 'params'" class="tab-content fade-in">
+            <div class="params-layout">
+              <div class="params-editor">
+                <h3 class="panel-title">{{ $t('strategyPreview.parametersTitle') }}</h3>
+                <div class="param-groups">
+                  <div v-for="group in parameterGroups" :key="group.name" class="param-group">
+                    <h4 class="param-group__name">{{ group.name }}</h4>
+                    <div class="param-group__items">
+                      <div v-for="param in group.params" :key="param.key" class="param-field">
+                        <label class="param-field__label">
+                          <span class="param-field__name">{{ getUserFacingLabel(param) }}</span>
+                          <span v-if="param.user_facing?.hint" class="param-field__hint">{{ param.user_facing.hint }}</span>
+                        </label>
+                        <div class="param-field__input-row">
+                          <input
+                            v-if="param.type === 'integer' || param.type === 'number'"
+                            type="number"
+                            class="field-input"
+                            :value="editedParams[param.key] ?? param.default"
+                            :min="param.min"
+                            :max="param.max"
+                            :step="param.step || (param.type === 'integer' ? 1 : 0.1)"
+                            @input="updateParam(param.key, $event)"
+                          />
+                          <select
+                            v-else-if="param.type === 'enum' && param.enum"
+                            class="field-input"
+                            :value="editedParams[param.key] ?? param.default"
+                            @change="updateParam(param.key, $event)"
+                          >
+                            <option v-for="opt in param.enum" :key="String(opt)" :value="opt">{{ opt }}</option>
+                          </select>
+                          <input
+                            v-else
+                            type="text"
+                            class="field-input"
+                            :value="editedParams[param.key] ?? param.default"
+                            @input="updateParam(param.key, $event)"
+                          />
+                        </div>
                       </div>
                     </div>
                   </div>
                 </div>
               </div>
-            </div>
-          </aside>
-
-          <main class="content">
-            <div class="card panel">
-              <div class="tab-bar">
-                <button
-                  class="tab-btn"
-                  :class="{ 'tab-btn--active': activeTab === 'report' }"
-                  type="button"
-                  @click="activeTab = 'report'"
-                >
-                  {{ $t('strategyPreview.tabReport') }}
-                </button>
-                <button
-                  class="tab-btn"
-                  :class="{ 'tab-btn--active': activeTab === 'code' }"
-                  type="button"
-                  @click="activeTab = 'code'"
-                >
-                  {{ $t('strategyPreview.tabCode') }}
-                </button>
-                <button
-                  class="tab-btn"
-                  :class="{ 'tab-btn--active': activeTab === 'params' }"
-                  type="button"
-                  @click="activeTab = 'params'"
-                >
-                  {{ $t('strategyPreview.tabParams') }}
-                </button>
-              </div>
-
-              <div v-if="activeTab === 'report'" class="tab-content">
-                <StrategyReportCard :metadata="metadata" />
-              </div>
-
-              <div v-if="activeTab === 'code'" class="tab-content">
-                <div v-if="codeLoading" class="code-loading">{{ $t('strategyPreview.loadingCode') }}</div>
-                <div v-else-if="codeError" class="code-error">{{ codeError }}</div>
-                <div v-else ref="editorContainer" class="code-editor"></div>
-              </div>
-
-              <div v-if="activeTab === 'params'" class="tab-content">
+              <div v-if="parameters.length" class="params-detail">
                 <table class="params-table">
                   <thead>
                     <tr>
                       <th>{{ $t('strategyPreview.paramKey') }}</th>
-                      <th>{{ $t('strategyPreview.paramLabel') }}</th>
                       <th>{{ $t('strategyPreview.paramType') }}</th>
                       <th>{{ $t('strategyPreview.paramDefault') }}</th>
                       <th>{{ $t('strategyPreview.paramRange') }}</th>
-                      <th>{{ $t('strategyPreview.paramDesc') }}</th>
                     </tr>
                   </thead>
                   <tbody>
                     <tr v-for="param in parameters" :key="param.key">
                       <td class="mono">{{ param.key }}</td>
-                      <td>{{ getUserFacingLabel(param) }}</td>
                       <td>{{ param.type }}</td>
                       <td>{{ param.default }}</td>
                       <td>{{ formatRange(param) }}</td>
-                      <td>{{ param.description || '-' }}</td>
                     </tr>
                   </tbody>
                 </table>
               </div>
             </div>
-          </main>
+          </div>
+
+          <!-- Code tab -->
+          <div v-if="activeTab === 'code'" class="tab-content fade-in">
+            <div v-if="codeLoading" class="code-loading">{{ $t('strategyPreview.loadingCode') }}</div>
+            <div v-else-if="codeError" class="code-error">{{ codeError }}</div>
+            <div v-else ref="editorContainer" class="code-editor"></div>
+          </div>
         </div>
 
         <AiSuggestionBar
@@ -221,7 +223,7 @@ async function initEditor() {
   editor = monaco.editor.create(editorContainer.value, {
     value: editedCode.value,
     language: 'python',
-    theme: 'vs-dark',
+    theme: 'vs',
     minimap: { enabled: false },
     fontSize: 13,
     lineNumbers: 'on',
@@ -289,6 +291,26 @@ const aiSuggestions = computed<string[]>(() => {
   return suggestions
 })
 
+function riskLevelLabel(level: string): string {
+  const map: Record<string, string> = {
+    low: t('strategyPreview.riskLow'),
+    medium: t('strategyPreview.riskMedium'),
+    high: t('strategyPreview.riskHigh'),
+  }
+  return map[level] || level
+}
+
+function categoryLabel(category: string): string {
+  const map: Record<string, string> = {
+    'trend-following': t('strategyPreview.catTrendFollowing'),
+    'mean-reversion': t('strategyPreview.catMeanReversion'),
+    'momentum': t('strategyPreview.catMomentum'),
+    'multi-indicator': t('strategyPreview.catMultiIndicator'),
+    'other': t('strategyPreview.catOther'),
+  }
+  return map[category] || category
+}
+
 function getUserFacingLabel(param: StrategyParameter): string {
   if (param.user_facing && 'label' in param.user_facing) {
     return String(param.user_facing.label)
@@ -323,6 +345,7 @@ async function handleExport(format: 'qys' | 'py') {
         }
         return edited as Record<string, unknown>
       }),
+      codeOverride: codeDirty.value ? editedCode.value : undefined,
     })
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
@@ -419,24 +442,30 @@ const ArrowLeftIcon = () => h('svg', {
 <style scoped>
 .strategy-preview-view {
   width: 100%;
+  padding-bottom: var(--spacing-xxl);
 }
 
+/* ── Header ── */
 .page-header {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
   gap: var(--spacing-lg);
-  margin-bottom: var(--spacing-lg);
+  margin-bottom: var(--spacing-md);
 }
 
-.header-text {
-  display: flex;
-  flex-direction: column;
-  gap: var(--spacing-xs);
+.btn--back {
+  padding: var(--spacing-xs) var(--spacing-sm);
+  border-radius: var(--radius-full);
+  font-size: var(--font-size-sm);
+}
+
+.header-info {
+  min-width: 0;
 }
 
 .eyebrow {
-  margin: 0 0 6px;
+  margin: 0 0 4px;
   font-size: var(--font-size-xs);
   font-weight: 700;
   letter-spacing: 0.12em;
@@ -448,36 +477,112 @@ const ArrowLeftIcon = () => h('svg', {
   margin: 0;
   font-size: var(--font-size-xxl);
   font-weight: 800;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .page-subtitle {
   margin: var(--spacing-xs) 0 0;
+  font-size: var(--font-size-sm);
   color: var(--color-text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-.actions-bar {
-  margin-bottom: var(--spacing-lg);
+/* ── Toolbar (tabs + badges) ── */
+.toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 var(--spacing-sm);
+  margin-bottom: var(--spacing-md);
+  border-radius: var(--radius-lg);
+  gap: var(--spacing-md);
+  overflow-x: auto;
 }
 
-.main-grid {
+.toolbar__left {
+  display: flex;
+  gap: 0;
+}
+
+.toolbar__right {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  flex-shrink: 0;
+}
+
+.toolbar__badge {
+  padding: 3px 10px;
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  border-radius: var(--radius-full);
+  background: var(--color-surface-hover);
+  color: var(--color-text-secondary);
+  white-space: nowrap;
+}
+
+.risk-tag--low { color: #2a9d65; background: rgba(46, 125, 50, 0.08); }
+.risk-tag--medium { color: #c87a00; background: rgba(200, 122, 0, 0.08); }
+.risk-tag--high { color: #cf4e4e; background: rgba(207, 78, 78, 0.08); }
+
+.tab-btn {
+  padding: var(--spacing-sm) var(--spacing-md);
+  border: none;
+  background: transparent;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  transition: color 0.15s, border-color 0.15s;
+  font-family: inherit;
+}
+
+.tab-btn:hover {
+  color: var(--color-text-primary);
+}
+
+.tab-btn--active {
+  color: var(--color-primary);
+  border-bottom-color: var(--color-primary);
+}
+
+/* ── Tab body ── */
+.tab-body {
+  padding: var(--spacing-lg);
+  min-height: 300px;
+}
+
+.tab-content {
+  min-height: 200px;
+}
+
+/* ── Params layout ── */
+.params-layout {
   display: grid;
-  grid-template-columns: minmax(300px, 380px) minmax(0, 1fr);
-  gap: var(--spacing-lg);
+  grid-template-columns: minmax(280px, 400px) minmax(0, 1fr);
+  gap: var(--spacing-xl);
+  align-items: start;
 }
 
-.sidebar {
+.params-editor {
   display: flex;
   flex-direction: column;
   gap: var(--spacing-md);
 }
 
-.panel {
-  padding: var(--spacing-lg);
+.params-detail {
+  overflow-x: auto;
 }
 
 .panel-title {
   margin: 0 0 var(--spacing-md);
   font-size: var(--font-size-md);
+  font-weight: 600;
 }
 
 .param-groups {
@@ -488,11 +593,11 @@ const ArrowLeftIcon = () => h('svg', {
 
 .param-group__name {
   margin: 0 0 var(--spacing-sm);
-  font-size: var(--font-size-sm);
-  font-weight: 600;
-  color: var(--color-accent);
+  font-size: var(--font-size-xs);
+  font-weight: 700;
+  color: var(--color-primary);
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.06em;
 }
 
 .param-group__items {
@@ -532,45 +637,20 @@ const ArrowLeftIcon = () => h('svg', {
 .field-input {
   width: 100%;
   padding: var(--spacing-xs) var(--spacing-sm);
-  border-radius: var(--radius-md);
-  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  border: 2px solid var(--color-border-light);
   background: var(--color-surface);
   color: var(--color-text-primary);
   font-size: var(--font-size-sm);
+  transition: border-color 0.15s;
 }
 
-.tab-bar {
-  display: flex;
-  gap: 2px;
-  border-bottom: 1px solid var(--color-border);
-  margin-bottom: var(--spacing-lg);
+.field-input:focus {
+  border-color: var(--color-primary);
+  outline: none;
 }
 
-.tab-btn {
-  padding: var(--spacing-sm) var(--spacing-md);
-  border: none;
-  background: transparent;
-  color: var(--color-text-muted);
-  font-size: var(--font-size-sm);
-  font-weight: 500;
-  cursor: pointer;
-  border-bottom: 2px solid transparent;
-  transition: color 0.2s, border-color 0.2s;
-}
-
-.tab-btn:hover {
-  color: var(--color-text-primary);
-}
-
-.tab-btn--active {
-  color: var(--color-accent);
-  border-bottom-color: var(--color-accent);
-}
-
-.tab-content {
-  min-height: 200px;
-}
-
+/* ── Params table ── */
 .params-table {
   width: 100%;
   border-collapse: collapse;
@@ -580,23 +660,25 @@ const ArrowLeftIcon = () => h('svg', {
 .params-table th {
   text-align: left;
   padding: var(--spacing-xs) var(--spacing-sm);
-  border-bottom: 1px solid var(--color-border);
+  border-bottom: 2px solid var(--color-border);
   color: var(--color-text-muted);
   font-weight: 600;
   font-size: var(--font-size-xs);
   text-transform: uppercase;
   letter-spacing: 0.05em;
+  white-space: nowrap;
 }
 
 .params-table td {
   padding: var(--spacing-xs) var(--spacing-sm);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  border-bottom: 1px solid var(--color-border-light);
 }
 
 .mono {
-  font-family: var(--font-mono, 'SF Mono', 'Cascadia Code', 'Fira Code', Consolas, monospace);
+  font-family: var(--font-mono);
 }
 
+/* ── States ── */
 .message {
   margin: var(--spacing-md) 0 0;
 }
@@ -605,34 +687,43 @@ const ArrowLeftIcon = () => h('svg', {
   color: var(--color-danger);
 }
 
-.code-loading {
+.code-loading,
+.code-error {
   padding: var(--spacing-xl);
   text-align: center;
-  color: var(--color-text-muted);
 }
 
 .code-error {
-  padding: var(--spacing-lg);
-  text-align: center;
   color: var(--color-danger);
 }
 
 .code-editor {
-  min-height: 400px;
+  min-height: 480px;
   border-radius: var(--radius-md);
   overflow: hidden;
-  border: 1px solid var(--color-border);
+  border: 2px solid var(--color-border);
 }
 
-@media (max-width: 900px) {
-  .main-grid {
+/* ── Responsive ── */
+@media (max-width: 1024px) {
+  .params-layout {
     grid-template-columns: 1fr;
   }
 }
 
-@media (max-width: 720px) {
+@media (max-width: 768px) {
   .page-header {
+    grid-template-columns: 1fr;
+    gap: var(--spacing-sm);
+  }
+
+  .toolbar {
     flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .toolbar__right {
+    flex-wrap: wrap;
   }
 }
 </style>

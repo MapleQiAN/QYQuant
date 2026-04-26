@@ -306,6 +306,21 @@ def export_strategy():
     except StrategyImportConfirmError as exc:
         return error_response(exc.code, exc.message, exc.status, details=exc.details)
 
+    code_override = payload.get("codeOverride")
+    if code_override is not None:
+        if not isinstance(code_override, str) or not code_override.strip():
+            return error_response("INVALID_CODE_OVERRIDE", "Code override must be non-empty string", 400)
+        try:
+            compile(code_override, "<code-override>", "exec")
+        except SyntaxError as exc:
+            return error_response(
+                "CODE_OVERRIDE_SYNTAX_ERROR",
+                f"Code override has syntax error: {exc.msg}",
+                422,
+                details={"line": exc.lineno, "msg": exc.msg},
+            )
+        source_text = code_override
+
     metadata = payload.get("metadata") or {}
     parameter_definitions = payload.get("parameterDefinitions") or []
     entrypoint_candidates = draft.analysis_payload.get("entrypointCandidates") if isinstance(draft.analysis_payload, dict) else []

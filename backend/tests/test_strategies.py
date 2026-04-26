@@ -1064,6 +1064,133 @@ def test_fetch_draft_code_rejects_other_users_draft(client, app):
     assert response.status_code == 404
 
 
+def test_export_ai_strategy_returns_python_source_from_draft(client):
+    token, _ = _login_user(client, phone="13800138047", nickname="ExportPyUser")
+    source = "def on_bar(ctx, bar):\n    return []\n"
+
+    analyze_response = client.post(
+        "/api/v1/strategy-imports/analyze",
+        headers=_auth_headers(token),
+        data={"file": (io.BytesIO(source.encode("utf-8")), "export_me.py")},
+        content_type="multipart/form-data",
+    )
+    assert analyze_response.status_code == 200
+    draft_id = analyze_response.json["data"]["draftImportId"]
+
+    response = client.post(
+        "/api/v1/strategy-ai/export",
+        headers=_auth_headers(token),
+        json={
+            "draftImportId": draft_id,
+            "format": "py",
+            "metadata": {"name": "Export Me"},
+        },
+    )
+
+    assert response.status_code == 200
+    assert response.data.decode("utf-8") == source
+    assert "attachment; filename=export-me.py" in response.headers["Content-Disposition"]
+
+
+def test_export_ai_strategy_builds_qys_package_with_overrides(client):
+    token, _ = _login_user(client, phone="13800138048", nickname="ExportQysUser")
+    source = "def on_bar(ctx, bar):\n    return []\n"
+    edited_source = "def on_bar(ctx, bar):\n    return [ctx.buy(bar.symbol, quantity=1)]\n"
+
+    analyze_response = client.post(
+        "/api/v1/strategy-imports/analyze",
+        headers=_auth_headers(token),
+        data={"file": (io.BytesIO(source.encode("utf-8")), "package_me.py")},
+        content_type="multipart/form-data",
+    )
+    assert analyze_response.status_code == 200
+    draft_id = analyze_response.json["data"]["draftImportId"]
+
+    response = client.post(
+        "/api/v1/strategy-ai/export",
+        headers=_auth_headers(token),
+        json={
+            "draftImportId": draft_id,
+            "format": "qys",
+            "metadata": {
+                "name": "Packaged Strategy",
+                "description": "Generated package",
+                "category": "momentum",
+                "symbol": "BTCUSDT",
+                "version": "2.0.0",
+                "tags": ["ai", "momentum"],
+                "logicExplanation": "Use a simple generated signal.",
+                "riskRules": "Keep position size small.",
+                "suitableMarket": "Trending markets.",
+                "riskLevel": "medium",
+            },
+            "codeOverride": edited_source,
+            "parameterDefinitions": [
+                {
+                    "key": "window",
+                    "type": "integer",
+                    "default": 20,
+                    "min": 5,
+                    "max": 60,
+                    "user_facing": {
+                        "label": "Window",
+                        "group": "Signal",
+                        "hint": "Longer values react more slowly.",
+                    },
+                }
+            ],
+        },
+    )
+
+    assert response.status_code == 200
+    assert "attachment; filename=packaged-strategy.qys" in response.headers["Content-Disposition"]
+
+    with zipfile.ZipFile(io.BytesIO(response.data), "r") as archive:
+        manifest = json.loads(archive.read("strategy.json").decode("utf-8"))
+        exported_source = archive.read("src/strategy.py").decode("utf-8")
+        readme = archive.read("README.md").decode("utf-8")
+
+    assert exported_source == edited_source
+    assert manifest["name"] == "Packaged Strategy"
+    assert manifest["description"] == "Generated package"
+    assert manifest["version"] == "2.0.0"
+    assert manifest["entrypoint"] == {
+        "path": "src/strategy.py",
+        "callable": "on_bar",
+        "interface": "event_v1",
+    }
+    assert manifest["parameters"][0]["user_facing"]["label"] == "Window"
+    assert manifest["tags"] == ["ai", "momentum"]
+    assert manifest["ui"]["category"] == "momentum"
+    assert manifest["universe"]["symbols"] == ["BTCUSDT"]
+    assert "Use a simple generated signal." in readme
+    assert "**Risk Level**: medium" in readme
+
+
+def test_export_ai_strategy_rejects_other_users_draft(client):
+    token_a, _ = _login_user(client, phone="13800138049", nickname="ExportOwnerA")
+    source = "def on_bar(ctx, bar): return []"
+
+    analyze_response = client.post(
+        "/api/v1/strategy-imports/analyze",
+        headers=_auth_headers(token_a),
+        data={"file": (io.BytesIO(source.encode("utf-8")), "private.py")},
+        content_type="multipart/form-data",
+    )
+    assert analyze_response.status_code == 200
+    draft_id = analyze_response.json["data"]["draftImportId"]
+
+    token_b, _ = _login_user(client, phone="13800138050", nickname="ExportOwnerB")
+    response = client.post(
+        "/api/v1/strategy-ai/export",
+        headers=_auth_headers(token_b),
+        json={"draftImportId": draft_id, "format": "py"},
+    )
+
+    assert response.status_code == 404
+    assert response.json["error"]["code"] == "DRAFT_NOT_FOUND"
+
+
 def test_import_strategy_requires_auth(client, tmp_path):
     package_path, _, _ = _build_qys_package(tmp_path)
     with package_path.open("rb") as handle:

@@ -556,6 +556,7 @@ export async function exportStrategy(payload: {
   format: 'qys' | 'py'
   metadata?: Record<string, unknown>
   parameterDefinitions?: Array<Record<string, unknown>>
+  codeOverride?: string
 }): Promise<Blob> {
   const response = await fetch('/api/v1/strategy-ai/export', {
     method: 'POST',
