@@ -665,7 +665,7 @@ onBeforeUnmount(() => {
 
 .usage-stat__label {
   color: var(--color-text-muted);
-  font-size: var(--font-size-xs);
+  font-size: 10px;
   font-weight: 800;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -1010,7 +1010,9 @@ onBeforeUnmount(() => {
 
 .pricing-card__unit {
   color: var(--color-text-muted);
-  font-size: var(--font-size-sm);
+  font-size: var(--font-size-md);
+  font-weight: 500;
+  font-family: var(--font-zh-body);
   margin-left: 3px;
 }
 
@@ -1020,7 +1022,7 @@ onBeforeUnmount(() => {
   border-radius: var(--radius-full);
   background: var(--color-danger);
   color: #fff;
-  font-size: var(--font-size-xs);
+  font-size: 10px;
   font-weight: 700;
   width: fit-content;
 }
@@ -1044,15 +1046,16 @@ onBeforeUnmount(() => {
 
 .pricing-card__quota {
   color: var(--color-primary);
-  font-size: var(--font-size-sm);
-  font-weight: 700;
-  font-family: var(--font-mono);
-  font-variant-numeric: tabular-nums;
+  font-size: var(--font-size-md);
+  font-weight: 600;
+  font-family: var(--font-zh-body);
 }
 
 .pricing-card__capacity {
   color: var(--color-text-secondary);
-  font-size: var(--font-size-xs);
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  font-family: var(--font-zh-body);
   letter-spacing: 0.02em;
 }
 
@@ -1216,7 +1219,7 @@ onBeforeUnmount(() => {
   text-align: left;
   color: var(--color-text-muted);
   font-weight: 700;
-  font-size: var(--font-size-xs);
+  font-size: 10px;
   text-transform: uppercase;
   letter-spacing: 0.08em;
   border-bottom: 2px solid var(--color-border);
