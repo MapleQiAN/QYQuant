@@ -369,7 +369,7 @@ function ProfileIcon() {
   align-items: center;
   padding: 1px 7px;
   border-radius: var(--radius-full);
-  font-size: var(--font-size-xs);
+  font-size: 10px;
   font-weight: 700;
   line-height: 1.6;
   letter-spacing: 0.02em;

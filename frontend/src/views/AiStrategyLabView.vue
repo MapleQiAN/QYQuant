@@ -1349,7 +1349,7 @@ onMounted(() => {
 
 .mode-option span {
   margin-top: 2px;
-  font-size: var(--font-size-xs);
+  font-size: 10px;
   line-height: 1.3;
   color: var(--color-text-muted);
 }
@@ -1415,7 +1415,7 @@ onMounted(() => {
 .field > span,
 .prompt-box > span {
   color: var(--color-text-muted);
-  font-size: var(--font-size-xs);
+  font-size: 10px;
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -1613,7 +1613,7 @@ onMounted(() => {
   gap: var(--spacing-sm);
   color: var(--color-text-muted);
   font-family: var(--font-mono);
-  font-size: var(--font-size-xs);
+  font-size: 10px;
   text-transform: uppercase;
   letter-spacing: 0.06em;
 }
@@ -1751,7 +1751,7 @@ onMounted(() => {
 .parameter-table__row--head {
   border-top: none;
   color: var(--color-text-muted);
-  font-size: var(--font-size-xs);
+  font-size: 10px;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.06em;
@@ -1878,7 +1878,7 @@ onMounted(() => {
 }
 
 .history-item__meta {
-  font-size: var(--font-size-xs);
+  font-size: 10px;
   color: var(--color-text-muted);
 }
 

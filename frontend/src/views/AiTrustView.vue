@@ -521,7 +521,7 @@ const ruleExample = `{
 }
 
 .pipeline-node__num {
-  font-size: var(--font-size-xs);
+  font-size: 10px;
   font-weight: 800;
   color: var(--color-primary);
   font-family: var(--font-mono);
@@ -670,7 +670,7 @@ const ruleExample = `{
 }
 
 .eval-card__axis {
-  font-size: var(--font-size-xs);
+  font-size: 10px;
   font-weight: 800;
   text-transform: uppercase;
   letter-spacing: 0.1em;

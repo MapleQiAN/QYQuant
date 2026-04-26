@@ -294,7 +294,7 @@ defineExpose({ open, close, toggle })
 /* ── Group Label ── */
 .q-dropdown__group-label {
   padding: var(--spacing-sm) var(--spacing-md) var(--spacing-xs);
-  font-size: var(--font-size-xs);
+  font-size: 10px;
   font-weight: var(--font-weight-bold);
   color: var(--color-text-muted);
   text-transform: uppercase;
@@ -376,7 +376,7 @@ defineExpose({ open, close, toggle })
   flex-shrink: 0;
   white-space: nowrap;
   font-family: var(--font-mono);
-  font-size: var(--font-size-xs);
+  font-size: 10px;
   color: var(--color-text-muted);
   padding: 1px 5px;
   background: var(--color-surface-elevated);

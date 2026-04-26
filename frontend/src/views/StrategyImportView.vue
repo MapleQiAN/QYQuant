@@ -278,7 +278,7 @@ async function handleAnalyze() {
   background: var(--color-surface-elevated);
   border: 1px solid var(--color-border);
   color: var(--color-text-muted);
-  font-size: var(--font-size-xs);
+  font-size: 10px;
   font-family: var(--font-mono);
   font-weight: 700;
 }

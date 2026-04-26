@@ -318,7 +318,7 @@ const BookmarkIcon = () => h('svg', {
 }
 
 .tag {
-  font-size: var(--font-size-xs);
+  font-size: 10px;
   padding: 2px 6px;
   background: var(--color-primary-bg);
   color: var(--color-primary);

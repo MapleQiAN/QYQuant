@@ -694,7 +694,7 @@ function statusClass(status?: MarketplaceReviewStatus) {
   border-radius: 999px;
   background: var(--color-primary-bg);
   color: var(--color-accent);
-  font-size: var(--font-size-xs);
+  font-size: 10px;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
 }
@@ -823,7 +823,7 @@ function statusClass(status?: MarketplaceReviewStatus) {
   background: var(--color-background);
   border: 1px solid var(--color-border-light);
   color: var(--color-text-muted);
-  font-size: var(--font-size-xs);
+  font-size: 10px;
 }
 
 /* ── Status Badges ── */
@@ -833,7 +833,7 @@ function statusClass(status?: MarketplaceReviewStatus) {
   gap: 5px;
   padding: 2px 8px;
   border-radius: 999px;
-  font-size: var(--font-size-xs);
+  font-size: 10px;
   font-weight: 700;
 }
 

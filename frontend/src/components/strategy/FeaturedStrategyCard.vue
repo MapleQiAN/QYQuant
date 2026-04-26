@@ -165,7 +165,7 @@ function formatMetric(value: string | number | boolean | null | undefined, perce
 
 .metric-label {
   display: block;
-  font-size: var(--font-size-xs);
+  font-size: 10px;
   color: var(--color-text-muted);
   font-weight: 800;
   letter-spacing: 0.06em;
