@@ -577,7 +577,7 @@ const ruleExample = `{
 .code-dots i:nth-child(3) { background: #28c840; }
 
 .code-filename {
-  font-size: var(--font-size-xs);
+  font-size: 11px;
   color: rgba(255, 255, 255, 0.35);
   font-family: var(--font-mono);
 }

@@ -1060,7 +1060,7 @@ onMounted(() => {
   border-radius: var(--radius-full);
   background: var(--color-surface);
   color: var(--color-text-secondary);
-  font-size: var(--font-size-xs);
+  font-size: 11px;
   font-weight: 700;
   font-family: var(--font-mono);
   transition: all var(--transition-normal);

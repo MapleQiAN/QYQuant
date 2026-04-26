@@ -777,7 +777,7 @@ function statusClass(status?: MarketplaceReviewStatus) {
   border-radius: 999px;
   background: var(--color-surface-active);
   color: var(--color-text-secondary);
-  font-size: var(--font-size-xs);
+  font-size: 11px;
   font-weight: 600;
 }
 

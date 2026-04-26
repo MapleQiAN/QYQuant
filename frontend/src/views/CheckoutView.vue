@@ -395,7 +395,7 @@ async function handlePay(provider: PaymentProvider) {
   border-radius: var(--radius-full);
   background: linear-gradient(135deg, #ff4d4f 0%, #ff7a45 100%);
   color: #fff;
-  font-size: var(--font-size-xs);
+  font-size: 11px;
   font-weight: 600;
   width: fit-content;
 }

@@ -439,7 +439,7 @@ const TargetIcon = () => h('svg', {
 .badge-default {
   background: var(--color-surface-elevated);
   color: var(--color-text-muted);
-  font-size: var(--font-size-xs);
+  font-size: 11px;
   padding: 3px 8px;
   border-radius: var(--radius-full);
   font-weight: 600;

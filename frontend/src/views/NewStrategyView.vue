@@ -657,7 +657,7 @@ const ArrowLeftIcon = () => h('svg', {
   border-radius: var(--radius-full);
   background: var(--color-accent);
   color: var(--color-text-primary);
-  font-size: var(--font-size-xs);
+  font-size: 11px;
   font-weight: 900;
 }
 

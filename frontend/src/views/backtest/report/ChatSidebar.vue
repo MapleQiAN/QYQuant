@@ -348,7 +348,7 @@ onUnmounted(() => {
   border-radius: 6px;
   background: var(--color-surface-elevated);
   border: 1px dashed var(--color-border-light);
-  font-size: var(--font-size-xs);
+  font-size: 11px;
   color: var(--color-text-secondary);
 }
 

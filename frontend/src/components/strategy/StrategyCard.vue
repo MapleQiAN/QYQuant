@@ -137,7 +137,7 @@ function formatMetric(value: string | number | boolean | null | undefined, perce
 
 .card-category {
   margin-top: var(--spacing-sm);
-  font-size: var(--font-size-xs);
+  font-size: 11px;
   color: var(--color-text-muted);
   font-weight: 800;
   letter-spacing: 0.08em;

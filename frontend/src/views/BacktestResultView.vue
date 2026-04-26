@@ -806,7 +806,7 @@ onMounted(() => {
   border: 2px solid var(--color-border);
   border-radius: 999px;
   background: var(--color-surface);
-  font-size: var(--font-size-xs);
+  font-size: 11px;
   font-weight: 800;
   color: var(--color-text-muted);
 }

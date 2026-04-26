@@ -232,7 +232,7 @@ function switchFeed(mode: 'all' | 'collections') {
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.18);
   border: 2px solid rgba(255, 255, 255, 0.25);
-  font-size: var(--font-size-xs);
+  font-size: 11px;
   font-weight: 800;
   letter-spacing: 0.1em;
   text-transform: uppercase;

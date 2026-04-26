@@ -347,7 +347,7 @@ const PlusIcon = () => h('svg', {
 }
 
 .kpi-label {
-  font-size: var(--font-size-xs);
+  font-size: 11px;
   font-weight: 800;
   color: var(--color-text-muted);
   letter-spacing: 0.06em;
@@ -375,7 +375,7 @@ const PlusIcon = () => h('svg', {
 .kpi-value.negative { color: var(--color-negative); }
 
 .kpi-badge {
-  font-size: var(--font-size-xs);
+  font-size: 11px;
   padding: 3px 8px;
   border-radius: var(--radius-full);
   font-weight: 800;
