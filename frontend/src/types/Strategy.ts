@@ -104,6 +104,28 @@ export interface AiStrategyMessage {
 export interface AiStrategyDraftResult {
   reply: string
   analysis: StrategyImportAnalysis | null
+  sessionId: string
+}
+
+export interface AiSessionSummary {
+  id: string
+  title: string | null
+  messageCount: number
+  modelName: string | null
+  hasDraft: boolean
+  createdAt: string | null
+  updatedAt: string | null
+}
+
+export interface AiSessionDetail {
+  id: string
+  title: string | null
+  messages: AiStrategyMessage[]
+  analysis: StrategyImportAnalysis | null
+  draftId: string | null
+  modelName: string | null
+  createdAt: string | null
+  updatedAt: string | null
 }
 
 export interface AiStrategyMetadata {

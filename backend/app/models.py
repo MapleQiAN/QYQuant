@@ -719,3 +719,21 @@ class OAuthIdentity(db.Model):
     raw_profile = db.Column(db.JSON, nullable=True, default=dict)
     created_at = db.Column(db.DateTime(timezone=True), nullable=False, default=now_utc)
     updated_at = db.Column(db.DateTime(timezone=True), nullable=False, default=now_utc, onupdate=now_utc)
+
+
+class AiGenerationSession(db.Model):
+    __tablename__ = 'ai_generation_sessions'
+    __table_args__ = (
+        db.Index('ix_ai_gen_sessions_owner_updated', 'owner_id', 'updated_at'),
+    )
+
+    id = db.Column(db.String, primary_key=True, default=gen_id)
+    owner_id = db.Column(db.String, db.ForeignKey('users.id'), nullable=False)
+    title = db.Column(db.String(200), nullable=True)
+    messages = db.Column(db.JSON, nullable=False, default=list)
+    analysis = db.Column(job_json_type, nullable=True)
+    draft_id = db.Column(db.String, nullable=True)
+    model_name = db.Column(db.String(100), nullable=True)
+    message_count = db.Column(db.Integer, nullable=False, default=0)
+    created_at = db.Column(db.DateTime(timezone=True), nullable=False, default=now_utc)
+    updated_at = db.Column(db.DateTime(timezone=True), nullable=False, default=now_utc, onupdate=now_utc)

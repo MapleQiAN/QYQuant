@@ -400,6 +400,13 @@ const zh = {
     suggestOptimize: '优化参数',
     suggestBacktest: '快速回测',
     suggestionApplied: '已应用建议：{suggestion}',
+    historyTitle: '历史记录',
+    newSession: '新对话',
+    messageCount: '{n} 条消息',
+    deleteConfirm: '确定删除此生成记录？',
+    loadError: '加载历史记录失败',
+    deleteError: '删除失败',
+    draftExpired: '草稿已过期',
   },
   strategyWritingGuide: {
     title: '策略编写指南',

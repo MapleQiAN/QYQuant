@@ -12,7 +12,7 @@ from flask_smorest import Blueprint
 from qysp.builder import build_package
 
 from ..extensions import db
-from ..models import BacktestJob, BotInstance, File, Post, Report, SimulationBot, Strategy, StrategyImportDraft, StrategyParameterPreset, StrategyVersion
+from ..models import AiGenerationSession, BacktestJob, BotInstance, File, Post, Report, SimulationBot, Strategy, StrategyImportDraft, StrategyParameterPreset, StrategyVersion
 from ..schemas import StrategyParameterSchema, StrategySchema
 from ..services.strategy_import_analysis import (
     StrategyImportAnalysisError,
@@ -263,17 +263,133 @@ def generate_ai_strategy_v1():
     if not integration_id:
         return error_response("INTEGRATION_ID_REQUIRED", "AI integration id is required", 400)
 
+    user_id = get_jwt_identity()
+    session_id = str(payload.get("sessionId") or "").strip() or None
+    locale = str(payload.get("locale") or "en").strip()
+
     try:
         result = generate_strategy_draft(
-            user_id=get_jwt_identity(),
+            user_id=user_id,
             integration_id=integration_id,
             messages=payload.get("messages"),
-            locale=str(payload.get("locale") or "en").strip(),
+            locale=locale,
         )
     except AIStrategyGenerationError as exc:
         return error_response(exc.code, exc.message, exc.status, details=exc.details)
 
+    # Persist session
+    input_messages = payload.get("messages") or []
+    reply_message = {"role": "assistant", "content": result["reply"]}
+    all_messages = [*input_messages, reply_message]
+    first_user_content = next(
+        (m.get("content", "") for m in all_messages if m.get("role") == "user"), ""
+    )
+    title = first_user_content[:200] if first_user_content else None
+
+    # Get model name from integration config
+    from ..services.integrations import get_user_integration
+    integration = get_user_integration(integration_id, user_id)
+    model_name = None
+    if integration and integration.config_public:
+        model_name = str(integration.config_public.get("model") or "").strip() or None
+
+    analysis_data = result.get("analysis")
+    draft_id = analysis_data.get("draftImportId") if analysis_data else None
+
+    if session_id:
+        session = db.session.get(AiGenerationSession, session_id)
+        if session and session.owner_id == user_id:
+            session.messages = all_messages
+            if analysis_data:
+                session.analysis = analysis_data
+            if draft_id:
+                session.draft_id = draft_id
+            session.message_count = len(all_messages)
+            if not session.title and title:
+                session.title = title
+    else:
+        session = AiGenerationSession(
+            owner_id=user_id,
+            title=title,
+            messages=all_messages,
+            analysis=analysis_data,
+            draft_id=draft_id,
+            model_name=model_name,
+            message_count=len(all_messages),
+        )
+        db.session.add(session)
+
+    db.session.commit()
+    result["sessionId"] = session.id
+
     return ok(result)
+
+
+@bp.get("/v1/ai-sessions")
+@jwt_required()
+def list_ai_sessions():
+    user_id = get_jwt_identity()
+    page = request.args.get("page", 1, type=int)
+    per_page = min(request.args.get("perPage", 20, type=int), 100)
+
+    pagination = (
+        db.session.query(AiGenerationSession)
+        .filter(AiGenerationSession.owner_id == user_id)
+        .order_by(AiGenerationSession.updated_at.desc())
+        .paginate(page=page, per_page=per_page, error_out=False)
+    )
+
+    sessions = [
+        {
+            "id": s.id,
+            "title": s.title,
+            "messageCount": s.message_count,
+            "modelName": s.model_name,
+            "hasDraft": s.draft_id is not None,
+            "createdAt": s.created_at.isoformat() if s.created_at else None,
+            "updatedAt": s.updated_at.isoformat() if s.updated_at else None,
+        }
+        for s in pagination.items
+    ]
+
+    return ok(sessions, meta={
+        "total": pagination.total,
+        "page": pagination.page,
+        "perPage": per_page,
+    })
+
+
+@bp.get("/v1/ai-sessions/<session_id>")
+@jwt_required()
+def get_ai_session(session_id):
+    user_id = get_jwt_identity()
+    session = db.session.get(AiGenerationSession, session_id)
+    if not session or session.owner_id != user_id:
+        return error_response("SESSION_NOT_FOUND", "Session not found", 404)
+
+    return ok({
+        "id": session.id,
+        "title": session.title,
+        "messages": session.messages or [],
+        "analysis": session.analysis,
+        "draftId": session.draft_id,
+        "modelName": session.model_name,
+        "createdAt": session.created_at.isoformat() if session.created_at else None,
+        "updatedAt": session.updated_at.isoformat() if session.updated_at else None,
+    })
+
+
+@bp.delete("/v1/ai-sessions/<session_id>")
+@jwt_required()
+def delete_ai_session(session_id):
+    user_id = get_jwt_identity()
+    session = db.session.get(AiGenerationSession, session_id)
+    if not session or session.owner_id != user_id:
+        return error_response("SESSION_NOT_FOUND", "Session not found", 404)
+
+    db.session.delete(session)
+    db.session.commit()
+    return ok({"deletedId": session_id})
 
 
 @bp.post("/v1/strategy-ai/export")
@@ -745,9 +861,15 @@ def _delete_strategy_assets(strategy):
     # Strategy versions and associated files
     versions = StrategyVersion.query.filter_by(strategy_id=strategy.id).all()
     file_ids = [version.file_id for version in versions if version.file_id]
+    if strategy.built_package_file_id:
+        file_ids.append(strategy.built_package_file_id)
+        strategy.built_package_file_id = None
 
     for version in versions:
         db.session.delete(version)
+
+    # Flush to clear version + strategy FK references before deleting files
+    db.session.flush()
 
     if file_ids:
         for file_record in File.query.filter(File.id.in_(file_ids)).all():
@@ -769,11 +891,14 @@ def _delete_strategy_assets(strategy):
     # Bot instances — unlink strategy (FK nullable=True)
     BotInstance.query.filter_by(strategy_id=strategy.id).update({"strategy_id": None})
 
-    # Backtest jobs — unlink strategy (FK nullable=True)
-    BacktestJob.query.filter_by(strategy_id=strategy.id).update({"strategy_id": None})
-
     # Posts — unlink strategy (FK nullable=True)
     Post.query.filter_by(strategy_id=strategy.id).update({"strategy_id": None})
+
+    # Strategies referencing this as source — unlink (FK nullable=True)
+    Strategy.query.filter_by(source_strategy_id=strategy.id).update({"source_strategy_id": None})
+
+    # Backtest jobs — unlink strategy (FK nullable=True)
+    BacktestJob.query.filter_by(strategy_id=strategy.id).update({"strategy_id": None})
 
     # Imported strategies — clear source link (self-referential FK)
     Strategy.query.filter_by(source_strategy_id=strategy.id).update({"source_strategy_id": None})

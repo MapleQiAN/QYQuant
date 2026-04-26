@@ -400,6 +400,13 @@ const en = {
     suggestOptimize: 'Optimize parameters',
     suggestBacktest: 'Quick backtest',
     suggestionApplied: 'Applied suggestion: {suggestion}',
+    historyTitle: 'History',
+    newSession: 'New Session',
+    messageCount: '{n} messages',
+    deleteConfirm: 'Delete this generation session?',
+    loadError: 'Failed to load history',
+    deleteError: 'Failed to delete',
+    draftExpired: 'Draft expired',
   },
   strategyWritingGuide: {
     title: 'Strategy Writing Guide',
