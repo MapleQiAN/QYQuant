@@ -347,10 +347,14 @@ async function handleDelete(strategyId: string) {
     return
   }
 
-  await deleteStrategy(strategyId)
-  const fallbackPage = items.value.length === 1 && page.value > 1 ? page.value - 1 : page.value
-  await loadPage(fallbackPage)
-  toast.success('策略已删除')
+  try {
+    await deleteStrategy(strategyId)
+    const fallbackPage = items.value.length === 1 && page.value > 1 ? page.value - 1 : page.value
+    await loadPage(fallbackPage)
+    toast.success(t('strategy.library.deletedToast'))
+  } catch {
+    toast.error(t('strategy.library.deleteFailed'))
+  }
 }
 
 function openPublishFlow(strategy: Strategy) {

@@ -1321,6 +1321,8 @@ const en = {
       failedToLoadGuided: 'Failed to load guided strategies',
       failedToSubmit: 'Failed to submit strategy for review',
       deleteConfirm: 'Delete this strategy?',
+      deletedToast: 'Strategy deleted',
+      deleteFailed: 'Failed to delete strategy',
       noDescription: 'No description provided.',
       unknownTime: 'Unknown time',
       pendingReview: 'Pending review',

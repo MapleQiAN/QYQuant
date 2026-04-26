@@ -1324,6 +1324,8 @@ const zh = {
       failedToLoadGuided: '加载引导策略失败',
       failedToSubmit: '提交策略审核失败',
       deleteConfirm: '删除此策略？',
+      deletedToast: '策略已删除',
+      deleteFailed: '删除策略失败',
       noDescription: '未提供描述。',
       unknownTime: '未知时间',
       pendingReview: '待审核',

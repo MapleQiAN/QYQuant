@@ -12,7 +12,7 @@ from flask_smorest import Blueprint
 from qysp.builder import build_package
 
 from ..extensions import db
-from ..models import BacktestJob, File, Strategy, StrategyImportDraft, StrategyVersion
+from ..models import BacktestJob, BotInstance, File, Post, Report, SimulationBot, Strategy, StrategyImportDraft, StrategyParameterPreset, StrategyVersion
 from ..schemas import StrategyParameterSchema, StrategySchema
 from ..services.strategy_import_analysis import (
     StrategyImportAnalysisError,
@@ -727,6 +727,7 @@ def _sort_column(name):
 
 
 def _delete_strategy_assets(strategy):
+    # Strategy versions and associated files
     versions = StrategyVersion.query.filter_by(strategy_id=strategy.id).all()
     file_ids = [version.file_id for version in versions if version.file_id]
 
@@ -738,11 +739,34 @@ def _delete_strategy_assets(strategy):
             _remove_path(file_record.path)
             db.session.delete(file_record)
 
+    # Parameter presets (FK nullable=False)
+    for preset in StrategyParameterPreset.query.filter_by(strategy_id=strategy.id).all():
+        db.session.delete(preset)
+
+    # Reports against this strategy (FK nullable=False)
+    for report in Report.query.filter_by(strategy_id=strategy.id).all():
+        db.session.delete(report)
+
+    # Simulation bots (FK nullable=False, cascades to simulation_records)
+    for sim_bot in SimulationBot.query.filter_by(strategy_id=strategy.id).all():
+        db.session.delete(sim_bot)
+
+    # Bot instances — unlink strategy (FK nullable=True)
+    BotInstance.query.filter_by(strategy_id=strategy.id).update({"strategy_id": None})
+
+    # Backtest jobs — unlink strategy (FK nullable=True)
+    BacktestJob.query.filter_by(strategy_id=strategy.id).update({"strategy_id": None})
+
+    # Posts — unlink strategy (FK nullable=True)
+    Post.query.filter_by(strategy_id=strategy.id).update({"strategy_id": None})
+
+    # Imported strategies — clear source link (self-referential FK)
+    Strategy.query.filter_by(source_strategy_id=strategy.id).update({"source_strategy_id": None})
+
+    # On-disk storage
     if strategy.storage_key and not strategy.source_strategy_id:
         storage_root = Path(os.getenv("STRATEGY_STORAGE_DIR") or Path(__file__).resolve().parents[2] / "storage")
         _remove_path((storage_root / strategy.storage_key).as_posix())
-
-    BacktestJob.query.filter_by(strategy_id=strategy.id).update({"strategy_id": None})
 
 
 def _remove_path(path):
