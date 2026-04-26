@@ -2,6 +2,7 @@ from ..extensions import db
 from ..models import BacktestJob, BacktestJobStatus, BacktestReport, ReportAlert, User
 from ..utils.storage import build_backtest_storage_key, read_json
 from . import advisor, diagnostician, narrator
+from .agents_sdk import generate_report_narratives
 from .quant_engine import build_report_payload
 from .tier_filter import normalize_report_plan_level
 
@@ -49,16 +50,30 @@ def generate_report(backtest_job_id, user_id, force=False, locale="en"):
         report.monte_carlo = payload["monte_carlo"]
         report.regime_analysis = payload["regime_analysis"]
         report.metric_narrations = payload["metric_narrations"]
-        report.executive_summary = narrator.generate_summary(payload["metrics"], tier, locale=locale, user_id=user_id)
-        if tier in {"go", "plus", "pro", "ultra"}:
-            report.metric_narrations = narrator.annotate_metrics(payload["metrics"], locale=locale, user_id=user_id)
-        if tier in {"plus", "pro", "ultra"}:
-            report.diagnosis_narration = diagnostician.generate_diagnosis(payload, tier, locale=locale, user_id=user_id)
+        agent_result = generate_report_narratives(payload, tier, locale=locale, user_id=user_id)
+        if agent_result is not None:
+            report.executive_summary = agent_result.executive_summary
+            if tier in {"go", "plus", "pro", "ultra"}:
+                report.metric_narrations = agent_result.metric_narrations or {}
+            report.diagnosis_narration = agent_result.diagnosis_narration if tier in {"plus", "pro", "ultra"} else None
+            report.advisor_narration = agent_result.advisor_narration if tier in {"pro", "ultra"} else None
+            alert_specs = agent_result.alerts or []
         else:
-            report.diagnosis_narration = None
+            report.executive_summary = narrator.generate_summary(payload["metrics"], tier, locale=locale, user_id=user_id)
+            if tier in {"go", "plus", "pro", "ultra"}:
+                report.metric_narrations = narrator.annotate_metrics(payload["metrics"], locale=locale, user_id=user_id)
+            if tier in {"plus", "pro", "ultra"}:
+                report.diagnosis_narration = diagnostician.generate_diagnosis(payload, tier, locale=locale, user_id=user_id)
+            else:
+                report.diagnosis_narration = None
+            if tier in {"pro", "ultra"}:
+                report.advisor_narration = advisor.generate_suggestions(payload, tier, locale=locale, user_id=user_id)
+                alert_specs = advisor.generate_alerts(payload, tier, locale=locale, user_id=user_id)
+            else:
+                report.advisor_narration = None
+                alert_specs = []
+
         if tier in {"pro", "ultra"}:
-            report.advisor_narration = advisor.generate_suggestions(payload, tier, locale=locale, user_id=user_id)
-            alert_specs = advisor.generate_alerts(payload, tier, locale=locale, user_id=user_id)
             report.anomalies = alert_specs
             ReportAlert.query.filter_by(report_id=report.id).delete()
             for alert in alert_specs:

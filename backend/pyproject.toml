@@ -18,6 +18,7 @@ dependencies = [
     "cryptography==42.0.8",
     "psycopg2-binary==2.9.9",
     "gunicorn==23.0.0",
+    "openai-agents>=0.14.6,<0.15.0",
     "akshare>=1.18.49,<2.0.0",
     "jqdatasdk>=1.9.7,<2.0.0",
     "qysp",

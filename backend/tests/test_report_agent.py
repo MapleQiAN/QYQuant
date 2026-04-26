@@ -463,8 +463,14 @@ def test_generate_report_uses_narrator_stub(app, monkeypatch, tmp_path):
     from app.utils.storage import build_backtest_storage_key, write_json
 
     monkeypatch.setenv("BACKTEST_STORAGE_DIR", tmp_path.as_posix())
-    monkeypatch.setattr("app.report_agent.narrator.generate_summary", lambda metrics, tier, locale="en": f"{tier} summary")
-    monkeypatch.setattr("app.report_agent.narrator.annotate_metrics", lambda metrics, locale="en": {"sharpeRatio": "stub metric"})
+    monkeypatch.setattr(
+        "app.report_agent.narrator.generate_summary",
+        lambda metrics, tier, locale="en", user_id=None: f"{tier} summary",
+    )
+    monkeypatch.setattr(
+        "app.report_agent.narrator.annotate_metrics",
+        lambda metrics, locale="en", user_id=None: {"sharpeRatio": "stub metric"},
+    )
 
     with app.app_context():
         user = User(phone="13800138908", nickname="NarratorOwner", plan_level="go")
@@ -503,7 +509,10 @@ def test_generate_report_uses_diagnostician_for_plus_tier(app, monkeypatch, tmp_
     from app.utils.storage import build_backtest_storage_key, write_json
 
     monkeypatch.setenv("BACKTEST_STORAGE_DIR", tmp_path.as_posix())
-    monkeypatch.setattr("app.report_agent.diagnostician.generate_diagnosis", lambda payload, tier, locale="en": "diagnosis stub")
+    monkeypatch.setattr(
+        "app.report_agent.diagnostician.generate_diagnosis",
+        lambda payload, tier, locale="en", user_id=None: "diagnosis stub",
+    )
 
     with app.app_context():
         user = User(phone="13800138909", nickname="DiagnosisOwner", plan_level="plus")
@@ -541,10 +550,15 @@ def test_generate_report_uses_advisor_and_creates_alerts_for_pro_tier(app, monke
     from app.utils.storage import build_backtest_storage_key, write_json
 
     monkeypatch.setenv("BACKTEST_STORAGE_DIR", tmp_path.as_posix())
-    monkeypatch.setattr("app.report_agent.advisor.generate_suggestions", lambda payload, tier, locale="en": "advisor stub")
+    monkeypatch.setattr(
+        "app.report_agent.advisor.generate_suggestions",
+        lambda payload, tier, locale="en", user_id=None: "advisor stub",
+    )
     monkeypatch.setattr(
         "app.report_agent.advisor.generate_alerts",
-        lambda payload, tier, locale="en": [{"level": "warning", "title": "Drawdown cluster", "message": "Watch recent losses"}],
+        lambda payload, tier, locale="en", user_id=None: [
+            {"level": "warning", "title": "Drawdown cluster", "message": "Watch recent losses"}
+        ],
     )
 
     with app.app_context():
@@ -580,6 +594,101 @@ def test_generate_report_uses_advisor_and_creates_alerts_for_pro_tier(app, monke
         assert alert.title == "Drawdown cluster"
 
 
+def test_generate_report_can_use_agents_sdk_result(app, monkeypatch, tmp_path):
+    from app.extensions import db
+    from app.models import BacktestJob, BacktestJobStatus, BacktestReport, ReportAlert, User
+    from app.report_agent.agents_sdk import ReportAgentResult
+    from app.utils.storage import build_backtest_storage_key, write_json
+
+    monkeypatch.setenv("BACKTEST_STORAGE_DIR", tmp_path.as_posix())
+    monkeypatch.setattr(
+        "app.report_agent.orchestrator.generate_report_narratives",
+        lambda payload, tier, locale="en", user_id=None: ReportAgentResult(
+            executive_summary="agents summary",
+            metric_narrations={"sharpeRatio": "agents metric"},
+            diagnosis_narration="agents diagnosis",
+            advisor_narration="agents advisor",
+            alerts=[{"level": "warning", "title": "Agents alert", "message": "Review risk"}],
+        ),
+    )
+    monkeypatch.setattr(
+        "app.report_agent.narrator.generate_summary",
+        lambda metrics, tier, locale="en", user_id=None: (_ for _ in ()).throw(AssertionError("fallback used")),
+    )
+
+    with app.app_context():
+        user = User(phone="13800138914", nickname="AgentsOwner", plan_level="pro")
+        db.session.add(user)
+        db.session.flush()
+        user_id = user.id
+        job = BacktestJob(
+            user_id=user_id,
+            status=BacktestJobStatus.COMPLETED.value,
+            params={"symbol": "BTCUSDT"},
+            result_storage_key=build_backtest_storage_key("agents-job"),
+        )
+        job.id = "agents-job"
+        db.session.add(job)
+        db.session.commit()
+
+    bars, trades = _build_report_fixture()
+    storage_key = build_backtest_storage_key("agents-job")
+    write_json(f"{storage_key}/kline.json", bars)
+    write_json(f"{storage_key}/trades.json", trades)
+
+    from app.report_agent.orchestrator import generate_report
+
+    with app.app_context():
+        report = generate_report("agents-job", user_id, force=True)
+        stored = db.session.get(BacktestReport, report.id)
+        alert = ReportAlert.query.filter_by(report_id=report.id).one()
+
+        assert stored.executive_summary == "agents summary"
+        assert stored.metric_narrations == {"sharpeRatio": "agents metric"}
+        assert stored.diagnosis_narration == "agents diagnosis"
+        assert stored.advisor_narration == "agents advisor"
+        assert alert.title == "Agents alert"
+
+
+def test_agents_sdk_report_output_parser_rejects_invalid_payloads():
+    from app.report_agent.agents_sdk import _parse_agent_output
+
+    assert _parse_agent_output("not json") is None
+    assert _parse_agent_output('{"metric_narrations": {}}') is None
+    assert _parse_agent_output('{"executive_summary": "ok", "alerts": {}}') is None
+    assert _parse_agent_output('{"executive_summary": "ok"}')["executive_summary"] == "ok"
+
+
+def test_agents_sdk_generation_falls_back_on_runner_error(monkeypatch):
+    import sys
+    import types
+
+    from app.report_agent.agents_sdk import generate_report_narratives
+
+    class FakeAgent:
+        def __init__(self, **kwargs):
+            self.kwargs = kwargs
+
+    class FakeRunner:
+        @staticmethod
+        def run_sync(agent, prompt):
+            raise RuntimeError("model unavailable")
+
+    fake_agents = types.SimpleNamespace(
+        Agent=FakeAgent,
+        Runner=FakeRunner,
+        function_tool=lambda func: func,
+        set_tracing_disabled=lambda disabled: None,
+    )
+
+    monkeypatch.setenv("QYQUANT_REPORT_AGENTS_SDK_ENABLED", "true")
+    monkeypatch.setitem(sys.modules, "agents", fake_agents)
+
+    result = generate_report_narratives({"metrics": {}, "anomalies": []}, "pro", locale="en", user_id=1)
+
+    assert result is None
+
+
 def test_report_chat_persists_question_and_answer(client, app, monkeypatch):
     from app.extensions import db
     from app.models import BacktestJob, BacktestJobStatus, BacktestReport, ReportChatMessage, User
@@ -607,7 +716,10 @@ def test_report_chat_persists_question_and_answer(client, app, monkeypatch):
         db.session.commit()
         report_id = report.id
 
-    monkeypatch.setattr("app.report_agent.chat_router.route_chat_question", lambda message, report, locale="en": "answer stub")
+    monkeypatch.setattr(
+        "app.report_agent.chat_router.route_chat_question",
+        lambda message, report, locale="en", user_id=None: "answer stub",
+    )
 
     response = client.post(
         f"/api/reports/{report_id}/chat",
