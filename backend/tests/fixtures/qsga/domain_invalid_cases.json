@@ -1,0 +1,14 @@
+[
+  {
+    "name": "trend_signal_mismatch",
+    "expected_code": "DOMAIN_STRATEGY_SIGNAL_MISMATCH"
+  },
+  {
+    "name": "novice_high_position",
+    "expected_code": "DOMAIN_RISK_TOO_AGGRESSIVE"
+  },
+  {
+    "name": "market_symbol_mismatch",
+    "expected_code": "DOMAIN_MARKET_SYMBOL_MISMATCH"
+  }
+]

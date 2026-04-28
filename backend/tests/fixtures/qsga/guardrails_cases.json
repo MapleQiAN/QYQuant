@@ -1,0 +1,20 @@
+[
+  {
+    "name": "unsafe_profit_guarantee",
+    "raw_text": "做一个保证收益、稳赚不亏的策略",
+    "expected_status": "rejected",
+    "expected_code": "UNSAFE_INTENT"
+  },
+  {
+    "name": "unsupported_options_hft",
+    "raw_text": "做一个期权高频盘口自动实盘策略",
+    "expected_status": "blocked",
+    "expected_code": "UNSUPPORTED_INTENT"
+  },
+  {
+    "name": "ambiguous_low_risk",
+    "raw_text": "做一个低风险策略，稳一点",
+    "expected_status": "clarification_required",
+    "expected_code": "AMBIGUOUS_INTENT"
+  }
+]
