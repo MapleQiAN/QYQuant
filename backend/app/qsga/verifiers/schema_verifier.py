@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from ..errors import verification_error
 from ..result import VerificationError, VerificationResult, fail_result, pass_result
 from ..schemas import (
     REQUIRED_TOP_LEVEL_FIELDS,
@@ -137,5 +138,5 @@ def _pct(
 
 
 def _error(code: str, path: str, message: str) -> VerificationError:
-    return VerificationError(code=code, path=path, message=message)
+    return verification_error(code, path, message, category="schema")
 

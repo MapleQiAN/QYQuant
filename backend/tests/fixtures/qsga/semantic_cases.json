@@ -1,0 +1,14 @@
+[
+  {
+    "name": "position_weakened",
+    "raw_text": "仓位不要超过 30%",
+    "set": {"risk.max_position_pct": 50},
+    "expected_code": "SEMANTIC_POSITION_WEAKENED"
+  },
+  {
+    "name": "drawdown_weakened",
+    "raw_text": "最大回撤 10%",
+    "set": {"risk.max_drawdown_pct": 20},
+    "expected_code": "SEMANTIC_DRAWDOWN_WEAKENED"
+  }
+]
