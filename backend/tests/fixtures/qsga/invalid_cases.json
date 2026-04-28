@@ -1,0 +1,42 @@
+[
+  {
+    "name": "missing_version",
+    "remove": ["version"],
+    "expected_code": "REQUIRED_FIELD_MISSING"
+  },
+  {
+    "name": "unsupported_family",
+    "set": {"strategy.family": "breakout"},
+    "expected_code": "UNSUPPORTED_STRATEGY_FAMILY"
+  },
+  {
+    "name": "invalid_timeframe",
+    "set": {"strategy.timeframe": "5m"},
+    "expected_code": "INVALID_ENUM"
+  },
+  {
+    "name": "invalid_market",
+    "set": {"universe.market": "forex"},
+    "expected_code": "INVALID_ENUM"
+  },
+  {
+    "name": "empty_symbols",
+    "set": {"universe.symbols": []},
+    "expected_code": "SYMBOLS_REQUIRED"
+  },
+  {
+    "name": "unknown_signal_reference",
+    "set": {"signals.0.right": "missing_signal"},
+    "expected_code": "UNKNOWN_SIGNAL_REFERENCE"
+  },
+  {
+    "name": "unsupported_indicator",
+    "set": {"signals.0.indicator": "rsi"},
+    "expected_code": "UNSUPPORTED_INDICATOR"
+  },
+  {
+    "name": "position_out_of_range",
+    "set": {"risk.max_position_pct": 120},
+    "expected_code": "INVALID_PERCENT"
+  }
+]

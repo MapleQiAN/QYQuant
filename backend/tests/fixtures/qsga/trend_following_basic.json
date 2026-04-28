@@ -1,0 +1,50 @@
+{
+  "version": "1.0",
+  "intent": {
+    "raw_text": "做一个黄金日线双均线趋势策略，仓位不要超过 30%",
+    "language": "zh-CN",
+    "classification": "supported",
+    "normalized_summary": "黄金日线双均线趋势策略"
+  },
+  "strategy": {
+    "family": "trend_following",
+    "direction": "flat_or_long",
+    "timeframe": "1d"
+  },
+  "universe": {
+    "market": "gold",
+    "symbols": ["XAUUSD"]
+  },
+  "signals": [
+    {
+      "name": "fast_ma",
+      "indicator": "ma",
+      "field": "close",
+      "window": 10,
+      "operator": "cross_up",
+      "right": "slow_ma"
+    },
+    {
+      "name": "slow_ma",
+      "indicator": "ma",
+      "field": "close",
+      "window": 30,
+      "operator": "reference"
+    }
+  ],
+  "risk": {
+    "max_drawdown_pct": 15,
+    "stop_loss_pct": 5,
+    "take_profit_pct": 12,
+    "max_position_pct": 30
+  },
+  "execution": {
+    "rebalance": "on_signal",
+    "max_orders_per_day": 2,
+    "price_timing": "next_bar"
+  },
+  "explanation": {
+    "audience": "beginner",
+    "include_risk_warning": true
+  }
+}

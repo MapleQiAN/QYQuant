@@ -1,0 +1,50 @@
+{
+  "version": "1.0",
+  "intent": {
+    "raw_text": "做一个 BTC 动量策略，快慢 EMA 确认趋势",
+    "language": "zh-CN",
+    "classification": "supported",
+    "normalized_summary": "BTC EMA 动量策略"
+  },
+  "strategy": {
+    "family": "momentum",
+    "direction": "flat_or_long",
+    "timeframe": "1h"
+  },
+  "universe": {
+    "market": "crypto",
+    "symbols": ["BTCUSDT"]
+  },
+  "signals": [
+    {
+      "name": "fast_ema",
+      "indicator": "ema",
+      "field": "close",
+      "window": 12,
+      "operator": "cross_up",
+      "right": "slow_ema"
+    },
+    {
+      "name": "slow_ema",
+      "indicator": "ema",
+      "field": "close",
+      "window": 26,
+      "operator": "reference"
+    }
+  ],
+  "risk": {
+    "max_drawdown_pct": 20,
+    "stop_loss_pct": 6,
+    "take_profit_pct": 14,
+    "max_position_pct": 40
+  },
+  "execution": {
+    "rebalance": "on_signal",
+    "max_orders_per_day": 2,
+    "price_timing": "next_bar"
+  },
+  "explanation": {
+    "audience": "beginner",
+    "include_risk_warning": true
+  }
+}
