@@ -9,6 +9,7 @@ BLOCKED_STATUS = "blocked"
 CLARIFICATION_STATUS = "clarification_required"
 REJECTED_STATUS = "rejected"
 NOT_RUN_STATUS = "not_run"
+RUNNING_STATUS = "running"
 
 
 @dataclass(frozen=True)
@@ -91,4 +92,8 @@ def rejected_result(errors: list[VerificationError]) -> VerificationResult:
 
 def not_run_result() -> VerificationResult:
     return VerificationResult(status=NOT_RUN_STATUS)
+
+
+def running_result() -> VerificationResult:
+    return VerificationResult(status=RUNNING_STATUS)
 
