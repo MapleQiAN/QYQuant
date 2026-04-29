@@ -5,6 +5,7 @@ import urllib.request
 from pathlib import Path
 
 from ..extensions import db
+from ..qsga.pipeline import build_qsga_draft
 from ..services.integrations import decrypt_secret_payload, get_user_integration
 from .qysp_docs import get_api_reference
 from .strategy_import_analysis import analyze_strategy_import
@@ -19,6 +20,7 @@ SUPPORTED_CATEGORY_VALUES = {
 }
 
 SUPPORTED_RISK_LEVELS = {"low", "medium", "high"}
+QSGA_MODE = "qsga"
 
 
 class AIStrategyGenerationError(Exception):
@@ -30,7 +32,7 @@ class AIStrategyGenerationError(Exception):
         self.details = details
 
 
-def generate_strategy_draft(*, user_id, integration_id, messages, locale="en"):
+def generate_strategy_draft(*, user_id, integration_id, messages, locale="en", mode="direct", options=None):
     integration = get_user_integration(integration_id, user_id)
     if integration is None:
         raise AIStrategyGenerationError("INTEGRATION_NOT_FOUND", "Integration not found", 404)
@@ -44,6 +46,15 @@ def generate_strategy_draft(*, user_id, integration_id, messages, locale="en"):
     normalized_messages = _normalize_messages(messages)
     if not normalized_messages:
         raise AIStrategyGenerationError("MESSAGES_REQUIRED", "At least one user message is required", 400)
+
+    normalized_mode = str(mode or "direct").strip().lower()
+    if normalized_mode == QSGA_MODE:
+        qyir = _build_qyir_from_qsga_options(normalized_messages, options or {}, locale=locale)
+        qsga_result = build_qsga_draft(qyir, owner_id=user_id)
+        return {
+            "reply": _qsga_reply(qsga_result.get("status"), qsga_result.get("verification") or {}, locale),
+            "analysis": _normalize_qsga_analysis(qsga_result, qyir),
+        }
 
     config_public = dict(integration.config_public or {})
     secret_payload = decrypt_secret_payload(integration)
@@ -100,6 +111,197 @@ def generate_strategy_draft(*, user_id, integration_id, messages, locale="en"):
         "reply": reply,
         "analysis": response_analysis,
     }
+
+
+def _build_qyir_from_qsga_options(messages, options, *, locale="en"):
+    if not isinstance(options, dict):
+        options = {}
+    brief = options.get("qsgaBrief")
+    if not isinstance(brief, dict):
+        brief = {}
+
+    raw_text = _latest_user_message(messages)
+    strategy_style = str(brief.get("strategyStyle") or "trend-following").strip()
+    family = {
+        "trend-following": "trend_following",
+        "momentum": "momentum",
+    }.get(strategy_style, strategy_style.replace("-", "_"))
+
+    direction = _qsga_direction(str(brief.get("direction") or "long-only"))
+    classification = _qsga_classification(raw_text, family, direction)
+    market = _choice(str(brief.get("market") or "crypto"), {"crypto", "gold", "stock", "futures"}, "crypto")
+    symbol = str(brief.get("symbol") or "").strip().upper() or ("XAUUSD" if market == "gold" else "BTCUSDT")
+    timeframe = _choice(str(brief.get("timeframe") or "1d"), {"1d", "4h", "1h", "15m"}, "1d")
+    risk_limits = brief.get("riskLimits") if isinstance(brief.get("riskLimits"), dict) else {}
+    max_drawdown_pct = _number(risk_limits.get("maxDrawdownPct"), 15)
+    max_position_pct = _number(risk_limits.get("positionRatio"), 30)
+
+    return {
+        "version": "1.0",
+        "intent": {
+            "raw_text": raw_text,
+            "language": "zh-CN" if locale == "zh" else "en-US",
+            "classification": classification,
+            "normalized_summary": _qsga_summary(symbol, family),
+        },
+        "strategy": {
+            "family": family,
+            "direction": direction if direction in {"long_only", "flat_or_long"} else "long_only",
+            "timeframe": timeframe,
+        },
+        "universe": {
+            "market": market,
+            "symbols": [symbol],
+        },
+        "signals": _default_qsga_signals(family),
+        "risk": {
+            "max_drawdown_pct": max_drawdown_pct,
+            "stop_loss_pct": max(1, min(10, round(max_drawdown_pct / 3, 2))),
+            "take_profit_pct": max(2, min(30, round(max_drawdown_pct * 0.8, 2))),
+            "max_position_pct": max_position_pct,
+        },
+        "execution": {
+            "rebalance": "on_signal",
+            "max_orders_per_day": 2,
+            "price_timing": "next_bar",
+        },
+        "explanation": {
+            "audience": "beginner" if brief.get("mode") == "guided" else "intermediate",
+            "include_risk_warning": True,
+        },
+    }
+
+
+def _normalize_qsga_analysis(result, qyir):
+    status = str(result.get("status") or "failed")
+    verification = result.get("verification") or {}
+    analysis = dict(result.get("analysis") or {})
+    analysis.setdefault("draftImportId", "")
+    analysis.setdefault("sourceType", "qys_package")
+    analysis.setdefault("entrypointCandidates", [])
+    analysis.setdefault("parameterCandidates", [])
+    analysis.setdefault("metadataCandidates", _qsga_metadata(qyir))
+    analysis.setdefault("validation", {"entrypointFound": False})
+    analysis.setdefault("warnings", [])
+    analysis.setdefault("errors", [])
+    analysis["qsgaStatus"] = status
+    analysis["qyir"] = qyir
+    analysis["verification"] = verification
+    analysis["repairHistory"] = result.get("repairHistory") or []
+
+    messages = _verification_messages(verification)
+    if status in {"rejected", "blocked", "failed"}:
+        analysis["errors"] = [*analysis.get("errors", []), *messages]
+    elif status == "clarification_required":
+        analysis["warnings"] = [*analysis.get("warnings", []), *messages]
+    return analysis
+
+
+def _qsga_reply(status, verification, locale):
+    zh = locale == "zh"
+    if status == "draft_ready":
+        return "QSGA 验证通过，已生成可采纳草案。" if zh else "QSGA verification passed. Draft is ready to adopt."
+    if status == "clarification_required":
+        question = _first_question(verification)
+        fallback = "需要先补充关键约束。" if zh else "More constraints are required before QSGA can compile a draft."
+        return question or fallback
+    if status == "rejected":
+        return "QSGA 已拒绝该请求，原因见验证链。" if zh else "QSGA rejected this request. See verification details."
+    return "QSGA 暂时阻断该请求，原因见验证链。" if zh else "QSGA blocked this request. See verification details."
+
+
+def _latest_user_message(messages):
+    for message in reversed(messages):
+        if message.get("role") == "user":
+            return str(message.get("content") or "").strip()
+    return ""
+
+
+def _qsga_classification(raw_text, family, direction):
+    if family not in {"trend_following", "momentum"} or direction == "unsupported":
+        return "unsupported"
+    return "supported"
+
+
+def _qsga_direction(value):
+    normalized = value.strip().lower().replace("_", "-")
+    if normalized == "long-only":
+        return "long_only"
+    if normalized in {"flat-or-long", "long"}:
+        return "flat_or_long"
+    return "unsupported"
+
+
+def _default_qsga_signals(family):
+    if family == "momentum":
+        return [
+            {"name": "fast_ema", "indicator": "ema", "field": "close", "window": 12, "operator": "cross_up", "right": "slow_ema"},
+            {"name": "slow_ema", "indicator": "ema", "field": "close", "window": 26, "operator": "reference"},
+        ]
+    return [
+        {"name": "fast_ma", "indicator": "ma", "field": "close", "window": 10, "operator": "cross_up", "right": "slow_ma"},
+        {"name": "slow_ma", "indicator": "ma", "field": "close", "window": 30, "operator": "reference"},
+    ]
+
+
+def _qsga_metadata(qyir):
+    intent = qyir.get("intent") or {}
+    strategy = qyir.get("strategy") or {}
+    universe = qyir.get("universe") or {}
+    risk = qyir.get("risk") or {}
+    return {
+        "name": intent.get("normalized_summary") or "QSGA Strategy Draft",
+        "description": intent.get("raw_text") or "QSGA dry-run draft",
+        "category": str(strategy.get("family") or "other").replace("_", "-"),
+        "symbol": (universe.get("symbols") or [""])[0],
+        "timeframe": strategy.get("timeframe"),
+        "riskLevel": "low" if _number(risk.get("max_position_pct"), 100) <= 30 else "medium",
+        "logicExplanation": "QSGA dry-run uses a constrained QYIR plan and deterministic QYSP compiler.",
+        "riskRules": f"Max drawdown {risk.get('max_drawdown_pct')}%, max position {risk.get('max_position_pct')}%.",
+    }
+
+
+def _qsga_summary(symbol, family):
+    label = {"trend_following": "Trend Following", "momentum": "Momentum"}.get(family, family.replace("_", " ").title())
+    return f"{symbol} QSGA {label}"
+
+
+def _verification_messages(verification):
+    messages = []
+    for result in verification.values():
+        for error in result.get("errors", []) if isinstance(result, dict) else []:
+            message = error.get("message") or error.get("code")
+            if message:
+                messages.append(str(message))
+        for question in result.get("questions", []) if isinstance(result, dict) else []:
+            message = question.get("message")
+            if message:
+                messages.append(str(message))
+    return messages
+
+
+def _first_question(verification):
+    for result in verification.values():
+        if not isinstance(result, dict):
+            continue
+        questions = result.get("questions") or []
+        if questions:
+            return str(questions[0].get("message") or "").strip() or None
+    return None
+
+
+def _choice(value, allowed, fallback):
+    return value if value in allowed else fallback
+
+
+def _number(value, fallback):
+    try:
+        number = float(value)
+    except (TypeError, ValueError):
+        return fallback
+    if not (number == number):
+        return fallback
+    return int(number) if number.is_integer() else number
 
 
 def _normalize_messages(messages):

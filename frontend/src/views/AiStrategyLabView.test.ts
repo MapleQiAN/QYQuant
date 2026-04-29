@@ -135,11 +135,71 @@ describe('AiStrategyLabView', () => {
     expect(generateAiStrategyDraftMock).toHaveBeenCalledTimes(1)
     expect(generateAiStrategyDraftMock.mock.calls[0][0].integrationId).toBe('integration-ai-1')
     expect(generateAiStrategyDraftMock.mock.calls[0][0].locale).toBe('en')
+    expect(generateAiStrategyDraftMock.mock.calls[0][0].mode).toBe('qsga')
+    expect(generateAiStrategyDraftMock.mock.calls[0][0].options.qsgaBrief.symbol).toBe('BTCUSDT')
     expect(generateAiStrategyDraftMock.mock.calls[0][0].messages[0].content).toContain('Symbol: BTCUSDT')
     expect(generateAiStrategyDraftMock.mock.calls[0][0].messages[0].content).toContain('Additional request: Build a BTC trend strategy')
     expect(wrapper.text()).toContain('AI Draft')
     expect(wrapper.text()).toContain('Lookback')
     expect(wrapper.get('[data-test="ai-lab-adopt"]').attributes('disabled')).toBeUndefined()
+  })
+
+  it('renders QSGA verification details and blocks rejected drafts', async () => {
+    fetchIntegrationsMock.mockResolvedValue([
+      {
+        id: 'integration-ai-1',
+        providerKey: 'openai_compatible',
+        displayName: 'Strategy AI',
+        status: 'active',
+        configPublic: {},
+        lastValidatedAt: null,
+        lastSuccessAt: null,
+        lastFailureAt: null,
+        lastErrorMessage: null,
+        createdAt: null,
+        updatedAt: null,
+      },
+    ])
+    generateAiStrategyDraftMock.mockResolvedValue({
+      reply: 'QSGA rejected this request.',
+      sessionId: 'session-1',
+      analysis: {
+        draftImportId: '',
+        sourceType: 'qys_package',
+        entrypointCandidates: [],
+        parameterCandidates: [],
+        warnings: [],
+        errors: ['Unsafe request'],
+        metadataCandidates: {
+          name: 'BTCUSDT QSGA Trend Following',
+          symbol: 'BTCUSDT',
+          timeframe: '1d',
+        },
+        qsgaStatus: 'rejected',
+        qyir: {
+          strategy: { family: 'trend_following' },
+        },
+        verification: {
+          guardrails: {
+            status: 'rejected',
+            errors: [{ code: 'UNSAFE_INTENT', message: 'Unsafe request' }],
+          },
+          schema: { status: 'not_run', errors: [] },
+        },
+      },
+    })
+
+    const wrapper = mountView()
+    await flushPromises()
+
+    await wrapper.get('[data-test="ai-lab-prompt"]').setValue('Guarantee returns')
+    await wrapper.get('[data-test="ai-lab-generate"]').trigger('click')
+    await flushPromises()
+
+    expect(wrapper.text()).toContain('QSGA verification chain')
+    expect(wrapper.text()).toContain('rejected')
+    expect(wrapper.text()).toContain('Unsafe request')
+    expect(wrapper.get('[data-test="ai-lab-adopt"]').attributes('disabled')).toBeDefined()
   })
 
   it('adopts a generated draft into the existing preview flow', async () => {
@@ -192,4 +252,3 @@ describe('AiStrategyLabView', () => {
     })
   })
 })
-

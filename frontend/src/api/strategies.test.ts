@@ -103,9 +103,35 @@ describe('strategies api', () => {
     expect(requestMock).toHaveBeenCalledWith({
       method: 'post',
       url: '/v1/strategy-ai/generate',
+      timeout: 60000,
       data: {
         integrationId: 'integration-ai-1',
         messages: [{ role: 'user', content: 'Build a BTC trend strategy' }]
+      }
+    })
+  })
+
+  it('passes QSGA mode options to ai strategy draft endpoint', async () => {
+    await strategies.generateAiStrategyDraft({
+      integrationId: 'integration-ai-1',
+      locale: 'en',
+      mode: 'qsga',
+      sessionId: 'session-1',
+      messages: [{ role: 'user', content: 'Build a BTC trend strategy' }],
+      options: { qsgaBrief: { symbol: 'BTCUSDT' } }
+    })
+
+    expect(requestMock).toHaveBeenCalledWith({
+      method: 'post',
+      url: '/v1/strategy-ai/generate',
+      timeout: 60000,
+      data: {
+        integrationId: 'integration-ai-1',
+        locale: 'en',
+        mode: 'qsga',
+        sessionId: 'session-1',
+        messages: [{ role: 'user', content: 'Build a BTC trend strategy' }],
+        options: { qsgaBrief: { symbol: 'BTCUSDT' } }
       }
     })
   })

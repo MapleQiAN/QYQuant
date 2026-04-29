@@ -343,6 +343,11 @@
               <strong>{{ validationLabel }}</strong>
             </div>
 
+            <div v-if="qsgaStatus" class="qsga-status">
+              <span>{{ copy.qsgaStatus }}</span>
+              <strong>{{ qsgaStatusLabel }}</strong>
+            </div>
+
             <div class="summary-card">
               <div>
                 <span>{{ copy.name }}</span>
@@ -370,6 +375,28 @@
             <section v-if="metadataText('riskRules') !== '-'" class="draft-section">
               <h3>{{ copy.riskRules }}</h3>
               <p>{{ metadataText('riskRules') }}</p>
+            </section>
+
+            <section v-if="qsgaVerificationEntries.length" class="draft-section">
+              <h3>{{ copy.verificationChain }}</h3>
+              <div class="validation-list">
+                <div
+                  v-for="item in qsgaVerificationEntries"
+                  :key="item.key"
+                  class="validation-item"
+                >
+                  <span>{{ item.label }}</span>
+                  <strong :class="verificationStatusClass(item.status)">{{ item.status }}</strong>
+                </div>
+              </div>
+              <div v-if="qsgaMessages.length" class="summary-alert" :class="validationState === 'block' ? 'summary-alert--error' : 'summary-alert--warning'">
+                {{ qsgaMessages.join(', ') }}
+              </div>
+            </section>
+
+            <section v-if="qyirPreview" class="draft-section">
+              <h3>{{ copy.qyirTitle }}</h3>
+              <pre class="qyir-preview">{{ qyirPreview }}</pre>
             </section>
 
             <section class="draft-section">
@@ -528,6 +555,13 @@ const copy = computed(() => ({
   adopt: t('aiLab.adopt'),
   adoptWithWarning: t('aiLab.adoptWithWarning'),
   blocked: t('aiLab.blocked'),
+  qsgaStatus: t('aiLab.qsgaStatus'),
+  qsgaDraftReady: t('aiLab.qsgaDraftReady'),
+  qsgaClarification: t('aiLab.qsgaClarification'),
+  qsgaRejected: t('aiLab.qsgaRejected'),
+  qsgaBlocked: t('aiLab.qsgaBlocked'),
+  verificationChain: t('aiLab.verificationChain'),
+  qyirTitle: t('aiLab.qyirTitle'),
   refineAction: t('aiLab.refineAction'),
   refineMore: t('aiLab.refineMore'),
   historyTitle: t('aiLab.historyTitle'),
@@ -622,9 +656,52 @@ const currentStageLabel = computed(() => stages.value.find((stage) => stage.key 
 
 const hasEntrypoint = computed(() => (aiLatestAnalysis.value?.entrypointCandidates.length ?? 0) > 0)
 
+const qsgaStatus = computed(() => aiLatestAnalysis.value?.qsgaStatus || '')
+
+const qsgaStatusLabel = computed(() => {
+  const labels: Record<string, string> = {
+    draft_ready: copy.value.qsgaDraftReady,
+    clarification_required: copy.value.qsgaClarification,
+    rejected: copy.value.qsgaRejected,
+    blocked: copy.value.qsgaBlocked,
+  }
+  return labels[qsgaStatus.value] || qsgaStatus.value
+})
+
+const qsgaVerificationEntries = computed(() => {
+  const verification = aiLatestAnalysis.value?.verification
+  if (!verification || typeof verification !== 'object') return []
+  return Object.entries(verification).map(([key, result]) => ({
+    key,
+    label: key,
+    status: String(result?.status || 'not_run'),
+  }))
+})
+
+const qsgaMessages = computed(() => {
+  const verification = aiLatestAnalysis.value?.verification
+  if (!verification || typeof verification !== 'object') return []
+  const messages: string[] = []
+  Object.values(verification).forEach((result) => {
+    ;(result?.errors || []).forEach((error) => {
+      if (error.message || error.code) messages.push(String(error.message || error.code))
+    })
+    ;(result?.questions || []).forEach((question) => {
+      if (question.message) messages.push(String(question.message))
+    })
+  })
+  return messages
+})
+
+const qyirPreview = computed(() => {
+  const qyir = aiLatestAnalysis.value?.qyir
+  return qyir ? JSON.stringify(qyir, null, 2) : ''
+})
+
 const validationState = computed<ValidationState>(() => {
   const analysis = aiLatestAnalysis.value
   if (!analysis) return 'warn'
+  if (qsgaStatus.value && qsgaStatus.value !== 'draft_ready') return 'block'
   if (!hasEntrypoint.value || analysis.errors.length > 0) return 'block'
   if (analysis.warnings.length > 0) return 'warn'
   return 'pass'
@@ -632,7 +709,8 @@ const validationState = computed<ValidationState>(() => {
 
 const aiCanAdopt = computed(() => {
   const analysis = aiLatestAnalysis.value
-  return Boolean(analysis?.draftImportId && validationState.value !== 'block')
+  if (!analysis?.draftImportId || validationState.value === 'block') return false
+  return !qsgaStatus.value || qsgaStatus.value === 'draft_ready'
 })
 
 const validationLabel = computed(() => {
@@ -739,6 +817,20 @@ function compileBriefMessage(): string {
   return lines.join('\n')
 }
 
+function qsgaBriefSnapshot() {
+  return {
+    mode: brief.mode,
+    market: brief.market,
+    symbol: brief.symbol,
+    timeframe: brief.timeframe,
+    strategyStyle: brief.strategyStyle,
+    direction: brief.direction,
+    riskLimits: { ...brief.riskLimits },
+    constraints: [...brief.constraints],
+    notes: brief.notes,
+  }
+}
+
 async function loadAiIntegrations() {
   aiLoadingIntegrations.value = true
   aiError.value = ''
@@ -783,6 +875,10 @@ async function handleGenerate() {
       messages: pendingMessages,
       locale: isZh.value ? 'zh' : 'en',
       sessionId: activeSessionId.value || undefined,
+      mode: 'qsga',
+      options: {
+        qsgaBrief: qsgaBriefSnapshot(),
+      },
     })
     aiMessages.value = [...pendingMessages, { role: 'assistant', content: result.reply }]
     aiLatestAnalysis.value = result.analysis
@@ -854,6 +950,12 @@ function parameterLabel(param: StrategyParameter): string {
 
 function validationClass(value: boolean) {
   return value ? 'validation-state validation-state--pass' : 'validation-state validation-state--warn'
+}
+
+function verificationStatusClass(status: string) {
+  if (status === 'pass') return 'validation-state validation-state--pass'
+  if (status === 'not_run') return 'validation-state validation-state--muted'
+  return 'validation-state validation-state--warn'
 }
 
 async function loadSessionList() {
@@ -1768,6 +1870,43 @@ onMounted(() => {
 
 .validation-state--warn {
   color: var(--color-warning);
+}
+
+.validation-state--muted {
+  color: var(--color-text-muted);
+}
+
+.qsga-status {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-sm);
+  padding: 8px 12px;
+  border: 1.5px solid var(--color-border-light);
+  border-radius: 8px;
+  background: var(--color-surface);
+}
+
+.qsga-status span {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-xs);
+}
+
+.qsga-status strong {
+  font-family: var(--font-mono);
+  font-size: var(--font-size-sm);
+}
+
+.qyir-preview {
+  max-height: 260px;
+  margin: 0;
+  overflow: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+  color: var(--color-text-secondary);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  line-height: 1.5;
 }
 
 .summary-alert {
