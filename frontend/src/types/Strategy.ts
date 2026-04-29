@@ -75,6 +75,14 @@ export interface StrategyImportAnalysis {
   } | null
   warnings: string[]
   errors: string[]
+  qsgaStatus?: 'draft_ready' | 'clarification_required' | 'rejected' | 'blocked' | 'failed' | string
+  qyir?: Record<string, unknown> | null
+  verification?: Record<string, {
+    status?: string
+    errors?: Array<{ code?: string; path?: string; message?: string; category?: string }>
+    questions?: Array<{ id?: string; path?: string; message?: string; options?: unknown[] }>
+  }>
+  repairHistory?: Array<Record<string, unknown>>
 }
 
 export interface StrategyImportConfirmPayload {

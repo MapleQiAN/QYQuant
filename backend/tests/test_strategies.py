@@ -587,6 +587,78 @@ def test_generate_ai_strategy_creates_import_draft_from_user_integration(client,
         assert draft.analysis_payload["metadataCandidates"]["category"] == "momentum"
 
 
+def test_generate_ai_strategy_qsga_mode_runs_dry_run_without_llm(client, app, monkeypatch):
+    token, user_id = _login_user(client, phone="13800138134", nickname="AiQsgaUser")
+
+    with app.app_context():
+        provider = IntegrationProvider(
+            key="openai_compatible",
+            name="OpenAI Compatible",
+            type="llm",
+            mode="hosted",
+            capabilities={"chat": True, "strategy_generation": True},
+            config_schema={"public_fields": ["base_url", "model"], "secret_fields": ["api_key"]},
+        )
+        db.session.merge(provider)
+
+        integration = UserIntegration(
+            user_id=user_id,
+            provider_key="openai_compatible",
+            display_name="Strategy AI",
+            status="active",
+            config_public={"base_url": "https://example.com/v1", "model": "demo-model"},
+        )
+        db.session.add(integration)
+        db.session.flush()
+        db.session.add(
+            UserIntegrationSecret(
+                integration_id=integration.id,
+                encrypted_payload="ciphertext",
+                schema_version=1,
+            )
+        )
+        db.session.commit()
+        integration_id = integration.id
+
+    from app.services import ai_strategy_generation as ai_generation_service
+
+    monkeypatch.setattr(
+        ai_generation_service,
+        "_request_chat_completion",
+        lambda **kwargs: (_ for _ in ()).throw(AssertionError("LLM must not run in QSGA dry-run")),
+    )
+
+    response = client.post(
+        "/api/v1/strategy-ai/generate",
+        headers=_auth_headers(token),
+        json={
+            "integrationId": integration_id,
+            "mode": "qsga",
+            "messages": [{"role": "user", "content": "Build a BTC trend strategy"}],
+            "options": {
+                "qsgaBrief": {
+                    "mode": "guided",
+                    "market": "crypto",
+                    "symbol": "BTCUSDT",
+                    "timeframe": "1d",
+                    "strategyStyle": "trend-following",
+                    "direction": "long-only",
+                    "riskLimits": {"maxDrawdownPct": 15, "positionRatio": 30},
+                    "constraints": ["constraintNoLeverage", "constraintStopLoss"],
+                }
+            },
+        },
+    )
+
+    assert response.status_code == 200
+    data = response.json["data"]
+    assert data["analysis"]["qsgaStatus"] == "draft_ready"
+    assert data["analysis"]["qyir"]["strategy"]["family"] == "trend_following"
+    assert data["analysis"]["verification"]["schema"]["status"] == "pass"
+    assert data["analysis"]["draftImportId"]
+    assert data["sessionId"]
+
+
 def test_confirm_strategy_import_uses_selected_entrypoint_and_creates_final_package(client, app):
     token, user_id = _login_user(client, phone="13800138035", nickname="ConfirmPyUser")
     source = (

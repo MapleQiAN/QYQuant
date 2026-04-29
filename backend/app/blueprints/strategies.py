@@ -273,6 +273,8 @@ def generate_ai_strategy_v1():
             integration_id=integration_id,
             messages=payload.get("messages"),
             locale=locale,
+            mode=payload.get("mode") or "direct",
+            options=payload.get("options") or {},
         )
     except AIStrategyGenerationError as exc:
         return error_response(exc.code, exc.message, exc.status, details=exc.details)

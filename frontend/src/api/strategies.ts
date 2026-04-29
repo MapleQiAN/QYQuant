@@ -422,17 +422,23 @@ export function generateAiStrategyDraft(payload: {
   messages: AiStrategyMessage[]
   locale?: string
   sessionId?: string
+  mode?: 'direct' | 'qsga'
+  options?: Record<string, unknown>
 }): Promise<AiStrategyDraftResult> {
+  const data: Record<string, unknown> = {
+    integrationId: payload.integrationId,
+    messages: payload.messages,
+  }
+  if (payload.locale) data.locale = payload.locale
+  if (payload.sessionId) data.sessionId = payload.sessionId
+  if (payload.mode) data.mode = payload.mode
+  if (payload.options) data.options = payload.options
+
   return client.request({
     method: 'post',
     url: '/v1/strategy-ai/generate',
     timeout: 60000,
-    data: {
-      integrationId: payload.integrationId,
-      messages: payload.messages,
-      locale: payload.locale,
-      sessionId: payload.sessionId,
-    }
+    data
   })
 }
 
