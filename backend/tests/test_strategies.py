@@ -1,4 +1,3 @@
-
 import hashlib
 import io
 import json
@@ -22,10 +21,18 @@ from app.utils.time import now_utc
 from qysp.validator import validate_integrity
 
 
-def _seed_runtime_strategy(app, tmp_path, *, owner_id=None, parameters=None, is_public=False, review_status='draft'):
+def _seed_runtime_strategy(
+    app,
+    tmp_path,
+    *,
+    owner_id=None,
+    parameters=None,
+    is_public=False,
+    review_status="draft",
+):
     strategy_id = str(uuid.uuid4())
-    version = '1.2.3'
-    package_path = tmp_path / 'runtime-test.qys'
+    version = "1.2.3"
+    package_path = tmp_path / "runtime-test.qys"
     manifest = {
         "schemaVersion": "1.0",
         "kind": "QYStrategy",
@@ -34,7 +41,11 @@ def _seed_runtime_strategy(app, tmp_path, *, owner_id=None, parameters=None, is_
         "version": version,
         "language": "python",
         "runtime": {"name": "python", "version": "3.11"},
-        "entrypoint": {"path": "src/strategy.py", "callable": "Strategy", "interface": "event_v1"},
+        "entrypoint": {
+            "path": "src/strategy.py",
+            "callable": "Strategy",
+            "interface": "event_v1",
+        },
         "parameters": parameters
         or [
             {"key": "window", "type": "integer", "default": 20, "min": 1, "max": 200},
@@ -46,23 +57,25 @@ class Strategy:
     def on_bar(self, ctx, bar):
         return None
 """
-    with zipfile.ZipFile(package_path, 'w', compression=zipfile.ZIP_DEFLATED) as archive:
-        archive.writestr('strategy.json', json.dumps(manifest))
-        archive.writestr('src/strategy.py', source)
+    with zipfile.ZipFile(
+        package_path, "w", compression=zipfile.ZIP_DEFLATED
+    ) as archive:
+        archive.writestr("strategy.json", json.dumps(manifest))
+        archive.writestr("src/strategy.py", source)
 
     with app.app_context():
         strategy = Strategy(
             id=strategy_id,
-            name='Runtime Descriptor Strategy',
-            symbol='BTCUSDT',
-            status='draft',
+            name="Runtime Descriptor Strategy",
+            symbol="BTCUSDT",
+            status="draft",
             owner_id=owner_id,
             is_public=is_public,
             review_status=review_status,
             returns=0,
             win_rate=0,
             max_drawdown=0,
-            tags=['runtime'],
+            tags=["runtime"],
             trades=0,
         )
         db.session.add(strategy)
@@ -71,7 +84,7 @@ class Strategy:
         file_record = File(
             owner_id=None,
             filename=Path(package_path).name,
-            content_type='application/zip',
+            content_type="application/zip",
             size=Path(package_path).stat().st_size,
             path=Path(package_path).as_posix(),
         )
@@ -82,7 +95,7 @@ class Strategy:
             strategy_id=strategy.id,
             version=version,
             file_id=file_record.id,
-            checksum='descriptor-checksum',
+            checksum="descriptor-checksum",
         )
         db.session.add(strategy_version)
         db.session.commit()
@@ -130,9 +143,7 @@ def _build_qys_package(
     strategy_id = strategy_id or str(uuid.uuid4())
     tags = tags or ["gold", "trend"]
     source_code = source_code or (
-        "class Strategy:\n"
-        "    def on_bar(self, ctx, bar):\n"
-        "        return None\n"
+        "class Strategy:\n    def on_bar(self, ctx, bar):\n        return None\n"
     )
     source_bytes = source_code.encode("utf-8")
     sha256 = "0" * 64 if tamper_integrity else hashlib.sha256(source_bytes).hexdigest()
@@ -145,7 +156,11 @@ def _build_qys_package(
         "description": description,
         "language": "python",
         "runtime": {"name": "python", "version": "3.11"},
-        "entrypoint": {"path": "src/strategy.py", "callable": "Strategy", "interface": "event_v1"},
+        "entrypoint": {
+            "path": "src/strategy.py",
+            "callable": "Strategy",
+            "interface": "event_v1",
+        },
         "tags": tags,
         "ui": {"category": category, "difficulty": "beginner"},
         "integrity": {
@@ -159,17 +174,23 @@ def _build_qys_package(
         },
     }
     package_path = tmp_path / f"{strategy_id}-{version}.qys"
-    with zipfile.ZipFile(package_path, "w", compression=zipfile.ZIP_DEFLATED) as archive:
+    with zipfile.ZipFile(
+        package_path, "w", compression=zipfile.ZIP_DEFLATED
+    ) as archive:
         archive.writestr("strategy.json", json.dumps(manifest))
         archive.writestr("src/strategy.py", source_code)
     return package_path, manifest, source_code
 
 
-def _build_source_zip_bytes(*, include_manifest=True, include_requirements=False, source_code=None, parameters=None):
+def _build_source_zip_bytes(
+    *,
+    include_manifest=True,
+    include_requirements=False,
+    source_code=None,
+    parameters=None,
+):
     source_code = source_code or (
-        "class Strategy:\n"
-        "    def on_bar(self, ctx, bar):\n"
-        "        return None\n"
+        "class Strategy:\n    def on_bar(self, ctx, bar):\n        return None\n"
     )
     payload = io.BytesIO()
     manifest = None
@@ -184,8 +205,13 @@ def _build_source_zip_bytes(*, include_manifest=True, include_requirements=False
                 "description": "Zip source import",
                 "language": "python",
                 "runtime": {"name": "python", "version": "3.11"},
-                "entrypoint": {"path": "src/strategy.py", "callable": "Strategy", "interface": "event_v1"},
-                "parameters": parameters or [{"key": "window", "type": "integer", "default": 20}],
+                "entrypoint": {
+                    "path": "src/strategy.py",
+                    "callable": "Strategy",
+                    "interface": "event_v1",
+                },
+                "parameters": parameters
+                or [{"key": "window", "type": "integer", "default": 20}],
                 "tags": ["zip", "source"],
                 "ui": {"category": "trend-following"},
             }
@@ -198,9 +224,9 @@ def _build_source_zip_bytes(*, include_manifest=True, include_requirements=False
 
 
 def test_recent_strategies(client):
-    resp = client.get('/api/strategies/recent')
+    resp = client.get("/api/strategies/recent")
     assert resp.status_code == 200
-    assert isinstance(resp.json['data'], list)
+    assert isinstance(resp.json["data"], list)
 
 
 def test_strategy_import_draft_persists_analysis_payload(app):
@@ -222,7 +248,9 @@ def test_strategy_import_draft_persists_analysis_payload(app):
             source_type="source_zip",
             status="analyzed",
             analysis_payload={
-                "entrypointCandidates": [{"path": "src/strategy.py", "callable": "Strategy"}],
+                "entrypointCandidates": [
+                    {"path": "src/strategy.py", "callable": "Strategy"}
+                ],
                 "warnings": ["ignored requirements.txt"],
             },
             expires_at=expires_at,
@@ -282,30 +310,36 @@ def test_strategy_persists_original_and_built_package_file_links(app):
 
 
 def test_runtime_descriptor_returns_parameters(client, app, tmp_path):
-    token, user_id = _login_user(client, phone="13800138024", nickname="RuntimeDescriptorOwner")
+    token, user_id = _login_user(
+        client, phone="13800138024", nickname="RuntimeDescriptorOwner"
+    )
     strategy_id, version = _seed_runtime_strategy(app, tmp_path, owner_id=user_id)
     resp = client.get(
-        f'/api/strategies/{strategy_id}/runtime?version={version}',
+        f"/api/strategies/{strategy_id}/runtime?version={version}",
         headers=_auth_headers(token),
     )
 
     assert resp.status_code == 200
-    data = resp.json['data']
-    assert data['strategyId'] == strategy_id
-    assert data['strategyVersion'] == version
-    assert data['interface'] == 'event_v1'
-    assert len(data['parameters']) == 2
+    data = resp.json["data"]
+    assert data["strategyId"] == strategy_id
+    assert data["strategyVersion"] == version
+    assert data["interface"] == "event_v1"
+    assert len(data["parameters"]) == 2
 
 
-def test_runtime_descriptor_hides_private_strategy_from_unauthenticated_calls(client, app, tmp_path):
-    token, user_id = _login_user(client, phone="13800138025", nickname="RuntimePrivateOwner")
+def test_runtime_descriptor_hides_private_strategy_from_unauthenticated_calls(
+    client, app, tmp_path
+):
+    token, user_id = _login_user(
+        client, phone="13800138025", nickname="RuntimePrivateOwner"
+    )
     strategy_id, version = _seed_runtime_strategy(app, tmp_path, owner_id=user_id)
 
     authed = client.get(
-        f'/api/strategies/{strategy_id}/runtime?version={version}',
+        f"/api/strategies/{strategy_id}/runtime?version={version}",
         headers=_auth_headers(token),
     )
-    anonymous = client.get(f'/api/strategies/{strategy_id}/runtime?version={version}')
+    anonymous = client.get(f"/api/strategies/{strategy_id}/runtime?version={version}")
 
     assert authed.status_code == 200
     assert anonymous.status_code == 404
@@ -320,7 +354,7 @@ def test_runtime_descriptor_allows_public_strategy_without_auth(client, app, tmp
         review_status="approved",
     )
 
-    response = client.get(f'/api/strategies/{strategy_id}/runtime?version={version}')
+    response = client.get(f"/api/strategies/{strategy_id}/runtime?version={version}")
 
     assert response.status_code == 200
     assert response.json["data"]["strategyVersion"] == version
@@ -328,11 +362,7 @@ def test_runtime_descriptor_allows_public_strategy_without_auth(client, app, tmp
 
 def test_analyze_strategy_import_for_python_file_persists_draft(client, app):
     token, user_id = _login_user(client, phone="13800138031", nickname="AnalyzePyUser")
-    source = (
-        "class Strategy:\n"
-        "    def on_bar(self, ctx, bar):\n"
-        "        return None\n"
-    )
+    source = "class Strategy:\n    def on_bar(self, ctx, bar):\n        return None\n"
 
     response = client.post(
         "/api/v1/strategy-imports/analyze",
@@ -360,12 +390,18 @@ def test_analyze_strategy_import_for_python_file_persists_draft(client, app):
         assert draft is not None
         assert draft.owner_id == user_id
         assert draft.source_type == "python_file"
-        assert draft.analysis_payload["entrypointCandidates"][0]["callable"] == "Strategy"
+        assert (
+            draft.analysis_payload["entrypointCandidates"][0]["callable"] == "Strategy"
+        )
 
 
-def test_analyze_strategy_import_for_source_zip_reads_manifest_and_warnings(client, app):
+def test_analyze_strategy_import_for_source_zip_reads_manifest_and_warnings(
+    client, app
+):
     token, user_id = _login_user(client, phone="13800138032", nickname="AnalyzeZipUser")
-    payload, manifest = _build_source_zip_bytes(include_manifest=True, include_requirements=True)
+    payload, manifest = _build_source_zip_bytes(
+        include_manifest=True, include_requirements=True
+    )
 
     response = client.post(
         "/api/v1/strategy-imports/analyze",
@@ -380,14 +416,18 @@ def test_analyze_strategy_import_for_source_zip_reads_manifest_and_warnings(clie
     assert data["metadataCandidates"]["name"] == manifest["name"]
     assert data["metadataCandidates"]["category"] == "trend-following"
     assert data["parameterCandidates"] == manifest["parameters"]
-    assert data["warnings"] == ["Ignored unsupported dependency manifest: requirements.txt"]
+    assert data["warnings"] == [
+        "Ignored unsupported dependency manifest: requirements.txt"
+    ]
     assert data["errors"] == []
 
     with app.app_context():
         draft = db.session.get(StrategyImportDraft, data["draftImportId"])
         assert draft is not None
         assert draft.owner_id == user_id
-        assert draft.analysis_payload["warnings"] == ["Ignored unsupported dependency manifest: requirements.txt"]
+        assert draft.analysis_payload["warnings"] == [
+            "Ignored unsupported dependency manifest: requirements.txt"
+        ]
 
 
 def test_analyze_strategy_import_for_qys_reads_package_manifest(client):
@@ -432,7 +472,9 @@ def test_analyze_strategy_import_reports_blocking_errors_for_unsupported_layout(
 
 def test_analyze_strategy_import_reports_python_syntax_validation(client):
     token, _ = _login_user(client, phone="13800138039", nickname="AnalyzeSyntaxUser")
-    invalid_source = "def on_bar(ctx, data):\n    if data.close > data.open\n        return []\n"
+    invalid_source = (
+        "def on_bar(ctx, data):\n    if data.close > data.open\n        return []\n"
+    )
 
     response = client.post(
         "/api/v1/strategy-imports/analyze",
@@ -453,7 +495,9 @@ def test_analyze_strategy_import_reports_python_syntax_validation(client):
     }
 
 
-def test_generate_ai_strategy_creates_import_draft_from_user_integration(client, app, monkeypatch):
+def test_generate_ai_strategy_creates_import_draft_from_user_integration(
+    client, app, monkeypatch
+):
     token, user_id = _login_user(client, phone="13800138040", nickname="AiDraftUser")
 
     with app.app_context():
@@ -463,7 +507,10 @@ def test_generate_ai_strategy_creates_import_draft_from_user_integration(client,
             type="llm",
             mode="hosted",
             capabilities={"chat": True, "strategy_generation": True},
-            config_schema={"public_fields": ["base_url", "model"], "secret_fields": ["api_key"]},
+            config_schema={
+                "public_fields": ["base_url", "model"],
+                "secret_fields": ["api_key"],
+            },
         )
         db.session.merge(provider)
 
@@ -487,7 +534,12 @@ def test_generate_ai_strategy_creates_import_draft_from_user_integration(client,
         integration_id = integration.id
 
     from app.services import ai_strategy_generation as ai_generation_service
-    monkeypatch.setattr(ai_generation_service, "decrypt_secret_payload", lambda integration: {"api_key": "secret-key"})
+
+    monkeypatch.setattr(
+        ai_generation_service,
+        "decrypt_secret_payload",
+        lambda integration: {"api_key": "secret-key"},
+    )
     monkeypatch.setattr(
         ai_generation_service,
         "_request_chat_completion",
@@ -515,7 +567,13 @@ def test_generate_ai_strategy_creates_import_draft_from_user_integration(client,
                                 ],
                             },
                         },
-                        {"key": "slow_period", "type": "integer", "default": 30, "min": 5, "max": 120},
+                        {
+                            "key": "slow_period",
+                            "type": "integer",
+                            "default": 30,
+                            "min": 5,
+                            "max": 120,
+                        },
                     ],
                     "code": (
                         "from qysp import BarData, Order, StrategyContext\n\n"
@@ -544,7 +602,12 @@ def test_generate_ai_strategy_creates_import_draft_from_user_integration(client,
         headers=_auth_headers(token),
         json={
             "integrationId": integration_id,
-            "messages": [{"role": "user", "content": "Build a BTC trend strategy with EMA crossover"}],
+            "messages": [
+                {
+                    "role": "user",
+                    "content": "Build a BTC trend strategy with EMA crossover",
+                }
+            ],
         },
     )
 
@@ -587,7 +650,9 @@ def test_generate_ai_strategy_creates_import_draft_from_user_integration(client,
         assert draft.analysis_payload["metadataCandidates"]["category"] == "momentum"
 
 
-def test_generate_ai_strategy_qsga_mode_runs_dry_run_without_llm(client, app, monkeypatch):
+def test_generate_ai_strategy_qsga_mode_runs_dry_run_without_llm(
+    client, app, monkeypatch
+):
     token, user_id = _login_user(client, phone="13800138134", nickname="AiQsgaUser")
 
     with app.app_context():
@@ -597,7 +662,10 @@ def test_generate_ai_strategy_qsga_mode_runs_dry_run_without_llm(client, app, mo
             type="llm",
             mode="hosted",
             capabilities={"chat": True, "strategy_generation": True},
-            config_schema={"public_fields": ["base_url", "model"], "secret_fields": ["api_key"]},
+            config_schema={
+                "public_fields": ["base_url", "model"],
+                "secret_fields": ["api_key"],
+            },
         )
         db.session.merge(provider)
 
@@ -625,7 +693,9 @@ def test_generate_ai_strategy_qsga_mode_runs_dry_run_without_llm(client, app, mo
     monkeypatch.setattr(
         ai_generation_service,
         "_request_chat_completion",
-        lambda **kwargs: (_ for _ in ()).throw(AssertionError("LLM must not run in QSGA dry-run")),
+        lambda **kwargs: (_ for _ in ()).throw(
+            AssertionError("LLM must not run in QSGA dry-run")
+        ),
     )
 
     response = client.post(
@@ -655,11 +725,15 @@ def test_generate_ai_strategy_qsga_mode_runs_dry_run_without_llm(client, app, mo
     assert data["analysis"]["qsgaStatus"] == "draft_ready"
     assert data["analysis"]["qyir"]["strategy"]["family"] == "trend_following"
     assert data["analysis"]["verification"]["schema"]["status"] == "pass"
+    assert data["analysis"]["qsgaTrust"]["trusted"] is False
+    assert "backtest" in data["analysis"]["qsgaTrust"]["missingChecks"]
     assert data["analysis"]["draftImportId"]
     assert data["sessionId"]
 
 
-def test_confirm_strategy_import_uses_selected_entrypoint_and_creates_final_package(client, app):
+def test_confirm_strategy_import_uses_selected_entrypoint_and_creates_final_package(
+    client, app
+):
     token, user_id = _login_user(client, phone="13800138035", nickname="ConfirmPyUser")
     source = (
         "class Strategy:\n"
@@ -695,7 +769,9 @@ def test_confirm_strategy_import_uses_selected_entrypoint_and_creates_final_pack
                 "tags": ["python", "confirmed"],
                 "symbol": "BTCUSDT",
             },
-            "parameterDefinitions": [{"key": "window", "type": "integer", "default": 12}],
+            "parameterDefinitions": [
+                {"key": "window", "type": "integer", "default": 12}
+            ],
         },
     )
 
@@ -805,7 +881,10 @@ def test_confirm_strategy_import_fills_missing_metadata_from_payload(client, app
             }
         ]
 
-def test_get_strategy_parameters_returns_normalized_manifest_parameters(client, app, tmp_path):
+
+def test_get_strategy_parameters_returns_normalized_manifest_parameters(
+    client, app, tmp_path
+):
     token, user_id = _login_user(client, phone="13800138026", nickname="ParameterOwner")
     strategy_id, _ = _seed_runtime_strategy(
         app,
@@ -929,8 +1008,8 @@ def test_marketplace_strategies_can_filter_onboarding_tag(client, app):
 def test_import_strategy_encrypts_entrypoint_source(client, app, tmp_path):
     token, user_id = _login_user(client, phone="13800138027", nickname="EncryptUser")
     strategy_id = str(uuid.uuid4())
-    version = '2.0.0'
-    package_path = tmp_path / 'encrypted-import.qys'
+    version = "2.0.0"
+    package_path = tmp_path / "encrypted-import.qys"
     source = """
 class Strategy:
     def on_bar(self, ctx, bar):
@@ -944,19 +1023,25 @@ class Strategy:
         "version": version,
         "language": "python",
         "runtime": {"name": "python", "version": "3.11"},
-        "entrypoint": {"path": "src/strategy.py", "callable": "Strategy", "interface": "event_v1"},
+        "entrypoint": {
+            "path": "src/strategy.py",
+            "callable": "Strategy",
+            "interface": "event_v1",
+        },
     }
 
-    with zipfile.ZipFile(package_path, 'w', compression=zipfile.ZIP_DEFLATED) as archive:
-        archive.writestr('strategy.json', json.dumps(manifest))
-        archive.writestr('src/strategy.py', source)
+    with zipfile.ZipFile(
+        package_path, "w", compression=zipfile.ZIP_DEFLATED
+    ) as archive:
+        archive.writestr("strategy.json", json.dumps(manifest))
+        archive.writestr("src/strategy.py", source)
 
-    with package_path.open('rb') as handle:
+    with package_path.open("rb") as handle:
         response = client.post(
-            '/api/strategies/import',
+            "/api/strategies/import",
             headers=_auth_headers(token),
             data={"file": (io.BytesIO(handle.read()), package_path.name)},
-            content_type='multipart/form-data',
+            content_type="multipart/form-data",
         )
 
     assert response.status_code == 200
@@ -966,7 +1051,7 @@ class Strategy:
         assert strategy is not None
         assert strategy.owner_id == user_id
         assert strategy.code_encrypted is not None
-        assert strategy.code_encrypted != source.encode('utf-8')
+        assert strategy.code_encrypted != source.encode("utf-8")
         assert strategy.code_hash is not None
 
 
@@ -1037,8 +1122,12 @@ def test_list_strategies_returns_only_current_user_with_pagination(client, app):
 
 
 def test_delete_strategy_requires_owner_and_cleans_relations(client, app, tmp_path):
-    owner_token, owner_id = _login_user(client, phone="13800138023", nickname="DeleteOwner")
-    intruder_token, intruder_id = _login_user(client, phone="13800138024", nickname="Intruder")
+    owner_token, owner_id = _login_user(
+        client, phone="13800138023", nickname="DeleteOwner"
+    )
+    intruder_token, intruder_id = _login_user(
+        client, phone="13800138024", nickname="Intruder"
+    )
 
     package_path, _, source_code = _build_qys_package(tmp_path, strategy_id="delete-me")
 
@@ -1063,15 +1152,33 @@ def test_delete_strategy_requires_owner_and_cleans_relations(client, app, tmp_pa
         )
         db.session.add(file_record)
         db.session.flush()
-        db.session.add(StrategyVersion(strategy_id=strategy.id, version="1.0.0", file_id=file_record.id, checksum="sum"))
-        db.session.add(BacktestJob(user_id=owner_id, strategy_id=strategy.id, status="completed", params={"symbol": "BTCUSDT"}))
+        db.session.add(
+            StrategyVersion(
+                strategy_id=strategy.id,
+                version="1.0.0",
+                file_id=file_record.id,
+                checksum="sum",
+            )
+        )
+        db.session.add(
+            BacktestJob(
+                user_id=owner_id,
+                strategy_id=strategy.id,
+                status="completed",
+                params={"symbol": "BTCUSDT"},
+            )
+        )
         db.session.commit()
 
-    forbidden = client.delete("/api/v1/strategies/delete-me", headers=_auth_headers(intruder_token))
+    forbidden = client.delete(
+        "/api/v1/strategies/delete-me", headers=_auth_headers(intruder_token)
+    )
     assert forbidden.status_code == 404
     assert forbidden.json["error"]["code"] == "STRATEGY_NOT_FOUND"
 
-    response = client.delete("/api/v1/strategies/delete-me", headers=_auth_headers(owner_token))
+    response = client.delete(
+        "/api/v1/strategies/delete-me", headers=_auth_headers(owner_token)
+    )
 
     assert response.status_code == 200
     assert response.json["data"]["deletedId"] == "delete-me"
@@ -1161,13 +1268,17 @@ def test_export_ai_strategy_returns_python_source_from_draft(client):
 
     assert response.status_code == 200
     assert response.data.decode("utf-8") == source
-    assert "attachment; filename=export-me.py" in response.headers["Content-Disposition"]
+    assert (
+        "attachment; filename=export-me.py" in response.headers["Content-Disposition"]
+    )
 
 
 def test_export_ai_strategy_builds_qys_package_with_overrides(client):
     token, _ = _login_user(client, phone="13800138048", nickname="ExportQysUser")
     source = "def on_bar(ctx, bar):\n    return []\n"
-    edited_source = "def on_bar(ctx, bar):\n    return [ctx.buy(bar.symbol, quantity=1)]\n"
+    edited_source = (
+        "def on_bar(ctx, bar):\n    return [ctx.buy(bar.symbol, quantity=1)]\n"
+    )
 
     analyze_response = client.post(
         "/api/v1/strategy-imports/analyze",
@@ -1215,7 +1326,10 @@ def test_export_ai_strategy_builds_qys_package_with_overrides(client):
     )
 
     assert response.status_code == 200
-    assert "attachment; filename=packaged-strategy.qys" in response.headers["Content-Disposition"]
+    assert (
+        "attachment; filename=packaged-strategy.qys"
+        in response.headers["Content-Disposition"]
+    )
 
     with zipfile.ZipFile(io.BytesIO(response.data), "r") as archive:
         manifest = json.loads(archive.read("strategy.json").decode("utf-8"))
@@ -1276,7 +1390,9 @@ def test_import_strategy_requires_auth(client, tmp_path):
     assert response.json["error"]["code"] == "UNAUTHORIZED"
 
 
-def test_import_strategy_creates_owned_strategy_and_returns_metadata(client, app, tmp_path):
+def test_import_strategy_creates_owned_strategy_and_returns_metadata(
+    client, app, tmp_path
+):
     token, user_id = _login_user(client, phone="13800138025", nickname="Importer")
     package_path, manifest, source_code = _build_qys_package(
         tmp_path,
@@ -1321,7 +1437,10 @@ def test_import_strategy_creates_owned_strategy_and_returns_metadata(client, app
         assert strategy.original_source_file_id is not None
         assert strategy.built_package_file_id is not None
         assert File.query.filter_by(owner_id=user_id).count() == 2
-        assert StrategyVersion.query.filter_by(strategy_id="imported-strategy").count() == 1
+        assert (
+            StrategyVersion.query.filter_by(strategy_id="imported-strategy").count()
+            == 1
+        )
 
 
 def test_legacy_import_v1_reuses_draft_pipeline(client, app, tmp_path):
@@ -1357,8 +1476,12 @@ def test_legacy_import_v1_reuses_draft_pipeline(client, app, tmp_path):
 
 
 def test_legacy_import_compat_endpoint_reuses_draft_pipeline(client, app, tmp_path):
-    token, user_id = _login_user(client, phone="13800138038", nickname="LegacyCompatImporter")
-    package_path, _, _ = _build_qys_package(tmp_path, strategy_id="legacy-compat-strategy")
+    token, user_id = _login_user(
+        client, phone="13800138038", nickname="LegacyCompatImporter"
+    )
+    package_path, _, _ = _build_qys_package(
+        tmp_path, strategy_id="legacy-compat-strategy"
+    )
 
     with package_path.open("rb") as handle:
         response = client.post(
@@ -1404,7 +1527,9 @@ def test_import_strategy_returns_422_when_integrity_check_fails(client, tmp_path
 
 
 def test_confirm_strategy_import_with_code_override(client, app):
-    token, user_id = _login_user(client, phone="13800138045", nickname="CodeOverrideUser")
+    token, user_id = _login_user(
+        client, phone="13800138045", nickname="CodeOverrideUser"
+    )
     source = "def on_bar(ctx, bar):\n    return []\n"
 
     analyze_response = client.post(
@@ -1471,7 +1596,9 @@ def test_confirm_strategy_import_rejects_invalid_syntax_override(client, app):
     assert response.status_code == 422
 
 
-def test_import_strategy_returns_503_when_encryption_key_missing(client, monkeypatch, tmp_path):
+def test_import_strategy_returns_503_when_encryption_key_missing(
+    client, monkeypatch, tmp_path
+):
     token, _ = _login_user(client, phone="13800138028", nickname="MissingKeyUser")
     package_path, _, _ = _build_qys_package(tmp_path)
     monkeypatch.delenv("STRATEGY_ENCRYPT_KEY", raising=False)

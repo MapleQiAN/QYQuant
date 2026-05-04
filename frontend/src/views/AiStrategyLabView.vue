@@ -348,6 +348,15 @@
               <strong>{{ qsgaStatusLabel }}</strong>
             </div>
 
+            <div
+              v-if="qsgaTrustNotice"
+              class="summary-alert"
+              :class="qsgaTrustPassed ? 'summary-alert--success' : 'summary-alert--warning'"
+              data-test="ai-lab-trust-notice"
+            >
+              {{ qsgaTrustNotice }}
+            </div>
+
             <div class="summary-card">
               <div>
                 <span>{{ copy.name }}</span>
@@ -557,9 +566,13 @@ const copy = computed(() => ({
   blocked: t('aiLab.blocked'),
   qsgaStatus: t('aiLab.qsgaStatus'),
   qsgaDraftReady: t('aiLab.qsgaDraftReady'),
+  qsgaRunning: t('aiLab.qsgaRunning'),
   qsgaClarification: t('aiLab.qsgaClarification'),
   qsgaRejected: t('aiLab.qsgaRejected'),
   qsgaBlocked: t('aiLab.qsgaBlocked'),
+  qsgaTrusted: t('aiLab.qsgaTrusted'),
+  qsgaTrustPending: t('aiLab.qsgaTrustPending'),
+  qsgaTrustBlocked: t('aiLab.qsgaTrustBlocked'),
   verificationChain: t('aiLab.verificationChain'),
   qyirTitle: t('aiLab.qyirTitle'),
   refineAction: t('aiLab.refineAction'),
@@ -661,11 +674,44 @@ const qsgaStatus = computed(() => aiLatestAnalysis.value?.qsgaStatus || '')
 const qsgaStatusLabel = computed(() => {
   const labels: Record<string, string> = {
     draft_ready: copy.value.qsgaDraftReady,
+    running: copy.value.qsgaRunning,
     clarification_required: copy.value.qsgaClarification,
     rejected: copy.value.qsgaRejected,
     blocked: copy.value.qsgaBlocked,
   }
   return labels[qsgaStatus.value] || qsgaStatus.value
+})
+
+const trustedQsgaRequiredChecks = ['guardrails', 'schema', 'domain', 'semantic', 'qysp', 'runtime', 'backtest', 'risk']
+
+const qsgaTrust = computed(() => aiLatestAnalysis.value?.qsgaTrust || null)
+
+const qsgaTrustBlockingChecks = computed(() => {
+  const trust = qsgaTrust.value
+  if (Array.isArray(trust?.blockingChecks)) return trust.blockingChecks
+  const verification = aiLatestAnalysis.value?.verification
+  if (!qsgaStatus.value || !verification || typeof verification !== 'object') return []
+  return trustedQsgaRequiredChecks.filter((check) => String(verification[check]?.status || 'not_run') !== 'pass')
+})
+
+const qsgaTrustPassed = computed(() => {
+  if (!qsgaStatus.value) return true
+  if (typeof qsgaTrust.value?.trusted === 'boolean') return qsgaTrust.value.trusted
+  return qsgaTrustBlockingChecks.value.length === 0
+})
+
+const qsgaTrustNotice = computed(() => {
+  if (!qsgaStatus.value) return ''
+  if (qsgaTrustPassed.value) return copy.value.qsgaTrusted
+  const blocking = qsgaTrustBlockingChecks.value
+  const failed = Array.isArray(qsgaTrust.value?.failedChecks) ? qsgaTrust.value.failedChecks : []
+  if (
+    ['draft_ready', 'running'].includes(qsgaStatus.value)
+    && blocking.some((check) => ['backtest', 'risk'].includes(check))
+  ) {
+    return copy.value.qsgaTrustPending
+  }
+  return copy.value.qsgaTrustBlocked.replace('{checks}', (failed.length ? failed : blocking).join(', ') || '-')
 })
 
 const qsgaVerificationEntries = computed(() => {
@@ -702,6 +748,7 @@ const validationState = computed<ValidationState>(() => {
   const analysis = aiLatestAnalysis.value
   if (!analysis) return 'warn'
   if (qsgaStatus.value && qsgaStatus.value !== 'draft_ready') return 'block'
+  if (qsgaStatus.value && !qsgaTrustPassed.value) return 'block'
   if (!hasEntrypoint.value || analysis.errors.length > 0) return 'block'
   if (analysis.warnings.length > 0) return 'warn'
   return 'pass'
@@ -710,7 +757,7 @@ const validationState = computed<ValidationState>(() => {
 const aiCanAdopt = computed(() => {
   const analysis = aiLatestAnalysis.value
   if (!analysis?.draftImportId || validationState.value === 'block') return false
-  return !qsgaStatus.value || qsgaStatus.value === 'draft_ready'
+  return !qsgaStatus.value || (qsgaStatus.value === 'draft_ready' && qsgaTrustPassed.value)
 })
 
 const validationLabel = computed(() => {
@@ -878,6 +925,7 @@ async function handleGenerate() {
       mode: 'qsga',
       options: {
         qsgaBrief: qsgaBriefSnapshot(),
+        runBacktest: true,
       },
     })
     aiMessages.value = [...pendingMessages, { role: 'assistant', content: result.reply }]
@@ -1922,6 +1970,12 @@ onMounted(() => {
   border-color: rgba(230, 81, 0, 0.25);
   background: var(--color-warning-bg);
   color: var(--color-warning);
+}
+
+.summary-alert--success {
+  border-color: rgba(46, 125, 50, 0.25);
+  background: var(--color-success-bg);
+  color: var(--color-success);
 }
 
 .summary-alert--error {

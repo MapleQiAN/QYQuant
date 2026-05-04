@@ -2,10 +2,9 @@ import json
 import re
 import urllib.error
 import urllib.request
-from pathlib import Path
 
 from ..extensions import db
-from ..qsga.pipeline import build_qsga_draft
+from ..qsga.pipeline import build_qsga_draft, evaluate_qsga_trust
 from ..services.integrations import decrypt_secret_payload, get_user_integration
 from .qysp_docs import get_api_reference
 from .strategy_import_analysis import analyze_strategy_import
@@ -32,10 +31,14 @@ class AIStrategyGenerationError(Exception):
         self.details = details
 
 
-def generate_strategy_draft(*, user_id, integration_id, messages, locale="en", mode="direct", options=None):
+def generate_strategy_draft(
+    *, user_id, integration_id, messages, locale="en", mode="direct", options=None
+):
     integration = get_user_integration(integration_id, user_id)
     if integration is None:
-        raise AIStrategyGenerationError("INTEGRATION_NOT_FOUND", "Integration not found", 404)
+        raise AIStrategyGenerationError(
+            "INTEGRATION_NOT_FOUND", "Integration not found", 404
+        )
     if integration.provider_key != "openai_compatible":
         raise AIStrategyGenerationError(
             "UNSUPPORTED_AI_PROVIDER",
@@ -45,14 +48,27 @@ def generate_strategy_draft(*, user_id, integration_id, messages, locale="en", m
 
     normalized_messages = _normalize_messages(messages)
     if not normalized_messages:
-        raise AIStrategyGenerationError("MESSAGES_REQUIRED", "At least one user message is required", 400)
+        raise AIStrategyGenerationError(
+            "MESSAGES_REQUIRED", "At least one user message is required", 400
+        )
 
     normalized_mode = str(mode or "direct").strip().lower()
     if normalized_mode == QSGA_MODE:
-        qyir = _build_qyir_from_qsga_options(normalized_messages, options or {}, locale=locale)
-        qsga_result = build_qsga_draft(qyir, owner_id=user_id)
+        qsga_options = options if isinstance(options, dict) else {}
+        qyir = _build_qyir_from_qsga_options(
+            normalized_messages, qsga_options, locale=locale
+        )
+        qsga_result = build_qsga_draft(qyir, owner_id=user_id, options=qsga_options)
+        trust = qsga_result.get("trust") or evaluate_qsga_trust(
+            qsga_result.get("verification") or {}
+        )
         return {
-            "reply": _qsga_reply(qsga_result.get("status"), qsga_result.get("verification") or {}, locale),
+            "reply": _qsga_reply(
+                qsga_result.get("status"),
+                qsga_result.get("verification") or {},
+                locale,
+                trust,
+            ),
             "analysis": _normalize_qsga_analysis(qsga_result, qyir),
         }
 
@@ -95,7 +111,9 @@ def generate_strategy_draft(*, user_id, integration_id, messages, locale="en", m
     if normalized_strategy.get("riskLevel"):
         metadata_candidates["riskLevel"] = normalized_strategy["riskLevel"]
     if normalized_strategy.get("logicExplanation"):
-        metadata_candidates["logicExplanation"] = normalized_strategy["logicExplanation"]
+        metadata_candidates["logicExplanation"] = normalized_strategy[
+            "logicExplanation"
+        ]
     if normalized_strategy.get("riskRules"):
         metadata_candidates["riskRules"] = normalized_strategy["riskRules"]
     if normalized_strategy.get("suitableMarket"):
@@ -129,10 +147,20 @@ def _build_qyir_from_qsga_options(messages, options, *, locale="en"):
 
     direction = _qsga_direction(str(brief.get("direction") or "long-only"))
     classification = _qsga_classification(raw_text, family, direction)
-    market = _choice(str(brief.get("market") or "crypto"), {"crypto", "gold", "stock", "futures"}, "crypto")
-    symbol = str(brief.get("symbol") or "").strip().upper() or ("XAUUSD" if market == "gold" else "BTCUSDT")
-    timeframe = _choice(str(brief.get("timeframe") or "1d"), {"1d", "4h", "1h", "15m"}, "1d")
-    risk_limits = brief.get("riskLimits") if isinstance(brief.get("riskLimits"), dict) else {}
+    market = _choice(
+        str(brief.get("market") or "crypto"),
+        {"crypto", "gold", "stock", "futures"},
+        "crypto",
+    )
+    symbol = str(brief.get("symbol") or "").strip().upper() or (
+        "XAUUSD" if market == "gold" else "BTCUSDT"
+    )
+    timeframe = _choice(
+        str(brief.get("timeframe") or "1d"), {"1d", "4h", "1h", "15m"}, "1d"
+    )
+    risk_limits = (
+        brief.get("riskLimits") if isinstance(brief.get("riskLimits"), dict) else {}
+    )
     max_drawdown_pct = _number(risk_limits.get("maxDrawdownPct"), 15)
     max_position_pct = _number(risk_limits.get("positionRatio"), 30)
 
@@ -146,7 +174,9 @@ def _build_qyir_from_qsga_options(messages, options, *, locale="en"):
         },
         "strategy": {
             "family": family,
-            "direction": direction if direction in {"long_only", "flat_or_long"} else "long_only",
+            "direction": direction
+            if direction in {"long_only", "flat_or_long"}
+            else "long_only",
             "timeframe": timeframe,
         },
         "universe": {
@@ -188,6 +218,14 @@ def _normalize_qsga_analysis(result, qyir):
     analysis["qyir"] = qyir
     analysis["verification"] = verification
     analysis["repairHistory"] = result.get("repairHistory") or []
+    trust = (
+        result.get("trust")
+        or analysis.get("qsgaTrust")
+        or evaluate_qsga_trust(verification)
+    )
+    analysis["qsgaTrust"] = trust
+    analysis["isTrusted"] = trust["trusted"]
+    analysis["isVerified"] = trust["verified"]
 
     messages = _verification_messages(verification)
     if status in {"rejected", "blocked", "failed"}:
@@ -197,17 +235,39 @@ def _normalize_qsga_analysis(result, qyir):
     return analysis
 
 
-def _qsga_reply(status, verification, locale):
+def _qsga_reply(status, verification, locale, trust=None):
     zh = locale == "zh"
     if status == "draft_ready":
-        return "QSGA 验证通过，已生成可采纳草案。" if zh else "QSGA verification passed. Draft is ready to adopt."
+        if trust and trust.get("trusted"):
+            return (
+                "QSGA 验证通过，已生成可采纳草案。"
+                if zh
+                else "QSGA verification passed. Draft is ready to adopt."
+            )
+        return (
+            "QSGA 编译验证通过，但必须先通过回测和风险审计后才能采用。"
+            if zh
+            else "QSGA compile checks passed, but backtest and risk audit must pass before adoption."
+        )
     if status == "clarification_required":
         question = _first_question(verification)
-        fallback = "需要先补充关键约束。" if zh else "More constraints are required before QSGA can compile a draft."
+        fallback = (
+            "需要先补充关键约束。"
+            if zh
+            else "More constraints are required before QSGA can compile a draft."
+        )
         return question or fallback
     if status == "rejected":
-        return "QSGA 已拒绝该请求，原因见验证链。" if zh else "QSGA rejected this request. See verification details."
-    return "QSGA 暂时阻断该请求，原因见验证链。" if zh else "QSGA blocked this request. See verification details."
+        return (
+            "QSGA 已拒绝该请求，原因见验证链。"
+            if zh
+            else "QSGA rejected this request. See verification details."
+        )
+    return (
+        "QSGA 暂时阻断该请求，原因见验证链。"
+        if zh
+        else "QSGA blocked this request. See verification details."
+    )
 
 
 def _latest_user_message(messages):
@@ -235,12 +295,38 @@ def _qsga_direction(value):
 def _default_qsga_signals(family):
     if family == "momentum":
         return [
-            {"name": "fast_ema", "indicator": "ema", "field": "close", "window": 12, "operator": "cross_up", "right": "slow_ema"},
-            {"name": "slow_ema", "indicator": "ema", "field": "close", "window": 26, "operator": "reference"},
+            {
+                "name": "fast_ema",
+                "indicator": "ema",
+                "field": "close",
+                "window": 12,
+                "operator": "cross_up",
+                "right": "slow_ema",
+            },
+            {
+                "name": "slow_ema",
+                "indicator": "ema",
+                "field": "close",
+                "window": 26,
+                "operator": "reference",
+            },
         ]
     return [
-        {"name": "fast_ma", "indicator": "ma", "field": "close", "window": 10, "operator": "cross_up", "right": "slow_ma"},
-        {"name": "slow_ma", "indicator": "ma", "field": "close", "window": 30, "operator": "reference"},
+        {
+            "name": "fast_ma",
+            "indicator": "ma",
+            "field": "close",
+            "window": 10,
+            "operator": "cross_up",
+            "right": "slow_ma",
+        },
+        {
+            "name": "slow_ma",
+            "indicator": "ma",
+            "field": "close",
+            "window": 30,
+            "operator": "reference",
+        },
     ]
 
 
@@ -255,14 +341,18 @@ def _qsga_metadata(qyir):
         "category": str(strategy.get("family") or "other").replace("_", "-"),
         "symbol": (universe.get("symbols") or [""])[0],
         "timeframe": strategy.get("timeframe"),
-        "riskLevel": "low" if _number(risk.get("max_position_pct"), 100) <= 30 else "medium",
+        "riskLevel": "low"
+        if _number(risk.get("max_position_pct"), 100) <= 30
+        else "medium",
         "logicExplanation": "QSGA dry-run uses a constrained QYIR plan and deterministic QYSP compiler.",
         "riskRules": f"Max drawdown {risk.get('max_drawdown_pct')}%, max position {risk.get('max_position_pct')}%.",
     }
 
 
 def _qsga_summary(symbol, family):
-    label = {"trend_following": "Trend Following", "momentum": "Momentum"}.get(family, family.replace("_", " ").title())
+    label = {"trend_following": "Trend Following", "momentum": "Momentum"}.get(
+        family, family.replace("_", " ").title()
+    )
     return f"{symbol} QSGA {label}"
 
 
@@ -322,11 +412,17 @@ def _normalize_messages(messages):
 
 def _request_chat_completion(*, base_url, model, api_key, messages, locale="en"):
     if not base_url:
-        raise AIStrategyGenerationError("AI_BASE_URL_REQUIRED", "AI integration base_url is required", 422)
+        raise AIStrategyGenerationError(
+            "AI_BASE_URL_REQUIRED", "AI integration base_url is required", 422
+        )
     if not model:
-        raise AIStrategyGenerationError("AI_MODEL_REQUIRED", "AI integration model is required", 422)
+        raise AIStrategyGenerationError(
+            "AI_MODEL_REQUIRED", "AI integration model is required", 422
+        )
     if not api_key:
-        raise AIStrategyGenerationError("AI_API_KEY_REQUIRED", "AI integration api_key is required", 422)
+        raise AIStrategyGenerationError(
+            "AI_API_KEY_REQUIRED", "AI integration api_key is required", 422
+        )
 
     payload = {
         "model": model,
@@ -365,18 +461,26 @@ def _request_chat_completion(*, base_url, model, api_key, messages, locale="en")
     try:
         parsed = json.loads(body)
     except json.JSONDecodeError as exc:
-        raise AIStrategyGenerationError("AI_RESPONSE_INVALID", "AI provider returned invalid JSON", 502) from exc
+        raise AIStrategyGenerationError(
+            "AI_RESPONSE_INVALID", "AI provider returned invalid JSON", 502
+        ) from exc
 
     choices = parsed.get("choices") or []
     if not choices:
-        raise AIStrategyGenerationError("AI_RESPONSE_INVALID", "AI provider returned no choices", 502)
+        raise AIStrategyGenerationError(
+            "AI_RESPONSE_INVALID", "AI provider returned no choices", 502
+        )
     message = choices[0].get("message") or {}
     content = message.get("content")
     if isinstance(content, list):
-        parts = [str(item.get("text") or "") for item in content if isinstance(item, dict)]
+        parts = [
+            str(item.get("text") or "") for item in content if isinstance(item, dict)
+        ]
         content = "\n".join(part for part in parts if part)
     if not isinstance(content, str) or not content.strip():
-        raise AIStrategyGenerationError("AI_RESPONSE_INVALID", "AI provider returned empty content", 502)
+        raise AIStrategyGenerationError(
+            "AI_RESPONSE_INVALID", "AI provider returned empty content", 502
+        )
     return content
 
 
@@ -402,21 +506,30 @@ def _parse_model_response(content):
         ) from exc
 
     if not isinstance(payload, dict):
-        raise AIStrategyGenerationError("AI_RESPONSE_INVALID", "AI response must be a JSON object", 502)
+        raise AIStrategyGenerationError(
+            "AI_RESPONSE_INVALID", "AI response must be a JSON object", 502
+        )
     return payload
 
 
 def _normalize_strategy_payload(payload):
     if not isinstance(payload, dict):
-        raise AIStrategyGenerationError("AI_STRATEGY_INVALID", "AI strategy payload must be an object", 422)
+        raise AIStrategyGenerationError(
+            "AI_STRATEGY_INVALID", "AI strategy payload must be an object", 422
+        )
 
     raw_code = str(payload.get("code") or "").strip()
     if not raw_code:
-        raise AIStrategyGenerationError("AI_STRATEGY_INVALID", "AI strategy code is required", 422)
+        raise AIStrategyGenerationError(
+            "AI_STRATEGY_INVALID", "AI strategy code is required", 422
+        )
 
     code = _strip_code_fence(raw_code)
     name = str(payload.get("name") or "").strip() or "AI Generated Strategy"
-    description = str(payload.get("description") or "").strip() or "Generated from AI conversation"
+    description = (
+        str(payload.get("description") or "").strip()
+        or "Generated from AI conversation"
+    )
     category = str(payload.get("category") or "other").strip().lower()
     if category not in SUPPORTED_CATEGORY_VALUES:
         category = "other"
@@ -448,7 +561,11 @@ def _normalize_strategy_payload(payload):
         "logicExplanation": logic_explanation,
         "riskRules": risk_rules,
         "suitableMarket": suitable_market,
-        "parameters": [_normalize_parameter_definition(item) for item in parameters if isinstance(item, dict)],
+        "parameters": [
+            _normalize_parameter_definition(item)
+            for item in parameters
+            if isinstance(item, dict)
+        ],
         "code": code,
     }
 
@@ -456,7 +573,9 @@ def _normalize_strategy_payload(payload):
 def _normalize_parameter_definition(item):
     key = str(item.get("key") or item.get("name") or "").strip()
     if not key:
-        raise AIStrategyGenerationError("AI_STRATEGY_INVALID", "Parameter key is required", 422)
+        raise AIStrategyGenerationError(
+            "AI_STRATEGY_INVALID", "Parameter key is required", 422
+        )
 
     raw_type = str(item.get("type") or "string").strip().lower()
     normalized_type = {
@@ -528,7 +647,7 @@ def _system_prompt(locale="en"):
             '"user_facing":{"label":"参数中文名称","group":"参数组名称（中文）","hint":"面向初学者的解释（中文）"},'
             '"enum":["..."]}],'
             '"code":"python 源码，带中文段注释"'
-            '}}\n\n'
+            "}}\n\n"
             "如果需求仍不清晰，将 strategy 设为 null，并在 reply 中提出一个简洁的追问。\n\n"
             "代码要求:\n"
             "- 必须定义 on_bar(ctx: StrategyContext, data: BarData) -> list[Order]，优先使用函数形式。\n"
@@ -580,7 +699,7 @@ def _system_prompt(locale="en"):
         '"user_facing":{"label":"human-readable name","group":"parameter group name","hint":"explanation for beginners"},'
         '"enum":["..."]}],'
         '"code":"python source with section comments"'
-        '}}\n\n'
+        "}}\n\n"
         "If requirements still unclear, set strategy to null and ask one concise follow-up question in reply.\n\n"
         "CODE REQUIREMENTS:\n"
         "- Must define on_bar(ctx: StrategyContext, data: BarData) -> list[Order]. Prefer function form.\n"

@@ -76,6 +76,18 @@ export interface StrategyImportAnalysis {
   warnings: string[]
   errors: string[]
   qsgaStatus?: 'draft_ready' | 'clarification_required' | 'rejected' | 'blocked' | 'failed' | string
+  qsgaTrust?: {
+    trusted?: boolean
+    verified?: boolean
+    status?: string
+    requiredChecks?: string[]
+    blockingChecks?: string[]
+    runningChecks?: string[]
+    missingChecks?: string[]
+    failedChecks?: string[]
+  } | null
+  isTrusted?: boolean
+  isVerified?: boolean
   qyir?: Record<string, unknown> | null
   verification?: Record<string, {
     status?: string

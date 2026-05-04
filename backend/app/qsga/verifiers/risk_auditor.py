@@ -20,7 +20,11 @@ def audit_risk_constraints(qyir: dict, backtest_result: dict) -> dict:
         _turnover_check(execution, backtest_result, data_range),
     ]
     checks = [check for check in checks if check is not None]
-    status = "pass" if all(check["status"] in {"pass", "not_run"} for check in checks) else "violation"
+    status = (
+        "pass"
+        if all(check["status"] in {"pass", "not_run"} for check in checks)
+        else "violation"
+    )
     return {
         "status": status,
         "scope": HISTORICAL_SCOPE,
@@ -30,8 +34,26 @@ def audit_risk_constraints(qyir: dict, backtest_result: dict) -> dict:
 
 
 def verify_risk_audit(audit: dict) -> VerificationResult:
-    violations = [check for check in audit.get("checks", []) if check.get("status") == "violation"]
+    violations = [
+        check for check in audit.get("checks", []) if check.get("status") == "violation"
+    ]
     if not violations:
+        incomplete = [
+            check
+            for check in audit.get("checks", [])
+            if check.get("status") == "not_run"
+        ]
+        if incomplete:
+            return fail_result(
+                [
+                    verification_error(
+                        "RISK_AUDIT_INCOMPLETE",
+                        "$.risk",
+                        "历史回测风险审计缺少必要观测值",
+                        category="risk",
+                    )
+                ]
+            )
         return pass_result()
     return fail_result(
         [
@@ -52,7 +74,12 @@ def _max_drawdown_check(risk: dict, summary: dict, data_range: dict) -> dict | N
     if target is None:
         return None
     if observed is None:
-        return _not_run("max_drawdown", target, data_range, ["add_stop_loss", "reduce_position_weight"])
+        return _not_run(
+            "max_drawdown",
+            target,
+            data_range,
+            ["add_stop_loss", "reduce_position_weight"],
+        )
     observed_value = float(observed)
     target_value = float(target)
     return _check(
@@ -65,16 +92,24 @@ def _max_drawdown_check(risk: dict, summary: dict, data_range: dict) -> dict | N
     )
 
 
-def _max_position_check(risk: dict, summary: dict, backtest_result: dict, data_range: dict) -> dict | None:
+def _max_position_check(
+    risk: dict, summary: dict, backtest_result: dict, data_range: dict
+) -> dict | None:
     target = risk.get("max_position_pct")
     observed = summary.get("maxPositionPct")
-    runtime = backtest_result.get("runtime") if isinstance(backtest_result.get("runtime"), dict) else {}
+    runtime = (
+        backtest_result.get("runtime")
+        if isinstance(backtest_result.get("runtime"), dict)
+        else {}
+    )
     if observed is None:
         observed = runtime.get("maxPositionPct")
     if target is None:
         return None
     if observed is None:
-        return _not_run("max_position_pct", target, data_range, ["reduce_position_weight"])
+        return _not_run(
+            "max_position_pct", target, data_range, ["reduce_position_weight"]
+        )
     observed_value = float(observed)
     target_value = float(target)
     return _check(
@@ -87,13 +122,17 @@ def _max_position_check(risk: dict, summary: dict, backtest_result: dict, data_r
     )
 
 
-def _turnover_check(execution: dict, backtest_result: dict, data_range: dict) -> dict | None:
+def _turnover_check(
+    execution: dict, backtest_result: dict, data_range: dict
+) -> dict | None:
     target = execution.get("max_orders_per_day")
     if target is None:
         return None
     observed = _observed_orders_per_day(backtest_result, data_range)
     if observed is None:
-        return _not_run("turnover_orders_per_day", target, data_range, ["lower_rebalance_frequency"])
+        return _not_run(
+            "turnover_orders_per_day", target, data_range, ["lower_rebalance_frequency"]
+        )
     target_value = float(target)
     return _check(
         "turnover_orders_per_day",
@@ -121,7 +160,14 @@ def _observed_orders_per_day(backtest_result: dict, data_range: dict) -> float |
     return len(trades) / days
 
 
-def _check(constraint: str, target: float, observed: float, status: str, data_range: dict, actions: list[str]) -> dict:
+def _check(
+    constraint: str,
+    target: float,
+    observed: float,
+    status: str,
+    data_range: dict,
+    actions: list[str],
+) -> dict:
     return {
         "constraint": constraint,
         "target": target,

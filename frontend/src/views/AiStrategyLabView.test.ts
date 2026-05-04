@@ -60,6 +60,19 @@ describe('AiStrategyLabView', () => {
     })
   }
 
+  function passingQsgaVerification() {
+    return {
+      guardrails: { status: 'pass', errors: [] },
+      schema: { status: 'pass', errors: [] },
+      domain: { status: 'pass', errors: [] },
+      semantic: { status: 'pass', errors: [] },
+      qysp: { status: 'pass', errors: [] },
+      runtime: { status: 'pass', errors: [] },
+      backtest: { status: 'pass', errors: [] },
+      risk: { status: 'pass', errors: [] },
+    }
+  }
+
   it('shows setup state when no AI integration is configured', async () => {
     fetchIntegrationsMock.mockResolvedValue([])
 
@@ -122,6 +135,18 @@ describe('AiStrategyLabView', () => {
           logicExplanation: 'Follow trend after confirmation.',
           riskRules: 'Stop when drawdown limit is hit.',
         },
+        qsgaStatus: 'draft_ready',
+        verification: passingQsgaVerification(),
+        qsgaTrust: {
+          trusted: true,
+          verified: true,
+          status: 'trusted',
+          requiredChecks: ['guardrails', 'schema', 'domain', 'semantic', 'qysp', 'runtime', 'backtest', 'risk'],
+          blockingChecks: [],
+          runningChecks: [],
+          missingChecks: [],
+          failedChecks: [],
+        },
       },
     })
 
@@ -137,11 +162,72 @@ describe('AiStrategyLabView', () => {
     expect(generateAiStrategyDraftMock.mock.calls[0][0].locale).toBe('en')
     expect(generateAiStrategyDraftMock.mock.calls[0][0].mode).toBe('qsga')
     expect(generateAiStrategyDraftMock.mock.calls[0][0].options.qsgaBrief.symbol).toBe('BTCUSDT')
+    expect(generateAiStrategyDraftMock.mock.calls[0][0].options.runBacktest).toBe(true)
     expect(generateAiStrategyDraftMock.mock.calls[0][0].messages[0].content).toContain('Symbol: BTCUSDT')
     expect(generateAiStrategyDraftMock.mock.calls[0][0].messages[0].content).toContain('Additional request: Build a BTC trend strategy')
     expect(wrapper.text()).toContain('AI Draft')
     expect(wrapper.text()).toContain('Lookback')
+    expect(wrapper.text()).toContain('Trusted result')
     expect(wrapper.get('[data-test="ai-lab-adopt"]').attributes('disabled')).toBeUndefined()
+  })
+
+  it('blocks adoption while QSGA backtest and risk audit are not complete', async () => {
+    fetchIntegrationsMock.mockResolvedValue([
+      {
+        id: 'integration-ai-1',
+        providerKey: 'openai_compatible',
+        displayName: 'Strategy AI',
+        status: 'active',
+        configPublic: {},
+        lastValidatedAt: null,
+        lastSuccessAt: null,
+        lastFailureAt: null,
+        lastErrorMessage: null,
+        createdAt: null,
+        updatedAt: null,
+      },
+    ])
+    generateAiStrategyDraftMock.mockResolvedValue({
+      reply: 'Backtest running.',
+      analysis: {
+        draftImportId: 'draft-ai-1',
+        sourceType: 'qys_package',
+        entrypointCandidates: [{ path: 'strategy.py', callable: 'on_bar', interface: 'event_v1', confidence: 0.9 }],
+        parameterCandidates: [],
+        warnings: [],
+        errors: [],
+        metadataCandidates: {
+          name: 'AI Draft',
+          symbol: 'BTCUSDT',
+        },
+        qsgaStatus: 'running',
+        verification: {
+          ...passingQsgaVerification(),
+          backtest: { status: 'running', errors: [] },
+          risk: { status: 'not_run', errors: [] },
+        },
+        qsgaTrust: {
+          trusted: false,
+          verified: false,
+          status: 'running',
+          requiredChecks: ['guardrails', 'schema', 'domain', 'semantic', 'qysp', 'runtime', 'backtest', 'risk'],
+          blockingChecks: ['backtest', 'risk'],
+          runningChecks: ['backtest'],
+          missingChecks: ['risk'],
+          failedChecks: [],
+        },
+      },
+    })
+
+    const wrapper = mountView()
+    await flushPromises()
+
+    await wrapper.get('[data-test="ai-lab-prompt"]').setValue('Build a BTC trend strategy')
+    await wrapper.get('[data-test="ai-lab-generate"]').trigger('click')
+    await flushPromises()
+
+    expect(wrapper.get('[data-test="ai-lab-trust-notice"]').text()).toContain('Backtest and risk audit must pass')
+    expect(wrapper.get('[data-test="ai-lab-adopt"]').attributes('disabled')).toBeDefined()
   })
 
   it('renders QSGA verification details and blocks rejected drafts', async () => {
